@@ -1,13 +1,10 @@
-from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
-
 import random
 import helpers.utils as utils
 import helpers.constants as constants
+
+from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
 from helpers.context import SchematicContext
-
-
-from renderers import top_view, side_view, materials, path_view
-
+from renderers import structure_facades, top_view, materials, path_view, roof, site_facades
 from registries.loader import BLOCK_REGISTRY
 from registries.loader import compile_texture_set
 
@@ -15,7 +12,7 @@ from registries.loader import compile_texture_set
 random.seed(42)
 
 # --- MASTER PIPELINE RUNNER WRAPPER ---
-def build_stage_complete_schematics(structure="structure", stage=1, renders=None):
+def build_stage_complete_schematics(structure: str, stage: int, renders: list[str] = None):
     if renders is None:
         renders = [constants.RENDER_ALL]    
 
@@ -64,13 +61,18 @@ def build_stage_complete_schematics(structure="structure", stage=1, renders=None
     
     if should_render(constants.RENDER_TOP_VIEW):
         top_view.render_floor_blueprints(ctx)
+        
+    if should_render(constants.RENDER_ROOF):
+        roof.render_roof_blueprints(ctx)
 
-    if should_render(constants.RENDER_SIDE_VIEW):
-        side_view.render_structure_elevations(ctx)
+    if should_render(constants.RENDER_STRUCTURE_FACADES):
+        structure_facades.render_structure_facades(ctx)
 
     if should_render(constants.RENDER_PATH):
         path_view.render_path_focused_blueprint(ctx)
-        path_view.render_site_elevations(ctx)
+    
+    if should_render(constants.RENDER_SITE_FACADES):
+        site_facades.render_site_facades(ctx)
 
     if should_render(constants.RENDER_MATERIALS):
         materials.render_materials_inventory_blueprint(ctx)
@@ -82,4 +84,5 @@ def build_stage_complete_schematics(structure="structure", stage=1, renders=None
 if __name__ == "__main__":
     build_stage_complete_schematics(   
         structure="residence",     
-        stage=2)
+        stage=2,
+        renders=None)
