@@ -1,0 +1,393 @@
+G:
+  minecraft:
+    block: minecraft:grass_block
+  schematic:
+    top_texture: "grass_block_top.png"
+    background_color: [95, 160, 75]
+  display_name: "Grass Block"
+d:
+  minecraft:
+    block: minecraft:dirt
+  schematic:
+    top_texture: "dirt.png"    
+  display_name: "Dirt"
+dp:
+  minecraft:
+    block: minecraft:dirt_path
+  schematic:
+    top_texture: "dirt_path_top.png"    
+  display_name: "Dirt Path"
+g:
+  minecraft:
+    block: minecraft:gravel    
+  schematic:
+    top_texture: "gravel.png"    
+  display_name: "Gravel"
+C:
+  minecraft:
+    block: minecraft:cobblestone  
+  display_name: "Cobblestone"
+M:
+  minecraft:
+    block: minecraft:mossy_cobblestone
+  display_name: "Mossy Cobblestone"
+L:
+  minecraft:
+    block: minecraft:oak_log
+    blockstate: "axis=y"
+  schematic:
+    top_texture: "oak_log_top.png"
+  display_name: "Oak Log"
+LS:
+  minecraft:
+    block: minecraft:oak_log
+    blockstate: "axis=x"
+  schematic:
+    direction: "east"
+  display_name: "Oak Log"
+P:
+  minecraft:
+    block: minecraft:oak_planks
+  display_name: "Oak Planks"
+F:
+  minecraft:
+    block: minecraft:furnace
+  schematic:
+    top_texture: "furnace_front.png"
+    background_color: [80, 80, 80]
+  display_name: "Furnace"
+T:
+  minecraft:
+    block: minecraft:crafting_table      
+  schematic:
+    top_texture: "crafting_table_top.png"
+    background_color: [120, 85, 50]
+  display_name: "Crafting Table"
+# Torches have separate tokens for each facing direction, 
+# since they use the "facing" blockstate property to determine their orientation.
+i:
+  minecraft:
+    block: minecraft:torch
+  display_name: "Torch"
+  category: "torch"
+in:
+  minecraft:
+    block: minecraft:torch
+    blockstate: "facing=north"
+  display_name: "Torch"
+  category: "torch"
+is:
+  minecraft:
+    block: minecraft:torch
+    blockstate: "facing=south"
+  display_name: "Torch"
+  category: "torch"
+ie:
+  minecraft:
+    block: minecraft:torch
+    blockstate: "facing=east"
+  display_name: "Torch"
+  category: "torch"
+iw:
+  minecraft:
+    block: minecraft:torch
+    blockstate: "facing=west"
+  display_name: "Torch"
+  category: "torch"
+# Doors have separate tokens for upper and lower halves, 
+# since they use the "half" blockstate property to determine their position.
+dt:
+  minecraft:
+    block: minecraft:oak_door_top
+    blockstate: "half=upper"
+  display_name: "Oak Door"
+db:
+  minecraft:
+    block: minecraft:oak_door_bottom
+    blockstate: "half=lower"  
+  display_name: "Oak Door"
+# Fences have a more complex blockstate with multiple boolean properties, 
+# so we use separate tokens for each connection configuration.
+o:
+  minecraft:
+    block: minecraft:oak_fence
+  schematic:
+    top_texture: "/custom/oak_fence_side.png"
+  display_name: "Oak Fence"
+  category: "fence"
+ons:
+  minecraft:
+    block: minecraft:oak_fence
+    blockstate: "north=true,east=false,south=true,west=false"
+  schematic:
+    top_texture: "/custom/oak_fence_side.png"
+    direction: "west"
+  display_name: "Oak Fence"
+  category: "fence"
+osn:
+  minecraft:
+    block: minecraft:oak_fence
+    blockstate: "north=true,east=false,south=true,west=false"
+  schematic:
+    top_texture: "/custom/oak_fence_side.png"
+    direction: "east"
+  display_name: "Oak Fence"
+  category: "fence"
+oew:
+  minecraft:
+    block: minecraft:oak_fence
+    blockstate: "north=false,east=true,south=false,west=true"
+  schematic:
+    top_texture: "/custom/oak_fence_side.png"
+    direction: "south"
+  display_name: "Oak Fence"
+  category: "fence"
+owe:
+  minecraft:
+    block: minecraft:oak_fence
+    blockstate: "north=false,east=true,south=false,west=true"
+  schematic:
+    top_texture: "/custom/oak_fence_side.png"
+    direction: "north"
+  display_name: "Oak Fence"
+  category: "fence"
+
+# Stairs have separate tokens for each facing direction and shape,
+# since they use the "facing", "half", and "shape" blockstate properties
+s:
+  minecraft:
+    block: minecraft:oak_stairs
+  schematic:
+    top_texture: "/custom/oak_stairs_top.png"
+  display_name: "Oak Stairs"
+  category: "stairs"
+sn:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=north,half=bottom,shape=straight"
+  schematic:
+    top_texture: "/custom/oak_stairs_top.png"
+    direction: "north"
+  display_name: "Oak Stairs"
+  category: "stairs"
+ss:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=south,half=bottom,shape=straight"
+  schematic:
+    top_texture: "/custom/oak_stairs_top.png"
+    direction: "south"
+  display_name: "Oak Stairs"
+  category: "stairs"
+se:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=east,half=bottom,shape=straight"
+  schematic:
+    top_texture: "/custom/oak_stairs_top.png"
+    direction: "east"
+  display_name: "Oak Stairs"
+  category: "stairs"
+sw:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=west,half=bottom,shape=straight"
+  schematic:
+    top_texture: "/custom/oak_stairs_top.png"
+    direction: "west"
+  display_name: "Oak Stairs"
+  category: "stairs"
+sn_ol:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=north,half=bottom,shape=outer_left"
+  schematic:
+    top_texture: "/custom/oak_stairs_outer_left.png"    
+  display_name: "Oak Stairs"
+  category: "stairs"
+sn_or:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=north,half=bottom,shape=outer_right"
+  schematic:
+    top_texture: "/custom/oak_stairs_outer_left.png"   
+    direction: "east" 
+  display_name: "Oak Stairs"
+  category: "stairs"
+ss_ol:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=south,half=bottom,shape=outer_left"
+  schematic:
+    top_texture: "/custom/oak_stairs_outer_left.png"    
+    direction: "south"
+  display_name: "Oak Stairs"
+  category: "stairs"
+ss_or:
+  minecraft:
+    block: minecraft:oak_stairs
+    blockstate: "facing=south,half=bottom,shape=outer_right"
+  schematic:
+    top_texture: "/custom/oak_stairs_outer_left.png"
+    direction: "west"
+  display_name: "Oak Stairs"
+  category: "stairs"
+# Beds have separate tokens for each half, since they use the "part" blockstate property
+bnh:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=north,part=head,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_top.png"
+    background_color: [200, 50, 50]
+  display_name: "Red Bed"
+  category: "bed"
+bnf:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=north,part=foot,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_bottom.png"
+    background_color: [200, 50, 50]
+  display_name: "Red Bed"
+  category: "bed"
+bsh:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=south,part=head,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_top.png"
+    background_color: [200, 50, 50]
+    direction: "south"
+  display_name: "Red Bed"
+  category: "bed"
+bsf:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=south,part=foot,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_bottom.png"
+    background_color: [200, 50, 50]
+    direction: "south"
+  display_name: "Red Bed"
+  category: "bed"
+bwh:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=west,part=head,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_top.png"
+    background_color: [200, 50, 50]
+    direction: "west"
+  display_name: "Red Bed"
+  category: "bed"
+bwf:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=west,part=foot,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_bottom.png"
+    background_color: [200, 50, 50]
+    direction: "west"
+  display_name: "Red Bed"
+  category: "bed"
+beh:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=east,part=head,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_top.png"
+    background_color: [200, 50, 50]
+    direction: "east"
+  display_name: "Red Bed"
+  category: "bed"
+bef:
+  minecraft:
+    block: minecraft:red_bed
+    blockstate: "facing=east,part=foot,occupied=false"
+  schematic:
+    top_texture: "/custom/red_bed_bottom.png"
+    background_color: [200, 50, 50]
+    direction: "east"
+  display_name: "Red Bed"
+  category: "bed"
+# Double chests have separate tokens for left and right halves, 
+# since they use the "type" blockstate property
+xnl:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=north,type=left"
+  schematic:
+    top_texture: "/custom/double_chest_right.png"
+    background_color: [140, 100, 45]
+  display_name: "Chest"
+  category: "chest"
+xnr:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=north,type=right"
+  schematic:
+    top_texture: "/custom/double_chest_left.png"
+    background_color: [140, 100, 45]
+  display_name: "Chest"
+  category: "chest"
+xsl:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=south,type=left"
+  schematic:
+    top_texture: "/custom/double_chest_left.png"
+    background_color: [140, 100, 45]
+    direction: "south"
+  display_name: "Chest"
+  category: "chest"
+xsr:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=south,type=right"
+  schematic:
+    top_texture: "/custom/double_chest_right.png"
+    background_color: [140, 100, 45]
+    direction: "south"
+  display_name: "Chest"
+  category: "chest"
+xel:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=east,type=left"
+  schematic:
+    top_texture: "/custom/double_chest_left.png"
+    background_color: [140, 100, 45]
+    direction: "east"
+  display_name: "Chest"
+  category: "chest"
+xer:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=east,type=right"
+  schematic:
+    top_texture: "/custom/double_chest_right.png"
+    background_color: [140, 100, 45]
+    direction: "east"
+  display_name: "Chest"
+  category: "chest"
+xwl:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=west,type=left"
+  schematic:
+    top_texture: "/custom/double_chest_left.png"
+    background_color: [140, 100, 45]
+    direction: "west"
+  display_name: "Chest"
+  category: "chest"
+xwr:
+  minecraft:
+    block: minecraft:chest
+    blockstate: "facing=west,type=right"
+  schematic:
+    top_texture: "/custom/double_chest_right.png"
+    background_color: [140, 100, 45]
+    direction: "west"
+  display_name: "Chest"
+  category: "chest"

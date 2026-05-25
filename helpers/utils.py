@@ -1,0 +1,98 @@
+import importlib.util
+from pathlib import Path
+
+def load_structure_config(structure, stage):
+    
+    structure_file = f"structures/{structure}/stage{stage}_structure.py"
+    
+    structure_path = Path(structure_file).resolve()
+
+    if not structure_path.exists():
+        raise FileNotFoundError(f"Structure file not found: {structure_path}")
+
+    module_name = structure_path.stem
+
+    spec = importlib.util.spec_from_file_location(module_name, structure_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load structure module: {structure_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    if not hasattr(module, "STRUCTURE_CONFIG"):
+        raise AttributeError(
+            f"{structure_path} must define STRUCTURE_CONFIG"
+        )
+
+    return module.STRUCTURE_CONFIG
+
+from pathlib import Path
+import yaml
+
+
+def load_block_registry(registry_path=None):
+    """
+    Load block registry from blocks.yaml.
+
+    Returns:
+        dict
+    """
+
+    if registry_path is None:
+        registry_path = (
+            Path(__file__).resolve().parent / "blocks.yaml"
+        )
+
+    registry_path = Path(registry_path)
+
+    if not registry_path.exists():
+        raise FileNotFoundError(
+            f"Block registry YAML not found: {registry_path}"
+        )
+
+    with registry_path.open("r", encoding="utf-8") as file:
+        data = yaml.safe_load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            "block_registry.yaml must contain a top-level dictionary"
+        )
+
+    return data
+
+# --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---
+def split_block_id(block_id):
+    """Return (namespace, block_name) from a Minecraft block id."""
+    if ":" not in block_id:
+        return "minecraft", block_id
+    return block_id.split(":", 1)
+
+
+def default_texture_name(block_id):
+    """Resolve minecraft:oak_planks -> oak_planks.png.
+
+    This intentionally strips the namespace so future modded blocks can use
+    their own asset folders while keeping the registry close to Minecraft syntax.
+    Example: create:brass_block -> brass_block.png
+    """
+    _namespace, block_name = split_block_id(block_id)
+    return f"{block_name}.png"
+
+def normalize_direction(direction):
+    if direction is None:
+        return None
+
+    direction = str(direction).strip().upper()
+
+    direction_aliases = {
+        "NORTH": "N",
+        "EAST": "E",
+        "SOUTH": "S",
+        "WEST": "W",
+        "N": "N",
+        "E": "E",
+        "S": "S",
+        "W": "W",
+    }
+
+    return direction_aliases.get(direction)

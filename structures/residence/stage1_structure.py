@@ -1,0 +1,83 @@
+STAGE1_STRUCTURE_DATA = {
+    0: [
+        "M C M C M M C C M",
+        "C P P P P P P P M",
+        "M P P P P P P P C",
+        "C P P P P P P P M",
+        "M P P P P P P P C",
+        "C P P P P P P P M",
+        "M P P P P P P P M",
+        "C P P P P P P P C",
+        "M C M C C C M C M",
+        ". . . sn sn sn . . ."],
+    1: [
+        "L P P P P P P P L",
+        "P bn_h . . . . . T P",
+        "P bn_f . . . . . F P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . xw_r P",
+        "P . . . . . . xw_l P",
+        "L P P P db P P P L",
+        ". . . . . . . . ."],
+    2: [
+        "L P P P P P P P L",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P ie . . . . . iw P",
+        "ons . . . . . . . ons",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "L P oew P dt P oew P L",
+        ". . . is . is . . ."],
+    3: [
+        "L P P P P P P P L",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "P . . . . . . . P",
+        "L P P P P P P P L",
+        ". . . . . . . . ."],
+    4: [
+        "ss_ol ss ss ss ss ss ss ss ss_or",
+        "se . . . . . . . sw",
+        "se . . . . . . . sw",
+        "se . . . . . . . sw",
+        "se . . . . . . . sw",
+        "se . . . . . . . sw",
+        "se . . . . . . . sw",
+        "se . . . . . . . sw",
+        "sn_or sn sn sn sn sn sn sn sn_ol",
+        ". . . . . . . . ."],
+    5: [
+        ". . . . . . . . .",
+        ". l l l l l l l .",
+        ". l l l l l l l .",
+        ". l l l l l l l .",
+        ". l l l l l l l .",
+        ". l l l l l l l .",
+        ". l l l l l l l .",
+        ". l l l l l l l .",
+        ". . . . . . . . .",
+        ". . . . . . . . ."]
+}
+
+STRUCTURE_CONFIG = {    
+    "name": "Residence Stage 1",
+    "output_folder": "stage1_residence",
+    "data": STAGE1_STRUCTURE_DATA,
+    "size": 30,
+    "struct_w": 9,
+    "struct_h": 10,
+    "offset_x": 10,
+    "offset_z": 4,
+    "floor_map": {
+        "Floor 1": [0, 1, 2, 3],
+        "Roof": [4, 5]
+    }
+}
