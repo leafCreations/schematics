@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+from PIL import Image
 
 def load_structure_config(structure, stage):
     
@@ -96,3 +97,20 @@ def normalize_direction(direction):
     }
 
     return direction_aliases.get(direction)
+
+def rotate_directional_texture(texture, direction):
+    """Rotate a square top-down asset so token direction is visible in schematics.
+
+    Assumption: source assets are drawn in NORTH orientation by default.
+    Uses lossless right-angle transpose operations instead of Image.rotate()
+    so pixel-art textures do not get resampled or visually blurred.
+    """
+    if direction is None or direction == "N":
+        return texture.copy()
+    if direction == "E":
+        return texture.transpose(Image.Transpose.ROTATE_270)
+    if direction == "S":
+        return texture.transpose(Image.Transpose.ROTATE_180)
+    if direction == "W":
+        return texture.transpose(Image.Transpose.ROTATE_90)
+    return texture.copy()
