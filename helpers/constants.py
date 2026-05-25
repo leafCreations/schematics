@@ -1,5 +1,7 @@
 RENDER_TOP_VIEW = "top_view"
-RENDER_SIDE_VIEW = "side_view"
+RENDER_ROOF = "roof"
+RENDER_STRUCTURE_FACADES = "structure_facades"
 RENDER_PATH = "path"
+RENDER_SITE_FACADES = "site_facades"
 RENDER_MATERIALS = "materials"
 RENDER_ALL = "all"
