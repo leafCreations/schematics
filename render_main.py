@@ -2,7 +2,9 @@ from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
 
 import random
 import helpers.utils as utils
+import helpers.constants as constants
 from helpers.context import SchematicContext
+
 
 from renderers import top_view, side_view, materials, path_view
 
@@ -13,14 +15,17 @@ from registries.loader import compile_texture_set
 random.seed(42)
 
 # --- MASTER PIPELINE RUNNER WRAPPER ---
-def build_stage_complete_schematics(structure="structure", stage=1, renders=["top_view"]):
+def build_stage_complete_schematics(structure="structure", stage=1, renders=None):
     if renders is None:
-        renders = ["all"]
+        renders = [constants.RENDER_ALL]    
+
+    if isinstance(renders, str):
+        renders = [renders]
 
     renders = set(renders)
 
     def should_render(name):
-        return "all" in renders or name in renders
+        return constants.RENDER_ALL in renders or name in renders
 
     config = utils.load_structure_config(structure, stage)
     
@@ -57,17 +62,17 @@ def build_stage_complete_schematics(structure="structure", stage=1, renders=["to
     print("🤖 RUNNING AUTOMATED OMNI-BLUEPRINT COMPILE ENGINE...")
     print("="*70)            
     
-    if should_render("top_view"):
+    if should_render(constants.RENDER_TOP_VIEW):
         top_view.render_floor_blueprints(ctx)
 
-    if should_render("side_view"):
+    if should_render(constants.RENDER_SIDE_VIEW):
         side_view.render_structure_elevations(ctx)
 
-    if should_render("path"):
+    if should_render(constants.RENDER_PATH):
         path_view.render_path_focused_blueprint(ctx)
         path_view.render_site_elevations(ctx)
 
-    if should_render("materials"):
+    if should_render(constants.RENDER_MATERIALS):
         materials.render_materials_inventory_blueprint(ctx)
     
     print("="*70)

@@ -1,1 +1,7 @@
 assets/
+__pycache__/
+helpers/__pycache__/
+output/
+registires/__pycache__/
+renders/__pycache__/
+structures/residence/__pycache__/

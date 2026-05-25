@@ -1,0 +1,5 @@
+RENDER_TOP_VIEW = "top_view"
+RENDER_SIDE_VIEW = "side_view"
+RENDER_PATH = "path"
+RENDER_MATERIALS = "materials"
+RENDER_ALL = "all"
