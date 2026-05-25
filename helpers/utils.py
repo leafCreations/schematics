@@ -28,38 +28,6 @@ def load_structure_config(structure, stage):
     return module.STRUCTURE_CONFIG
 
 from pathlib import Path
-import yaml
-
-
-def load_block_registry(registry_path=None):
-    """
-    Load block registry from blocks.yaml.
-
-    Returns:
-        dict
-    """
-
-    if registry_path is None:
-        registry_path = (
-            Path(__file__).resolve().parent / "blocks.yaml"
-        )
-
-    registry_path = Path(registry_path)
-
-    if not registry_path.exists():
-        raise FileNotFoundError(
-            f"Block registry YAML not found: {registry_path}"
-        )
-
-    with registry_path.open("r", encoding="utf-8") as file:
-        data = yaml.safe_load(file)
-
-    if not isinstance(data, dict):
-        raise ValueError(
-            "block_registry.yaml must contain a top-level dictionary"
-        )
-
-    return data
 
 # --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---
 def split_block_id(block_id):

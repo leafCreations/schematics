@@ -1,4 +1,4 @@
-from __init__ import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
+from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
 
 import random
 import helpers.utils as utils
@@ -13,7 +13,14 @@ from registries.loader import compile_texture_set
 random.seed(42)
 
 # --- MASTER PIPELINE RUNNER WRAPPER ---
-def build_stage_complete_schematics(structure="structure", stage=1):    
+def build_stage_complete_schematics(structure="structure", stage=1, renders=["top_view"]):
+    if renders is None:
+        renders = ["all"]
+
+    renders = set(renders)
+
+    def should_render(name):
+        return "all" in renders or name in renders
 
     config = utils.load_structure_config(structure, stage)
     
@@ -50,18 +57,18 @@ def build_stage_complete_schematics(structure="structure", stage=1):
     print("🤖 RUNNING AUTOMATED OMNI-BLUEPRINT COMPILE ENGINE...")
     print("="*70)            
     
-    # 3. Render the top-down floor blueprints
-    top_view.render_floor_blueprints(ctx)    
-    
-    # 4. Update the other Nodes to save into 'target_path' as well    
-    side_view.render_structure_elevations(ctx)
-    
-    # 5. Render the path-focused blueprint
-    path_view.render_path_focused_blueprint(ctx)        
-    path_view.render_site_elevations(ctx)
-    
-    # 6. Render the materials inventory blueprint
-    materials.render_materials_inventory_blueprint(ctx)
+    if should_render("top_view"):
+        top_view.render_floor_blueprints(ctx)
+
+    if should_render("side_view"):
+        side_view.render_structure_elevations(ctx)
+
+    if should_render("path"):
+        path_view.render_path_focused_blueprint(ctx)
+        path_view.render_site_elevations(ctx)
+
+    if should_render("materials"):
+        materials.render_materials_inventory_blueprint(ctx)
     
     print("="*70)
     print(f"🎉 ENGINE COMPLETE! Assets packed to: {target_path.resolve()}")

@@ -1,10 +1,12 @@
 import os
 
-from __init__ import MAX_PANELS_PER_ROW, MAX_PANEL_ROWS_PER_IMAGE
 from helpers.context import SchematicContext
 import helpers.utils_schematics as schematics_utils
 
 from PIL import Image, ImageDraw, ImageFont
+
+MAX_PANELS_PER_ROW = 3
+MAX_PANEL_ROWS_PER_IMAGE = 3
 
 # Public function to render floor blueprints
 def render_floor_blueprints(ctx: SchematicContext):
