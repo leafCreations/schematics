@@ -5,11 +5,12 @@ import helpers.utils_schematics as schematics_utils
 
 from PIL import Image, ImageDraw, ImageFont
 from helpers.context import SchematicContext
+from helpers.types import RawToken, Token, Layout, Panel, Rect, Fonts
 
 MAX_PANELS_PER_ROW = 3
 MAX_PANEL_ROWS_PER_IMAGE = 3
 
-def _build_layout(ctx, layers):
+def _build_layout(ctx: SchematicContext, layers: Rect) -> Layout:
     block_px = 30
     padding = 50
     layer_gap = 80
@@ -43,7 +44,7 @@ def _build_layout(ctx, layers):
         "layer_pages": layer_pages,
     }
     
-def _load_fonts():
+def _load_fonts() -> Fonts:
     fonts = {
         "floor": ImageFont.load_default(),
         "layer": ImageFont.load_default(),
@@ -57,7 +58,7 @@ def _load_fonts():
 
     return fonts
 
-def _draw_layer_panel(img, draw, ctx, layer, panel, fonts):
+def _draw_layer_panel(img, draw, ctx: SchematicContext, layer: int, panel: Panel, fonts: Fonts):
     sx = panel["sx"]
     sy = panel["sy"]
     block_px = panel["block_px"]
@@ -84,7 +85,7 @@ def _draw_layer_panel(img, draw, ctx, layer, panel, fonts):
 
     return panel_materials
 
-def _draw_block_cell(img, draw, ctx, raw_token, token, bx, by, block_px):
+def _draw_block_cell(img, draw, ctx: SchematicContext, raw_token: RawToken, token: Token, bx: int, by: int, block_px: int):
     rect = [bx, by, bx + block_px, by + block_px]
 
     if token == ".":
@@ -109,7 +110,7 @@ def _draw_block_cell(img, draw, ctx, raw_token, token, bx, by, block_px):
         outline=(230, 230, 230)
     )
     
-def _create_page_image(layout: dict, page_layers: list):
+def _create_page_image(layout: Layout, page_layers: Rect) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     layer_count = len(page_layers)
     rows = (layer_count + layout["columns"] - 1) // layout["columns"]
 
@@ -133,7 +134,7 @@ def _create_page_image(layout: dict, page_layers: list):
 
     return img, draw
 
-def _draw_page_title(draw, ctx, floor_name, page_index, layout, fonts):
+def _draw_page_title(draw, ctx: SchematicContext, floor_name: str, page_index: int, layout: Layout, fonts: Fonts):
     page_title = f"{ctx.name} - {floor_name}"
 
     if len(layout["layer_pages"]) > 1:
@@ -146,7 +147,7 @@ def _draw_page_title(draw, ctx, floor_name, page_index, layout, fonts):
         font=fonts["floor"]
     )
     
-def _get_panel_position(index: int, layout: dict):
+def _get_panel_position(index: int, layout: Layout) -> Panel:
     col = index % layout["columns"]
     row = index // layout["columns"]
 
@@ -162,7 +163,7 @@ def _get_panel_position(index: int, layout: dict):
         "inventory_w": layout["inventory_w"],
     }
     
-def _draw_layer_header(draw, layer, sx, sy, fonts):
+def _draw_layer_header(draw, layer: int, sx: int, sy: int, fonts: Fonts):
     draw.text(
         (sx, sy - 40),
         f"Layer Y={layer}",
@@ -170,7 +171,7 @@ def _draw_layer_header(draw, layer, sx, sy, fonts):
         font=fonts["layer"]
     )
     
-def _draw_grid_labels(draw, ctx, sx, sy, block_px, fonts):
+def _draw_grid_labels(draw, ctx: SchematicContext, sx: int, sy: int, block_px: int, fonts: Fonts):
     for x in range(ctx.struct_w):
         draw.text(
             (sx + (x * block_px) + 10, sy - 20),
@@ -187,7 +188,7 @@ def _draw_grid_labels(draw, ctx, sx, sy, block_px, fonts):
             font=fonts["layer"]
         )
         
-def _draw_inventory_panel(img, draw, ctx, panel, panel_materials, fonts):
+def _draw_inventory_panel(img, draw, ctx: SchematicContext, panel: Panel, panel_materials: dict, fonts: Fonts):
     final_inventory, inventory_icons = schematics_utils.collect_inventory_counts(panel_materials)
 
     lx = panel["sx"] + panel["panel_w"] + 20
@@ -225,7 +226,7 @@ def _draw_inventory_panel(img, draw, ctx, panel, panel_materials, fonts):
             font=fonts["inventory"]
         )
         
-def _draw_inventory_icon(img, draw, ctx, icon_token, lx, ly):
+def _draw_inventory_icon(img, draw, ctx: SchematicContext, icon_token: Token, lx: int, ly: int):
     if icon_token in ctx.topdown_textures:
         tex = ctx.topdown_textures[icon_token].resize(
             (25, 25),
@@ -248,7 +249,7 @@ def _draw_inventory_icon(img, draw, ctx, icon_token, lx, ly):
         outline=(80, 80, 80)
     )
     
-def _build_output_path(ctx, floor_name, page_index, layout):
+def _build_output_path(ctx: SchematicContext, floor_name: str, page_index: int, layout: Layout) -> str:
     page_suffix = ""
 
     if len(layout["layer_pages"]) > 1:
@@ -259,16 +260,16 @@ def _build_output_path(ctx, floor_name, page_index, layout):
         f"Structure_{floor_name.lower().replace(' ', '_')}{page_suffix}.png"
     )
 
-def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: list):
-    layout = _build_layout(ctx, layers)
-    fonts = _load_fonts()
+def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: Rect):
+    layout: Layout = _build_layout(ctx, layers)
+    fonts: Fonts = _load_fonts()
 
     for page_index, page_layers in enumerate(layout["layer_pages"], start=1):
         img, draw = _create_page_image(layout, page_layers)
         _draw_page_title(draw, ctx, floor_name, page_index, layout, fonts)
 
         for i, layer in enumerate(page_layers):
-            panel = _get_panel_position(i, layout)
+            panel: Panel = _get_panel_position(i, layout)
             panel_materials = _draw_layer_panel(img, draw, ctx, layer, panel, fonts)
             _draw_inventory_panel(img, draw, ctx, panel, panel_materials, fonts)
 

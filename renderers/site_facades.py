@@ -2,10 +2,11 @@
 from helpers.context import SchematicContext
 import helpers.utils_schematics as schematics_utils
 import helpers.landscape_utils as landscape_utils
+from helpers.types import Token, Panel, Layout, Rect
 
 from PIL import Image, ImageDraw
 
-def _build_site_facades_layout(ctx: SchematicContext):
+def _build_site_facades_layout(ctx: SchematicContext) -> Panel:
     block_px = 30
     padding = 60
     top_margin = 80
@@ -34,7 +35,7 @@ def _build_site_facades_layout(ctx: SchematicContext):
         },
     }
     
-def _create_site_facades_image(layout: dict):
+def _create_site_facades_image(layout: Layout):
     img = Image.new(
         "RGB",
         (layout["img_w"], layout["img_h"]),
@@ -45,7 +46,7 @@ def _create_site_facades_image(layout: dict):
 
     return img, draw
 
-def _draw_site_facades_title(draw, layout: dict):
+def _draw_site_facades_title(draw, layout: Layout):
     draw.text(
         (layout["padding"], 20),
         "SITE CROSS-SECTIONS - 4 COMPASS DIRECTIONAL ENVIRONMENTAL PROJECTIONS",
@@ -163,7 +164,7 @@ def _draw_site_facade_panels(
     draw,
     ctx: SchematicContext,
     elevations: dict,
-    layout: dict
+    layout: Layout
 ):
     current_x = layout["padding"]
     current_y = layout["top_margin"] + 50
@@ -194,7 +195,7 @@ def _draw_site_facade_heading(
     view_key: str,
     current_x: int,
     current_y: int,
-    layout: dict
+    layout: Layout
 ):
     draw.text(
         (current_x, current_y - 22),
@@ -206,10 +207,10 @@ def _draw_site_facade_panel(
     img,
     draw,
     ctx: SchematicContext,
-    panel_data: dict,
+    panel_data: Panel,
     current_x: int,
     current_y: int,
-    layout: dict
+    layout: Layout
 ):
     for step, layer_y in enumerate(layout["layer_keys"]):
         pixel_row = (len(layout["layer_keys"]) - 1) - step
@@ -233,12 +234,12 @@ def _draw_site_facade_cell(
     img,
     draw,
     ctx: SchematicContext,
-    token: str,
+    token: Token,
     col: int,
     pixel_row: int,
     current_x: int,
     current_y: int,
-    layout: dict
+    layout: Layout
 ):
     block_px = layout["block_px"]
 
@@ -265,8 +266,8 @@ def _draw_site_facade_cell(
     
 def _draw_site_facade_cell_background(
     draw,
-    token: str,
-    rect: list
+    token: Token,
+    rect: Rect
 ):
     if token == ".":
         background_color = (235, 245, 255)
@@ -285,8 +286,8 @@ def _draw_site_facade_cell_texture(
     img,
     draw,
     ctx: SchematicContext,
-    token: str,
-    rect: list,
+    token: Token,
+    rect: Rect,
     bx: int,
     by: int
 ):

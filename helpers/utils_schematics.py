@@ -2,8 +2,9 @@ from typing import Counter
 from registries.loader import BLOCK_REGISTRY
 from PIL import Image, ImageChops
 import helpers.utils as utils
+from helpers.types import Token, RawToken
 
-def resolve_schematic_token(raw_token):
+def resolve_schematic_token(raw_token: RawToken) -> Token:
     """Return (base_token, direction) for schematic rendering/counting.
 
     Direction comes only from BLOCK_REGISTRY[token]["schematic"]["direction"].
@@ -23,7 +24,21 @@ def resolve_schematic_token(raw_token):
 
     return token, None
 
-def paste_schematic_token(img, textures, raw_token, xy, size=None, draw=None):
+def show_interior_view(token: Token) -> bool:
+    """Return whether this block should appear in interior/path overlays.
+
+    blocks.yaml may define showInteriorView: false at the token root
+    to hide interior-only blocks from landscaping/path views.
+    Missing values default to True.
+    """
+    if token == ".":
+        return False
+
+    entry = BLOCK_REGISTRY.get(token, {})
+    schematic = entry.get("schematic", {})
+    return schematic.get("showInteriorView", True) is not False
+
+def paste_schematic_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
     """Paste a token texture using the raw token, not the stripped base token.
 
     Any schematic token with a parsed direction will rotate.
@@ -50,7 +65,7 @@ def paste_schematic_token(img, textures, raw_token, xy, size=None, draw=None):
 
     return True
 
-def get_background_color(token, default=(245, 245, 245)):
+def get_background_color(token: Token, default=(245, 245, 245)) -> tuple[int, int, int] | None:
     entry = BLOCK_REGISTRY.get(token, {})
     schematic = entry.get("schematic", {})
 
@@ -73,7 +88,7 @@ def get_background_color(token, default=(245, 245, 245)):
 
     return default
 
-def get_display_name(token):
+def get_display_name(token: Token) -> str:
     entry = BLOCK_REGISTRY.get(token)
 
     if entry:
@@ -81,7 +96,7 @@ def get_display_name(token):
 
     return token
 
-def get_inventory_group(token):
+def get_inventory_group(token: Token) -> str:
     entry = BLOCK_REGISTRY.get(token, {})
 
     category = entry.get("category")
@@ -90,7 +105,7 @@ def get_inventory_group(token):
 
     return get_display_name(token)
 
-def collect_inventory_counts(raw_tokens):
+def collect_inventory_counts(raw_tokens: list[RawToken]) -> tuple[Counter, dict[str, Token]]:
     grouped_counts = Counter()
     group_icons = {}
 
@@ -106,7 +121,7 @@ def collect_inventory_counts(raw_tokens):
 
     return grouped_counts, group_icons
 
-def material_sort_key(item):
+def material_sort_key(item: tuple[str, int]) -> str:
     token, _count = item
     return get_display_name(token).lower()
 
@@ -119,7 +134,7 @@ SIDE_VIEW_TORCH_BACKING_BY_VIEW = {
 
 SIDE_VIEW_TORCH_TOKENS = {"in", "is", "ie", "iw", "it"}
 
-def paste_side_view_token(img, textures, raw_token, xy, block_px, view_key=None):
+def paste_side_view_token(img, textures, raw_token: RawToken, xy, block_px, view_key=None) -> bool:
     x, y = xy
 
     base_token, direction = resolve_schematic_token(raw_token)
@@ -170,7 +185,7 @@ def paste_side_view_token(img, textures, raw_token, xy, block_px, view_key=None)
 
     return False
 
-def get_texture_for_render(token, texture):
+def get_texture_for_render(token: Token, texture: Image.Image) -> Image.Image:
     background_color = get_background_color(token, default=None)
 
     if background_color is None:

@@ -2,8 +2,9 @@ import helpers.utils_schematics as schematics_utils
 
 from helpers.context import SchematicContext
 from PIL import Image, ImageDraw
+from helpers.types import Token, RawToken, Panel, Layout
 
-def _build_structure_elevation_layout(ctx: SchematicContext):
+def _build_structure_elevation_layout(ctx: SchematicContext) -> Panel:
     block_px = 30
     top_margin = 60
     panel_gap = 50
@@ -34,7 +35,7 @@ def _build_structure_elevation_layout(ctx: SchematicContext):
         },
     }
     
-def _create_structure_elevation_image(layout: dict):
+def _create_structure_elevation_image(layout: Layout):
     img = Image.new(
         "RGB",
         (layout["img_w"], layout["img_h"]),
@@ -116,7 +117,7 @@ def _find_first_visible_token_along_z(
     ctx: SchematicContext,
     layer_y: int,
     x: int,
-    z_range
+    z_range: range
 ):
     for z in z_range:
         raw_token = _get_raw_token(ctx, layer_y, z, x)
@@ -131,7 +132,7 @@ def _find_first_visible_token_along_x(
     ctx: SchematicContext,
     layer_y: int,
     z: int,
-    x_range
+    x_range: range
 ):
     for x in x_range:
         raw_token = _get_raw_token(ctx, layer_y, z, x)
@@ -163,9 +164,9 @@ def _get_raw_token(
 def _draw_structure_elevation_panels(
     img,
     draw,
-    ctx,
-    struct_elevations,
-    layout
+    ctx: SchematicContext,
+    struct_elevations: dict,
+    layout: Layout
 ):
     current_x = layout["panel_gap"]
     current_y = layout["top_margin"] + 20
@@ -195,10 +196,10 @@ def _draw_structure_elevation_panels(
         
 def _draw_structure_elevation_heading(
     draw,
-    view_key,
-    current_x,
-    current_y,
-    layout
+    view_key: str,
+    current_x: int,
+    current_y: int,
+    layout: Layout
 ):
     draw.text(
         (current_x, current_y - 20),
@@ -209,12 +210,12 @@ def _draw_structure_elevation_heading(
 def _draw_structure_elevation_panel(
     img,
     draw,
-    ctx,
-    panel_data,
-    view_key,
-    current_x,
-    current_y,
-    layout
+    ctx: SchematicContext,
+    panel_data: dict,
+    view_key: str,
+    current_x: int,
+    current_y: int,
+    layout: Layout
 ):
     tokens_count = _get_view_token_count(ctx, view_key)
 
@@ -250,13 +251,13 @@ def _get_view_token_count(ctx: SchematicContext, view_key: str):
 def _draw_structure_elevation_cell(
     img,
     draw,
-    ctx,
-    raw_token,
-    token,
-    bx,
-    by,
-    view_key,
-    layout
+    ctx: SchematicContext,
+    raw_token: RawToken,
+    token: Token,
+    bx: int,
+    by: int,
+    view_key: str,
+    layout: Layout
 ):
     block_px = layout["block_px"]
     rect = [bx, by, bx + block_px, by + block_px]
