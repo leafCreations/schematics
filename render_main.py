@@ -12,7 +12,7 @@ from renderers import structure_facades, top_view, materials, path_view, roof, s
 random.seed(42)
 
 # --- MASTER PIPELINE RUNNER WRAPPER ---
-def build_stage_complete_schematics(structure: str, stage: int, renders: RenderList = None):
+def build_stage_complete_schematics(structure: str, stage: int, renders: RenderList | str | None = None):
     if renders is None:
         renders = [constants.RENDER_ALL]    
 
