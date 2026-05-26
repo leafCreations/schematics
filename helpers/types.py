@@ -101,6 +101,10 @@ class Cell(TypedDict):
     is_ground_layer: bool
     is_ghost: bool
     
+class MinecraftBlock(TypedDict):
+    block: str
+    blockstate: str | None
+    
 # Complex Types
 Fonts: TypeAlias = dict[str, ImageFont.ImageFont]
 
