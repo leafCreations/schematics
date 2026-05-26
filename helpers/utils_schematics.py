@@ -4,10 +4,25 @@ from PIL import Image, ImageChops
 import helpers.utils as utils
 from helpers.types import BackgroundColor, Token, RawToken
 
+def get_blockstate_value(blockstate: str | None, key: str) -> str | None:
+    if not blockstate:
+        return None
+
+    for part in blockstate.split(","):
+        name, _, value = part.partition("=")
+
+        if name.strip() == key:
+            return value.strip()
+
+    return None
+
 def resolve_schematic_token(raw_token: RawToken) -> tuple[Token, str | None]:
     """Return (base_token, direction) for schematic rendering/counting.
 
-    Direction comes only from BLOCK_REGISTRY[token]["schematic"]["direction"].
+    Direction priority:
+    1. schematic.direction override
+    2. minecraft.blockstate facing value
+    3. None
     """
 
     token = raw_token.split("@")[0]
@@ -17,12 +32,26 @@ def resolve_schematic_token(raw_token: RawToken) -> tuple[Token, str | None]:
 
     entry = BLOCK_REGISTRY.get(token)
 
-    if entry:
-        schematic = entry.get("schematic", {})
-        direction = utils.normalize_direction(schematic.get("direction"))
-        return token, direction
+    if not entry:
+        return token, None
 
-    return token, None
+    schematic = entry.get("schematic", {})
+
+    # Optional manual override for special render cases.
+    schematic_direction = utils.normalize_direction(
+        schematic.get("direction")
+    )
+
+    if schematic_direction is not None:
+        return token, schematic_direction
+
+    minecraft = entry.get("minecraft", {})
+    blockstate = minecraft.get("blockstate")
+
+    facing = get_blockstate_value(blockstate, "facing")
+    direction = utils.normalize_direction(facing)
+
+    return token, direction
 
 def show_interior_view(token: Token) -> bool:
     """Return whether this block should appear in interior/path overlays.
