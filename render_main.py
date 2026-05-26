@@ -5,7 +5,7 @@ import helpers.constants as constants
 
 from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
 from helpers.context import SchematicContext
-from helpers.types import Renders
+from helpers.types import RenderList
 
 from renderers import structure_facades, top_view, materials, path_view, roof, site_facades
 from registries.loader import BLOCK_REGISTRY
@@ -15,7 +15,7 @@ from registries.loader import compile_texture_set
 random.seed(42)
 
 # --- MASTER PIPELINE RUNNER WRAPPER ---
-def build_stage_complete_schematics(structure: str, stage: int, renders: Renders = None):
+def build_stage_complete_schematics(structure: str, stage: int, renders: RenderList = None):
     if renders is None:
         renders = [constants.RENDER_ALL]    
 
@@ -44,8 +44,8 @@ def build_stage_complete_schematics(structure: str, stage: int, renders: Renders
         output_dir=OUTPUT_SCHEMATICS_FOLDER / config["output_folder"]
     )
     
-    ctx.topdown_textures = compile_texture_set("top", ctx.assets_dir, block_px=30)
-    ctx.sideview_textures = compile_texture_set("side", ctx.assets_dir, block_px=30)
+    ctx.topdown_textures = compile_texture_set(constants.TEXTURE_TOP, ctx.assets_dir, block_px=30)
+    ctx.sideview_textures = compile_texture_set(constants.TEXTURE_SIDE, ctx.assets_dir, block_px=30)
     
     # 1. Define the specific sub-folder path   
     target_path = ctx.output_dir
