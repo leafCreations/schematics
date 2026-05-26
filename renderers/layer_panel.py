@@ -75,7 +75,7 @@ def _draw_layer_panel(img, draw, ctx: SchematicContext, layer: int, panel: Floor
 
         for x in range(ctx.struct_w):
             raw_token = tokens[x] if x < len(tokens) else "."
-            token, _direction = schematics_utils.resolve_schematic_token(raw_token)
+            token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
             bx = sx + (x * block_px)
             by = sy + (z * block_px)
@@ -96,7 +96,7 @@ def _draw_block_cell(img, draw, ctx: SchematicContext, raw_token: RawToken, toke
 
     if token in ctx.topdown_textures:
         draw.rectangle(rect, outline=(230, 230, 230))
-        schematics_utils.paste_schematic_token(
+        schematics_utils.paste_topdown_token(
             img,
             ctx.topdown_textures,
             raw_token,
@@ -167,10 +167,10 @@ def _get_panel_position(index: int, layout: FloorBlueprintLayout) -> FloorBluepr
         
     return panel
     
-def _draw_layer_header(draw, layerName: int, sx: int, sy: int, fonts: Fonts):
+def _draw_layer_header(draw, layer_name: int, sx: int, sy: int, fonts: Fonts):
     draw.text(
         (sx, sy - 40),
-        f"Layer Y={layerName}",
+        f"Layer Y={layer_name}",
         fill="black",
         font=fonts["layer"]
     )

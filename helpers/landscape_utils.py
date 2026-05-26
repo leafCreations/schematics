@@ -66,7 +66,7 @@ def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
             global_z = ctx.offset_z + local_z
             for local_x in range(ctx.struct_w):
                 global_x = ctx.offset_x + local_x
-                t, _direction = schematics_utils.resolve_schematic_token(tokens[local_x])
+                t, _direction = schematics_utils.resolve_token_for_render(tokens[local_x])
                 if t != "." and schematics_utils.show_interior_view(t):
                     site_map[y][global_z][global_x] = t
     return site_map

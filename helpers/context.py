@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from helpers.types import MappedTextureImages
+from helpers.types import BlockRegistryEntry, MappedTextureImages
 
 @dataclass
 class SchematicContext:
@@ -23,7 +23,7 @@ class SchematicContext:
     floor_map: dict[str, list[int]]
     
     #registries
-    block_registry: dict
+    block_registry: dict[str, BlockRegistryEntry]
     
     #paths
     assets_dir: Path

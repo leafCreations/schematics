@@ -105,6 +105,19 @@ class MinecraftBlock(TypedDict):
     block: str
     blockstate: NotRequired[str | None]
     
+class SchematicBlockData(TypedDict, total=False):
+    top_texture: str
+    side_texture: str
+    direction: str
+    background_color: list[int]
+    showInteriorView: bool
+
+class BlockRegistryEntry(TypedDict, total=False):
+    minecraft: MinecraftBlock
+    schematic: SchematicBlockData
+    display_name: str
+    category: str
+    
 # Complex Types
 Fonts: TypeAlias = dict[str, ImageFont.ImageFont]
 

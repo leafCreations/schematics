@@ -1,4 +1,5 @@
 import helpers.utils_schematics as schematics_utils
+import helpers.utils as utils
 
 from helpers.context import SchematicContext
 from PIL import Image, ImageDraw
@@ -125,10 +126,10 @@ def _find_first_visible_token_along_z(
 ):
     for z in z_range:
         raw_token = _get_raw_token(ctx, layer_y, z, x)
-        token, _direction = schematics_utils.resolve_schematic_token(raw_token)
+        token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
         if token != ".":
-            return raw_token.split("@")[0]
+            return utils.get_base_token(raw_token)
 
     return "."
 
@@ -140,10 +141,10 @@ def _find_first_visible_token_along_x(
 ):
     for x in x_range:
         raw_token = _get_raw_token(ctx, layer_y, z, x)
-        token, _direction = schematics_utils.resolve_schematic_token(raw_token)
+        token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
         if token != ".":
-            return raw_token.split("@")[0]
+            return utils.get_base_token(raw_token)
 
     return "."
 
@@ -229,7 +230,7 @@ def _draw_structure_elevation_panel(
 
         for col in range(tokens_count):
             raw_token = tokens[col] if col < len(tokens) else "."
-            token, _direction = schematics_utils.resolve_schematic_token(raw_token)
+            token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
             bx = current_x + (col * layout["block_px"])
             by = current_y + (pixel_row * layout["block_px"])
@@ -273,7 +274,7 @@ def _draw_structure_elevation_cell(
         )
         return
 
-    rendered = schematics_utils.paste_side_view_token(
+    rendered = schematics_utils.paste_sideview_token(
         img,
         ctx.sideview_textures,
         raw_token,

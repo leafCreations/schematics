@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 
 from helpers.context import SchematicContext
-from helpers.types import BlockId
+from helpers.types import BlockId, RawToken, Token
 from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER, OUTPUT_WORLDS_FOLDER, TEMPLATE_FOLDER
 import helpers.constants as constants
 
@@ -57,6 +57,9 @@ def load_structure_config(structure: str, stage: int) -> SchematicContext:
     
 
     return ctx
+
+def get_base_token(raw_token: RawToken) -> Token:
+    return raw_token.split("@", 1)[0]
 
 # --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---
 def split_block_id(block_id: BlockId) -> tuple[str, str]:

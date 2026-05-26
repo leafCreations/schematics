@@ -1,8 +1,6 @@
-import os
 import sys
 import shutil
 
-from helpers.paths import ASSET_FOLDER, OUTPUT_WORLDS_FOLDER, TEMPLATE_FOLDER
 from helpers.context import SchematicContext
 from helpers.types import MinecraftBlock
 import helpers.utils as utils
@@ -76,7 +74,7 @@ def generate_minecraft_world(ctx: SchematicContext):
 
             for x_idx, token_raw in enumerate(tokens):
                 global_x = ctx.offset_x + x_idx
-                token = token_raw.split("@")[0]
+                token = utils.get_base_token(token_raw)
 
                 if token == "." or token not in ctx.block_registry:
                     continue

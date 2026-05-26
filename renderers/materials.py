@@ -11,7 +11,7 @@ def _collect_material_tokens(ctx: SchematicContext) -> RawTokenMaterialsList:
             for raw_token in row.split():
 
                 token, _direction = (
-                    schematics_utils.resolve_schematic_token(raw_token)
+                    schematics_utils.resolve_token_for_render(raw_token)
                 )
 
                 if token != ".":

@@ -16,7 +16,7 @@ def get_blockstate_value(blockstate: str | None, key: str) -> str | None:
 
     return None
 
-def resolve_schematic_token(raw_token: RawToken) -> tuple[Token, str | None]:
+def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
     """Return (base_token, direction) for schematic rendering/counting.
 
     Direction priority:
@@ -25,7 +25,7 @@ def resolve_schematic_token(raw_token: RawToken) -> tuple[Token, str | None]:
     3. None
     """
 
-    token = raw_token.split("@")[0]
+    token = utils.get_base_token(raw_token)
 
     if token == ".":
         return ".", None
@@ -67,13 +67,13 @@ def show_interior_view(token: Token) -> bool:
     schematic = entry.get("schematic", {})
     return schematic.get("showInteriorView", True) is not False
 
-def paste_schematic_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
+def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
     """Paste a token texture using the raw token, not the stripped base token.
 
     Any schematic token with a parsed direction will rotate.
     Tokens without direction render in their default orientation.
     """
-    base_token, direction = resolve_schematic_token(raw_token)
+    base_token, direction = resolve_token_for_render(raw_token)
 
     if base_token not in textures:
         return False
@@ -163,11 +163,11 @@ SIDE_VIEW_TORCH_BACKING_BY_VIEW = {
 
 SIDE_VIEW_TORCH_TOKENS = {"in", "is", "ie", "iw", "it"}
 
-def paste_side_view_token(img, textures, raw_token: RawToken, xy, block_px, view_key=None) -> bool:
+def paste_sideview_token(img, textures, raw_token: RawToken, xy, block_px, view_key=None) -> bool:
     x, y = xy
 
-    base_token, direction = resolve_schematic_token(raw_token)
-    token = raw_token.split("@")[0]
+    base_token, direction = resolve_token_for_render(raw_token)
+    token = utils.get_base_token(raw_token)
 
     if token in SIDE_VIEW_TORCH_TOKENS:
         should_show_backing = token in SIDE_VIEW_TORCH_BACKING_BY_VIEW.get(view_key, set())

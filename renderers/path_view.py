@@ -71,11 +71,11 @@ def _draw_path_layer_panel(
     layer_y: int,
     panel: PathPanel,
     layout: PathLayout,
-    siteLayer: SiteLayer
+    site_layer: SiteLayer
 ):
     for z in range(ctx.site_size):
         for x in range(ctx.site_size):
-            cell = _resolve_path_cell(ctx, layer_y, x, z, siteLayer)
+            cell = _resolve_path_cell(ctx, layer_y, x, z, site_layer)
             _draw_path_cell(img, draw, ctx, cell, x, z, panel, layout)
             
 def _resolve_path_cell(
@@ -83,9 +83,9 @@ def _resolve_path_cell(
     layer_y: int,
     x: int,
     z: int,
-    siteLayer: SiteLayer
+    site_layer: SiteLayer
 ) -> Cell:
-    base_token = siteLayer[z][x]
+    base_token = site_layer[z][x]
     
     cell = Cell(
         base_token=base_token,
@@ -129,7 +129,7 @@ def _get_structure_overlay_token(
         return "."
 
     raw_token = _get_structure_raw_token(ctx, layer_y, lx, lz)
-    token, _direction = schematics_utils.resolve_schematic_token(raw_token)
+    token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
     if not schematics_utils.show_interior_view(token):
         return "."
@@ -330,7 +330,7 @@ def _build_path_output_path(ctx: SchematicContext) -> str:
 
 def render_path_focused_blueprint(ctx: SchematicContext):
     layout = _build_path_layout(ctx)
-    siteLayer = landscape_utils.generate_landscape_y_minus_1_sitelayer(ctx)
+    site_layer = landscape_utils.generate_landscape_y_minus_1_sitelayer(ctx)
 
     img, draw = _create_path_image(layout)
 
@@ -348,7 +348,7 @@ def render_path_focused_blueprint(ctx: SchematicContext):
             layer_y,
             panel,
             layout,
-            siteLayer
+            site_layer
         )
 
     output_path = _build_path_output_path(ctx)
