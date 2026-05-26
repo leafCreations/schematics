@@ -295,7 +295,7 @@ def _draw_structure_elevation_cell(
     
 def _build_structure_elevation_output_path(ctx: SchematicContext):
     return (
-        ctx.output_dir
+        ctx.output_schematics_dir
         / f"{ctx.name.lower().replace(' ', '_')}_structure_facades.png"
     )
     

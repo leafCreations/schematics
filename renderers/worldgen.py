@@ -17,183 +17,26 @@ from amulet.level.formats.anvil_world import AnvilFormat
 
 from registries.loader import BLOCK_REGISTRY
 
-# --- ENGINE CONFIGURATIONS ---
-#STRUCT_W = 9
-#STRUCT_H = 10
-#STRUCT_OFFSET_X = 10
-#STRUCT_OFFSET_Z = 4
-
-STAIR = "half=bottom,waterlogged=false"
-
-BLOCK_PALETTE = {
-    "G": Block("minecraft", "grass_block"),
-    "C": Block("minecraft", "cobblestone"),
-    "M": Block("minecraft", "mossy_cobblestone"),
-    "L": Block.from_string_blockstate("minecraft:oak_log[axis=y]"),
-    "LS": Block.from_string_blockstate("minecraft:oak_log[axis=x]"),
-    "P": Block("minecraft", "oak_planks"),    
-    "F": Block.from_string_blockstate("minecraft:furnace[facing=west]"),
-    "T": Block("minecraft", "crafting_table"),
-    "cf": Block.from_string_blockstate(
-        "minecraft:campfire[facing=north,lit=false,signal_fire=false,waterlogged=false]"
-    ),
-
-    # FENCE
-    ## no connections
-    "o": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=false,east=false,south=false,west=false,waterlogged=false]"
-    ),
-
-    ## single connections
-    "on": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=true,east=false,south=false,west=false,waterlogged=false]"
-    ),
-    "oe": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=false,east=true,south=false,west=false,waterlogged=false]"
-    ),
-    "os": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=false,east=false,south=true,west=false,waterlogged=false]"
-    ),
-    "ow": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=false,east=false,south=false,west=true,waterlogged=false]"
-    ),
-
-    ## two-way connections
-    "ons": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=true,east=false,south=true,west=false,waterlogged=false]"
-    ),
-    "oew": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=false,east=true,south=false,west=true,waterlogged=false]"
-    ),
-
-    ## corners
-    "one": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=true,east=true,south=false,west=false,waterlogged=false]"
-    ),
-    "onw": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=true,east=false,south=false,west=true,waterlogged=false]"
-    ),
-    "ose": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=false,east=true,south=true,west=false,waterlogged=false]"
-    ),
-    "osw": Block.from_string_blockstate(
-        "minecraft:oak_fence[north=false,east=false,south=true,west=true,waterlogged=false]"
-    ),
-
-    # STAIRS
-    ## straight sides
-    "sn": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=north,shape=straight,{STAIR}]"),
-    "ss": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=south,shape=straight,{STAIR}]"),
-    "se": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=east,shape=straight,{STAIR}]"),
-    "sw": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=west,shape=straight,{STAIR}]"),
-
-    ## roof outer corners
-    "sn_ol": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=north,shape=outer_left,{STAIR}]"),
-    "sn_or": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=north,shape=outer_right,{STAIR}]"),
-    "ss_ol": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=south,shape=outer_left,{STAIR}]"),
-    "ss_or": Block.from_string_blockstate(f"minecraft:oak_stairs[facing=south,shape=outer_right,{STAIR}]"),
-    "l": Block.from_string_blockstate(
-        "minecraft:oak_slab[type=bottom,waterlogged=false]"
-    ),
-
-    # TORCHES
-    "it": Block.from_string_blockstate("minecraft:torch"),
-    "in": Block.from_string_blockstate("minecraft:wall_torch[facing=north]"),
-    "is": Block.from_string_blockstate("minecraft:wall_torch[facing=south]"),
-    "ie": Block.from_string_blockstate("minecraft:wall_torch[facing=east]"),
-    "iw": Block.from_string_blockstate("minecraft:wall_torch[facing=west]"),    
-
-    # DOOR
-    "dt": Block.from_string_blockstate(
-        "minecraft:oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]"
-    ),
-    "db": Block.from_string_blockstate(
-    "minecraft:oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]"
-    ),
-
-    # CHEST
-    "xn_l": Block.from_string_blockstate(
-        "minecraft:chest[facing=north,type=left,waterlogged=false]"
-    ),
-    "xn_r": Block.from_string_blockstate(
-        "minecraft:chest[facing=north,type=right,waterlogged=false]"
-    ),
-
-    "xs_l": Block.from_string_blockstate(
-        "minecraft:chest[facing=south,type=left,waterlogged=false]"
-    ),
-    "xs_r": Block.from_string_blockstate(
-        "minecraft:chest[facing=south,type=right,waterlogged=false]"
-    ),
-
-    "xe_l": Block.from_string_blockstate(
-        "minecraft:chest[facing=east,type=left,waterlogged=false]"
-    ),
-    "xe_r": Block.from_string_blockstate(
-        "minecraft:chest[facing=east,type=right,waterlogged=false]"
-    ),
-
-    "xw_l": Block.from_string_blockstate(
-        "minecraft:chest[facing=west,type=left,waterlogged=false]"
-    ),
-    "xw_r": Block.from_string_blockstate(
-        "minecraft:chest[facing=west,type=right,waterlogged=false]"
-    ),
-
-    # BED    
-    "bn_f": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=north,part=foot,occupied=false]"
-    ),
-    "bn_h": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=north,part=head,occupied=false]"
-    ),    
-    "bs_f": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=south,part=foot,occupied=false]"
-    ),
-    "bs_h": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=south,part=head,occupied=false]"
-    ),
-    "be_f": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=east,part=foot,occupied=false]"
-    ),
-    "be_h": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=east,part=head,occupied=false]"
-    ),
-    "bw_f": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=west,part=foot,occupied=false]"
-    ),
-    "bw_h": Block.from_string_blockstate(
-        "minecraft:red_bed[facing=west,part=head,occupied=false]"
-    ),
-}
-
-def generate_minecraft_world(structure: str, stage: int = 1):    
-
-    config = utils.load_structure_config(structure, stage);
+def generate_block(token: str):
     
-    ctx = SchematicContext(
-        data=config["data"],
-        site_size=config["size"],
-        struct_w=config["struct_w"],
-        struct_h=config["struct_h"],
-        offset_x=config["offset_x"],
-        offset_z=config["offset_z"],
-        name=config["name"],
-        output_folder=config["output_folder"],
-        floor_map=config["floor_map"],
-        block_registry=BLOCK_REGISTRY,
-        assets_dir=ASSET_FOLDER / "textures/block",
-        output_dir=OUTPUT_WORLDS_FOLDER / config["output_folder"]
-    )
+    block = BLOCK_REGISTRY[token]["minecraft"]
+    block_name = block.get("block")
+    block_state = block.get("blockstate", "")
+    namespace, base_name = block_name.split(":", 1)
     
-    
-    
-    if os.path.exists(ctx.output_dir):
-        shutil.rmtree(ctx.output_dir)
-    shutil.copytree(TEMPLATE_FOLDER, ctx.output_dir)
+    if block_state:
+        return Block.from_string_blockstate(block_name + "[" + block_state + "]")
+    else:
+        return Block(namespace, base_name)
+
+def generate_minecraft_world(ctx: SchematicContext):        
+        
+    if ctx.output_worldgen_dir.exists():
+        shutil.rmtree(ctx.output_worldgen_dir)
+    shutil.copytree(ctx.worldgen_template_dir, ctx.output_worldgen_dir)
     
     # Initialize AnvilFormat directly to avoid World() initialization crashes
-    level = AnvilFormat(ctx.output_dir)
+    level = AnvilFormat(ctx.output_worldgen_dir)
 
     # 2. CRITICAL: Explicitly open the format
     # This mounts the directory and prepares the internal MCA readers
@@ -219,7 +62,7 @@ def generate_minecraft_world(structure: str, stage: int = 1):
                 global_x = ctx.offset_x + x_idx
                 token = token_raw.split("@")[0]
                 
-                if token == "." or token not in BLOCK_PALETTE:
+                if token == "." or token not in ctx.block_registry:
                     continue
                 
                 # Fetch chunk via format directly
@@ -234,7 +77,8 @@ def generate_minecraft_world(structure: str, stage: int = 1):
                     current_chunk = level.load_chunk(chunk_x, chunk_z, dimension)
                     last_coords = chunk_coords
                                 
-                block_to_place = BLOCK_PALETTE[token]                
+                block_to_place = generate_block(token)
+                
                 current_chunk.set_block(global_x % 16, actual_y, global_z % 16, block_to_place)
                 current_chunk.changed = True
                 changed_chunks[chunk_coords] = current_chunk
@@ -246,4 +90,4 @@ def generate_minecraft_world(structure: str, stage: int = 1):
     print("💾 WRITING BLOCKSTATES TO MCA REGION ARCHIVES...")
     level.save()
     level.close()
-    print(f"🎉 SUCCESS! World generated at: ./{ctx.output_dir}")
+    print(f"🎉 SUCCESS! World generated at: ./{ctx.output_worldgen_dir}")

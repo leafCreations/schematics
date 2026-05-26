@@ -6,6 +6,10 @@ from helpers.types import MappedTextureImages
 @dataclass
 class SchematicContext:
     # structure
+    structure: str
+    stage: int
+    
+    # dimensions
     data: dict[int, list[str]]
     site_size: int
     struct_w: int
@@ -17,12 +21,15 @@ class SchematicContext:
     name: str    
     output_folder: str
     floor_map: dict[str, list[int]]
+    
     #registries
     block_registry: dict
     
     #paths
     assets_dir: Path
-    output_dir: Path
+    worldgen_template_dir: Path
+    output_schematics_dir: Path
+    output_worldgen_dir: Path
     
     #textures
     topdown_textures: MappedTextureImages | None = None

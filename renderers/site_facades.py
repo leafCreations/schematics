@@ -303,7 +303,7 @@ def _draw_site_facade_cell_texture(
     
 def _build_site_facades_output_path(ctx: SchematicContext):
     return (
-        ctx.output_dir
+        ctx.output_schematics_dir
         / f"{ctx.name.lower().replace(' ', '_')}_site_facades.png"
     )
 

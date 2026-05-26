@@ -324,7 +324,7 @@ def _draw_path_cell_outline(draw, layers: Layers, is_ghost: bool):
     
 def _build_path_output_path(ctx: SchematicContext) -> str:
     return (
-        ctx.output_dir
+        ctx.output_schematics_dir
         / f"{ctx.name.lower().replace(' ', '_')}_site_topdown.png"
     )
 
