@@ -65,6 +65,13 @@ render_main.py
 ```
 
 ---
+# World Gen Requirements
+
+1. Create a new world in Minecraft 26.1 or greater.
+2. create a folder called "template"
+3. Copy the world folders/files into the template directory
+
+---
 
 # Requirements
 
@@ -186,6 +193,7 @@ build_stage_complete_schematics(
 | `path`         | Landscaping and path top-down plans |
 | `site_facades` | Site cross-section elevations       |
 | `materials`    | Material inventory sheets           |
+' `worldgen`     | Generates structure in a world      |
 | `all`          | Execute all renderers               |
 
 ---
