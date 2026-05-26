@@ -37,9 +37,9 @@ L:
 LS:
   minecraft:
     block: minecraft:oak_log
-    #blockstate: "axis=x"
-  #schematic:
-    #direction: "east"
+    blockstate: "axis=x"
+  schematic:
+    direction: "east"
   display_name: "Oak Log"
 P:
   minecraft:
