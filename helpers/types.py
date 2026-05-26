@@ -22,7 +22,7 @@ Layers: TypeAlias = list[int]
 Cell: TypeAlias = dict[str, object]
 RawTokenMaterialsList: TypeAlias = list[RawToken]
 MaterialsList: TypeAlias = list[tuple[str, int]]
-MaterialsIconList: TypeAlias = list[dict[str, Token]]
+MaterialsIconList: TypeAlias = dict[str, Token]
 
 # Structured Types
 class FloorBlueprintLayout(TypedDict): 
@@ -95,6 +95,12 @@ class MaterialsLayout(TypedDict):
     padding: int
     img_w: int
     img_h: int
+    
+class Cell(TypedDict):
+    base_token: Token
+    active_token: Token
+    is_ground_layer: bool
+    is_ghost: bool
     
 # Complex Types
 Fonts: TypeAlias = dict[str, ImageFont.ImageFont]

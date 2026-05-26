@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from helpers.types import MappedTextureImages
+
 @dataclass
 class SchematicContext:
     # structure
-    data: dict
+    data: dict[int, list[str]]
     site_size: int
     struct_w: int
     struct_h: int
@@ -14,7 +16,7 @@ class SchematicContext:
     # metadata
     name: str    
     output_folder: str
-    floor_map: dict
+    floor_map: dict[str, list[int]]
     #registries
     block_registry: dict
     
@@ -23,7 +25,7 @@ class SchematicContext:
     output_dir: Path
     
     #textures
-    topdown_textures: dict | None = None
-    sideview_textures: dict | None = None
+    topdown_textures: MappedTextureImages | None = None
+    sideview_textures: MappedTextureImages | None = None
     
     
