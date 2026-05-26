@@ -14,6 +14,8 @@ if venv_site:
 
 from amulet.api.block import Block
 from amulet.level.formats.anvil_world import AnvilFormat
+from amulet.api.errors import ChunkDoesNotExist
+from amulet.api.chunk import Chunk
 
 from registries.loader import BLOCK_REGISTRY
 
@@ -75,7 +77,11 @@ def generate_minecraft_world(ctx: SchematicContext):
                     if current_chunk is not None:
                         level.commit_chunk(current_chunk, dimension)
 
-                    current_chunk = level.load_chunk(chunk_x, chunk_z, dimension)
+                    try:
+                        current_chunk = level.load_chunk(chunk_x, chunk_z, dimension)
+                    except ChunkDoesNotExist:
+                        current_chunk = Chunk(chunk_x, chunk_z)
+                    
                     last_coords = chunk_coords
 
                 block_to_place = generate_block(token)
