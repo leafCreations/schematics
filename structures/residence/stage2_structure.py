@@ -30,7 +30,7 @@ STRUCTURE_DATA = {
         "P . . . . . . . P . . is . . P",
         "ons . . . . . . . . . . . . . osn",
         "P . . . . . . . P . . . . . P",
-        "L P owe P dtn P owe  P L P P owe P P L",
+        "L P oew P dtn P oew  P L P P oew P P L",
         ". . . . . . . . . . . . . . .  ."],
     3: [
         "L P P P P P P P L P P P P P L",

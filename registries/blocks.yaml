@@ -37,9 +37,9 @@ L:
 LS:
   minecraft:
     block: minecraft:oak_log
-    blockstate: "axis=x"
-  schematic:
-    direction: "east"
+    #blockstate: "axis=x"
+  #schematic:
+    #direction: "east"
   display_name: "Oak Log"
 P:
   minecraft:
@@ -50,8 +50,7 @@ F:
     block: minecraft:furnace
     blockstate: "facing=west"
   schematic:
-    top_texture: "furnace_front.png"
-    direction: "west"
+    top_texture: "furnace_front.png"    
     background_color: [80, 80, 80]
     showInteriorView: False
   display_name: "Furnace"
@@ -115,48 +114,42 @@ dts:
     block: minecraft:oak_door
     blockstate: "facing=south,half=upper,hinge=left,open=false"
   schematic:
-    top_texture: "oak_door_top.png"
-    direction: "south"
+    top_texture: "oak_door_top.png"    
   display_name: "Oak Door"
 dbs:
   minecraft:
     block: minecraft:oak_door
     blockstate: "facing=south,half=lower,hinge=left,open=false"
   schematic:
-    top_texture: "oak_door_bottom.png"
-    direction: "south"
+    top_texture: "oak_door_bottom.png"    
   display_name: "Oak Door"
 dte:
   minecraft:
     block: minecraft:oak_door
     blockstate: "facing=east,half=upper,hinge=left,open=false"
   schematic:
-    top_texture: "oak_door_top.png"
-    direction: "east"
+    top_texture: "oak_door_top.png"    
   display_name: "Oak Door"
 dbe:
   minecraft:
     block: minecraft:oak_door
     blockstate: "facing=east,half=lower,hinge=left,open=false"
   schematic:
-    top_texture: "oak_door_bottom.png"
-    direction: "east"
+    top_texture: "oak_door_bottom.png"    
   display_name: "Oak Door"
 dtw:
   minecraft:
     block: minecraft:oak_door
     blockstate: "facing=west,half=upper,hinge=left,open=false"
   schematic:
-    top_texture: "oak_door_top.png"
-    direction: "west"
+    top_texture: "oak_door_top.png"    
   display_name: "Oak Door"
 dbw:
   minecraft:
     block: minecraft:oak_door
     blockstate: "facing=west,half=lower,hinge=left,open=false"
   schematic:  
-    top_texture: "oak_door_bottom.png"
-    direction: "west" 
+    top_texture: "oak_door_bottom.png"    
   display_name: "Oak Door"
 # Fences have a more complex blockstate with multiple boolean properties, 
 # so we use separate tokens for each connection configuration.
@@ -172,8 +165,8 @@ ons:
     block: minecraft:oak_fence
     blockstate: "north=true,east=false,south=true,west=false"
   schematic:
-    top_texture: "/custom/oak_fence_side.png"
-    direction: "west"
+    top_texture: "/custom/oak_fence_side.png"    
+    direction: "east"
   display_name: "Oak Fence"
   category: "fence"
 osn:
@@ -181,8 +174,8 @@ osn:
     block: minecraft:oak_fence
     blockstate: "north=true,east=false,south=true,west=false"
   schematic:
-    top_texture: "/custom/oak_fence_side.png"
-    direction: "east"
+    top_texture: "/custom/oak_fence_side.png"        
+    direction: "west"
   display_name: "Oak Fence"
   category: "fence"
 oew:
@@ -190,7 +183,7 @@ oew:
     block: minecraft:oak_fence
     blockstate: "north=false,east=true,south=false,west=true"
   schematic:
-    top_texture: "/custom/oak_fence_side.png"
+    top_texture: "/custom/oak_fence_side.png"        
     direction: "south"
   display_name: "Oak Fence"
   category: "fence"
@@ -199,8 +192,7 @@ owe:
     block: minecraft:oak_fence
     blockstate: "north=false,east=true,south=false,west=true"
   schematic:
-    top_texture: "/custom/oak_fence_side.png"
-    direction: "north"
+    top_texture: "/custom/oak_fence_side.png"        
   display_name: "Oak Fence"
   category: "fence"
 
@@ -218,8 +210,7 @@ sn:
     block: minecraft:oak_stairs
     blockstate: "facing=north,half=bottom,shape=straight"
   schematic:
-    top_texture: "/custom/oak_stairs_top.png"
-    direction: "north"
+    top_texture: "/custom/oak_stairs_top.png"    
   display_name: "Oak Stairs"
   category: "stairs"
 ss:
@@ -227,8 +218,7 @@ ss:
     block: minecraft:oak_stairs
     blockstate: "facing=south,half=bottom,shape=straight"
   schematic:
-    top_texture: "/custom/oak_stairs_top.png"
-    direction: "south"
+    top_texture: "/custom/oak_stairs_top.png"    
   display_name: "Oak Stairs"
   category: "stairs"
 se:
@@ -236,8 +226,7 @@ se:
     block: minecraft:oak_stairs
     blockstate: "facing=east,half=bottom,shape=straight"
   schematic:
-    top_texture: "/custom/oak_stairs_top.png"
-    direction: "east"
+    top_texture: "/custom/oak_stairs_top.png"    
   display_name: "Oak Stairs"
   category: "stairs"
 sw:
@@ -245,8 +234,7 @@ sw:
     block: minecraft:oak_stairs
     blockstate: "facing=west,half=bottom,shape=straight"
   schematic:
-    top_texture: "/custom/oak_stairs_top.png"
-    direction: "west"
+    top_texture: "/custom/oak_stairs_top.png"    
   display_name: "Oak Stairs"
   category: "stairs"
 sn_ol:
@@ -254,7 +242,7 @@ sn_ol:
     block: minecraft:oak_stairs
     blockstate: "facing=north,half=bottom,shape=outer_left"
   schematic:
-    top_texture: "/custom/oak_stairs_outer_left.png"    
+    top_texture: "/custom/oak_stairs_outer_left.png"        
   display_name: "Oak Stairs"
   category: "stairs"
 sn_or:
@@ -262,8 +250,8 @@ sn_or:
     block: minecraft:oak_stairs
     blockstate: "facing=north,half=bottom,shape=outer_right"
   schematic:
-    top_texture: "/custom/oak_stairs_outer_left.png"   
-    direction: "east" 
+    top_texture: "/custom/oak_stairs_outer_left.png"    
+    direction: "west"   
   display_name: "Oak Stairs"
   category: "stairs"
 ss_ol:
@@ -271,8 +259,7 @@ ss_ol:
     block: minecraft:oak_stairs
     blockstate: "facing=south,half=bottom,shape=outer_left"
   schematic:
-    top_texture: "/custom/oak_stairs_outer_left.png"    
-    direction: "south"
+    top_texture: "/custom/oak_stairs_outer_left.png"        
   display_name: "Oak Stairs"
   category: "stairs"
 ss_or:
@@ -280,8 +267,8 @@ ss_or:
     block: minecraft:oak_stairs
     blockstate: "facing=south,half=bottom,shape=outer_right"
   schematic:
-    top_texture: "/custom/oak_stairs_outer_left.png"
-    direction: "west"
+    top_texture: "/custom/oak_stairs_outer_left.png"    
+    direction: "east"
   display_name: "Oak Stairs"
   category: "stairs"
 # Beds have separate tokens for each half, since they use the "part" blockstate property
@@ -311,8 +298,7 @@ bsh:
     blockstate: "facing=south,part=head,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_top.png"
-    background_color: [200, 50, 50]
-    direction: "south"
+    background_color: [200, 50, 50]    
     showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
@@ -322,8 +308,7 @@ bsf:
     blockstate: "facing=south,part=foot,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_bottom.png"
-    background_color: [200, 50, 50]
-    direction: "south"
+    background_color: [200, 50, 50]    
     showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
@@ -333,8 +318,7 @@ bwh:
     blockstate: "facing=west,part=head,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_top.png"
-    background_color: [200, 50, 50]
-    direction: "west"
+    background_color: [200, 50, 50]    
     showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
@@ -344,8 +328,7 @@ bwf:
     blockstate: "facing=west,part=foot,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_bottom.png"
-    background_color: [200, 50, 50]
-    direction: "west"
+    background_color: [200, 50, 50]    
     showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
@@ -355,8 +338,7 @@ beh:
     blockstate: "facing=east,part=head,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_top.png"
-    background_color: [200, 50, 50]
-    direction: "east"
+    background_color: [200, 50, 50]    
     showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
@@ -366,8 +348,7 @@ bef:
     blockstate: "facing=east,part=foot,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_bottom.png"
-    background_color: [200, 50, 50]
-    direction: "east"
+    background_color: [200, 50, 50]    
     showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
@@ -399,8 +380,7 @@ xsl:
     blockstate: "facing=south,type=left"
   schematic:
     top_texture: "/custom/double_chest_left.png"
-    background_color: [140, 100, 45]
-    direction: "south"
+    background_color: [140, 100, 45]    
     showInteriorView: False
   display_name: "Chest"
   category: "chest"
@@ -410,8 +390,7 @@ xsr:
     blockstate: "facing=south,type=right"
   schematic:
     top_texture: "/custom/double_chest_right.png"
-    background_color: [140, 100, 45]
-    direction: "south"
+    background_color: [140, 100, 45]    
     showInteriorView: False
   display_name: "Chest"
   category: "chest"
@@ -421,8 +400,7 @@ xel:
     blockstate: "facing=east,type=left"
   schematic:
     top_texture: "/custom/double_chest_left.png"
-    background_color: [140, 100, 45]
-    direction: "east"
+    background_color: [140, 100, 45]    
     showInteriorView: False
   display_name: "Chest"
   category: "chest"
@@ -432,8 +410,7 @@ xer:
     blockstate: "facing=east,type=right"
   schematic:
     top_texture: "/custom/double_chest_right.png"
-    background_color: [140, 100, 45]
-    direction: "east"
+    background_color: [140, 100, 45]    
     showInteriorView: False
   display_name: "Chest"
   category: "chest"
@@ -443,8 +420,7 @@ xwl:
     blockstate: "facing=west,type=left"
   schematic:
     top_texture: "/custom/double_chest_left.png"
-    background_color: [140, 100, 45]
-    direction: "west"
+    background_color: [140, 100, 45]    
     showInteriorView: False
   display_name: "Chest"
   category: "chest"
@@ -454,8 +430,7 @@ xwr:
     blockstate: "facing=west,type=right"
   schematic:
     top_texture: "/custom/double_chest_right.png"
-    background_color: [140, 100, 45]
-    direction: "west"
+    background_color: [140, 100, 45]    
     showInteriorView: False
   display_name: "Chest"
   category: "chest"

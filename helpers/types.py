@@ -1,6 +1,6 @@
 # helpers/types.py
 
-from typing import TypeAlias, TypedDict
+from typing import TypeAlias, TypedDict, NotRequired
 from PIL import Image, ImageFont
 
 # Simple Aliases
@@ -103,7 +103,7 @@ class Cell(TypedDict):
     
 class MinecraftBlock(TypedDict):
     block: str
-    blockstate: str | None
+    blockstate: NotRequired[str | None]
     
 # Complex Types
 Fonts: TypeAlias = dict[str, ImageFont.ImageFont]
