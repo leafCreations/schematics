@@ -7,9 +7,7 @@ G:
   display_name: "Grass Block"
 d:
   minecraft:
-    block: minecraft:dirt
-  schematic:
-    top_texture: "dirt.png"    
+    block: minecraft:dirt  
   display_name: "Dirt"
 dp:
   minecraft:
@@ -19,9 +17,7 @@ dp:
   display_name: "Dirt Path"
 g:
   minecraft:
-    block: minecraft:gravel    
-  schematic:
-    top_texture: "gravel.png"    
+    block: minecraft:gravel      
   display_name: "Gravel"
 C:
   minecraft:
@@ -55,6 +51,7 @@ F:
     blockstate: "facing=west"
   schematic:
     top_texture: "furnace_front.png"
+    direction: "west"
     background_color: [80, 80, 80]
     showInteriorView: False
   display_name: "Furnace"
@@ -381,7 +378,7 @@ xnl:
     block: minecraft:chest
     blockstate: "facing=north,type=left"
   schematic:
-    top_texture: "/custom/double_chest_right.png"
+    top_texture: "/custom/double_chest_left.png"
     background_color: [140, 100, 45]
     showInteriorView: False
   display_name: "Chest"
@@ -391,7 +388,7 @@ xnr:
     block: minecraft:chest
     blockstate: "facing=north,type=right"
   schematic:
-    top_texture: "/custom/double_chest_left.png"
+    top_texture: "/custom/double_chest_right.png"
     background_color: [140, 100, 45]
     showInteriorView: False
   display_name: "Chest"
