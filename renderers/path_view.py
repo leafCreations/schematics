@@ -2,9 +2,9 @@ import helpers.utils_schematics as schematics_utils
 import helpers.landscape_utils as landscape_utils
 from helpers.context import SchematicContext
 from PIL import Image, ImageDraw
-from helpers.types import RawToken, Token, Layout, Panel, BackgroundColor, Rect, Cell
+from helpers.types import PathLayout, PathPanel, RawToken, SiteLayer, Token, BackgroundColor, Layers,  Cell
 
-def _build_path_layout(ctx: SchematicContext) -> Layout:
+def _build_path_layout(ctx: SchematicContext) -> PathLayout:
     block_px = 30
     padding = 50
     top_margin = 80
@@ -14,18 +14,20 @@ def _build_path_layout(ctx: SchematicContext) -> Layout:
 
     img_w = (panel_dim * len(layers)) + (padding * (len(layers) + 1))
     img_h = top_margin + panel_dim + 80
-
-    return {
-        "block_px": block_px,
-        "padding": padding,
-        "top_margin": top_margin,
-        "layers": layers,
-        "panel_dim": panel_dim,
-        "img_w": img_w,
-        "img_h": img_h,
-    }
     
-def _create_path_image(layout: Layout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+    layout = PathLayout(
+        block_px=block_px,
+        padding=padding,
+        top_margin=top_margin,
+        layers=layers,
+        panel_dim=panel_dim,
+        img_w=img_w,
+        img_h=img_h
+    )
+
+    return layout
+
+def _create_path_image(layout: PathLayout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     img = Image.new(
         "RGB",
         (layout["img_w"], layout["img_h"]),
@@ -36,21 +38,21 @@ def _create_path_image(layout: Layout) -> tuple[Image.Image, ImageDraw.ImageDraw
 
     return img, draw
 
-def _draw_path_layer_header(draw, layer_y: int, panel: Panel):
+def _draw_path_layer_header(draw, layer_y: int, panel: PathPanel):
     draw.text(
         (panel["sx"], panel["sy"] - 22),
         f"PROPERTY TOP-DOWN BLUEPRINT -> LAYER Y={layer_y}",
         fill=(40, 40, 40)
     )
     
-def _draw_path_title(draw, layout: Layout):
+def _draw_path_title(draw, layout: PathLayout):
     draw.text(
         (layout["padding"], 20),
         "LANDSCAPING SITE MAP PLANS - PATHWAY SECTORS & ALIGNMENT BUFFERS",
         fill=(30, 30, 30)
     )
 
-def _get_path_panel_position(col_idx: int, layout: Layout) -> Panel:
+def _get_path_panel_position(col_idx: int, layout: PathLayout) -> PathPanel:
     sx = layout["padding"] + col_idx * (
         layout["panel_dim"] + layout["padding"]
     )
@@ -67,13 +69,13 @@ def _draw_path_layer_panel(
     draw,
     ctx: SchematicContext,
     layer_y: int,
-    panel: Panel,
-    layout: Layout,
-    y_minus_1: list[list[RawToken]]
+    panel: PathPanel,
+    layout: PathLayout,
+    siteLayer: SiteLayer
 ):
     for z in range(ctx.site_size):
         for x in range(ctx.site_size):
-            cell = _resolve_path_cell(ctx, layer_y, x, z, y_minus_1)
+            cell = _resolve_path_cell(ctx, layer_y, x, z, siteLayer)
             _draw_path_cell(img, draw, ctx, cell, x, z, panel, layout)
             
 def _resolve_path_cell(
@@ -81,9 +83,9 @@ def _resolve_path_cell(
     layer_y: int,
     x: int,
     z: int,
-    y_minus_1: list[list[RawToken]]
+    siteLayer: SiteLayer
 ) -> Cell:
-    base_token = y_minus_1[z][x]
+    base_token = siteLayer[z][x]
 
     cell = {
         "base_token": base_token,
@@ -205,8 +207,8 @@ def _draw_path_cell(
     cell: Cell,
     x: int,
     z: int,
-    panel: Panel,
-    layout: Layout
+    panel: PathPanel,
+    layout: PathLayout
 ):
     block_px = layout["block_px"]
 
@@ -238,14 +240,14 @@ def _draw_path_cell(
         cell["is_ghost"]
     )
     
-def _draw_base_path_cell(draw, base_token: str, rect: Rect) -> BackgroundColor:
+def _draw_base_path_cell(draw, base_token: Token, layers: Layers) -> BackgroundColor:
     base_background_color = schematics_utils.get_background_color(
         base_token,
         default=(245, 245, 245)
     )
 
     draw.rectangle(
-        rect,
+        layers,
         fill=base_background_color
     )
 
@@ -256,7 +258,7 @@ def _draw_active_path_cell(
     draw,
     ctx: SchematicContext,
     cell: Cell,
-    rect: Rect,
+    layers: Layers,
     bx: int,
     by: int,
     base_background_color: BackgroundColor
@@ -276,7 +278,7 @@ def _draw_active_path_cell(
 
     if active_token != "." and not cell["is_ground_layer"]:
         draw.rectangle(
-            rect,
+            layers,
             fill=schematics_utils.get_background_color(
                 active_token,
                 default=base_background_color
@@ -286,7 +288,7 @@ def _draw_active_path_cell(
 def _paste_active_path_texture(
     img,
     ctx: SchematicContext,
-    active_token: str,
+    active_token: Token,
     bx: int,
     by: int,
     is_ghost: bool
@@ -314,9 +316,9 @@ def _paste_active_path_texture(
         tex if tex.mode == "RGBA" else None
     )
     
-def _draw_path_cell_outline(draw, rect: Rect, is_ghost: bool):
+def _draw_path_cell_outline(draw, layers: Layers, is_ghost: bool):
     draw.rectangle(
-        rect,
+        layers,
         outline=(40, 40, 40, 12 if is_ghost else 25)
     )
     
@@ -328,7 +330,7 @@ def _build_path_output_path(ctx: SchematicContext) -> str:
 
 def render_path_focused_blueprint(ctx: SchematicContext):
     layout = _build_path_layout(ctx)
-    y_minus_1 = landscape_utils.generate_landscape_y_minus_1_cache(ctx)
+    siteLayer = landscape_utils.generate_landscape_y_minus_1_sitelayer(ctx)
 
     img, draw = _create_path_image(layout)
 
@@ -346,7 +348,7 @@ def render_path_focused_blueprint(ctx: SchematicContext):
             layer_y,
             panel,
             layout,
-            y_minus_1
+            siteLayer
         )
 
     output_path = _build_path_output_path(ctx)

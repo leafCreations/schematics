@@ -1,9 +1,9 @@
 from helpers.context import SchematicContext
 import helpers.utils_schematics as schematics_utils
 from PIL import Image, ImageDraw, ImageFont
-from helpers.types import RawToken, Token, Layout, Fonts
+from helpers.types import MaterialsIconList, MaterialsList, RawTokenMaterialsList, Token, MaterialsLayout, Fonts
 
-def _collect_material_tokens(ctx: SchematicContext) -> list[RawToken]:
+def _collect_material_tokens(ctx: SchematicContext) -> RawTokenMaterialsList:
     raw_tokens = []
 
     for _layer_y, rows in ctx.data.items():
@@ -19,7 +19,7 @@ def _collect_material_tokens(ctx: SchematicContext) -> list[RawToken]:
 
     return raw_tokens
 
-def _build_material_layout(materials: list[RawToken]) -> Layout:
+def _build_material_layout(materials: RawTokenMaterialsList) -> MaterialsLayout:    
 
     row_h = 42
     header_h = 110
@@ -31,15 +31,17 @@ def _build_material_layout(materials: list[RawToken]) -> Layout:
         360,
         header_h + (len(materials) * row_h) + footer_h
     )
+    
+    layout = MaterialsLayout(
+        row_h=row_h,
+        heading_h=header_h,
+        footer_h=footer_h,
+        padding=padding,
+        img_w=img_w,
+        img_h=img_h
+    )
 
-    return {
-        "row_h": row_h,
-        "header_h": header_h,
-        "footer_h": footer_h,
-        "padding": padding,
-        "img_w": img_w,
-        "img_h": img_h,
-    }
+    return layout        
     
 def _load_material_fonts() -> Fonts:
 
@@ -76,7 +78,7 @@ def _load_material_fonts() -> Fonts:
 
     return fonts
 
-def _create_material_image(layout: Layout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+def _create_material_image(layout: MaterialsLayout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
 
     img = Image.new(
         "RGB",
@@ -91,7 +93,7 @@ def _create_material_image(layout: Layout) -> tuple[Image.Image, ImageDraw.Image
 def _draw_material_header(
     draw,
     ctx: SchematicContext,
-    layout: Layout,
+    layout: MaterialsLayout,
     fonts: Fonts
 ):
 
@@ -136,15 +138,15 @@ def _draw_material_rows(
     img,
     draw,
     ctx: SchematicContext,
-    materials: list[tuple[str, int]],
-    material_icons: dict[str, Token],
-    layout: Layout,
+    materials_list: MaterialsList,
+    material_icons: MaterialsIconList,
+    layout: MaterialsLayout,
     fonts: Fonts
 ):
 
-    y = layout["header_h"]
+    y = layout["heading_h"]
 
-    for idx, (group_name, count) in enumerate(materials):
+    for idx, (group_name, count) in enumerate(materials_list):
 
         _draw_material_row_background(
             draw,
@@ -179,7 +181,7 @@ def _draw_material_row_background(
     draw,
     idx: int,
     y: int,
-    layout: Layout
+    layout: MaterialsLayout
 ):
 
     if idx % 2 != 0:
@@ -205,7 +207,7 @@ def _draw_material_icon(
     ctx: SchematicContext,
     icon_token: Token,
     y: int,
-    layout: Layout
+    layout: MaterialsLayout
 ):
 
     padding = layout["padding"]
@@ -242,7 +244,7 @@ def _draw_material_text(
     group_name: str,
     count: int,
     y: int,
-    layout: Layout,
+    layout: MaterialsLayout,
     fonts: Fonts
 ):
 
@@ -265,7 +267,7 @@ def _draw_material_text(
     
 def _draw_material_footer(
     draw,
-    layout: Layout,
+    layout: MaterialsLayout,
     fonts: Fonts
 ):
 

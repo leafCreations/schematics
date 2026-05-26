@@ -1,5 +1,6 @@
 import random
 from helpers.context import SchematicContext
+from helpers.types import SiteLayer, SiteMap
 import helpers.utils_schematics as schematics_utils
 
 # Landscaping Rules
@@ -10,7 +11,7 @@ LIGHTING_SPACING = 7
 LIGHTING_START_OFFSET = 10
 
 
-def _get_random_path_block():
+def _get_random_path_block() -> str:
     roll = random.random()
     if roll < 0.60: return "dp"
     elif roll < 0.75: return "g"
@@ -18,8 +19,8 @@ def _get_random_path_block():
     elif roll < 0.97: return "C"
     else: return "M"
 
-def generate_landscape_y_minus_1_cache(ctx: SchematicContext):
-    grid = [["G" for _ in range(ctx.site_size)] for _ in range(ctx.site_size)]
+def generate_landscape_y_minus_1_sitelayer(ctx: SchematicContext) -> SiteLayer:
+    grid: SiteLayer = [["G" for _ in range(ctx.site_size)] for _ in range(ctx.site_size)]
     stair_global_center_x = ctx.offset_x + 4
     stair_global_bottom_z = ctx.offset_z + (ctx.struct_h - 1)
     path_start_z = stair_global_bottom_z + 1
@@ -34,9 +35,9 @@ def generate_landscape_y_minus_1_cache(ctx: SchematicContext):
             elif trim_left <= x <= trim_right: grid[z][x] = TRIM_BLOCK
     return grid
 
-def generate_full_3d_landscape_cache(ctx: SchematicContext):
-    site_map = {y: [["." for _ in range(ctx.site_size)] for _ in range(ctx.site_size)] for y in [-1, 0, 1]}
-    y_minus_1 = generate_landscape_y_minus_1_cache(ctx)
+def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
+    site_map: SiteMap = {y: [["." for _ in range(ctx.site_size)] for _ in range(ctx.site_size)] for y in [-1, 0, 1]}
+    y_minus_1 = generate_landscape_y_minus_1_sitelayer(ctx)
     
     stair_global_center_x = ctx.offset_x + 4
     stair_global_bottom_z = ctx.offset_z + (ctx.struct_h - 1)

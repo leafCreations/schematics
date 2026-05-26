@@ -2,7 +2,7 @@ from typing import Counter
 from registries.loader import BLOCK_REGISTRY
 from PIL import Image, ImageChops
 import helpers.utils as utils
-from helpers.types import Token, RawToken
+from helpers.types import BackgroundColor, Token, RawToken
 
 def resolve_schematic_token(raw_token: RawToken) -> Token:
     """Return (base_token, direction) for schematic rendering/counting.
@@ -65,7 +65,7 @@ def paste_schematic_token(img, textures, raw_token: RawToken, xy, size=None, dra
 
     return True
 
-def get_background_color(token: Token, default=(245, 245, 245)) -> tuple[int, int, int] | None:
+def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundColor | None:
     entry = BLOCK_REGISTRY.get(token, {})
     schematic = entry.get("schematic", {})
 

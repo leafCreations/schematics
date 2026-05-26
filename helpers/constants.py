@@ -5,3 +5,6 @@ RENDER_PATH = "path"
 RENDER_SITE_FACADES = "site_facades"
 RENDER_MATERIALS = "materials"
 RENDER_ALL = "all"
+
+TEXTURE_TOP = "top"
+TEXTURE_SIDE = "side"

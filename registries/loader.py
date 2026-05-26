@@ -1,6 +1,7 @@
 import os
 import yaml
 from pathlib import Path
+from helpers.types import MappedTextureImages, MappedTextureNames, TextureType
 import helpers.utils as utils
 from PIL import Image
 
@@ -9,7 +10,7 @@ REGISTRY_PATH = Path(__file__).parent / "blocks.yaml"
 with open(REGISTRY_PATH, "r") as f:
     BLOCK_REGISTRY = yaml.safe_load(f)
     
-def _resolve_registry_texture(entry, texture_type="top"):
+def _resolve_registry_texture(entry, texture_type: TextureType = "top") -> str | None:
     """Resolve a texture from registry data.
 
     Priority:
@@ -29,11 +30,10 @@ def _resolve_registry_texture(entry, texture_type="top"):
 
     return utils.default_texture_name(block_id)
 
-def _build_registry_texture_mapping(texture_type="top"):
+def _build_registry_texture_mapping(texture_type: TextureType = "top") -> MappedTextureNames:
     mapping = {}
 
-    for raw_token, entry in BLOCK_REGISTRY.items():
-        schematic = entry.get("schematic", {})
+    for raw_token, entry in BLOCK_REGISTRY.items():        
         texture_name = _resolve_registry_texture(entry, texture_type)
 
         if texture_name:
@@ -41,7 +41,11 @@ def _build_registry_texture_mapping(texture_type="top"):
 
     return mapping
 
-def compile_texture_set(texture_type, assets_dir, block_px):
+def compile_texture_set(
+    texture_type: TextureType, 
+    assets_dir: str, 
+    block_px: int) -> MappedTextureImages:
+    
     mapping = _build_registry_texture_mapping(texture_type)
     loaded = {}
 
