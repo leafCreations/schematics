@@ -55,39 +55,43 @@ def generate_minecraft_world(ctx: SchematicContext):
 
     for layer_y, lines in ctx.data.items():
         actual_y = base_y + layer_y
+
         for z_idx, line in enumerate(lines):
             tokens = line.split()
             global_z = ctx.offset_z + z_idx
+
             for x_idx, token_raw in enumerate(tokens):
                 global_x = ctx.offset_x + x_idx
                 token = token_raw.split("@")[0]
-                
+
                 if token == "." or token not in ctx.block_registry:
                     continue
-                
-                # Fetch chunk via format directly
+
                 chunk_x = global_x // 16
                 chunk_z = global_z // 16
                 chunk_coords = (chunk_x, chunk_z)
 
-                changed_chunks = {}
-                
                 if chunk_coords != last_coords:
-                    # 'load_chunk' is available in your API version
+                    if current_chunk is not None:
+                        level.commit_chunk(current_chunk, dimension)
+
                     current_chunk = level.load_chunk(chunk_x, chunk_z, dimension)
                     last_coords = chunk_coords
-                                
-                block_to_place = generate_block(token)
-                
-                current_chunk.set_block(global_x % 16, actual_y, global_z % 16, block_to_place)
-                current_chunk.changed = True
-                changed_chunks[chunk_coords] = current_chunk
 
-                for coords, chunk in changed_chunks.items():
-                    level.commit_chunk(current_chunk, dimension)                
-                
-                    
+                block_to_place = generate_block(token)
+
+                current_chunk.set_block(
+                    global_x % 16,
+                    actual_y,
+                    global_z % 16,
+                    block_to_place,
+                )
+                current_chunk.changed = True
+
+    if current_chunk is not None:
+        level.commit_chunk(current_chunk, dimension)
+
     print("💾 WRITING BLOCKSTATES TO MCA REGION ARCHIVES...")
     level.save()
-    level.close()
+    level.close()               
     print(f"🎉 SUCCESS! World generated at: ./{ctx.output_worldgen_dir}")

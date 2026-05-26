@@ -10,7 +10,7 @@ import helpers.constants as constants
 from registries.loader import BLOCK_REGISTRY
 from registries.loader import compile_texture_set
 
-def load_structure_config(structure: str, stage: int) -> dict:
+def load_structure_config(structure: str, stage: int) -> SchematicContext:
     
     structure_file = f"structures/{structure}/stage{stage}_structure.py"
     
@@ -57,8 +57,6 @@ def load_structure_config(structure: str, stage: int) -> dict:
     
 
     return ctx
-
-from pathlib import Path
 
 # --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---
 def split_block_id(block_id: BlockId) -> tuple[str, str]:

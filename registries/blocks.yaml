@@ -52,6 +52,7 @@ P:
 F:
   minecraft:
     block: minecraft:furnace
+    blockstate: "facing=west"
   schematic:
     top_texture: "furnace_front.png"
     background_color: [80, 80, 80]
@@ -98,19 +99,67 @@ iw:
   category: "torch"
 # Doors have separate tokens for upper and lower halves, 
 # since they use the "half" blockstate property to determine their position.
-dt:
+dtn:
+  minecraft:
+    block: minecraft:oak_door
+    blockstate: "facing=north,half=upper,hinge=left,open=false"
+  schematic:
+    top_texture: "oak_door_top.png"
+  display_name: "Oak Door"
+dbn:
+  minecraft:
+    block: minecraft:oak_door
+    blockstate: "facing=north,half=lower,hinge=left,open=false"
+  schematic:
+    top_texture: "oak_door_bottom.png"
+  display_name: "Oak Door"
+dts:
+  minecraft:
+    block: minecraft:oak_door
+    blockstate: "facing=south,half=upper,hinge=left,open=false"
+  schematic:
+    top_texture: "oak_door_top.png"
+    direction: "south"
+  display_name: "Oak Door"
+dbs:
+  minecraft:
+    block: minecraft:oak_door
+    blockstate: "facing=south,half=lower,hinge=left,open=false"
+  schematic:
+    top_texture: "oak_door_bottom.png"
+    direction: "south"
+  display_name: "Oak Door"
+dte:
   minecraft:
     block: minecraft:oak_door
     blockstate: "facing=east,half=upper,hinge=left,open=false"
   schematic:
     top_texture: "oak_door_top.png"
+    direction: "east"
   display_name: "Oak Door"
-db:
+dbe:
   minecraft:
     block: minecraft:oak_door
     blockstate: "facing=east,half=lower,hinge=left,open=false"
   schematic:
     top_texture: "oak_door_bottom.png"
+    direction: "east"
+  display_name: "Oak Door"
+dtw:
+  minecraft:
+    block: minecraft:oak_door
+    blockstate: "facing=west,half=upper,hinge=left,open=false"
+  schematic:
+    top_texture: "oak_door_top.png"
+    direction: "west"
+  display_name: "Oak Door"
+dbw:
+  minecraft:
+    block: minecraft:oak_door
+    blockstate: "facing=west,half=lower,hinge=left,open=false"
+  schematic:  
+    top_texture: "oak_door_bottom.png"
+    direction: "west" 
   display_name: "Oak Door"
 # Fences have a more complex blockstate with multiple boolean properties, 
 # so we use separate tokens for each connection configuration.
