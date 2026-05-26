@@ -1,11 +1,10 @@
-import random
-
 import helpers.utils_schematics as schematics_utils
 import helpers.landscape_utils as landscape_utils
 from helpers.context import SchematicContext
 from PIL import Image, ImageDraw
+from helpers.types import RawToken, Token, Layout, Panel, BackgroundColor, Rect, Cell
 
-def _build_path_layout(ctx: SchematicContext):
+def _build_path_layout(ctx: SchematicContext) -> Layout:
     block_px = 30
     padding = 50
     top_margin = 80
@@ -26,7 +25,7 @@ def _build_path_layout(ctx: SchematicContext):
         "img_h": img_h,
     }
     
-def _create_path_image(layout: dict):
+def _create_path_image(layout: Layout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     img = Image.new(
         "RGB",
         (layout["img_w"], layout["img_h"]),
@@ -37,21 +36,21 @@ def _create_path_image(layout: dict):
 
     return img, draw
 
-def _draw_path_layer_header(draw, layer_y: int, panel: dict):
+def _draw_path_layer_header(draw, layer_y: int, panel: Panel):
     draw.text(
         (panel["sx"], panel["sy"] - 22),
         f"PROPERTY TOP-DOWN BLUEPRINT -> LAYER Y={layer_y}",
         fill=(40, 40, 40)
     )
     
-def _draw_path_title(draw, layout: dict):
+def _draw_path_title(draw, layout: Layout):
     draw.text(
         (layout["padding"], 20),
         "LANDSCAPING SITE MAP PLANS - PATHWAY SECTORS & ALIGNMENT BUFFERS",
         fill=(30, 30, 30)
     )
 
-def _get_path_panel_position(col_idx: int, layout: dict):
+def _get_path_panel_position(col_idx: int, layout: Layout) -> Panel:
     sx = layout["padding"] + col_idx * (
         layout["panel_dim"] + layout["padding"]
     )
@@ -68,9 +67,9 @@ def _draw_path_layer_panel(
     draw,
     ctx: SchematicContext,
     layer_y: int,
-    panel: dict,
-    layout: dict,
-    y_minus_1: list
+    panel: Panel,
+    layout: Layout,
+    y_minus_1: list[list[RawToken]]
 ):
     for z in range(ctx.site_size):
         for x in range(ctx.site_size):
@@ -82,8 +81,8 @@ def _resolve_path_cell(
     layer_y: int,
     x: int,
     z: int,
-    y_minus_1: list
-):
+    y_minus_1: list[list[RawToken]]
+) -> Cell:
     base_token = y_minus_1[z][x]
 
     cell = {
@@ -120,7 +119,7 @@ def _get_structure_overlay_token(
     layer_y: int,
     x: int,
     z: int
-):
+) -> Token:
     lx = x - ctx.offset_x
     lz = z - ctx.offset_z
 
@@ -130,12 +129,12 @@ def _get_structure_overlay_token(
     raw_token = _get_structure_raw_token(ctx, layer_y, lx, lz)
     token, _direction = schematics_utils.resolve_schematic_token(raw_token)
 
-    if token in landscape_utils.INTERIOR_FILTER_LIST:
+    if not schematics_utils.show_interior_view(token):
         return "."
 
     return token
 
-def _is_inside_structure(ctx: SchematicContext, lx: int, lz: int):
+def _is_inside_structure(ctx: SchematicContext, lx: int, lz: int) -> bool:
     return (
         0 <= lx < ctx.struct_w
         and 0 <= lz < ctx.struct_h
@@ -146,7 +145,7 @@ def _get_structure_raw_token(
     layer_y: int,
     lx: int,
     lz: int
-):
+) -> RawToken:
     if layer_y not in ctx.data:
         return "."
 
@@ -165,7 +164,7 @@ def _get_lighting_overlay_token(
     layer_y: int,
     x: int,
     z: int
-):
+) -> Token:
     if layer_y == 0:
         lighting_token = "o"
     elif layer_y == 1:
@@ -181,7 +180,7 @@ def _get_lighting_overlay_token(
 
     return lighting_token
 
-def _is_lighting_row(ctx: SchematicContext, z: int):
+def _is_lighting_row(ctx: SchematicContext, z: int) -> bool:
     relative_z = z - (ctx.offset_z + ctx.struct_h)
 
     return (
@@ -191,7 +190,7 @@ def _is_lighting_row(ctx: SchematicContext, z: int):
         ) % landscape_utils.LIGHTING_SPACING == 0
     )
     
-def _is_lighting_column(ctx: SchematicContext, x: int):
+def _is_lighting_column(ctx: SchematicContext, x: int) -> bool:
     stair_center_x = ctx.offset_x + 4
 
     return (
@@ -203,11 +202,11 @@ def _draw_path_cell(
     img,
     draw,
     ctx: SchematicContext,
-    cell: dict,
+    cell: Cell,
     x: int,
     z: int,
-    panel: dict,
-    layout: dict
+    panel: Panel,
+    layout: Layout
 ):
     block_px = layout["block_px"]
 
@@ -239,7 +238,7 @@ def _draw_path_cell(
         cell["is_ghost"]
     )
     
-def _draw_base_path_cell(draw, base_token: str, rect: list):
+def _draw_base_path_cell(draw, base_token: str, rect: Rect) -> BackgroundColor:
     base_background_color = schematics_utils.get_background_color(
         base_token,
         default=(245, 245, 245)
@@ -256,11 +255,11 @@ def _draw_active_path_cell(
     img,
     draw,
     ctx: SchematicContext,
-    cell: dict,
-    rect: list,
+    cell: Cell,
+    rect: Rect,
     bx: int,
     by: int,
-    base_background_color
+    base_background_color: BackgroundColor
 ):
     active_token = cell["active_token"]
 
@@ -315,13 +314,13 @@ def _paste_active_path_texture(
         tex if tex.mode == "RGBA" else None
     )
     
-def _draw_path_cell_outline(draw, rect: list, is_ghost: bool):
+def _draw_path_cell_outline(draw, rect: Rect, is_ghost: bool):
     draw.rectangle(
         rect,
         outline=(40, 40, 40, 12 if is_ghost else 25)
     )
     
-def _build_path_output_path(ctx: SchematicContext):
+def _build_path_output_path(ctx: SchematicContext) -> str:
     return (
         ctx.output_dir
         / f"{ctx.name.lower().replace(' ', '_')}_site_topdown.png"

@@ -55,6 +55,7 @@ F:
   schematic:
     top_texture: "furnace_front.png"
     background_color: [80, 80, 80]
+    showInteriorView: False
   display_name: "Furnace"
 T:
   minecraft:
@@ -62,6 +63,7 @@ T:
   schematic:
     top_texture: "crafting_table_top.png"
     background_color: [120, 85, 50]
+    showInteriorView: False
   display_name: "Crafting Table"
 # Torches have separate tokens for each facing direction, 
 # since they use the "facing" blockstate property to determine their orientation.
@@ -118,7 +120,7 @@ o:
 ons:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=true,east=false,south=true,west=false"
+    blockstate: "north=true,east=False,south=true,west=False"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "west"
@@ -127,7 +129,7 @@ ons:
 osn:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=true,east=false,south=true,west=false"
+    blockstate: "north=true,east=False,south=true,west=False"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "east"
@@ -136,7 +138,7 @@ osn:
 oew:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=false,east=true,south=false,west=true"
+    blockstate: "north=False,east=true,south=False,west=true"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "south"
@@ -145,7 +147,7 @@ oew:
 owe:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=false,east=true,south=false,west=true"
+    blockstate: "north=False,east=true,south=False,west=true"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "north"
@@ -236,79 +238,87 @@ ss_or:
 bnh:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=north,part=head,occupied=false"
+    blockstate: "facing=north,part=head,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_top.png"
     background_color: [200, 50, 50]
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 bnf:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=north,part=foot,occupied=false"
+    blockstate: "facing=north,part=foot,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_bottom.png"
     background_color: [200, 50, 50]
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 bsh:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=south,part=head,occupied=false"
+    blockstate: "facing=south,part=head,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_top.png"
     background_color: [200, 50, 50]
     direction: "south"
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 bsf:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=south,part=foot,occupied=false"
+    blockstate: "facing=south,part=foot,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_bottom.png"
     background_color: [200, 50, 50]
     direction: "south"
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 bwh:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=west,part=head,occupied=false"
+    blockstate: "facing=west,part=head,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_top.png"
     background_color: [200, 50, 50]
     direction: "west"
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 bwf:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=west,part=foot,occupied=false"
+    blockstate: "facing=west,part=foot,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_bottom.png"
     background_color: [200, 50, 50]
     direction: "west"
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 beh:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=east,part=head,occupied=false"
+    blockstate: "facing=east,part=head,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_top.png"
     background_color: [200, 50, 50]
     direction: "east"
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 bef:
   minecraft:
     block: minecraft:red_bed
-    blockstate: "facing=east,part=foot,occupied=false"
+    blockstate: "facing=east,part=foot,occupied=False"
   schematic:
     top_texture: "/custom/red_bed_bottom.png"
     background_color: [200, 50, 50]
     direction: "east"
+    showInteriorView: False
   display_name: "Red Bed"
   category: "bed"
 # Double chests have separate tokens for left and right halves, 
@@ -320,6 +330,7 @@ xnl:
   schematic:
     top_texture: "/custom/double_chest_right.png"
     background_color: [140, 100, 45]
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"
 xnr:
@@ -329,6 +340,7 @@ xnr:
   schematic:
     top_texture: "/custom/double_chest_left.png"
     background_color: [140, 100, 45]
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"
 xsl:
@@ -339,6 +351,7 @@ xsl:
     top_texture: "/custom/double_chest_left.png"
     background_color: [140, 100, 45]
     direction: "south"
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"
 xsr:
@@ -349,6 +362,7 @@ xsr:
     top_texture: "/custom/double_chest_right.png"
     background_color: [140, 100, 45]
     direction: "south"
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"
 xel:
@@ -359,6 +373,7 @@ xel:
     top_texture: "/custom/double_chest_left.png"
     background_color: [140, 100, 45]
     direction: "east"
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"
 xer:
@@ -369,6 +384,7 @@ xer:
     top_texture: "/custom/double_chest_right.png"
     background_color: [140, 100, 45]
     direction: "east"
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"
 xwl:
@@ -379,6 +395,7 @@ xwl:
     top_texture: "/custom/double_chest_left.png"
     background_color: [140, 100, 45]
     direction: "west"
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"
 xwr:
@@ -389,5 +406,6 @@ xwr:
     top_texture: "/custom/double_chest_right.png"
     background_color: [140, 100, 45]
     direction: "west"
+    showInteriorView: False
   display_name: "Chest"
   category: "chest"

@@ -4,12 +4,11 @@ import helpers.utils_schematics as schematics_utils
 
 # Landscaping Rules
 PATH_WIDTH = 3
-TRIM_BLOCK = "g"
+TRIM_BLOCK = "g" # Gravel Block for path trim
 TRIM_WIDTH = 1
 LIGHTING_SPACING = 7
 LIGHTING_START_OFFSET = 10
 
-INTERIOR_FILTER_LIST = ["B1", "B2", "T", "F", "X1", "X2"]
 
 def _get_random_path_block():
     roll = random.random()
@@ -67,5 +66,6 @@ def generate_full_3d_landscape_cache(ctx: SchematicContext):
             for local_x in range(ctx.struct_w):
                 global_x = ctx.offset_x + local_x
                 t, _direction = schematics_utils.resolve_schematic_token(tokens[local_x])
-                if t != "." and t not in INTERIOR_FILTER_LIST: site_map[y][global_z][global_x] = t
+                if t != "." and schematics_utils.show_interior_view(t):
+                    site_map[y][global_z][global_x] = t
     return site_map

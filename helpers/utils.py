@@ -1,8 +1,9 @@
 import importlib.util
 from pathlib import Path
 from PIL import Image
+from helpers.types import BlockId
 
-def load_structure_config(structure, stage):
+def load_structure_config(structure: str, stage: int) -> dict:
     
     structure_file = f"structures/{structure}/stage{stage}_structure.py"
     
@@ -30,14 +31,14 @@ def load_structure_config(structure, stage):
 from pathlib import Path
 
 # --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---
-def split_block_id(block_id):
+def split_block_id(block_id: BlockId) -> tuple[str, str]:
     """Return (namespace, block_name) from a Minecraft block id."""
     if ":" not in block_id:
         return "minecraft", block_id
     return block_id.split(":", 1)
 
 
-def default_texture_name(block_id):
+def default_texture_name(block_id: BlockId) -> str:
     """Resolve minecraft:oak_planks -> oak_planks.png.
 
     This intentionally strips the namespace so future modded blocks can use
@@ -47,7 +48,7 @@ def default_texture_name(block_id):
     _namespace, block_name = split_block_id(block_id)
     return f"{block_name}.png"
 
-def normalize_direction(direction):
+def normalize_direction(direction: str | None) -> str | None:
     if direction is None:
         return None
 
@@ -66,7 +67,7 @@ def normalize_direction(direction):
 
     return direction_aliases.get(direction)
 
-def rotate_directional_texture(texture, direction):
+def rotate_directional_texture(texture: Image.Image, direction: str | None) -> Image.Image:
     """Rotate a square top-down asset so token direction is visible in schematics.
 
     Assumption: source assets are drawn in NORTH orientation by default.

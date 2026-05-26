@@ -1,8 +1,9 @@
 from helpers.context import SchematicContext
 import helpers.utils_schematics as schematics_utils
 from PIL import Image, ImageDraw, ImageFont
+from helpers.types import RawToken, Token, Layout, Fonts
 
-def _collect_material_tokens(ctx: SchematicContext):
+def _collect_material_tokens(ctx: SchematicContext) -> list[RawToken]:
     raw_tokens = []
 
     for _layer_y, rows in ctx.data.items():
@@ -18,7 +19,7 @@ def _collect_material_tokens(ctx: SchematicContext):
 
     return raw_tokens
 
-def _build_material_layout(materials: list):
+def _build_material_layout(materials: list[RawToken]) -> Layout:
 
     row_h = 42
     header_h = 110
@@ -40,7 +41,7 @@ def _build_material_layout(materials: list):
         "img_h": img_h,
     }
     
-def _load_material_fonts():
+def _load_material_fonts() -> Fonts:
 
     fonts = {
         "title": ImageFont.load_default(),
@@ -75,7 +76,7 @@ def _load_material_fonts():
 
     return fonts
 
-def _create_material_image(layout: dict):
+def _create_material_image(layout: Layout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
 
     img = Image.new(
         "RGB",
@@ -89,9 +90,9 @@ def _create_material_image(layout: dict):
 
 def _draw_material_header(
     draw,
-    ctx,
-    layout,
-    fonts
+    ctx: SchematicContext,
+    layout: Layout,
+    fonts: Fonts
 ):
 
     padding = layout["padding"]
@@ -134,11 +135,11 @@ def _draw_material_header(
 def _draw_material_rows(
     img,
     draw,
-    ctx,
-    materials,
-    material_icons,
-    layout,
-    fonts
+    ctx: SchematicContext,
+    materials: list[tuple[str, int]],
+    material_icons: dict[str, Token],
+    layout: Layout,
+    fonts: Fonts
 ):
 
     y = layout["header_h"]
@@ -176,9 +177,9 @@ def _draw_material_rows(
         
 def _draw_material_row_background(
     draw,
-    idx,
-    y,
-    layout
+    idx: int,
+    y: int,
+    layout: Layout
 ):
 
     if idx % 2 != 0:
@@ -201,10 +202,10 @@ def _draw_material_row_background(
 def _draw_material_icon(
     img,
     draw,
-    ctx,
-    icon_token,
-    y,
-    layout
+    ctx: SchematicContext,
+    icon_token: Token,
+    y: int,
+    layout: Layout
 ):
 
     padding = layout["padding"]
@@ -238,11 +239,11 @@ def _draw_material_icon(
     
 def _draw_material_text(
     draw,
-    group_name,
-    count,
-    y,
-    layout,
-    fonts
+    group_name: str,
+    count: int,
+    y: int,
+    layout: Layout,
+    fonts: Fonts
 ):
 
     padding = layout["padding"]
@@ -264,8 +265,8 @@ def _draw_material_text(
     
 def _draw_material_footer(
     draw,
-    layout,
-    fonts
+    layout: Layout,
+    fonts: Fonts
 ):
 
     padding = layout["padding"]
@@ -289,7 +290,7 @@ def _draw_material_footer(
         font=fonts["body"]
     )
     
-def _build_material_output_path(ctx: SchematicContext):
+def _build_material_output_path(ctx: SchematicContext) -> str:
 
     return (
         ctx.output_dir

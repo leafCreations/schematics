@@ -1,9 +1,12 @@
 import random
+
 import helpers.utils as utils
 import helpers.constants as constants
 
 from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
 from helpers.context import SchematicContext
+from helpers.types import Renders
+
 from renderers import structure_facades, top_view, materials, path_view, roof, site_facades
 from registries.loader import BLOCK_REGISTRY
 from registries.loader import compile_texture_set
@@ -12,7 +15,7 @@ from registries.loader import compile_texture_set
 random.seed(42)
 
 # --- MASTER PIPELINE RUNNER WRAPPER ---
-def build_stage_complete_schematics(structure: str, stage: int, renders: list[str] = None):
+def build_stage_complete_schematics(structure: str, stage: int, renders: Renders = None):
     if renders is None:
         renders = [constants.RENDER_ALL]    
 
