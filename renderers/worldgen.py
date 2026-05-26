@@ -4,6 +4,7 @@ import shutil
 
 from helpers.paths import ASSET_FOLDER, OUTPUT_WORLDS_FOLDER, TEMPLATE_FOLDER
 from helpers.context import SchematicContext
+from helpers.types import MinecraftBlock
 import helpers.utils as utils
 
 # 1. Force Python to register active virtual environment paths safely
@@ -19,17 +20,28 @@ from amulet.api.chunk import Chunk
 
 from registries.loader import BLOCK_REGISTRY
 
-def generate_block(token: str):
+BLOCK_CACHE: dict[str, Block] = {}
+
+def generate_block(token: str) -> Block:
     
-    block = BLOCK_REGISTRY[token]["minecraft"]
+    if token in BLOCK_CACHE:
+        return BLOCK_CACHE[token]
+    
+    block: MinecraftBlock = BLOCK_REGISTRY[token]["minecraft"]
+    
     block_name = block.get("block")
-    block_state = block.get("blockstate", "")
-    namespace, base_name = block_name.split(":", 1)
+    block_state = block.get("blockstate")    
     
     if block_state:
-        return Block.from_string_blockstate(block_name + "[" + block_state + "]")
+        generated_block = Block.from_string_blockstate(
+            f"{block_name}[{block_state}]"
+        )
     else:
-        return Block(namespace, base_name)
+        namespace, base_name = block_name.split(":", 1)
+        generated_block = Block(namespace, base_name)
+    
+    BLOCK_CACHE[token] = generated_block    
+    return generated_block
 
 def generate_minecraft_world(ctx: SchematicContext):        
         
@@ -76,7 +88,8 @@ def generate_minecraft_world(ctx: SchematicContext):
                 if chunk_coords != last_coords:
                     if current_chunk is not None:
                         level.commit_chunk(current_chunk, dimension)
-
+                        #print(f"Committed chunk {chunk_x}, {chunk_z}")
+                        
                     try:
                         current_chunk = level.load_chunk(chunk_x, chunk_z, dimension)
                     except ChunkDoesNotExist:
@@ -95,7 +108,7 @@ def generate_minecraft_world(ctx: SchematicContext):
                 current_chunk.changed = True
 
     if current_chunk is not None:
-        level.commit_chunk(current_chunk, dimension)
+        level.commit_chunk(current_chunk, dimension)        
 
     print("💾 WRITING BLOCKSTATES TO MCA REGION ARCHIVES...")
     level.save()
