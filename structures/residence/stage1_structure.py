@@ -68,6 +68,8 @@ STAGE1_STRUCTURE_DATA = {
 }
 
 STRUCTURE_CONFIG = {    
+    "structure": "residence",
+    "stage": 1,
     "name": "Residence Stage 1",
     "output_folder": "stage1_residence",
     "data": STAGE1_STRUCTURE_DATA,

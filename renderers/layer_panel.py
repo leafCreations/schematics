@@ -260,7 +260,7 @@ def _build_output_path(ctx: SchematicContext, floor_name: str, page_index: int, 
         page_suffix = f"_part_{page_index}"
 
     return os.path.join(
-        ctx.output_dir,
+        ctx.output_schematics_dir,
         f"Structure_{floor_name.lower().replace(' ', '_')}{page_suffix}.png"
     )
 

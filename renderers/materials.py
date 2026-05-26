@@ -295,7 +295,7 @@ def _draw_material_footer(
 def _build_material_output_path(ctx: SchematicContext) -> str:
 
     return (
-        ctx.output_dir
+        ctx.output_schematics_dir
         / f"{ctx.name.lower().replace(' ', '_')}_materials_list.png"
     )
 

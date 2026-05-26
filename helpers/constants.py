@@ -4,6 +4,7 @@ RENDER_STRUCTURE_FACADES = "structure_facades"
 RENDER_PATH = "path"
 RENDER_SITE_FACADES = "site_facades"
 RENDER_MATERIALS = "materials"
+RENDER_WORLDGEN = "worldgen"
 RENDER_ALL = "all"
 
 TEXTURE_TOP = "top"

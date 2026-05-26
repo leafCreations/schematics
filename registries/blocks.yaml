@@ -74,25 +74,25 @@ i:
   category: "torch"
 in:
   minecraft:
-    block: minecraft:torch
+    block: minecraft:wall_torch
     blockstate: "facing=north"
   display_name: "Torch"
   category: "torch"
 is:
   minecraft:
-    block: minecraft:torch
+    block: minecraft:wall_torch
     blockstate: "facing=south"
   display_name: "Torch"
   category: "torch"
 ie:
   minecraft:
-    block: minecraft:torch
+    block: minecraft:wall_torch
     blockstate: "facing=east"
   display_name: "Torch"
   category: "torch"
 iw:
   minecraft:
-    block: minecraft:torch
+    block: minecraft:wall_torch
     blockstate: "facing=west"
   display_name: "Torch"
   category: "torch"
@@ -100,13 +100,17 @@ iw:
 # since they use the "half" blockstate property to determine their position.
 dt:
   minecraft:
-    block: minecraft:oak_door_top
-    blockstate: "half=upper"
+    block: minecraft:oak_door
+    blockstate: "facing=east,half=upper,hinge=left,open=false"
+  schematic:
+    top_texture: "oak_door_top.png"
   display_name: "Oak Door"
 db:
   minecraft:
-    block: minecraft:oak_door_bottom
-    blockstate: "half=lower"  
+    block: minecraft:oak_door
+    blockstate: "facing=east,half=lower,hinge=left,open=false"
+  schematic:
+    top_texture: "oak_door_bottom.png"
   display_name: "Oak Door"
 # Fences have a more complex blockstate with multiple boolean properties, 
 # so we use separate tokens for each connection configuration.
@@ -120,7 +124,7 @@ o:
 ons:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=true,east=False,south=true,west=False"
+    blockstate: "north=true,east=false,south=true,west=false"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "west"
@@ -129,7 +133,7 @@ ons:
 osn:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=true,east=False,south=true,west=False"
+    blockstate: "north=true,east=false,south=true,west=false"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "east"
@@ -138,7 +142,7 @@ osn:
 oew:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=False,east=true,south=False,west=true"
+    blockstate: "north=false,east=true,south=false,west=true"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "south"
@@ -147,7 +151,7 @@ oew:
 owe:
   minecraft:
     block: minecraft:oak_fence
-    blockstate: "north=False,east=true,south=False,west=true"
+    blockstate: "north=false,east=true,south=false,west=true"
   schematic:
     top_texture: "/custom/oak_fence_side.png"
     direction: "north"

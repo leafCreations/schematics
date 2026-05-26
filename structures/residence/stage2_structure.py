@@ -18,7 +18,7 @@ STRUCTURE_DATA = {
         "P . . . . . . . L P P P P P L",
         "P . . . . . . . P . . . . T P",
         "P . . . . . . . . . . . . F P",
-        "P . . . . . . . P xsl xsr . . . P",
+        "P . . . . . . . P xnl xnr . . . P",
         "L P P P db P P P L P P P P P L",
         ". . . . . . . . . . . . . . .  ."],
     2: [
@@ -30,7 +30,7 @@ STRUCTURE_DATA = {
         "P . . . . . . . P . . is . . P",
         "ons . . . . . . . . . . . . . osn",
         "P . . . . . . . P . . . . . P",
-        "L P oew P dt P oew  P L P P oew P P L",
+        "L P owe P dt P owe  P L P P owe P P L",
         ". . . . . . . . . . . . . . .  ."],
     3: [
         "L P P P P P P P L P P P P P L",
@@ -79,6 +79,8 @@ STRUCTURE_DATA = {
 }
 
 STRUCTURE_CONFIG = {    
+    "structure": "residence",
+    "stage": 2,
     "name": "Residence Stage 2",
     "output_folder": "stage2_residence",
     "data": STRUCTURE_DATA,
