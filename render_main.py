@@ -7,9 +7,10 @@ from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER
 from helpers.context import SchematicContext
 from helpers.types import RenderList
 
-from renderers import structure_facades, top_view, materials, path_view, roof, site_facades
+from renderers import structure_facades, top_view, materials, path_view, roof, site_facades, worldgen
 from registries.loader import BLOCK_REGISTRY
 from registries.loader import compile_texture_set
+
 
 # --- STATIC GLOBAL MATRIX INITIALIZATION ---
 random.seed(42)
@@ -79,6 +80,8 @@ def build_stage_complete_schematics(structure: str, stage: int, renders: RenderL
 
     if should_render(constants.RENDER_MATERIALS):
         materials.render_materials_inventory_blueprint(ctx)
+        
+    worldgen.generate_minecraft_world(structure=structure, stage=stage)
     
     print("="*70)
     print(f"🎉 ENGINE COMPLETE! Assets packed to: {target_path.resolve()}")

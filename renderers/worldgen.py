@@ -2,7 +2,8 @@ import os
 import sys
 import shutil
 
-from __init__ import OUTPUT_WORLDS_FOLDER, TEMPLATE_FOLDER
+from helpers.paths import ASSET_FOLDER, OUTPUT_WORLDS_FOLDER, TEMPLATE_FOLDER
+from helpers.context import SchematicContext
 import helpers.utils as utils
 
 # 1. Force Python to register active virtual environment paths safely
@@ -13,6 +14,8 @@ if venv_site:
 
 from amulet.api.block import Block
 from amulet.level.formats.anvil_world import AnvilFormat
+
+from registries.loader import BLOCK_REGISTRY
 
 # --- ENGINE CONFIGURATIONS ---
 #STRUCT_W = 9
@@ -164,31 +167,33 @@ BLOCK_PALETTE = {
     ),
 }
 
-def generate_minecraft_world(structure=None, stage=1):
-        
-    global STRUCTURE_DATA_3D
-    global SITE_SIZE
-    global STRUCT_W
-    global STRUCT_H
-    global STRUCT_OFFSET_X
-    global STRUCT_OFFSET_Z
+def generate_minecraft_world(structure: str, stage: int = 1):    
 
     config = utils.load_structure_config(structure, stage);
     
-    STRUCTURE_DATA_3D = config["data"]
-    STRUCT_W = config["struct_w"]
-    STRUCT_H = config["struct_h"]
-    STRUCT_OFFSET_X = config["offset_x"]
-    STRUCT_OFFSET_Z = config["offset_z"]
+    ctx = SchematicContext(
+        data=config["data"],
+        site_size=config["size"],
+        struct_w=config["struct_w"],
+        struct_h=config["struct_h"],
+        offset_x=config["offset_x"],
+        offset_z=config["offset_z"],
+        name=config["name"],
+        output_folder=config["output_folder"],
+        floor_map=config["floor_map"],
+        block_registry=BLOCK_REGISTRY,
+        assets_dir=ASSET_FOLDER / "textures/block",
+        output_dir=OUTPUT_WORLDS_FOLDER / config["output_folder"]
+    )
     
-    target_world_folder = OUTPUT_WORLDS_FOLDER / config["output_folder"]
     
-    if os.path.exists(target_world_folder):
-        shutil.rmtree(target_world_folder)
-    shutil.copytree(TEMPLATE_FOLDER, target_world_folder)
+    
+    if os.path.exists(ctx.output_dir):
+        shutil.rmtree(ctx.output_dir)
+    shutil.copytree(TEMPLATE_FOLDER, ctx.output_dir)
     
     # Initialize AnvilFormat directly to avoid World() initialization crashes
-    level = AnvilFormat(target_world_folder)
+    level = AnvilFormat(ctx.output_dir)
 
     # 2. CRITICAL: Explicitly open the format
     # This mounts the directory and prepares the internal MCA readers
@@ -205,13 +210,13 @@ def generate_minecraft_world(structure=None, stage=1):
     current_chunk = None
     last_coords = None
 
-    for layer_y, lines in STRUCTURE_DATA_3D.items():
+    for layer_y, lines in ctx.data.items():
         actual_y = base_y + layer_y
         for z_idx, line in enumerate(lines):
             tokens = line.split()
-            global_z = STRUCT_OFFSET_Z + z_idx
+            global_z = ctx.offset_z + z_idx
             for x_idx, token_raw in enumerate(tokens):
-                global_x = STRUCT_OFFSET_X + x_idx
+                global_x = ctx.offset_x + x_idx
                 token = token_raw.split("@")[0]
                 
                 if token == "." or token not in BLOCK_PALETTE:
@@ -241,12 +246,4 @@ def generate_minecraft_world(structure=None, stage=1):
     print("💾 WRITING BLOCKSTATES TO MCA REGION ARCHIVES...")
     level.save()
     level.close()
-    print(f"🎉 SUCCESS! World generated at: ./{target_world_folder}")
-
-if __name__ == "__main__":
-    my_template = os.path.join(os.getcwd(), "template")
-    my_output = os.path.join(os.getcwd(), "Residence_World")
-    generate_minecraft_world(
-        structure="residence",
-        stage=2
-    )
+    print(f"🎉 SUCCESS! World generated at: ./{ctx.output_dir}")
