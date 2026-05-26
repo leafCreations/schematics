@@ -29,7 +29,7 @@ def generate_block(token: str) -> Block:
     
     block: MinecraftBlock = BLOCK_REGISTRY[token]["minecraft"]
     
-    block_name = block.get("block")
+    block_name = block["block"]
     block_state = block.get("blockstate")    
     
     if block_state:

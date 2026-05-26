@@ -105,9 +105,9 @@ def rotate_directional_texture(texture: Image.Image, direction: str | None) -> I
     if direction is None or direction == "N":
         return texture.copy()
     if direction == "E":
-        return texture.transpose(Image.Transpose.ROTATE_270)
+        return texture.transpose(Image.Transpose.ROTATE_90)
     if direction == "S":
         return texture.transpose(Image.Transpose.ROTATE_180)
     if direction == "W":
-        return texture.transpose(Image.Transpose.ROTATE_90)
+        return texture.transpose(Image.Transpose.ROTATE_270)
     return texture.copy()
