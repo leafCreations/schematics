@@ -1,7 +1,9 @@
-assets/
 __pycache__/
-helpers/__pycache__/
+*.pyc
+assets/
 output/
-registires/__pycache__/
-renders/__pycache__/
+helpers/__pycache__/
+registries/__pycache__/
+renderers/__pycache__/
 structures/residence/__pycache__/
+experimental/
