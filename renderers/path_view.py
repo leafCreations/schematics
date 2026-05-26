@@ -86,13 +86,13 @@ def _resolve_path_cell(
     siteLayer: SiteLayer
 ) -> Cell:
     base_token = siteLayer[z][x]
-
-    cell = {
-        "base_token": base_token,
-        "active_token": ".",
-        "is_ghost": False,
-        "is_ground_layer": False,
-    }
+    
+    cell = Cell(
+        base_token=base_token,
+        active_token=".",
+        is_ghost=False,
+        is_ground_layer=False,
+    )    
 
     if layer_y == -1:
         cell["active_token"] = base_token

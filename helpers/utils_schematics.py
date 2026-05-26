@@ -4,7 +4,7 @@ from PIL import Image, ImageChops
 import helpers.utils as utils
 from helpers.types import BackgroundColor, Token, RawToken
 
-def resolve_schematic_token(raw_token: RawToken) -> Token:
+def resolve_schematic_token(raw_token: RawToken) -> tuple[Token, str | None]:
     """Return (base_token, direction) for schematic rendering/counting.
 
     Direction comes only from BLOCK_REGISTRY[token]["schematic"]["direction"].
