@@ -9,7 +9,7 @@ class SchematicContext:
     # structure
     structure: str
     stage: int
-    
+
     # dimensions
     data: dict[int, list[str]]
     site_size: int
@@ -17,22 +17,20 @@ class SchematicContext:
     struct_h: int
     offset_x: int
     offset_z: int
-    
+
     # metadata
-    name: str        
+    name: str
     floor_map: dict[str, list[int]]
-    
-    #registries
+
+    # registries
     block_registry: dict[str, BlockRegistryEntry]
-    
-    #paths
+
+    # paths
     assets_dir: Path
     worldgen_template_dir: Path
     output_schematics_dir: Path
     output_worldgen_dir: Path
-    
-    #textures
+
+    # textures
     topdown_textures: MappedTextureImages | None = None
     sideview_textures: MappedTextureImages | None = None
-    
-    

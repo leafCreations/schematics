@@ -16,9 +16,8 @@ from registries.loader import BLOCK_REGISTRY, compile_texture_set
 
 
 def load_structure_config(structure: str, stage: int) -> SchematicContext:
-    
     structure_file = f"structures/{structure}/stage{stage}_structure.py"
-    
+
     structure_path = Path(structure_file).resolve()
 
     if not structure_path.exists():
@@ -34,10 +33,8 @@ def load_structure_config(structure: str, stage: int) -> SchematicContext:
     spec.loader.exec_module(module)
 
     if not hasattr(module, "STRUCTURE_CONFIG"):
-        raise AttributeError(
-            f"{structure_path} must define STRUCTURE_CONFIG"
-        )
-        
+        raise AttributeError(f"{structure_path} must define STRUCTURE_CONFIG")
+
     ctx = SchematicContext(
         structure=module.STRUCTURE_CONFIG["structure"],
         stage=module.STRUCTURE_CONFIG["stage"],
@@ -47,23 +44,24 @@ def load_structure_config(structure: str, stage: int) -> SchematicContext:
         struct_h=module.STRUCTURE_CONFIG["struct_h"],
         offset_x=module.STRUCTURE_CONFIG["offset_x"],
         offset_z=module.STRUCTURE_CONFIG["offset_z"],
-        name=module.STRUCTURE_CONFIG["name"],        
+        name=module.STRUCTURE_CONFIG["name"],
         floor_map=module.STRUCTURE_CONFIG["floor_map"],
         block_registry=BLOCK_REGISTRY,
         assets_dir=ASSET_FOLDER / "textures/block",
         output_schematics_dir=OUTPUT_SCHEMATICS_FOLDER / module.STRUCTURE_CONFIG["output_folder"],
         output_worldgen_dir=OUTPUT_WORLDS_FOLDER / module.STRUCTURE_CONFIG["output_folder"],
-        worldgen_template_dir=TEMPLATE_FOLDER
+        worldgen_template_dir=TEMPLATE_FOLDER,
     )
-    
+
     ctx.topdown_textures = compile_texture_set(constants.TEXTURE_TOP, ctx.assets_dir, block_px=30)
     ctx.sideview_textures = compile_texture_set(constants.TEXTURE_SIDE, ctx.assets_dir, block_px=30)
-    
 
     return ctx
 
+
 def get_base_token(raw_token: RawToken) -> Token:
     return raw_token.split("@", 1)[0]
+
 
 # --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---
 def split_block_id(block_id: BlockId) -> tuple[str, str]:
@@ -83,6 +81,7 @@ def default_texture_name(block_id: BlockId) -> str:
     _namespace, block_name = split_block_id(block_id)
     return f"{block_name}.png"
 
+
 def normalize_direction(direction: str | None) -> str | None:
     if direction is None:
         return None
@@ -101,6 +100,7 @@ def normalize_direction(direction: str | None) -> str | None:
     }
 
     return direction_aliases.get(direction)
+
 
 def rotate_directional_texture(texture: Image.Image, direction: str | None) -> Image.Image:
     """Rotate a square top-down asset so token direction is visible in schematics.

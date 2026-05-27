@@ -9,7 +9,8 @@ STAGE1_STRUCTURE_DATA = {
         "M P P P P P P P M",
         "C P P P P P P P C",
         "M C M C C C M C M",
-        ". . . sn sn sn . . ."],
+        ". . . sn sn sn . . .",
+    ],
     1: [
         "L P P P P P P P L",
         "P bn_h . . . . . T P",
@@ -20,7 +21,8 @@ STAGE1_STRUCTURE_DATA = {
         "P . . . . . . xw_r P",
         "P . . . . . . xw_l P",
         "L P P P db P P P L",
-        ". . . . . . . . ."],
+        ". . . . . . . . .",
+    ],
     2: [
         "L P P P P P P P L",
         "P . . . . . . . P",
@@ -31,7 +33,8 @@ STAGE1_STRUCTURE_DATA = {
         "P . . . . . . . P",
         "P . . . . . . . P",
         "L P oew P dt P oew P L",
-        ". . . is . is . . ."],
+        ". . . is . is . . .",
+    ],
     3: [
         "L P P P P P P P L",
         "P . . . . . . . P",
@@ -42,7 +45,8 @@ STAGE1_STRUCTURE_DATA = {
         "P . . . . . . . P",
         "P . . . . . . . P",
         "L P P P P P P P L",
-        ". . . . . . . . ."],
+        ". . . . . . . . .",
+    ],
     4: [
         "ss_ol ss ss ss ss ss ss ss ss_or",
         "se . . . . . . . sw",
@@ -53,7 +57,8 @@ STAGE1_STRUCTURE_DATA = {
         "se . . . . . . . sw",
         "se . . . . . . . sw",
         "sn_or sn sn sn sn sn sn sn sn_ol",
-        ". . . . . . . . ."],
+        ". . . . . . . . .",
+    ],
     5: [
         ". . . . . . . . .",
         ". l l l l l l l .",
@@ -64,10 +69,11 @@ STAGE1_STRUCTURE_DATA = {
         ". l l l l l l l .",
         ". l l l l l l l .",
         ". . . . . . . . .",
-        ". . . . . . . . ."]
+        ". . . . . . . . .",
+    ],
 }
 
-STRUCTURE_CONFIG = {    
+STRUCTURE_CONFIG = {
     "structure": "residence",
     "stage": 1,
     "name": "Residence Stage 1",
@@ -78,8 +84,5 @@ STRUCTURE_CONFIG = {
     "struct_h": 10,
     "offset_x": 10,
     "offset_z": 4,
-    "floor_map": {
-        "Floor 1": [0, 1, 2, 3],
-        "Roof": [4, 5]
-    }
+    "floor_map": {"Floor 1": [0, 1, 2, 3], "Roof": [4, 5]},
 }

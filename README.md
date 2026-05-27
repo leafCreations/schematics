@@ -73,7 +73,31 @@ render_main.py
 
 ---
 
-# Requirements
+# Development Setup
+
+## Install Pre-Commit:
+
+```bash
+pip install ruff pre-commit
+```
+
+Install Git hooks:
+
+```bash
+pre-commit install
+```
+
+Run checks manually:
+
+```bash
+ruff check .
+ruff format .
+pre-commit run --all-files
+```
+
+The pre-commit hook will automatically run Ruff before each commit.
+
+## Requirements
 
 * Python 3.13+
 * Pillow (PIL)
@@ -142,11 +166,7 @@ render_main.py
 ```python
 from render_main import build_stage_complete_schematics
 
-build_stage_complete_schematics(
-    structure="residence",
-    stage=1,
-    renders="all"
-)
+build_stage_complete_schematics(structure="residence", stage=1, renders="all")
 ```
 
 ---
@@ -156,11 +176,7 @@ build_stage_complete_schematics(
 ```python
 from render_main import build_stage_complete_schematics
 
-build_stage_complete_schematics(
-    structure="residence",
-    stage=1,
-    renders="top_view"
-)
+build_stage_complete_schematics(structure="residence", stage=1, renders="top_view")
 ```
 
 ---
@@ -171,13 +187,7 @@ build_stage_complete_schematics(
 from render_main import build_stage_complete_schematics
 
 build_stage_complete_schematics(
-    structure="residence",
-    stage=1,
-    renders=[
-        "top_view",
-        "roof",
-        "materials"
-    ]
+    structure="residence", stage=1, renders=["top_view", "roof", "materials"]
 )
 ```
 

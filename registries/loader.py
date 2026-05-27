@@ -11,7 +11,8 @@ REGISTRY_PATH = Path(__file__).parent / "blocks.yaml"
 
 with open(REGISTRY_PATH) as f:
     BLOCK_REGISTRY = yaml.safe_load(f)
-    
+
+
 def _resolve_registry_texture(entry, texture_type: TextureType = "top") -> str | None:
     """Resolve a texture from registry data.
 
@@ -32,10 +33,13 @@ def _resolve_registry_texture(entry, texture_type: TextureType = "top") -> str |
 
     return utils.default_texture_name(block_id)
 
-def _build_registry_texture_mapping(texture_type: TextureType = "top") -> MappedTextureNames:
+
+def _build_registry_texture_mapping(
+    texture_type: TextureType = "top",
+) -> MappedTextureNames:
     mapping = {}
 
-    for raw_token, entry in BLOCK_REGISTRY.items():        
+    for raw_token, entry in BLOCK_REGISTRY.items():
         texture_name = _resolve_registry_texture(entry, texture_type)
 
         if texture_name:
@@ -43,11 +47,10 @@ def _build_registry_texture_mapping(texture_type: TextureType = "top") -> Mapped
 
     return mapping
 
+
 def compile_texture_set(
-    texture_type: TextureType, 
-    assets_dir: str, 
-    block_px: int) -> MappedTextureImages:
-    
+    texture_type: TextureType, assets_dir: str, block_px: int
+) -> MappedTextureImages:
     mapping = _build_registry_texture_mapping(texture_type)
     loaded = {}
 
@@ -55,7 +58,7 @@ def compile_texture_set(
         for folder in [
             assets_dir,
             os.path.join(assets_dir, "block_assets"),
-            os.path.join(assets_dir, "item_assets")
+            os.path.join(assets_dir, "item_assets"),
         ]:
             normalized_filename = filename.lstrip("/\\")
             path = os.path.join(folder, normalized_filename)

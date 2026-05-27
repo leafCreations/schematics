@@ -19,6 +19,7 @@ def get_blockstate_value(blockstate: str | None, key: str) -> str | None:
 
     return None
 
+
 def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
     """Return (base_token, direction) for schematic rendering/counting.
 
@@ -41,9 +42,7 @@ def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
     schematic = entry.get("schematic", {})
 
     # Optional manual override for special render cases.
-    schematic_direction = utils.normalize_direction(
-        schematic.get("direction")
-    )
+    schematic_direction = utils.normalize_direction(schematic.get("direction"))
 
     if schematic_direction is not None:
         return token, schematic_direction
@@ -55,6 +54,7 @@ def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
     direction = utils.normalize_direction(facing)
 
     return token, direction
+
 
 def show_interior_view(token: Token) -> bool:
     """Return whether this block should appear in interior/path overlays.
@@ -69,6 +69,7 @@ def show_interior_view(token: Token) -> bool:
     entry = BLOCK_REGISTRY.get(token, {})
     schematic = entry.get("schematic", {})
     return schematic.get("showInteriorView", True) is not False
+
 
 def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
     """Paste a token texture using the raw token, not the stripped base token.
@@ -89,13 +90,10 @@ def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=
     if direction is not None:
         tex = utils.rotate_directional_texture(tex, direction)
 
-    img.paste(
-        tex,
-        xy,
-        tex if tex.mode == "RGBA" else None
-    )    
+    img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
 
     return True
+
 
 def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundColor | None:
     entry = BLOCK_REGISTRY.get(token, {})
@@ -110,15 +108,13 @@ def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundCol
         hex_color = background_color.lstrip("#")
 
         if len(hex_color) == 6:
-            return tuple(
-                int(hex_color[i:i + 2], 16)
-                for i in (0, 2, 4)
-            )
+            return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
-    if isinstance(background_color, (list, tuple)) and len(background_color) == 3:
+    if isinstance(background_color, list | tuple) and len(background_color) == 3:
         return tuple(background_color)
 
     return default
+
 
 def get_display_name(token: Token) -> str:
     entry = BLOCK_REGISTRY.get(token)
@@ -127,6 +123,7 @@ def get_display_name(token: Token) -> str:
         return entry.get("display_name", token)
 
     return token
+
 
 def get_inventory_group(token: Token) -> str:
     entry = BLOCK_REGISTRY.get(token, {})
@@ -137,7 +134,10 @@ def get_inventory_group(token: Token) -> str:
 
     return get_display_name(token)
 
-def collect_inventory_counts(raw_tokens: list[RawToken]) -> tuple[Counter, dict[str, Token]]:
+
+def collect_inventory_counts(
+    raw_tokens: list[RawToken],
+) -> tuple[Counter, dict[str, Token]]:
     grouped_counts = Counter()
     group_icons = {}
 
@@ -153,9 +153,11 @@ def collect_inventory_counts(raw_tokens: list[RawToken]) -> tuple[Counter, dict[
 
     return grouped_counts, group_icons
 
+
 def material_sort_key(item: tuple[str, int]) -> str:
     token, _count = item
     return get_display_name(token).lower()
+
 
 SIDE_VIEW_TORCH_BACKING_BY_VIEW = {
     "N": {"in"},
@@ -165,6 +167,7 @@ SIDE_VIEW_TORCH_BACKING_BY_VIEW = {
 }
 
 SIDE_VIEW_TORCH_TOKENS = {"in", "is", "ie", "iw", "it"}
+
 
 def paste_sideview_token(img, textures, raw_token: RawToken, xy, block_px, view_key=None) -> bool:
     x, y = xy
@@ -179,20 +182,19 @@ def paste_sideview_token(img, textures, raw_token: RawToken, xy, block_px, view_
             img.paste(
                 textures["P"],
                 (x, y),
-                textures["P"] if textures["P"].mode == "RGBA" else None
+                textures["P"] if textures["P"].mode == "RGBA" else None,
             )
 
         if "i" in textures:
             torch_size = int(block_px * 0.60)
             offset = (block_px - torch_size) // 2
             torch_tex = textures["i"].resize(
-                (torch_size, torch_size),
-                resample=Image.Resampling.NEAREST
+                (torch_size, torch_size), resample=Image.Resampling.NEAREST
             )
             img.paste(
                 torch_tex,
                 (x + offset, y + offset),
-                torch_tex if torch_tex.mode == "RGBA" else None
+                torch_tex if torch_tex.mode == "RGBA" else None,
             )
         return True
 
@@ -200,22 +202,16 @@ def paste_sideview_token(img, textures, raw_token: RawToken, xy, block_px, view_
         tex = textures[base_token]
 
         if tex.size != (block_px, block_px):
-            tex = tex.resize(
-                (block_px, block_px),
-                resample=Image.Resampling.NEAREST
-            )
+            tex = tex.resize((block_px, block_px), resample=Image.Resampling.NEAREST)
 
         if direction is not None:
             tex = utils.rotate_directional_texture(tex, direction)
 
-        img.paste(
-            tex,
-            (x, y),
-            tex if tex.mode == "RGBA" else None
-        )
+        img.paste(tex, (x, y), tex if tex.mode == "RGBA" else None)
         return True
 
     return False
+
 
 def get_texture_for_render(token: Token, texture: Image.Image) -> Image.Image:
     background_color = get_background_color(token, default=None)
@@ -223,10 +219,6 @@ def get_texture_for_render(token: Token, texture: Image.Image) -> Image.Image:
     if background_color is None:
         return texture
 
-    solid = Image.new(
-        "RGBA",
-        texture.size,
-        tuple(background_color) + (255,)
-    )
+    solid = Image.new("RGBA", texture.size, tuple(background_color) + (255,))
 
     return ImageChops.multiply(texture, solid)

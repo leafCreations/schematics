@@ -14,7 +14,6 @@ BLOCK_CACHE: dict[str, Block] = {}
 
 
 def generate_block(token: str) -> Block:
-
     if token in BLOCK_CACHE:
         return BLOCK_CACHE[token]
 
@@ -34,7 +33,6 @@ def generate_block(token: str) -> Block:
 
 
 def generate_minecraft_world(ctx: SchematicContext):
-
     if ctx.output_worldgen_dir.exists():
         shutil.rmtree(ctx.output_worldgen_dir)
     shutil.copytree(ctx.worldgen_template_dir, ctx.output_worldgen_dir)

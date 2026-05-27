@@ -24,8 +24,9 @@ RawTokenMaterialsList: TypeAlias = list[RawToken]
 MaterialsList: TypeAlias = list[tuple[str, int]]
 MaterialsIconList: TypeAlias = dict[str, Token]
 
+
 # Structured Types
-class FloorBlueprintLayout(TypedDict): 
+class FloorBlueprintLayout(TypedDict):
     block_px: int
     padding: int
     layer_gap: int
@@ -37,7 +38,8 @@ class FloorBlueprintLayout(TypedDict):
     layer_panel_w: int
     columns: int
     layer_pages: list[list[int]]
-    
+
+
 class FloorBlueprintPanel(TypedDict):
     sx: int
     sy: int
@@ -45,7 +47,8 @@ class FloorBlueprintPanel(TypedDict):
     panel_w: int
     panel_h: int
     inventory_w: int
-    
+
+
 class PathLayout(TypedDict):
     block_px: int
     padding: int
@@ -54,39 +57,44 @@ class PathLayout(TypedDict):
     panel_dim: int
     img_w: int
     img_h: int
-    
+
+
 class PathPanel(TypedDict):
     sx: int
     sy: int
-    
+
+
 class SiteFacadeLayout(TypedDict):
     block_px: int
     padding: int
     top_margin: int
-    panel_w: int    
+    panel_w: int
     img_w: int
     img_h: int
     view_keys: list[str]
     layer_keys: list[int]
     headings: dict[str, str]
-    
+
+
 class FacadeElevations(TypedDict):
     N: LayerElevations
     S: LayerElevations
     W: LayerElevations
     E: LayerElevations
-    
+
+
 class StructureFacadeLayout(TypedDict):
-    block_px: int    
+    block_px: int
     top_margin: int
     panel_gap: int
-    panel_w: int  
-    panel_h: int      
+    panel_w: int
+    panel_h: int
     img_w: int
     img_h: int
     view_keys: list[str]
     layer_keys: list[int]
     headings: dict[str, str]
+
 
 class MaterialsLayout(TypedDict):
     row_h: int
@@ -95,17 +103,20 @@ class MaterialsLayout(TypedDict):
     padding: int
     img_w: int
     img_h: int
-    
+
+
 class Cell(TypedDict):
     base_token: Token
     active_token: Token
     is_ground_layer: bool
     is_ghost: bool
-    
+
+
 class MinecraftBlock(TypedDict):
     block: str
     blockstate: NotRequired[str | None]
-    
+
+
 class SchematicBlockData(TypedDict, total=False):
     top_texture: str
     side_texture: str
@@ -113,12 +124,13 @@ class SchematicBlockData(TypedDict, total=False):
     background_color: list[int]
     showInteriorView: bool
 
+
 class BlockRegistryEntry(TypedDict, total=False):
     minecraft: MinecraftBlock
     schematic: SchematicBlockData
     display_name: str
     category: str
-    
+
+
 # Complex Types
 Fonts: TypeAlias = dict[str, ImageFont.ImageFont]
-

@@ -9,7 +9,8 @@ STRUCTURE_DATA = {
         "C P P P P P P P P P P P P P M",
         "M P P P P P P P M P P P P P C",
         "C M C M C C M M C C M M C M C",
-        ". . . sn sn sn . . . . . . . . . ."],
+        ". . . sn sn sn . . . . . . . . . .",
+    ],
     1: [
         "L P P P P P P P L P P P P P L",
         "P . . . . . . . P . . . bef beh P",
@@ -20,7 +21,8 @@ STRUCTURE_DATA = {
         "P . . . . . . . . . . . . F P",
         "P . . . . . . . P xnl xnr . . . P",
         "L P P P dbn P P P L P P P P P L",
-        ". . . . . . . . . . . . . . .  ."],
+        ". . . . . . . . . . . . . . .  .",
+    ],
     2: [
         "L P P P P P P P L P P owe P P L",
         "P . . . . . . . P . . . . . P",
@@ -31,7 +33,8 @@ STRUCTURE_DATA = {
         "ons . . . . . . . . . . . . . osn",
         "P . . . . . . . P . . . . . P",
         "L P oew P dtn P oew  P L P P oew P P L",
-        ". . . . . . . . . . . . . . .  ."],
+        ". . . . . . . . . . . . . . .  .",
+    ],
     3: [
         "L P P P P P P P L P P P P P L",
         "P . . . . . . . P . . . . . P",
@@ -42,7 +45,8 @@ STRUCTURE_DATA = {
         "P . . . . . . . P . . . . . P",
         "P . . . . . . . P . . . . . P",
         "L P P P P P P P L P P P P P L",
-        ". . . . . . . . . . . . . . .  ."],
+        ". . . . . . . . . . . . . . .  .",
+    ],
     4: [
         "L LS LS P P P P P L P P P P P L",
         "P . . . . . . . P . . . . . P",
@@ -53,7 +57,8 @@ STRUCTURE_DATA = {
         "P . . . . . . . P . . . . . P",
         "P . . . . . . . P . . . . . P",
         "L P P P P P P P L P P P P P L",
-        ". . . . . . . . . . . . . . .  ."],
+        ". . . . . . . . . . . . . . .  .",
+    ],
     5: [
         "ss_ol ss ss ss ss ss ss ss ss_or . . . . . . .",
         "se P P P P P P P sw . . . . . . .",
@@ -64,7 +69,8 @@ STRUCTURE_DATA = {
         "se . . . . . . . sw . . . . . . .",
         "se . . . . . . . sw . . . . . . .",
         "sn_or sn sn sn sn sn sn sn sn_ol . . . . . . .",
-        ". . . . . . . . . . . . . . . ."],
+        ". . . . . . . . . . . . . . . .",
+    ],
     6: [
         ". . . . . . . . . . . . . . . . .",
         ". l l l l l l l . . . . . . .",
@@ -75,10 +81,11 @@ STRUCTURE_DATA = {
         ". l l l l l l l . . . . . . .",
         ". l l l l l l l . . . . . . .",
         ". . . . . . . . . . . . . . . . .",
-        ". . . . . . . . . . . . . . . . ."]
+        ". . . . . . . . . . . . . . . . .",
+    ],
 }
 
-STRUCTURE_CONFIG = {    
+STRUCTURE_CONFIG = {
     "structure": "residence",
     "stage": 2,
     "name": "Residence Stage 2",
@@ -89,8 +96,5 @@ STRUCTURE_CONFIG = {
     "struct_h": 10,
     "offset_x": 10,
     "offset_z": 4,
-    "floor_map": {
-        "Floor 1": [0, 1, 2, 3, 4],
-        "Roof": [5, 6]
-    }
+    "floor_map": {"Floor 1": [0, 1, 2, 3, 4], "Roof": [5, 6]},
 }
