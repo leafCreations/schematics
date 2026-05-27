@@ -1,8 +1,19 @@
-import helpers.utils_schematics as schematics_utils
-import helpers.landscape_utils as landscape_utils
-from helpers.context import SchematicContext
 from PIL import Image, ImageDraw
-from helpers.types import PathLayout, PathPanel, RawToken, SiteLayer, Token, BackgroundColor, Layers,  Cell
+
+import helpers.landscape_utils as landscape_utils
+import helpers.utils_schematics as schematics_utils
+from helpers.context import SchematicContext
+from helpers.types import (
+    BackgroundColor,
+    Cell,
+    Layers,
+    PathLayout,
+    PathPanel,
+    RawToken,
+    SiteLayer,
+    Token,
+)
+
 
 def _build_path_layout(ctx: SchematicContext) -> PathLayout:
     block_px = 30

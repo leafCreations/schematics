@@ -1,10 +1,18 @@
 
-from helpers.context import SchematicContext
-import helpers.utils_schematics as schematics_utils
-import helpers.landscape_utils as landscape_utils
-from helpers.types import SiteFacadeLayout, FacadeElevations, LayerElevations, SiteMap, Token, Layers
-
 from PIL import Image, ImageDraw
+
+import helpers.landscape_utils as landscape_utils
+import helpers.utils_schematics as schematics_utils
+from helpers.context import SchematicContext
+from helpers.types import (
+    FacadeElevations,
+    LayerElevations,
+    Layers,
+    SiteFacadeLayout,
+    SiteMap,
+    Token,
+)
+
 
 def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
     block_px = 30

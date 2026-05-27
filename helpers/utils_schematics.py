@@ -1,8 +1,11 @@
-from typing import Counter
-from registries.loader import BLOCK_REGISTRY
+from collections import Counter
+
 from PIL import Image, ImageChops
+
 import helpers.utils as utils
-from helpers.types import BackgroundColor, Token, RawToken
+from helpers.types import BackgroundColor, RawToken, Token
+from registries.loader import BLOCK_REGISTRY
+
 
 def get_blockstate_value(blockstate: str | None, key: str) -> str | None:
     if not blockstate:

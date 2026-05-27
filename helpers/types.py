@@ -1,6 +1,7 @@
 # helpers/types.py
 
-from typing import TypeAlias, TypedDict, NotRequired
+from typing import NotRequired, TypeAlias, TypedDict
+
 from PIL import Image, ImageFont
 
 # Simple Aliases

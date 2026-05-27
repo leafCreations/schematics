@@ -1,14 +1,19 @@
 import importlib.util
 from pathlib import Path
+
 from PIL import Image
 
-from helpers.context import SchematicContext
-from helpers.types import BlockId, RawToken, Token
-from helpers.paths import ASSET_FOLDER, OUTPUT_SCHEMATICS_FOLDER, OUTPUT_WORLDS_FOLDER, TEMPLATE_FOLDER
 import helpers.constants as constants
+from helpers.context import SchematicContext
+from helpers.paths import (
+    ASSET_FOLDER,
+    OUTPUT_SCHEMATICS_FOLDER,
+    OUTPUT_WORLDS_FOLDER,
+    TEMPLATE_FOLDER,
+)
+from helpers.types import BlockId, RawToken, Token
+from registries.loader import BLOCK_REGISTRY, compile_texture_set
 
-from registries.loader import BLOCK_REGISTRY
-from registries.loader import compile_texture_set
 
 def load_structure_config(structure: str, stage: int) -> SchematicContext:
     

@@ -1,14 +1,24 @@
 # renderers/layer_panel.py
 
 import os
-import helpers.utils_schematics as schematics_utils
+from contextlib import suppress
 
 from PIL import Image, ImageDraw, ImageFont
+
+import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
-from helpers.types import FloorBlueprintLayout, FloorBlueprintPanel, Layers, RawToken, Token, Fonts
+from helpers.types import (
+    FloorBlueprintLayout,
+    FloorBlueprintPanel,
+    Fonts,
+    Layers,
+    RawToken,
+    Token,
+)
 
 MAX_PANELS_PER_ROW = 3
 MAX_PANEL_ROWS_PER_IMAGE = 3
+
 
 def _build_layout(ctx: SchematicContext, layers: Layers) -> FloorBlueprintLayout:
     block_px = 30
@@ -26,10 +36,9 @@ def _build_layout(ctx: SchematicContext, layers: Layers) -> FloorBlueprintLayout
     max_panels_per_image = columns * MAX_PANEL_ROWS_PER_IMAGE
 
     layer_pages = [
-        layers[i:i + max_panels_per_image]
-        for i in range(0, len(layers), max_panels_per_image)
+        layers[i : i + max_panels_per_image] for i in range(0, len(layers), max_panels_per_image)
     ]
-    
+
     layout = FloorBlueprintLayout(
         block_px=block_px,
         padding=padding,
@@ -41,11 +50,12 @@ def _build_layout(ctx: SchematicContext, layers: Layers) -> FloorBlueprintLayout
         panel_h=panel_h,
         layer_panel_w=layer_panel_w,
         columns=columns,
-        layer_pages=layer_pages
+        layer_pages=layer_pages,
     )
 
-    return layout        
-    
+    return layout
+
+
 def _load_fonts() -> Fonts:
     fonts = {
         "floor": ImageFont.load_default(),
@@ -53,14 +63,15 @@ def _load_fonts() -> Fonts:
         "inventory": ImageFont.load_default(),
     }
 
-    try:
+    with suppress(OSError):
         fonts["inventory"] = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
-    except Exception:
-        pass
 
     return fonts
 
-def _draw_layer_panel(img, draw, ctx: SchematicContext, layer: int, panel: FloorBlueprintPanel, fonts: Fonts):
+
+def _draw_layer_panel(
+    img, draw, ctx: SchematicContext, layer: int, panel: FloorBlueprintPanel, fonts: Fonts
+):
     sx = panel["sx"]
     sy = panel["sy"]
     block_px = panel["block_px"]
@@ -87,7 +98,17 @@ def _draw_layer_panel(img, draw, ctx: SchematicContext, layer: int, panel: Floor
 
     return panel_materials
 
-def _draw_block_cell(img, draw, ctx: SchematicContext, raw_token: RawToken, token: Token, bx: int, by: int, block_px: int):
+
+def _draw_block_cell(
+    img,
+    draw,
+    ctx: SchematicContext,
+    raw_token: RawToken,
+    token: Token,
+    bx: int,
+    by: int,
+    block_px: int,
+):
     rect = [bx, by, bx + block_px, by + block_px]
 
     if token == ".":
@@ -97,22 +118,20 @@ def _draw_block_cell(img, draw, ctx: SchematicContext, raw_token: RawToken, toke
     if token in ctx.topdown_textures:
         draw.rectangle(rect, outline=(230, 230, 230))
         schematics_utils.paste_topdown_token(
-            img,
-            ctx.topdown_textures,
-            raw_token,
-            (bx, by),
-            block_px,
-            draw
+            img, ctx.topdown_textures, raw_token, (bx, by), block_px, draw
         )
         return
 
     draw.rectangle(
         rect,
         fill=schematics_utils.get_background_color(token, default=(245, 245, 245)),
-        outline=(230, 230, 230)
+        outline=(230, 230, 230),
     )
-    
-def _create_page_image(layout: FloorBlueprintLayout, page_layers: Layers) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+
+
+def _create_page_image(
+    layout: FloorBlueprintLayout, page_layers: Layers
+) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     layer_count = len(page_layers)
     rows = (layer_count + layout["columns"] - 1) // layout["columns"]
 
@@ -120,7 +139,7 @@ def _create_page_image(layout: FloorBlueprintLayout, page_layers: Layers) -> tup
         900,
         (layout["padding"] * 2)
         + (layout["columns"] * layout["layer_panel_w"])
-        + (max(0, layout["columns"] - 1) * layout["layer_gap"])
+        + (max(0, layout["columns"] - 1) * layout["layer_gap"]),
     )
 
     img_h = max(
@@ -128,7 +147,7 @@ def _create_page_image(layout: FloorBlueprintLayout, page_layers: Layers) -> tup
         layout["top_margin"]
         + (rows * layout["panel_h"])
         + (max(0, rows - 1) * layout["layer_gap"])
-        + layout["bottom_margin"]
+        + layout["bottom_margin"],
     )
 
     img = Image.new("RGB", (img_w, img_h), (255, 255, 255))
@@ -136,63 +155,62 @@ def _create_page_image(layout: FloorBlueprintLayout, page_layers: Layers) -> tup
 
     return img, draw
 
-def _draw_page_title(draw, ctx: SchematicContext, floor_name: str, page_index: int, layout: FloorBlueprintLayout, fonts: Fonts):
+
+def _draw_page_title(
+    draw,
+    ctx: SchematicContext,
+    floor_name: str,
+    page_index: int,
+    layout: FloorBlueprintLayout,
+    fonts: Fonts,
+):
     page_title = f"{ctx.name} - {floor_name}"
 
     if len(layout["layer_pages"]) > 1:
         page_title += f" (Page {page_index}/{len(layout['layer_pages'])})"
 
-    draw.text(
-        (layout["padding"], 20),
-        page_title,
-        fill="black",
-        font=fonts["floor"]
-    )
-    
+    draw.text((layout["padding"], 20), page_title, fill="black", font=fonts["floor"])
+
+
 def _get_panel_position(index: int, layout: FloorBlueprintLayout) -> FloorBlueprintPanel:
     col = index % layout["columns"]
     row = index // layout["columns"]
 
     sx = layout["padding"] + (col * (layout["layer_panel_w"] + layout["layer_gap"]))
     sy = layout["top_margin"] + (row * (layout["panel_h"] + layout["layer_gap"]))
-    
+
     panel = FloorBlueprintPanel(
         sx=sx,
         sy=sy,
         block_px=layout["block_px"],
         panel_w=layout["panel_w"],
         panel_h=layout["panel_h"],
-        inventory_w=layout["inventory_w"]
+        inventory_w=layout["inventory_w"],
     )
-        
+
     return panel
-    
+
+
 def _draw_layer_header(draw, layer_name: int, sx: int, sy: int, fonts: Fonts):
-    draw.text(
-        (sx, sy - 40),
-        f"Layer Y={layer_name}",
-        fill="black",
-        font=fonts["layer"]
-    )
-    
+    draw.text((sx, sy - 40), f"Layer Y={layer_name}", fill="black", font=fonts["layer"])
+
+
 def _draw_grid_labels(draw, ctx: SchematicContext, sx: int, sy: int, block_px: int, fonts: Fonts):
     for x in range(ctx.struct_w):
-        draw.text(
-            (sx + (x * block_px) + 10, sy - 20),
-            str(x + 1),
-            fill="blue",
-            font=fonts["layer"]
-        )
+        draw.text((sx + (x * block_px) + 10, sy - 20), str(x + 1), fill="blue", font=fonts["layer"])
 
     for y in range(ctx.struct_h):
-        draw.text(
-            (sx - 20, sy + (y * block_px) + 5),
-            chr(65 + y),
-            fill="blue",
-            font=fonts["layer"]
-        )
-        
-def _draw_inventory_panel(img, draw, ctx: SchematicContext, panel: FloorBlueprintPanel, panel_materials: dict, fonts: Fonts):
+        draw.text((sx - 20, sy + (y * block_px) + 5), chr(65 + y), fill="blue", font=fonts["layer"])
+
+
+def _draw_inventory_panel(
+    img,
+    draw,
+    ctx: SchematicContext,
+    panel: FloorBlueprintPanel,
+    panel_materials: dict,
+    fonts: Fonts,
+):
     final_inventory, inventory_icons = schematics_utils.collect_inventory_counts(panel_materials)
 
     lx = panel["sx"] + panel["panel_w"] + 20
@@ -200,10 +218,7 @@ def _draw_inventory_panel(img, draw, ctx: SchematicContext, panel: FloorBlueprin
     panel_h = panel["panel_h"]
     inventory_w = panel["inventory_w"]
 
-    draw.rectangle(
-        [lx, sy, lx + inventory_w - 10, sy + panel_h],
-        fill="white"
-    )
+    draw.rectangle([lx, sy, lx + inventory_w - 10, sy + panel_h], fill="white")
 
     for j, (group_name, count) in enumerate(
         sorted(final_inventory.items(), key=schematics_utils.material_sort_key)
@@ -211,49 +226,33 @@ def _draw_inventory_panel(img, draw, ctx: SchematicContext, panel: FloorBlueprin
         ly = sy + 20 + (j * 35)
 
         if ly + 30 > sy + panel_h:
-            draw.text(
-                (lx, ly),
-                "...",
-                fill="black",
-                font=fonts["inventory"]
-            )
+            draw.text((lx, ly), "...", fill="black", font=fonts["inventory"])
             break
 
         icon_token = inventory_icons.get(group_name)
 
         _draw_inventory_icon(img, draw, ctx, icon_token, lx, ly)
 
-        draw.text(
-            (lx + 35, ly + 5),
-            f"x {count}",
-            fill="black",
-            font=fonts["inventory"]
-        )
-        
+        draw.text((lx + 35, ly + 5), f"x {count}", fill="black", font=fonts["inventory"])
+
+
 def _draw_inventory_icon(img, draw, ctx: SchematicContext, icon_token: Token, lx: int, ly: int):
     if icon_token in ctx.topdown_textures:
-        tex = ctx.topdown_textures[icon_token].resize(
-            (25, 25),
-            resample=Image.Resampling.NEAREST
-        )
+        tex = ctx.topdown_textures[icon_token].resize((25, 25), resample=Image.Resampling.NEAREST)
 
-        img.paste(
-            tex,
-            (lx, ly),
-            tex if tex.mode == "RGBA" else None
-        )
+        img.paste(tex, (lx, ly), tex if tex.mode == "RGBA" else None)
         return
 
     draw.rectangle(
         [lx, ly, lx + 25, ly + 25],
-        fill=schematics_utils.get_background_color(
-            icon_token,
-            default=(230, 230, 230)
-        ),
-        outline=(80, 80, 80)
+        fill=schematics_utils.get_background_color(icon_token, default=(230, 230, 230)),
+        outline=(80, 80, 80),
     )
-    
-def _build_output_path(ctx: SchematicContext, floor_name: str, page_index: int, layout: FloorBlueprintLayout) -> str:
+
+
+def _build_output_path(
+    ctx: SchematicContext, floor_name: str, page_index: int, layout: FloorBlueprintLayout
+) -> str:
     page_suffix = ""
 
     if len(layout["layer_pages"]) > 1:
@@ -261,8 +260,9 @@ def _build_output_path(ctx: SchematicContext, floor_name: str, page_index: int, 
 
     return os.path.join(
         ctx.output_schematics_dir,
-        f"Structure_{floor_name.lower().replace(' ', '_')}{page_suffix}.png"
+        f"Structure_{floor_name.lower().replace(' ', '_')}{page_suffix}.png",
     )
+
 
 def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: Layers):
     layout: FloorBlueprintLayout = _build_layout(ctx, layers)

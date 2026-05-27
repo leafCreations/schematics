@@ -3,6 +3,7 @@
 from helpers.context import SchematicContext
 from renderers.layer_panel import render_layer_blueprint
 
+
 def render_floor_blueprints(ctx: SchematicContext):
     print("  ↳ Rendering floor blueprint panels...")
 

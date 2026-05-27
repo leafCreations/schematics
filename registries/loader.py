@@ -1,13 +1,15 @@
 import os
-import yaml
 from pathlib import Path
-from helpers.types import MappedTextureImages, MappedTextureNames, TextureType
-import helpers.utils as utils
+
+import yaml
 from PIL import Image
+
+import helpers.utils as utils
+from helpers.types import MappedTextureImages, MappedTextureNames, TextureType
 
 REGISTRY_PATH = Path(__file__).parent / "blocks.yaml"
 
-with open(REGISTRY_PATH, "r") as f:
+with open(REGISTRY_PATH) as f:
     BLOCK_REGISTRY = yaml.safe_load(f)
     
 def _resolve_registry_texture(entry, texture_type: TextureType = "top") -> str | None:

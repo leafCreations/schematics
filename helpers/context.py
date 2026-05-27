@@ -3,6 +3,7 @@ from pathlib import Path
 
 from helpers.types import BlockRegistryEntry, MappedTextureImages
 
+
 @dataclass
 class SchematicContext:
     # structure

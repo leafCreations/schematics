@@ -1,7 +1,16 @@
-from helpers.context import SchematicContext
-import helpers.utils_schematics as schematics_utils
 from PIL import Image, ImageDraw, ImageFont
-from helpers.types import MaterialsIconList, MaterialsList, RawTokenMaterialsList, Token, MaterialsLayout, Fonts
+
+import helpers.utils_schematics as schematics_utils
+from helpers.context import SchematicContext
+from helpers.types import (
+    Fonts,
+    MaterialsIconList,
+    MaterialsLayout,
+    MaterialsList,
+    RawTokenMaterialsList,
+    Token,
+)
+
 
 def _collect_material_tokens(ctx: SchematicContext) -> RawTokenMaterialsList:
     raw_tokens = []
