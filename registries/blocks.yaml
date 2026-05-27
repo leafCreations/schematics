@@ -105,8 +105,8 @@ TORCH:
         block: minecraft:soul_torch
       wall:
         block: minecraft:wall_torch
-    blockstates:
-      facing: "{direction}"
+        blockstates:
+          facing: "{direction}"
 
 DOOR:
   behavior: door

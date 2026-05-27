@@ -132,7 +132,7 @@ STAGE1_STRUCTURE_LAYERS = [
             ],
             [
                 "PLANKS:oak",
-                "BED@east#head",
+                "BED@north#head",
                 ".",
                 ".",
                 ".",
@@ -143,13 +143,13 @@ STAGE1_STRUCTURE_LAYERS = [
             ],
             [
                 "PLANKS:oak",
-                "BED@east#foot",
+                "BED@north#foot",
                 ".",
                 ".",
                 ".",
                 ".",
                 ".",
-                "FURNACE@east",
+                "FURNACE@west",
                 "PLANKS:oak",
             ],
             [
@@ -193,10 +193,10 @@ STAGE1_STRUCTURE_LAYERS = [
                 ".",
                 ".",
                 ".",
-                "CHEST@west#left",
+                "CHEST@west#right",
                 "PLANKS:oak",
             ],
-            ["PLANKS:oak", ".", ".", ".", ".", ".", ".", "CHEST@west#right", "PLANKS:oak"],
+            ["PLANKS:oak", ".", ".", ".", ".", ".", ".", "CHEST@west#left", "PLANKS:oak"],
             [
                 "LOG:oak",
                 "PLANKS:oak",
@@ -270,15 +270,15 @@ STAGE1_STRUCTURE_LAYERS = [
                 "PLANKS:oak",
             ],
             [
-                "PLANKS:oak",
                 "FENCE:oak",
                 ".",
                 ".",
                 ".",
                 ".",
                 ".",
+                ".",
+                ".",
                 "FENCE:oak",
-                "PLANKS:oak",
             ],
             [
                 "PLANKS:oak",
@@ -458,6 +458,7 @@ STAGE1_STRUCTURE_LAYERS = [
         "group": "Roof",
         "cells": [
             [
+                "STAIRS:oak@south#outer_left",
                 "STAIRS:oak@south",
                 "STAIRS:oak@south",
                 "STAIRS:oak@south",
@@ -465,8 +466,7 @@ STAGE1_STRUCTURE_LAYERS = [
                 "STAIRS:oak@south",
                 "STAIRS:oak@south",
                 "STAIRS:oak@south",
-                "STAIRS:oak@south",
-                "STAIRS:oak@south",
+                "STAIRS:oak@south#outer_right",
             ],
             [
                 "STAIRS:oak@east",
@@ -546,6 +546,7 @@ STAGE1_STRUCTURE_LAYERS = [
                 "STAIRS:oak@west",
             ],
             [
+                "STAIRS:oak@north#outer_right",
                 "STAIRS:oak@north",
                 "STAIRS:oak@north",
                 "STAIRS:oak@north",
@@ -553,8 +554,7 @@ STAGE1_STRUCTURE_LAYERS = [
                 "STAIRS:oak@north",
                 "STAIRS:oak@north",
                 "STAIRS:oak@north",
-                "STAIRS:oak@north",
-                "STAIRS:oak@north",
+                "STAIRS:oak@north#outer_left",
             ],
             [
                 ".",

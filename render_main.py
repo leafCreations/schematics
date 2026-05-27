@@ -73,4 +73,6 @@ def build_stage_complete_schematics(
 
 
 if __name__ == "__main__":
-    build_stage_complete_schematics(structure="residence", stage=2, renders=[constants.RENDER_ALL])
+    build_stage_complete_schematics(
+        structure="residence", stage=1, renders=[constants.RENDER_WORLDGEN]
+    )

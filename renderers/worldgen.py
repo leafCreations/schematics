@@ -5,34 +5,173 @@ from amulet.api.chunk import Chunk
 from amulet.api.errors import ChunkDoesNotExist
 from amulet.level.formats.anvil_world import AnvilFormat
 
-import helpers.utils as utils
 from helpers.context import SchematicContext
-from helpers.types import MinecraftBlock
+from helpers.structure_tokens import ParsedToken, parse_structure_token
 from registries.loader import BLOCK_REGISTRY
 
-BLOCK_CACHE: dict[str, Block] = {}
+BLOCK_CACHE: dict[ParsedToken, Block] = {}
+
+DIRECTION_OFFSETS = {
+    "north": (0, -1),
+    "south": (0, 1),
+    "east": (1, 0),
+    "west": (-1, 0),
+}
+
+FENCE_CONNECTABLE_BEHAVIORS = {
+    "solid",
+    "facing_block",
+    "fence",
+    "log",
+    "slab",
+    "stairs",
+    "door",
+    "bed",
+    "chest",
+}
 
 
-def generate_block(token: str) -> Block:
-    if token in BLOCK_CACHE:
-        return BLOCK_CACHE[token]
+def get_cell_at(cells: list[list[str]], x: int, z: int) -> str | None:
+    if z < 0 or z >= len(cells):
+        return None
 
-    block: MinecraftBlock = BLOCK_REGISTRY[token]["minecraft"]
+    row = cells[z]
 
-    block_name = block["block"]
-    block_state = block.get("blockstate")
+    if x < 0 or x >= len(row):
+        return None
 
-    if block_state:
-        generated_block = Block.from_string_blockstate(f"{block_name}[{block_state}]")
+    return row[x]
+
+
+def should_fence_connect(raw_neighbor: str | None) -> bool:
+    if raw_neighbor is None:
+        return False
+
+    parsed_neighbor = parse_structure_token(raw_neighbor)
+
+    if parsed_neighbor is None:
+        return False
+
+    entry = BLOCK_REGISTRY.get(parsed_neighbor.token)
+
+    if entry is None:
+        return False
+
+    return entry["behavior"] in FENCE_CONNECTABLE_BEHAVIORS
+
+
+def resolve_fence_adjacency(
+    parsed: ParsedToken,
+    cells: list[list[str]],
+    x: int,
+    z: int,
+) -> ParsedToken:
+    states = tuple(
+        (direction, should_fence_connect(get_cell_at(cells, x + dx, z + dz)))
+        for direction, (dx, dz) in DIRECTION_OFFSETS.items()
+    )
+
+    return ParsedToken(
+        token=parsed.token,
+        material=parsed.material,
+        direction=parsed.direction,
+        variant=parsed.variant,
+        states=states,
+    )
+
+
+def resolve_worldgen_token(
+    parsed: ParsedToken,
+    cells: list[list[str]],
+    x: int,
+    z: int,
+) -> ParsedToken:
+    entry = BLOCK_REGISTRY[parsed.token]
+
+    if entry["behavior"] == "fence":
+        return resolve_fence_adjacency(parsed, cells, x, z)
+
+    return parsed
+
+
+def generate_block(parsed: ParsedToken) -> Block:
+    cache_key = parsed
+
+    if cache_key in BLOCK_CACHE:
+        return BLOCK_CACHE[cache_key]
+
+    entry = BLOCK_REGISTRY[parsed.token]
+
+    defaults = entry.get("defaults", {})
+
+    material = parsed.material or entry.get("material_default")
+    direction = parsed.direction or defaults.get("direction")
+    variant = parsed.variant or defaults.get("variant")
+
+    minecraft = entry["minecraft"]
+
+    #
+    # Resolve variant
+    #
+    if "variants" in minecraft:
+        if variant is None:
+            raise ValueError(f"{parsed.token} requires a variant or defaults.variant")
+
+        variant_data = minecraft["variants"][variant]
+        block_name = variant_data["block"]
+        blockstates_template = variant_data.get("blockstates", {})
+    else:
+        block_name = minecraft["block"]
+        blockstates_template = minecraft.get("blockstates", {})
+
+    #
+    # Material substitution
+    #
+    if material:
+        block_name = block_name.format(material=material)
+
+    #
+    # Resolve blockstates
+    #
+    resolved_blockstates = {}
+
+    format_values = {
+        **defaults,
+        **dict(parsed.states),
+        "material": material,
+        "direction": direction,
+        "variant": variant,
+        "half": parsed.variant or defaults.get("half"),
+        "part": parsed.variant or defaults.get("part"),
+        "type": parsed.variant or defaults.get("type"),
+        "shape": parsed.variant or defaults.get("shape"),
+    }
+
+    for state_name, state_value in blockstates_template.items():
+        if isinstance(state_value, str):
+            resolved_value = state_value.format(**format_values)
+        else:
+            resolved_value = state_value
+
+        resolved_blockstates[state_name] = str(resolved_value).lower()
+
+    #
+    # Create block
+    #
+    if resolved_blockstates:
+        state_string = ",".join(f"{key}={value}" for key, value in resolved_blockstates.items())
+
+        generated_block = Block.from_string_blockstate(f"{block_name}[{state_string}]")
     else:
         namespace, base_name = block_name.split(":", 1)
         generated_block = Block(namespace, base_name)
 
-    BLOCK_CACHE[token] = generated_block
+    BLOCK_CACHE[cache_key] = generated_block
+
     return generated_block
 
 
-def generate_minecraft_world(ctx: SchematicContext):
+def generate_minecraft_world(ctx: SchematicContext) -> None:
     if ctx.output_worldgen_dir.exists():
         shutil.rmtree(ctx.output_worldgen_dir)
     shutil.copytree(ctx.worldgen_template_dir, ctx.output_worldgen_dir)
@@ -55,19 +194,22 @@ def generate_minecraft_world(ctx: SchematicContext):
     current_chunk = None
     last_coords = None
 
-    for layer_y, lines in ctx.data.items():
-        actual_y = base_y + layer_y
+    for layer in ctx.layers:
+        actual_y = base_y + layer["index"]
 
-        for z_idx, line in enumerate(lines):
-            tokens = line.split()
-            global_z = ctx.offset_z + z_idx
+        for z_idx, row in enumerate(layer["cells"]):
+            global_z = ctx.grid["offset_z"] + z_idx
 
-            for x_idx, token_raw in enumerate(tokens):
-                global_x = ctx.offset_x + x_idx
-                token = utils.get_base_token(token_raw)
+            for x_idx, raw_cell in enumerate(row):
+                parsed = parse_structure_token(raw_cell)
 
-                if token == "." or token not in ctx.block_registry:
+                if parsed is None:
                     continue
+
+                if parsed.token not in ctx.block_registry:
+                    raise KeyError(f"Unknown block token: {parsed.token}")
+
+                global_x = ctx.grid["offset_x"] + x_idx
 
                 chunk_x = global_x // 16
                 chunk_z = global_z // 16
@@ -85,7 +227,8 @@ def generate_minecraft_world(ctx: SchematicContext):
 
                     last_coords = chunk_coords
 
-                block_to_place = generate_block(token)
+                resolved = resolve_worldgen_token(parsed, layer["cells"], x_idx, z_idx)
+                block_to_place = generate_block(resolved)
 
                 current_chunk.set_block(
                     global_x % 16,

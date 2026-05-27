@@ -24,6 +24,18 @@ RawTokenMaterialsList: TypeAlias = list[RawToken]
 MaterialsList: TypeAlias = list[tuple[str, int]]
 MaterialsIconList: TypeAlias = dict[str, Token]
 
+# Block Aliases
+BlockStateValue: TypeAlias = str | bool
+
+BlockStates: TypeAlias = tuple[
+    tuple[str, BlockStateValue],
+    ...,
+]
+
+DirectionOffset: TypeAlias = tuple[int, int]
+
+DirectionOffsets: TypeAlias = dict[str, DirectionOffset]
+
 
 # Structured Types
 class FloorBlueprintLayout(TypedDict):
