@@ -18,8 +18,7 @@ class SchematicContext:
     offset_z: int
     
     # metadata
-    name: str    
-    output_folder: str
+    name: str        
     floor_map: dict[str, list[int]]
     
     #registries
