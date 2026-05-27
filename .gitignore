@@ -10,6 +10,7 @@ __pycache__/
 # project related
 assets/
 output/
+*.ogg
 helpers/__pycache__/
 registries/__pycache__/
 renderers/__pycache__/
