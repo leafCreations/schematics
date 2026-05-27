@@ -1,5 +1,13 @@
+# root related
 __pycache__/
 *.pyc
+.venv/
+.vscode/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# project related
 assets/
 output/
 helpers/__pycache__/
