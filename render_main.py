@@ -35,6 +35,8 @@ def build_stage_complete_schematics(
 
     ctx: SchematicContext = utils.load_structure_config(structure, stage)
 
+    ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
+
     print("\n" + "=" * 70)
     print("🤖 RUNNING AUTOMATED OMNI-BLUEPRINT COMPILE ENGINE...")
     print("=" * 70)
@@ -74,5 +76,5 @@ def build_stage_complete_schematics(
 
 if __name__ == "__main__":
     build_stage_complete_schematics(
-        structure="residence", stage=1, renders=[constants.RENDER_WORLDGEN]
+        structure="residence", stage=1, renders=[constants.RENDER_MATERIALS]
     )

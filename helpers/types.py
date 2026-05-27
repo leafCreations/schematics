@@ -4,6 +4,8 @@ from typing import NotRequired, TypeAlias, TypedDict
 
 from PIL import Image, ImageFont
 
+from helpers.structure_tokens import ParsedToken
+
 # Simple Aliases
 Token: TypeAlias = str
 RawToken: TypeAlias = str
@@ -22,8 +24,8 @@ SiteMap: TypeAlias = dict[int, SiteLayer]
 Layers: TypeAlias = list[int]
 RawTokenMaterialsList: TypeAlias = list[RawToken]
 MaterialsList: TypeAlias = list[tuple[str, int]]
-MaterialsIconList: TypeAlias = dict[str, Token]
-
+MaterialsIconList: TypeAlias = dict[str, str]
+ParsedTokenMaterialsList: TypeAlias = list[ParsedToken]
 # Block Aliases
 BlockStateValue: TypeAlias = str | bool
 

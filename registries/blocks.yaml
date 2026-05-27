@@ -67,6 +67,7 @@ SLAB:
     textures:
       top: "{material}_planks.png"
       side: "{material}_planks.png"
+    inventory_image: /custom/oak_slab.png
 
 FURNACE:
   behavior: facing_block
@@ -107,6 +108,8 @@ TORCH:
         block: minecraft:wall_torch
         blockstates:
           facing: "{direction}"
+  render:
+    inventory_image: torch.png
 
 DOOR:
   behavior: door
@@ -127,6 +130,7 @@ DOOR:
     textures:
       upper: "{material}_door_top.png"
       lower: "{material}_door_bottom.png"
+    inventory_image: /custom/oak_door.png
 
 FENCE:
   behavior: fence
@@ -145,12 +149,13 @@ FENCE:
       west: "{west}"
   render:
     textures:
-      post: "/custom/{material}_fence_post.png"
-      end: "/custom/{material}_fence_end.png"
-      straight: "/custom/{material}_fence_straight.png"
-      corner: "/custom/{material}_fence_corner.png"
-      tee: "/custom/{material}_fence_tee.png"
-      cross: "/custom/{material}_fence_cross.png"
+      post: "/custom/{material}_fence_side.png"
+      end: "/custom/{material}_fence_side.png"
+      straight: "/custom/{material}_fence_side.png"
+      corner: "/custom/{material}_fence_side.png"
+      tee: "/custom/{material}_fence_side.png"
+      cross: "/custom/{material}_fence_side.png"
+    inventory_image: /custom/oak_fence_side.png
 
 STAIRS:
   behavior: stairs
@@ -172,6 +177,7 @@ STAIRS:
       outer_right: "/custom/{material}_stairs_outer_right.png"
       inner_left: "/custom/{material}_stairs_inner_left.png"
       inner_right: "/custom/{material}_stairs_inner_right.png"
+    inventory_image: /custom/stairs.png
 
 BED:
   behavior: bed
@@ -188,6 +194,7 @@ BED:
     textures:
       head: /custom/red_bed_top.png
       foot: /custom/red_bed_bottom.png
+    inventory_image: /custom/red_bed.png
   visibility:
     interior: false
 
@@ -207,5 +214,6 @@ CHEST:
       single: /custom/chest.png
       left: /custom/double_chest_left.png
       right: /custom/double_chest_right.png
+    inventory_image: /custom/chest.png
   visibility:
     interior: false

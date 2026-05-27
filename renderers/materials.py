@@ -1,29 +1,126 @@
+from collections import Counter
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 
-import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
+from helpers.structure_tokens import ParsedToken, parse_structure_token
 from helpers.types import (
     Fonts,
     MaterialsIconList,
     MaterialsLayout,
     MaterialsList,
+    ParsedTokenMaterialsList,
     RawTokenMaterialsList,
-    Token,
 )
 
 
-def _collect_material_tokens(ctx: SchematicContext) -> RawTokenMaterialsList:
-    raw_tokens = []
+def _resolve_texture_path(ctx: SchematicContext, texture_name: str) -> Path:
+    if texture_name.startswith("/custom/"):
+        return ctx.assets_dir / "custom" / texture_name.removeprefix("/custom/")
 
-    for _layer_y, rows in ctx.data.items():
-        for row in rows:
-            for raw_token in row.split():
-                token, _direction = schematics_utils.resolve_token_for_render(raw_token)
+    return ctx.assets_dir / texture_name
 
-                if token != ".":
-                    raw_tokens.append(token)
 
-    return raw_tokens
+def _resolve_material_texture_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
+    entry = ctx.block_registry[parsed.token]
+    defaults = entry.get("defaults", {})
+
+    material = parsed.material or entry.get("material_default")
+    variant = parsed.variant or defaults.get("variant")
+
+    render = entry.get("render", {})
+    textures = render.get("textures", {})
+
+    inventory_image = render.get("inventory_image")
+
+    if inventory_image:
+        texture_name = inventory_image
+    elif variant and variant in textures:
+        texture_name = textures[variant]
+    elif "top" in textures:
+        texture_name = textures["top"]
+    elif "side" in textures:
+        texture_name = textures["side"]
+    else:
+        block_name = _resolve_material_block_name(parsed, ctx)
+        texture_name = f"{block_name}.png"
+
+    if material:
+        texture_name = texture_name.format(material=material)
+
+    return texture_name
+
+
+def _collect_material_tokens(ctx: SchematicContext) -> ParsedTokenMaterialsList:
+    parsed_tokens = []
+
+    for layer in ctx.layers:
+        for row in layer["cells"]:
+            for raw_cell in row:
+                parsed = parse_structure_token(raw_cell)
+
+                if parsed is not None:
+                    parsed_tokens.append(parsed)
+
+    return parsed_tokens
+
+
+def _format_material_name(block_name: str) -> str:
+    return block_name.replace("_", " ").title()
+
+
+def _resolve_material_block_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
+    entry = ctx.block_registry[parsed.token]
+    defaults = entry.get("defaults", {})
+    material = parsed.material or entry.get("material_default")
+    variant = parsed.variant or defaults.get("variant")
+    minecraft = entry["minecraft"]
+
+    if "variants" in minecraft:
+        if variant is None:
+            raise ValueError(f"{parsed.token} requires a variant or defaults.variant")
+
+        block_name = minecraft["variants"][variant]["block"]
+    else:
+        block_name = minecraft["block"]
+
+    if material:
+        block_name = block_name.format(material=material)
+
+    return block_name.split(":", 1)[-1]
+
+
+def _should_count_material(parsed: ParsedToken, ctx: SchematicContext) -> bool:
+    entry = ctx.block_registry[parsed.token]
+    behavior = entry["behavior"]
+
+    if behavior == "door" and parsed.variant == "upper":
+        return False
+
+    return not (behavior == "bed" and parsed.variant == "foot")
+
+
+def _build_material_inventory(
+    parsed_tokens: ParsedTokenMaterialsList,
+    ctx: SchematicContext,
+) -> tuple[MaterialsList, MaterialsIconList]:
+    material_counts = Counter()
+    material_icons = {}
+
+    for parsed in parsed_tokens:
+        if not _should_count_material(parsed, ctx):
+            continue
+
+        block_name = _resolve_material_block_name(parsed, ctx)
+        material_name = _format_material_name(block_name)
+
+        material_counts[material_name] += 1
+        material_icons.setdefault(material_name, _resolve_material_texture_name(parsed, ctx))
+
+    materials = sorted(material_counts.items(), key=lambda item: item[0].lower())
+
+    return materials, material_icons
 
 
 def _build_material_layout(materials: RawTokenMaterialsList) -> MaterialsLayout:
@@ -135,23 +232,29 @@ def _draw_material_row_background(draw, idx: int, y: int, layout: MaterialsLayou
 
 
 def _draw_material_icon(
-    img, draw, ctx: SchematicContext, icon_token: Token, y: int, layout: MaterialsLayout
+    img,
+    draw,
+    ctx: SchematicContext,
+    texture_name: str | None,
+    y: int,
+    layout: MaterialsLayout,
 ):
     padding = layout["padding"]
-
     icon_x = padding + 8
     icon_y = y
 
-    if icon_token in ctx.topdown_textures:
-        tex = ctx.topdown_textures[icon_token].resize((30, 30), resample=Image.Resampling.NEAREST)
+    if texture_name:
+        texture_path = _resolve_texture_path(ctx, texture_name)
 
-        img.paste(tex, (icon_x, icon_y), tex if tex.mode == "RGBA" else None)
-
-        return
+        if texture_path.exists():
+            tex = Image.open(texture_path).convert("RGBA")
+            tex = tex.resize((30, 30), resample=Image.Resampling.NEAREST)
+            img.paste(tex, (icon_x, icon_y), tex)
+            return
 
     draw.rectangle(
         [icon_x, icon_y, icon_x + 30, icon_y + 30],
-        fill=schematics_utils.get_background_color(icon_token, default=(230, 230, 230)),
+        fill=(230, 230, 230),
         outline=(80, 80, 80),
     )
 
@@ -197,11 +300,9 @@ def _build_material_output_path(ctx: SchematicContext) -> str:
 
 
 def render_materials_inventory_blueprint(ctx: SchematicContext):
-    raw_tokens = _collect_material_tokens(ctx)
+    parsed_tokens = _collect_material_tokens(ctx)
 
-    material_counts, material_icons = schematics_utils.collect_inventory_counts(raw_tokens)
-
-    materials = sorted(material_counts.items(), key=schematics_utils.material_sort_key)
+    materials, material_icons = _build_material_inventory(parsed_tokens, ctx)
 
     layout = _build_material_layout(materials)
     fonts = _load_material_fonts()
