@@ -193,6 +193,20 @@ build_stage_complete_schematics(
 
 ---
 
+# Tokens
+
+| Section       | Meaning         |
+| ------------- | --------------- |
+| `STAIRS`      | token type      |
+| `oak`         | material        |
+| `@north`      | direction       |
+| `#outer_left` | shape           |
+| `!-90`        | render rotation |
+
+```
+
+---
+
 # Available Render Types
 
 | Render Name    | Description                         |

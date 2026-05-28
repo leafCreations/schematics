@@ -129,11 +129,30 @@ def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=
     tex = textures[texture_key]
     tex = get_texture_for_render(base_token, tex)
 
-    if size is not None and tex.size != (size, size):
-        tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
-
+    #
+    # Directional rotation
+    #
     if direction:
         tex = utils.rotate_directional_texture(tex, direction)
+
+    #
+    # Custom token rotation
+    #
+
+    rotation = getattr(parsed, "rotation", 0)
+
+    if rotation:
+        tex = tex.rotate(
+            -rotation,
+            expand=False,
+            resample=Image.Resampling.NEAREST,
+        )
+
+    #
+    # Resize after rotations
+    #
+    if size is not None and tex.size != (size, size):
+        tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
 
     img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
     return True

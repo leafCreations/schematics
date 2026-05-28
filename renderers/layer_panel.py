@@ -339,6 +339,29 @@ def _build_output_path(
     )
 
 
+def _draw_compass(draw, img_w: int, padding: int, fonts: Fonts):
+    cx = img_w - padding - 45
+    cy = 45
+    size = 32
+
+    draw.line((cx, cy - size, cx, cy + size), fill="black", width=2)
+    draw.line((cx - size, cy, cx + size, cy), fill="black", width=2)
+
+    draw.polygon(
+        [
+            (cx, cy - size - 10),
+            (cx - 6, cy - size + 2),
+            (cx + 6, cy - size + 2),
+        ],
+        fill="black",
+    )
+
+    draw.text((cx - 4, cy - size - 28), "N", fill="black", font=fonts["layer"])
+    draw.text((cx - 4, cy + size + 8), "S", fill="black", font=fonts["layer"])
+    draw.text((cx + size + 8, cy - 7), "E", fill="black", font=fonts["layer"])
+    draw.text((cx - size - 18, cy - 7), "W", fill="black", font=fonts["layer"])
+
+
 def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: Layers):
     layout: FloorBlueprintLayout = _build_layout(ctx, layers)
     fonts: Fonts = _load_fonts()
@@ -346,6 +369,7 @@ def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: Layer
     for page_index, page_layers in enumerate(layout["layer_pages"], start=1):
         img, draw = _create_page_image(layout, page_layers)
         _draw_page_title(draw, ctx, floor_name, page_index, layout, fonts)
+        _draw_compass(draw, img.width, layout["padding"], fonts)
 
         for i, layer in enumerate(page_layers):
             panel: FloorBlueprintPanel = _get_panel_position(i, layout)

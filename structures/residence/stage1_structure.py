@@ -1,4 +1,4 @@
-STAGE1_STRUCTURE_LAYERS = [
+STRUCTURE_DATA = [
     {
         "index": 0,
         "group": "Floor 1",
@@ -692,7 +692,7 @@ STRUCTURE_CONFIG = {
     "stage": 1,
     "name": "Residence Stage 1",
     "output_folder": "stage1_residence",
-    "layers": STAGE1_STRUCTURE_LAYERS,
+    "layers": STRUCTURE_DATA,
     "grid": {
         "site_size": 30,
         "offset_x": 10,

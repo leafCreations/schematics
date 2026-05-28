@@ -165,6 +165,7 @@ STAIRS:
     direction: north
     half: bottom
     shape: straight
+    rotation: 0
   minecraft:
     block: "minecraft:{material}_stairs"
     blockstates:
@@ -172,11 +173,12 @@ STAIRS:
       half: "{half}"
       shape: "{shape}"
   render:
+    rotation: "{rotation}"
     textures:
       top:
         straight: "/custom/{material}_stairs_top.png"
         outer_left: "/custom/{material}_stairs_outer_left.png"
-        outer_right: "/custom/{material}_stairs_outer_right.png"
+        outer_right: "/custom/{material}_stairs_outer_left.png"
         inner_left: "/custom/{material}_stairs_inner_left.png"
         inner_right: "/custom/{material}_stairs_inner_right.png"
       side:
@@ -184,7 +186,7 @@ STAIRS:
         south: "/custom/{material}_stairs_south.png"
         east: "/custom/{material}_stairs_side_west_east.png"
         west: "/custom/{material}_stairs_side_west_east.png"
-    inventory_image: /custom/oak_stairs_north_south.png
+    inventory_image: /custom/oak_stairs_south.png
 
 BED:
   behavior: bed
