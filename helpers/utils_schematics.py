@@ -3,6 +3,7 @@ from collections import Counter
 from PIL import Image, ImageChops
 
 import helpers.utils as utils
+from helpers.structure_tokens import parse_structure_token
 from helpers.types import BackgroundColor, RawToken, Token
 from registries.loader import BLOCK_REGISTRY
 
@@ -21,39 +22,40 @@ def get_blockstate_value(blockstate: str | None, key: str) -> str | None:
 
 
 def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
-    """Return (base_token, direction) for schematic rendering/counting.
+    parsed = parse_structure_token(raw_token)
 
-    Direction priority:
-    1. schematic.direction override
-    2. minecraft.blockstate facing value
-    3. None
-    """
-
-    token = utils.get_base_token(raw_token)
-
-    if token == ".":
+    if parsed is None:
         return ".", None
 
+    token = parsed.token
     entry = BLOCK_REGISTRY.get(token)
 
     if not entry:
-        return token, None
+        return token, utils.normalize_direction(parsed.direction)
 
-    schematic = entry.get("schematic", {})
+    if parsed.direction:
+        return token, utils.normalize_direction(parsed.direction)
 
-    # Optional manual override for special render cases.
-    schematic_direction = utils.normalize_direction(schematic.get("direction"))
+    defaults = entry.get("defaults", {})
+    default_direction = utils.normalize_direction(defaults.get("direction"))
 
-    if schematic_direction is not None:
-        return token, schematic_direction
+    if default_direction is not None:
+        return token, default_direction
 
     minecraft = entry.get("minecraft", {})
-    blockstate = minecraft.get("blockstate")
+    blockstates = minecraft.get("blockstates", {})
 
-    facing = get_blockstate_value(blockstate, "facing")
-    direction = utils.normalize_direction(facing)
+    facing = blockstates.get("facing")
 
-    return token, direction
+    if isinstance(facing, str):
+        facing = facing.format(
+            direction=parsed.direction or defaults.get("direction", ""),
+            variant=parsed.variant or defaults.get("variant", ""),
+            material=parsed.material or entry.get("material_default", ""),
+            part=parsed.variant or defaults.get("part", ""),
+        )
+
+    return token, utils.normalize_direction(facing)
 
 
 def show_interior_view(token: Token) -> bool:
@@ -72,17 +74,45 @@ def show_interior_view(token: Token) -> bool:
 
 
 def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
-    """Paste a token texture using the raw token, not the stripped base token.
+    parsed = parse_structure_token(raw_token)
 
-    Any schematic token with a parsed direction will rotate.
-    Tokens without direction render in their default orientation.
-    """
-    base_token, direction = resolve_token_for_render(raw_token)
-
-    if base_token not in textures:
+    if parsed is None:
         return False
 
-    tex = textures[base_token]
+    base_token, direction = resolve_token_for_render(raw_token)
+    entry = BLOCK_REGISTRY.get(parsed.token, {})
+    defaults = entry.get("defaults", {})
+    render_textures = entry.get("render", {}).get("textures", {})
+
+    texture_keys = []
+
+    if raw_token in textures:
+        texture_keys.append(raw_token)
+
+    if parsed.variant:
+        texture_keys.append(f"{parsed.token}#{parsed.variant}")
+
+    for default_key in (
+        defaults.get("shape"),
+        defaults.get("type"),
+        defaults.get("part"),
+        "post",
+        "straight",
+        "single",
+        "top",
+        "side",
+    ):
+        if default_key and default_key in render_textures:
+            texture_keys.append(f"{parsed.token}#{default_key}")
+
+    texture_keys.append(base_token)
+
+    texture_key = next((key for key in texture_keys if key in textures), None)
+
+    if texture_key is None:
+        return False
+
+    tex = textures[texture_key]
 
     if size is not None and tex.size != (size, size):
         tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
@@ -91,7 +121,6 @@ def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=
         tex = utils.rotate_directional_texture(tex, direction)
 
     img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
-
     return True
 
 

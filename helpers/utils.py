@@ -11,8 +11,9 @@ from helpers.paths import (
     OUTPUT_WORLDS_FOLDER,
     TEMPLATE_FOLDER,
 )
+from helpers.structure_tokens import parse_structure_token
 from helpers.types import BlockId, RawToken, Token
-from registries.loader import BLOCK_REGISTRY, compile_texture_set
+from registries.loader import BLOCK_REGISTRY, compile_inventory_texture_set, compile_texture_set
 
 
 def load_structure_config(structure: str, stage: int) -> SchematicContext:
@@ -49,13 +50,19 @@ def load_structure_config(structure: str, stage: int) -> SchematicContext:
     )
 
     ctx.topdown_textures = compile_texture_set(constants.TEXTURE_TOP, ctx.assets_dir, block_px=30)
+    ctx.inventory_textures = compile_inventory_texture_set(ctx.assets_dir, block_px=30)
     ctx.sideview_textures = compile_texture_set(constants.TEXTURE_SIDE, ctx.assets_dir, block_px=30)
 
     return ctx
 
 
 def get_base_token(raw_token: RawToken) -> Token:
-    return raw_token.split("@", 1)[0]
+    parsed = parse_structure_token(raw_token)
+
+    if parsed is None:
+        return "."
+
+    return parsed.token
 
 
 # --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---

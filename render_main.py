@@ -76,5 +76,7 @@ def build_stage_complete_schematics(
 
 if __name__ == "__main__":
     build_stage_complete_schematics(
-        structure="residence", stage=1, renders=[constants.RENDER_MATERIALS]
+        structure="residence",
+        stage=1,
+        renders=[constants.RENDER_TOP_VIEW, constants.RENDER_ROOF],
     )

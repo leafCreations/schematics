@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from helpers.types import BlockRegistryEntry, MappedTextureImages
@@ -22,3 +22,4 @@ class SchematicContext:
 
     topdown_textures: MappedTextureImages | None = None
     sideview_textures: MappedTextureImages | None = None
+    inventory_textures: dict = field(default_factory=dict)

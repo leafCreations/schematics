@@ -80,6 +80,7 @@ FURNACE:
   render:
     textures:
       top: furnace_front.png
+    inventory_image: furnace_front.png
   visibility:
     interior: false
 
@@ -172,7 +173,7 @@ STAIRS:
       shape: "{shape}"
   render:
     textures:
-      straight: "/custom/{material}_stairs_straight.png"
+      straight: "/custom/{material}_stairs_top.png"
       outer_left: "/custom/{material}_stairs_outer_left.png"
       outer_right: "/custom/{material}_stairs_outer_right.png"
       inner_left: "/custom/{material}_stairs_inner_left.png"
