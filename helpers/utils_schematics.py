@@ -154,9 +154,9 @@ def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None, draw
 
 def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundColor | None:
     entry = BLOCK_REGISTRY.get(token, {})
-    schematic = entry.get("schematic", {})
+    render = entry.get("render", {})
 
-    background_color = schematic.get("background_color")
+    background_color = render.get("background_color")
 
     if not background_color:
         return default

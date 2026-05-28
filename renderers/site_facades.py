@@ -6,11 +6,14 @@ from helpers.context import SchematicContext
 from helpers.types import (
     FacadeElevations,
     LayerElevations,
-    Layers,
     SiteFacadeLayout,
     SiteMap,
     Token,
 )
+
+
+def _get_site_size(ctx: SchematicContext) -> int:
+    return int(ctx.grid.get("site_size", 30))
 
 
 def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
@@ -20,12 +23,13 @@ def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
     view_keys = ["N", "S", "W", "E"]
     layer_keys = [-1, 0, 1]
 
-    panel_w = ctx.site_size * block_px
+    site_size = _get_site_size(ctx)
+    panel_w = site_size * block_px
 
     img_w = (panel_w * len(view_keys)) + (padding * (len(view_keys) + 1))
     img_h = top_margin + 50 + (len(layer_keys) * block_px) + 60
 
-    layout = SiteFacadeLayout(
+    return SiteFacadeLayout(
         block_px=block_px,
         padding=padding,
         top_margin=top_margin,
@@ -41,8 +45,6 @@ def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
             "E": "EAST ELEVATION (Landscape View)",
         },
     )
-
-    return layout
 
 
 def _create_site_facades_image(layout: SiteFacadeLayout):
@@ -77,13 +79,21 @@ def _collect_site_elevations(ctx: SchematicContext, siteMap: SiteMap) -> FacadeE
 
 
 def _collect_site_north_south_layer(
-    ctx: SchematicContext, siteMap: SiteMap, elevations: FacadeElevations, layer_y: int
+    ctx: SchematicContext,
+    siteMap: SiteMap,
+    elevations: FacadeElevations,
+    layer_y: int,
 ):
-    for x in range(ctx.site_size):
-        north_token = _find_first_site_token_along_z(siteMap, layer_y, x, range(ctx.site_size))
+    site_size = _get_site_size(ctx)
+
+    for x in range(site_size):
+        north_token = _find_first_site_token_along_z(siteMap, layer_y, x, range(site_size))
 
         south_token = _find_first_site_token_along_z(
-            siteMap, layer_y, x, range(ctx.site_size - 1, -1, -1)
+            siteMap,
+            layer_y,
+            x,
+            range(site_size - 1, -1, -1),
         )
 
         elevations["N"][layer_y].append(north_token)
@@ -91,13 +101,21 @@ def _collect_site_north_south_layer(
 
 
 def _collect_site_west_east_layer(
-    ctx: SchematicContext, siteMap: SiteMap, elevations: FacadeElevations, layer_y: int
+    ctx: SchematicContext,
+    siteMap: SiteMap,
+    elevations: FacadeElevations,
+    layer_y: int,
 ):
-    for z in range(ctx.site_size):
-        west_token = _find_first_site_token_along_x(siteMap, layer_y, z, range(ctx.site_size))
+    site_size = _get_site_size(ctx)
+
+    for z in range(site_size):
+        west_token = _find_first_site_token_along_x(siteMap, layer_y, z, range(site_size))
 
         east_token = _find_first_site_token_along_x(
-            siteMap, layer_y, z, range(ctx.site_size - 1, -1, -1)
+            siteMap,
+            layer_y,
+            z,
+            range(site_size - 1, -1, -1),
         )
 
         elevations["W"][layer_y].append(west_token)
@@ -161,14 +179,24 @@ def _draw_site_facade_panel(
     current_y: int,
     layout: SiteFacadeLayout,
 ):
+    site_size = _get_site_size(ctx)
+
     for step, layer_y in enumerate(layout["layer_keys"]):
         pixel_row = (len(layout["layer_keys"]) - 1) - step
         tokens = panel_data[layer_y]
 
-        for col in range(ctx.site_size):
+        for col in range(site_size):
             token = tokens[col]
             _draw_site_facade_cell(
-                img, draw, ctx, token, col, pixel_row, current_x, current_y, layout
+                img,
+                draw,
+                ctx,
+                token,
+                col,
+                pixel_row,
+                current_x,
+                current_y,
+                layout,
             )
 
 
@@ -190,42 +218,55 @@ def _draw_site_facade_cell(
 
     rect = [bx, by, bx + block_px, by + block_px]
 
-    _draw_site_facade_cell_background(draw, token, rect)
-
-    _draw_site_facade_cell_texture(img, draw, ctx, token, rect, bx, by)
-
-
-def _draw_site_facade_cell_background(draw: ImageDraw.ImageDraw, token: Token, layers: Layers):
     if token == ".":
-        background_color = (235, 245, 255)
-    else:
-        background_color = schematics_utils.get_background_color(token, default=(235, 245, 255))
-
-    draw.rectangle(layers, fill=background_color)
-
-
-def _draw_site_facade_cell_texture(
-    img: Image.Image,
-    draw: ImageDraw.ImageDraw,
-    ctx: SchematicContext,
-    token: Token,
-    layers: Layers,
-    bx: int,
-    by: int,
-):
-    if token in ctx.sideview_textures:
-        tex = ctx.sideview_textures[token]
-
-        img.paste(tex, (bx, by), tex if tex.mode == "RGBA" else None)
-
+        draw.rectangle(rect, fill=(235, 245, 255))
         return
 
-    if token == ".":
+    if ctx.sideview_textures and schematics_utils.paste_sideview_token(
+        img,
+        ctx.sideview_textures,
+        token,
+        (bx, by),
+        block_px,
+        draw,
+    ):
         return
 
     fallback_color = schematics_utils.get_background_color(token, default=(230, 230, 230))
+    draw.rectangle(rect, fill=fallback_color)
 
-    draw.rectangle(layers, fill=fallback_color)
+
+# def _draw_site_facade_cell_background(draw: ImageDraw.ImageDraw, token: Token, layers: Layers):
+#     if token == ".":
+#         background_color = (235, 245, 255)
+#     else:
+#         background_color = schematics_utils.get_background_color(token, default=(235, 245, 255))
+
+#     draw.rectangle(layers, fill=background_color)
+
+
+# def _draw_site_facade_cell_texture(
+#     img: Image.Image,
+#     draw: ImageDraw.ImageDraw,
+#     ctx: SchematicContext,
+#     token: Token,
+#     layers: Layers,
+#     bx: int,
+#     by: int,
+# ):
+#     if token in ctx.sideview_textures:
+#         tex = ctx.sideview_textures[token]
+
+#         img.paste(tex, (bx, by), tex if tex.mode == "RGBA" else None)
+
+#         return
+
+#     if token == ".":
+#         return
+
+#     fallback_color = schematics_utils.get_background_color(token, default=(230, 230, 230))
+
+#     draw.rectangle(layers, fill=fallback_color)
 
 
 def _build_site_facades_output_path(ctx: SchematicContext):
