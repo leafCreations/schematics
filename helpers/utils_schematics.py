@@ -84,6 +84,61 @@ def _get_raw_token_direction(raw_token: RawToken) -> str | None:
     return utils.normalize_direction(direction)
 
 
+def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
+    parsed = parse_structure_token(raw_token)
+
+    if parsed is None:
+        return False
+
+    base_token, direction = resolve_token_for_render(raw_token)
+
+    entry = BLOCK_REGISTRY.get(parsed.token, {})
+    defaults = entry.get("defaults", {})
+    render_textures = entry.get("render", {}).get("textures", {})
+
+    texture_keys = []
+
+    if raw_token in textures:
+        texture_keys.append(raw_token)
+
+    if parsed.variant:
+        texture_keys.append(f"{parsed.token}#{parsed.variant}")
+
+    for default_key in (
+        defaults.get("shape"),
+        defaults.get("type"),
+        defaults.get("part"),
+        "top",
+        "post",
+        "straight",
+        "single",
+        "bottom",
+        "lower",
+        "upper",
+    ):
+        if default_key and default_key in render_textures:
+            texture_keys.append(f"{parsed.token}#{default_key}")
+
+    texture_keys.append(base_token)
+
+    texture_key = next((key for key in texture_keys if key in textures), None)
+
+    if texture_key is None:
+        return False
+
+    tex = textures[texture_key]
+    tex = get_texture_for_render(base_token, tex)
+
+    if size is not None and tex.size != (size, size):
+        tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
+
+    if direction:
+        tex = utils.rotate_directional_texture(tex, direction)
+
+    img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
+    return True
+
+
 def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
     parsed = parse_structure_token(raw_token)
 

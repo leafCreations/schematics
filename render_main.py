@@ -78,5 +78,5 @@ if __name__ == "__main__":
     build_stage_complete_schematics(
         structure="residence",
         stage=1,
-        renders=[constants.RENDER_SITE_FACADES],
+        renders=[constants.RENDER_ALL],
     )

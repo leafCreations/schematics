@@ -6,7 +6,7 @@ from helpers.types import SiteLayer, SiteMap
 
 # Landscaping Rules
 PATH_WIDTH = 3
-TRIM_BLOCK = "g"  # Gravel Block for path trim
+TRIM_BLOCK = "GRAVEL"  # Gravel Block for path trim
 TRIM_WIDTH = 1
 LIGHTING_SPACING = 7
 LIGHTING_START_OFFSET = 10
@@ -14,16 +14,17 @@ LIGHTING_START_OFFSET = 10
 
 def _get_random_path_block() -> str:
     roll = random.random()
+
     if roll < 0.60:
-        return "dp"
-    elif roll < 0.75:
-        return "g"
-    elif roll < 0.90:
-        return "d"
-    elif roll < 0.97:
-        return "C"
-    else:
-        return "M"
+        return "DIRT_PATH"
+    if roll < 0.75:
+        return "GRAVEL"
+    if roll < 0.90:
+        return "DIRT"
+    if roll < 0.97:
+        return "COBBLESTONE"
+
+    return "COBBLESTONE#mossy"
 
 
 def _get_site_size(ctx: SchematicContext) -> int:

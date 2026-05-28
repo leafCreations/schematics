@@ -157,9 +157,9 @@ def _build_registry_texture_mapping(
                     mapping[f"{raw_token}#{texture_key}"] = formatted_texture
                     mapping[f"{raw_token}#{texture_type}:{texture_key}"] = formatted_texture
 
-        # Side-view fallback for flat render texture maps like FENCE.
+        # Top/side fallback for flat render texture maps like FENCE.
         # This intentionally skips nested groups like STAIRS.top.
-        if texture_type == "side":
+        if texture_type in {"top", "side"}:
             for texture_key, texture_name in render_textures.items():
                 if not isinstance(texture_name, str):
                     continue

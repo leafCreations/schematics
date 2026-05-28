@@ -15,18 +15,45 @@ from helpers.types import (
 )
 
 
+def _get_site_size(ctx: SchematicContext) -> int:
+    return int(ctx.grid.get("site_size", 30))
+
+
+def _get_offset_x(ctx: SchematicContext) -> int:
+    return int(ctx.grid.get("offset_x", 0))
+
+
+def _get_offset_z(ctx: SchematicContext) -> int:
+    return int(ctx.grid.get("offset_z", 0))
+
+
+def _get_structure_width(ctx: SchematicContext) -> int:
+    return max(
+        (len(row) for layer in ctx.layers for row in layer.get("cells", [])),
+        default=1,
+    )
+
+
+def _get_structure_depth(ctx: SchematicContext) -> int:
+    return max(
+        (len(layer.get("cells", [])) for layer in ctx.layers),
+        default=1,
+    )
+
+
 def _build_path_layout(ctx: SchematicContext) -> PathLayout:
     block_px = 30
     padding = 50
     top_margin = 80
     layers = [-1, 0, 1]
 
-    panel_dim = ctx.site_size * block_px
+    site_size = _get_site_size(ctx)
+    panel_dim = site_size * block_px
 
     img_w = (panel_dim * len(layers)) + (padding * (len(layers) + 1))
     img_h = top_margin + panel_dim + 80
 
-    layout = PathLayout(
+    return PathLayout(
         block_px=block_px,
         padding=padding,
         top_margin=top_margin,
@@ -35,8 +62,6 @@ def _build_path_layout(ctx: SchematicContext) -> PathLayout:
         img_w=img_w,
         img_h=img_h,
     )
-
-    return layout
 
 
 def _create_path_image(layout: PathLayout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
@@ -83,8 +108,10 @@ def _draw_path_layer_panel(
     layout: PathLayout,
     site_layer: SiteLayer,
 ):
-    for z in range(ctx.site_size):
-        for x in range(ctx.site_size):
+    site_size = _get_site_size(ctx)
+
+    for z in range(site_size):
+        for x in range(site_size):
             cell = _resolve_path_cell(ctx, layer_y, x, z, site_layer)
             _draw_path_cell(img, draw, ctx, cell, x, z, panel, layout)
 
@@ -124,9 +151,9 @@ def _resolve_path_cell(
     return cell
 
 
-def _get_structure_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: int) -> Token:
-    lx = x - ctx.offset_x
-    lz = z - ctx.offset_z
+def _get_structure_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: int) -> RawToken:
+    lx = x - _get_offset_x(ctx)
+    lz = z - _get_offset_z(ctx)
 
     if not _is_inside_structure(ctx, lx, lz):
         return "."
@@ -134,36 +161,45 @@ def _get_structure_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z:
     raw_token = _get_structure_raw_token(ctx, layer_y, lx, lz)
     token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
-    if not schematics_utils.show_interior_view(token):
+    if token == ".":
         return "."
 
-    return token
+    entry = ctx.block_registry.get(token, {})
+    visibility = entry.get("visibility", {})
+
+    if visibility is not None and visibility.get("interior") is False:
+        return "."
+
+    return raw_token
 
 
 def _is_inside_structure(ctx: SchematicContext, lx: int, lz: int) -> bool:
-    return 0 <= lx < ctx.struct_w and 0 <= lz < ctx.struct_h
+    return 0 <= lx < _get_structure_width(ctx) and 0 <= lz < _get_structure_depth(ctx)
 
 
 def _get_structure_raw_token(ctx: SchematicContext, layer_y: int, lx: int, lz: int) -> RawToken:
-    if layer_y not in ctx.data:
+    if layer_y < 0 or layer_y >= len(ctx.layers):
         return "."
 
-    if lz >= len(ctx.data[layer_y]):
+    layer = ctx.layers[layer_y]
+    cells = layer.get("cells", [])
+
+    if lz >= len(cells):
         return "."
 
-    tokens = ctx.data[layer_y][lz].split()
+    row = cells[lz]
 
-    if lx >= len(tokens):
+    if lx >= len(row):
         return "."
 
-    return tokens[lx]
+    return row[lx]
 
 
 def _get_lighting_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: int) -> Token:
     if layer_y == 0:
-        lighting_token = "o"
+        lighting_token = "FENCE"
     elif layer_y == 1:
-        lighting_token = "i"
+        lighting_token = "TORCH"
     else:
         return "."
 
@@ -173,11 +209,14 @@ def _get_lighting_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: 
     if not _is_lighting_column(ctx, x):
         return "."
 
+    if lighting_token == "FENCE":
+        print("Fence overlay:", layer_y, x, z)
+
     return lighting_token
 
 
 def _is_lighting_row(ctx: SchematicContext, z: int) -> bool:
-    relative_z = z - (ctx.offset_z + ctx.struct_h)
+    relative_z = z - (_get_offset_z(ctx) + _get_structure_depth(ctx))
 
     return (
         relative_z >= landscape_utils.LIGHTING_START_OFFSET
@@ -187,7 +226,7 @@ def _is_lighting_row(ctx: SchematicContext, z: int) -> bool:
 
 
 def _is_lighting_column(ctx: SchematicContext, x: int) -> bool:
-    stair_center_x = ctx.offset_x + 4
+    stair_center_x = _get_offset_x(ctx) + 4
 
     return x == stair_center_x - 2 or x == stair_center_x + 2
 
@@ -226,6 +265,11 @@ def _draw_base_path_cell(draw, base_token: Token, layers: Layers) -> BackgroundC
     return base_background_color
 
 
+def _apply_path_ghost_overlay(img: Image.Image, bx: int, by: int, block_px: int):
+    ghost = Image.new("RGBA", (block_px, block_px), (255, 255, 255, 140))
+    img.paste(ghost, (bx, by), ghost)
+
+
 def _draw_active_path_cell(
     img,
     draw,
@@ -238,15 +282,34 @@ def _draw_active_path_cell(
 ):
     active_token = cell["active_token"]
 
-    if active_token in ctx.topdown_textures:
-        _paste_active_path_texture(img, ctx, active_token, bx, by, cell["is_ghost"])
+    if active_token == ".":
         return
 
-    if active_token != "." and not cell["is_ground_layer"]:
-        draw.rectangle(
-            layers,
-            fill=schematics_utils.get_background_color(active_token, default=base_background_color),
-        )
+    if cell["is_ghost"] and active_token == cell["base_token"]:
+        return
+
+    token, _direction = schematics_utils.resolve_token_for_render(active_token)
+
+    if cell["is_ghost"] and active_token == cell["base_token"]:
+        return
+
+    if ctx.topdown_textures and schematics_utils.paste_topdown_token(
+        img,
+        ctx.topdown_textures,
+        active_token,
+        (bx, by),
+        30,
+        draw,
+    ):
+        if cell["is_ghost"]:
+            _apply_path_ghost_overlay(img, bx, by, 30)
+
+        return
+
+    draw.rectangle(
+        layers,
+        fill=schematics_utils.get_background_color(token, default=base_background_color),
+    )
 
 
 def _paste_active_path_texture(

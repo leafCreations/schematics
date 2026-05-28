@@ -82,7 +82,7 @@ FURNACE:
       top: furnace_front.png
     inventory_image: furnace_front.png
   visibility:
-    interior: false
+    interior: False
 
 CRAFTING_TABLE:
   behavior: solid
@@ -92,7 +92,7 @@ CRAFTING_TABLE:
     textures:
       top: crafting_table_top.png
   visibility:
-    interior: false
+    interior: False
 
 TORCH:
   behavior: torch
@@ -203,7 +203,7 @@ BED:
       foot: /custom/red_bed_bottom.png
     inventory_image: /custom/red_bed.png
   visibility:
-    interior: false
+    interior: False
 
 CHEST:
   behavior: chest
@@ -223,4 +223,4 @@ CHEST:
       right: /custom/double_chest_right.png
     inventory_image: /custom/chest.png
   visibility:
-    interior: false
+    interior: False
