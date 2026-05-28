@@ -69,19 +69,26 @@ def _get_texture_from_render(entry: dict[str, Any], texture_type: TextureType) -
     textures = render.get("textures", {})
     defaults = entry.get("defaults", {})
 
-    fallback_keys = [
-        texture_type,
-        defaults.get("variant"),
-        defaults.get("shape"),
-        defaults.get("part"),
-        defaults.get("type"),
-        "top",
-        "side",
-    ]
+    texture_value = textures.get(texture_type)
 
-    for key in fallback_keys:
-        if key and textures.get(key):
-            return _format_registry_value(textures[key], entry)
+    if isinstance(texture_value, dict):
+        nested_keys = [
+            defaults.get("direction"),
+            defaults.get("shape"),
+            defaults.get("half"),
+            defaults.get("variant"),
+            defaults.get("part"),
+            defaults.get("type"),
+        ]
+
+        for key in nested_keys:
+            if key and texture_value.get(key):
+                return _format_registry_value(texture_value[key], entry)
+
+        return None
+
+    if isinstance(texture_value, str):
+        return _format_registry_value(texture_value, entry)
 
     return None
 
@@ -134,20 +141,42 @@ def _build_registry_texture_mapping(
             mapping[raw_token] = texture_name
 
         render_textures = entry.get("render", {}).get("textures", {})
+        texture_value = render_textures.get(texture_type)
 
-        for texture_key, render_texture_name in render_textures.items():
-            formatted_texture = _format_registry_value(render_texture_name, entry)
+        if isinstance(texture_value, str):
+            formatted_texture = _format_registry_value(texture_value, entry)
 
             if formatted_texture:
-                mapping[f"{raw_token}#{texture_key}"] = formatted_texture
+                mapping[f"{raw_token}#{texture_type}"] = formatted_texture
 
-        minecraft_variants = entry.get("minecraft", {}).get("variants", {})
+        elif isinstance(texture_value, dict):
+            for texture_key, nested_texture_name in texture_value.items():
+                formatted_texture = _format_registry_value(nested_texture_name, entry)
 
-        for variant, variant_data in minecraft_variants.items():
-            block_id = _format_registry_value(variant_data.get("block"), entry)
+                if formatted_texture:
+                    mapping[f"{raw_token}#{texture_key}"] = formatted_texture
+                    mapping[f"{raw_token}#{texture_type}:{texture_key}"] = formatted_texture
 
-            if block_id:
-                mapping[f"{raw_token}#{variant}"] = utils.default_texture_name(block_id)
+        # Side-view fallback for flat render texture maps like FENCE.
+        # This intentionally skips nested groups like STAIRS.top.
+        if texture_type == "side":
+            for texture_key, texture_name in render_textures.items():
+                if not isinstance(texture_name, str):
+                    continue
+
+                formatted_texture = _format_registry_value(texture_name, entry)
+
+                if formatted_texture:
+                    mapping[f"{raw_token}#{texture_key}"] = formatted_texture
+
+        if texture_type == "top":
+            minecraft_variants = entry.get("minecraft", {}).get("variants", {})
+
+            for variant, variant_data in minecraft_variants.items():
+                block_id = _format_registry_value(variant_data.get("block"), entry)
+
+                if block_id:
+                    mapping[f"{raw_token}#{variant}"] = utils.default_texture_name(block_id)
 
     return mapping
 

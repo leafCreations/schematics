@@ -73,18 +73,47 @@ def show_interior_view(token: Token) -> bool:
     return schematic.get("showInteriorView", True) is not False
 
 
-def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
+def _get_raw_token_direction(raw_token: RawToken) -> str | None:
+    if "@" not in raw_token:
+        return None
+
+    direction = raw_token.split("@", 1)[1]
+    direction = direction.split("#", 1)[0]
+    direction = direction.split(":", 1)[0]
+
+    return utils.normalize_direction(direction)
+
+
+def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
     parsed = parse_structure_token(raw_token)
 
     if parsed is None:
         return False
 
-    base_token, direction = resolve_token_for_render(raw_token)
+    base_token, resolved_direction = resolve_token_for_render(raw_token)
+
     entry = BLOCK_REGISTRY.get(parsed.token, {})
     defaults = entry.get("defaults", {})
     render_textures = entry.get("render", {}).get("textures", {})
 
+    direction = parsed.direction or resolved_direction or defaults.get("direction")
+
     texture_keys = []
+
+    raw_base_token = raw_token.split("@", 1)[0].split("#", 1)[0]
+    clean_base_token = raw_base_token.split(":", 1)[0]
+
+    if direction:
+        texture_keys.extend(
+            [
+                f"{raw_base_token}#side:{direction}",
+                f"{raw_base_token}#{direction}",
+                f"{clean_base_token}#side:{direction}",
+                f"{clean_base_token}#{direction}",
+                f"{parsed.token}#side:{direction}",
+                f"{parsed.token}#{direction}",
+            ]
+        )
 
     if raw_token in textures:
         texture_keys.append(raw_token)
@@ -96,11 +125,13 @@ def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=
         defaults.get("shape"),
         defaults.get("type"),
         defaults.get("part"),
+        "side",
         "post",
         "straight",
         "single",
-        "top",
-        "side",
+        "bottom",
+        "lower",
+        "upper",
     ):
         if default_key and default_key in render_textures:
             texture_keys.append(f"{parsed.token}#{default_key}")
@@ -116,9 +147,6 @@ def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=
 
     if size is not None and tex.size != (size, size):
         tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
-
-    if direction is not None:
-        tex = utils.rotate_directional_texture(tex, direction)
 
     img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
     return True
@@ -196,50 +224,6 @@ SIDE_VIEW_TORCH_BACKING_BY_VIEW = {
 }
 
 SIDE_VIEW_TORCH_TOKENS = {"in", "is", "ie", "iw", "it"}
-
-
-def paste_sideview_token(img, textures, raw_token: RawToken, xy, block_px, view_key=None) -> bool:
-    x, y = xy
-
-    base_token, direction = resolve_token_for_render(raw_token)
-    token = utils.get_base_token(raw_token)
-
-    if token in SIDE_VIEW_TORCH_TOKENS:
-        should_show_backing = token in SIDE_VIEW_TORCH_BACKING_BY_VIEW.get(view_key, set())
-
-        if should_show_backing and "P" in textures:
-            img.paste(
-                textures["P"],
-                (x, y),
-                textures["P"] if textures["P"].mode == "RGBA" else None,
-            )
-
-        if "i" in textures:
-            torch_size = int(block_px * 0.60)
-            offset = (block_px - torch_size) // 2
-            torch_tex = textures["i"].resize(
-                (torch_size, torch_size), resample=Image.Resampling.NEAREST
-            )
-            img.paste(
-                torch_tex,
-                (x + offset, y + offset),
-                torch_tex if torch_tex.mode == "RGBA" else None,
-            )
-        return True
-
-    if base_token in textures:
-        tex = textures[base_token]
-
-        if tex.size != (block_px, block_px):
-            tex = tex.resize((block_px, block_px), resample=Image.Resampling.NEAREST)
-
-        if direction is not None:
-            tex = utils.rotate_directional_texture(tex, direction)
-
-        img.paste(tex, (x, y), tex if tex.mode == "RGBA" else None)
-        return True
-
-    return False
 
 
 def get_texture_for_render(token: Token, texture: Image.Image) -> Image.Image:

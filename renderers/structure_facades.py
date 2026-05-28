@@ -1,15 +1,31 @@
 from PIL import Image, ImageDraw
 
-import helpers.utils as utils
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.types import (
     FacadeElevations,
-    LayerElevations,
     RawToken,
     StructureFacadeLayout,
     Token,
 )
+
+
+def _get_structure_width(ctx: SchematicContext) -> int:
+    return max(
+        (len(row) for layer in ctx.layers for row in layer.get("cells", [])),
+        default=1,
+    )
+
+
+def _get_structure_depth(ctx: SchematicContext) -> int:
+    return max(
+        (len(layer.get("cells", [])) for layer in ctx.layers),
+        default=1,
+    )
+
+
+def _get_structure_height(ctx: SchematicContext) -> int:
+    return max(len(ctx.layers), 1)
 
 
 def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeLayout:
@@ -17,15 +33,17 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
     top_margin = 60
     panel_gap = 50
     side_count = 4
-    max_layers = 6
 
-    panel_w = max(ctx.struct_w, ctx.struct_h) * block_px
+    struct_w = _get_structure_width(ctx)
+    struct_h = _get_structure_depth(ctx)
+    max_layers = _get_structure_height(ctx)
+
+    panel_w = max(struct_w, struct_h) * block_px
     panel_h = max_layers * block_px
-
     img_w = (panel_w * side_count) + (panel_gap * (side_count + 1))
     img_h = top_margin + panel_h + 60
 
-    layout = StructureFacadeLayout(
+    return StructureFacadeLayout(
         block_px=block_px,
         top_margin=top_margin,
         panel_gap=panel_gap,
@@ -42,8 +60,6 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
             "E": "EAST FAÇADE (Right Side)",
         },
     )
-
-    return layout
 
 
 def _create_structure_elevation_image(
@@ -64,8 +80,11 @@ def _draw_structure_elevation_title(draw: ImageDraw.ImageDraw):
     )
 
 
-def _collect_structure_elevations(ctx: SchematicContext) -> FacadeElevations:
-    max_layers = 6
+def _collect_structure_elevations(
+    ctx: SchematicContext,
+    layout: StructureFacadeLayout,
+) -> FacadeElevations:
+    max_layers = layout["max_layers"]
 
     struct_elevations = FacadeElevations(
         N={y: [] for y in range(max_layers)},
@@ -82,13 +101,20 @@ def _collect_structure_elevations(ctx: SchematicContext) -> FacadeElevations:
 
 
 def _collect_north_south_elevation_layer(
-    ctx: SchematicContext, struct_elevations: FacadeElevations, layer_y: int
+    ctx: SchematicContext,
+    struct_elevations: FacadeElevations,
+    layer_y: int,
 ):
-    for x in range(ctx.struct_w):
-        north_token = _find_first_visible_token_along_z(ctx, layer_y, x, range(ctx.struct_h))
+    struct_w = _get_structure_width(ctx)
+    struct_h = _get_structure_depth(ctx)
 
+    for x in range(struct_w):
+        north_token = _find_first_visible_token_along_z(ctx, layer_y, x, range(struct_h))
         south_token = _find_first_visible_token_along_z(
-            ctx, layer_y, x, range(ctx.struct_h - 1, -1, -1)
+            ctx,
+            layer_y,
+            x,
+            range(struct_h - 1, -1, -1),
         )
 
         struct_elevations["N"][layer_y].append(north_token)
@@ -96,53 +122,74 @@ def _collect_north_south_elevation_layer(
 
 
 def _collect_west_east_elevation_layer(
-    ctx: SchematicContext, struct_elevations: FacadeElevations, layer_y: int
+    ctx: SchematicContext,
+    struct_elevations: FacadeElevations,
+    layer_y: int,
 ):
-    for z in range(ctx.struct_h):
-        west_token = _find_first_visible_token_along_x(ctx, layer_y, z, range(ctx.struct_w))
+    struct_w = _get_structure_width(ctx)
+    struct_h = _get_structure_depth(ctx)
 
+    for z in range(struct_h):
+        west_token = _find_first_visible_token_along_x(ctx, layer_y, z, range(struct_w))
         east_token = _find_first_visible_token_along_x(
-            ctx, layer_y, z, range(ctx.struct_w - 1, -1, -1)
+            ctx,
+            layer_y,
+            z,
+            range(struct_w - 1, -1, -1),
         )
 
         struct_elevations["W"][layer_y].append(west_token)
         struct_elevations["E"][layer_y].append(east_token)
 
 
-def _find_first_visible_token_along_z(ctx: SchematicContext, layer_y: int, x: int, z_range: range):
+def _find_first_visible_token_along_z(
+    ctx: SchematicContext,
+    layer_y: int,
+    x: int,
+    z_range: range,
+):
     for z in z_range:
         raw_token = _get_raw_token(ctx, layer_y, z, x)
         token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
         if token != ".":
-            return utils.get_base_token(raw_token)
+            return raw_token
 
     return "."
 
 
-def _find_first_visible_token_along_x(ctx: SchematicContext, layer_y: int, z: int, x_range: range):
+def _find_first_visible_token_along_x(
+    ctx: SchematicContext,
+    layer_y: int,
+    z: int,
+    x_range: range,
+):
     for x in x_range:
         raw_token = _get_raw_token(ctx, layer_y, z, x)
         token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
         if token != ".":
-            return utils.get_base_token(raw_token)
+            return raw_token
 
     return "."
 
 
 def _get_raw_token(ctx: SchematicContext, layer_y: int, z: int, x: int) -> RawToken:
-    try:
-        row = ctx.data[layer_y][z]
-    except KeyError:
+    if layer_y >= len(ctx.layers):
         return "."
 
-    tokens = row.split()
+    layer = ctx.layers[layer_y]
+    cells = layer.get("cells", [])
 
-    if x >= len(tokens):
+    if z >= len(cells):
         return "."
 
-    return tokens[x]
+    row = cells[z]
+
+    if x >= len(row):
+        return "."
+
+    return row[x]
 
 
 def _draw_structure_elevation_panels(
@@ -159,10 +206,55 @@ def _draw_structure_elevation_panels(
         _draw_structure_elevation_heading(draw, view_key, current_x, current_y, layout)
 
         _draw_structure_elevation_panel(
-            img, draw, ctx, struct_elevations[view_key], view_key, current_x, current_y, layout
+            img,
+            draw,
+            ctx,
+            struct_elevations[view_key],
+            view_key,
+            current_x,
+            current_y,
+            layout,
         )
 
         current_x += layout["panel_w"] + layout["panel_gap"]
+
+
+def _draw_structure_elevation_panel(
+    img: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    ctx: SchematicContext,
+    elevation: dict[int, list[RawToken]],
+    view_key: str,
+    sx: int,
+    sy: int,
+    layout: StructureFacadeLayout,
+):
+    block_px = layout["block_px"]
+    panel_h = layout["panel_h"]
+    max_layers = layout["max_layers"]
+
+    token_count = _get_view_token_count(ctx, view_key)
+
+    for layer_y in range(max_layers):
+        row_tokens = elevation.get(layer_y, [])
+
+        for i in range(token_count):
+            raw_token = row_tokens[i] if i < len(row_tokens) else "."
+            token, _direction = schematics_utils.resolve_token_for_render(raw_token)
+
+            bx = sx + (i * block_px)
+            by = sy + panel_h - ((layer_y + 1) * block_px)
+
+            _draw_structure_elevation_cell(
+                img,
+                draw,
+                ctx,
+                raw_token,
+                token,
+                bx,
+                by,
+                block_px,
+            )
 
 
 def _draw_structure_elevation_heading(
@@ -175,39 +267,11 @@ def _draw_structure_elevation_heading(
     draw.text((current_x, current_y - 20), layout["headings"][view_key], fill=(60, 60, 60))
 
 
-def _draw_structure_elevation_panel(
-    img: Image.Image,
-    draw: ImageDraw.ImageDraw,
-    ctx: SchematicContext,
-    layer_elevations: LayerElevations,
-    view_key: str,
-    current_x: int,
-    current_y: int,
-    layout: StructureFacadeLayout,
-):
-    tokens_count = _get_view_token_count(ctx, view_key)
-
-    for layer_y in range(layout["max_layers"]):
-        pixel_row = (layout["max_layers"] - 1) - layer_y
-        tokens = layer_elevations[layer_y]
-
-        for col in range(tokens_count):
-            raw_token = tokens[col] if col < len(tokens) else "."
-            token, _direction = schematics_utils.resolve_token_for_render(raw_token)
-
-            bx = current_x + (col * layout["block_px"])
-            by = current_y + (pixel_row * layout["block_px"])
-
-            _draw_structure_elevation_cell(
-                img, draw, ctx, raw_token, token, bx, by, view_key, layout
-            )
-
-
 def _get_view_token_count(ctx: SchematicContext, view_key: str) -> int:
     if view_key in ["N", "S"]:
-        return ctx.struct_w
+        return _get_structure_width(ctx)
 
-    return ctx.struct_h
+    return _get_structure_depth(ctx)
 
 
 def _draw_structure_elevation_cell(
@@ -218,24 +282,29 @@ def _draw_structure_elevation_cell(
     token: Token,
     bx: int,
     by: int,
-    view_key: str,
-    layout: StructureFacadeLayout,
+    block_px: int,
 ):
-    block_px = layout["block_px"]
     rect = [bx, by, bx + block_px, by + block_px]
 
     if token == ".":
-        draw.rectangle(rect, fill=(240, 248, 255))
+        draw.rectangle(rect, fill=(245, 245, 245), outline=(230, 230, 230))
         return
 
-    rendered = schematics_utils.paste_sideview_token(
-        img, ctx.sideview_textures, raw_token, (bx, by), block_px, view_key
+    if ctx.sideview_textures and schematics_utils.paste_sideview_token(
+        img,
+        ctx.sideview_textures,
+        raw_token,
+        (bx, by),
+        block_px,
+        draw,
+    ):
+        return
+
+    draw.rectangle(
+        rect,
+        fill=schematics_utils.get_background_color(token, default=(245, 245, 245)),
+        outline=(230, 230, 230),
     )
-
-    if rendered:
-        return
-
-    draw.rectangle(rect, fill=schematics_utils.get_background_color(token, default=(230, 230, 230)))
 
 
 def _build_structure_elevation_output_path(ctx: SchematicContext):
@@ -244,14 +313,12 @@ def _build_structure_elevation_output_path(ctx: SchematicContext):
 
 def render_structure_facades(ctx: SchematicContext):
     layout = _build_structure_elevation_layout(ctx)
-    struct_elevations = _collect_structure_elevations(ctx)
+    struct_elevations = _collect_structure_elevations(ctx, layout)
 
     img, draw = _create_structure_elevation_image(layout)
 
     _draw_structure_elevation_title(draw)
-
     _draw_structure_elevation_panels(img, draw, ctx, struct_elevations, layout)
 
     output_path = _build_structure_elevation_output_path(ctx)
-
     img.save(output_path)

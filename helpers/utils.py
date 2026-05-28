@@ -50,8 +50,8 @@ def load_structure_config(structure: str, stage: int) -> SchematicContext:
     )
 
     ctx.topdown_textures = compile_texture_set(constants.TEXTURE_TOP, ctx.assets_dir, block_px=30)
-    ctx.inventory_textures = compile_inventory_texture_set(ctx.assets_dir, block_px=30)
     ctx.sideview_textures = compile_texture_set(constants.TEXTURE_SIDE, ctx.assets_dir, block_px=30)
+    ctx.inventory_textures = compile_inventory_texture_set(ctx.assets_dir, block_px=30)
 
     return ctx
 

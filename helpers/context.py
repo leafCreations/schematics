@@ -22,4 +22,4 @@ class SchematicContext:
 
     topdown_textures: MappedTextureImages | None = None
     sideview_textures: MappedTextureImages | None = None
-    inventory_textures: dict = field(default_factory=dict)
+    inventory_textures: MappedTextureImages = field(default_factory=dict)
