@@ -1,5 +1,6 @@
 import random
 
+import helpers.grid as grid_utils
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.types import SiteLayer, SiteMap
@@ -39,25 +40,11 @@ def _get_offset_z(ctx: SchematicContext) -> int:
     return int(ctx.grid.get("offset_z", 0))
 
 
-def _get_structure_width(ctx: SchematicContext) -> int:
-    return max(
-        (len(row) for layer in ctx.layers for row in layer.get("cells", [])),
-        default=1,
-    )
-
-
-def _get_structure_depth(ctx: SchematicContext) -> int:
-    return max(
-        (len(layer.get("cells", [])) for layer in ctx.layers),
-        default=1,
-    )
-
-
 def generate_landscape_y_minus_1_sitelayer(ctx: SchematicContext) -> SiteLayer:
     site_size = _get_site_size(ctx)
     offset_x = _get_offset_x(ctx)
     offset_z = _get_offset_z(ctx)
-    structure_depth = _get_structure_depth(ctx)
+    structure_depth = grid_utils.get_structure_depth(ctx)
 
     grid: SiteLayer = [["GRASS" for _ in range(site_size)] for _ in range(site_size)]
 
@@ -84,8 +71,8 @@ def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
     site_size = _get_site_size(ctx)
     offset_x = _get_offset_x(ctx)
     offset_z = _get_offset_z(ctx)
-    structure_width = _get_structure_width(ctx)
-    structure_depth = _get_structure_depth(ctx)
+    structure_width = grid_utils.get_structure_width(ctx)
+    structure_depth = grid_utils.get_structure_depth(ctx)
 
     site_map: SiteMap = {
         y: [["." for _ in range(site_size)] for _ in range(site_size)] for y in [-1, 0, 1]

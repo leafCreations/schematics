@@ -1,0 +1,7 @@
+amulet-core
+Pillow
+PyYAML
+
+[dev]
+ruff
+pre-commit

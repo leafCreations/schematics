@@ -1,11 +1,19 @@
 from collections import Counter
+from typing import Literal
 
 from PIL import Image, ImageChops
 
 import helpers.utils as utils
-from helpers.structure_tokens import parse_structure_token
-from helpers.types import BackgroundColor, RawToken, Token
+from helpers.structure_tokens import ParsedToken, parse_structure_token
+from helpers.types import BackgroundColor, MappedTextureImages, RawToken, Token
 from registries.loader import BLOCK_REGISTRY
+
+TextureView = Literal["top", "side"]
+
+_VIEW_DEFAULT_TEXTURE_KEYS: dict[TextureView, tuple[str, ...]] = {
+    "top": ("top", "post", "straight", "single", "bottom", "lower", "upper"),
+    "side": ("side", "post", "straight", "single", "bottom", "lower", "upper"),
+}
 
 
 def get_blockstate_value(blockstate: str | None, key: str) -> str | None:
@@ -84,19 +92,41 @@ def _get_raw_token_direction(raw_token: RawToken) -> str | None:
     return utils.normalize_direction(direction)
 
 
-def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
-    parsed = parse_structure_token(raw_token)
+def _build_directional_side_keys(
+    raw_token: RawToken,
+    parsed_token: str,
+    direction: str | None,
+) -> list[str]:
+    if not direction:
+        return []
 
-    if parsed is None:
-        return False
+    raw_base_token = raw_token.split("@", 1)[0].split("#", 1)[0]
+    clean_base_token = raw_base_token.split(":", 1)[0]
 
-    base_token, direction = resolve_token_for_render(raw_token)
+    return [
+        f"{raw_base_token}#side:{direction}",
+        f"{raw_base_token}#{direction}",
+        f"{clean_base_token}#side:{direction}",
+        f"{clean_base_token}#{direction}",
+        f"{parsed_token}#side:{direction}",
+        f"{parsed_token}#{direction}",
+    ]
 
-    entry = BLOCK_REGISTRY.get(parsed.token, {})
-    defaults = entry.get("defaults", {})
-    render_textures = entry.get("render", {}).get("textures", {})
 
-    texture_keys = []
+def _build_texture_key_candidates(
+    raw_token: RawToken,
+    parsed: ParsedToken,
+    base_token: Token,
+    defaults: dict,
+    render_textures: dict,
+    textures: MappedTextureImages,
+    view: TextureView,
+    direction: str | None = None,
+) -> list[str]:
+    texture_keys: list[str] = []
+
+    if view == "side":
+        texture_keys.extend(_build_directional_side_keys(raw_token, parsed.token, direction))
 
     if raw_token in textures:
         texture_keys.append(raw_token)
@@ -108,38 +138,37 @@ def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=
         defaults.get("shape"),
         defaults.get("type"),
         defaults.get("part"),
-        "top",
-        "post",
-        "straight",
-        "single",
-        "bottom",
-        "lower",
-        "upper",
+        *_VIEW_DEFAULT_TEXTURE_KEYS[view],
     ):
         if default_key and default_key in render_textures:
             texture_keys.append(f"{parsed.token}#{default_key}")
 
     texture_keys.append(base_token)
 
-    texture_key = next((key for key in texture_keys if key in textures), None)
+    return texture_keys
 
-    if texture_key is None:
-        return False
 
-    tex = textures[texture_key]
+def _resolve_texture_key(texture_keys: list[str], textures: MappedTextureImages) -> str | None:
+    return next((key for key in texture_keys if key in textures), None)
+
+
+def _resize_texture(tex: Image.Image, size: int | None) -> Image.Image:
+    if size is not None and tex.size != (size, size):
+        return tex.resize((size, size), resample=Image.Resampling.NEAREST)
+
+    return tex
+
+
+def _prepare_topdown_texture(
+    tex: Image.Image,
+    base_token: Token,
+    direction: str | None,
+    rotation: int,
+) -> Image.Image:
     tex = get_texture_for_render(base_token, tex)
 
-    #
-    # Directional rotation
-    #
     if direction:
         tex = utils.rotate_directional_texture(tex, direction)
-
-    #
-    # Custom token rotation
-    #
-
-    rotation = getattr(parsed, "rotation", 0)
 
     if rotation:
         tex = tex.rotate(
@@ -148,82 +177,68 @@ def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=
             resample=Image.Resampling.NEAREST,
         )
 
-    #
-    # Resize after rotations
-    #
-    if size is not None and tex.size != (size, size):
-        tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
+    return tex
 
+
+def _paste_prepared_texture(img, tex: Image.Image, xy) -> None:
     img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
-    return True
 
 
-def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
+def _paste_token(
+    img,
+    textures: MappedTextureImages,
+    raw_token: RawToken,
+    xy,
+    view: TextureView,
+    size: int | None = None,
+    draw=None,
+) -> bool:
     parsed = parse_structure_token(raw_token)
 
     if parsed is None:
         return False
 
     base_token, resolved_direction = resolve_token_for_render(raw_token)
-
     entry = BLOCK_REGISTRY.get(parsed.token, {})
     defaults = entry.get("defaults", {})
     render_textures = entry.get("render", {}).get("textures", {})
 
-    direction = parsed.direction or resolved_direction or defaults.get("direction")
+    if view == "side":
+        direction = parsed.direction or resolved_direction or defaults.get("direction")
+    else:
+        direction = resolved_direction
 
-    texture_keys = []
-
-    raw_base_token = raw_token.split("@", 1)[0].split("#", 1)[0]
-    clean_base_token = raw_base_token.split(":", 1)[0]
-
-    if direction:
-        texture_keys.extend(
-            [
-                f"{raw_base_token}#side:{direction}",
-                f"{raw_base_token}#{direction}",
-                f"{clean_base_token}#side:{direction}",
-                f"{clean_base_token}#{direction}",
-                f"{parsed.token}#side:{direction}",
-                f"{parsed.token}#{direction}",
-            ]
-        )
-
-    if raw_token in textures:
-        texture_keys.append(raw_token)
-
-    if parsed.variant:
-        texture_keys.append(f"{parsed.token}#{parsed.variant}")
-
-    for default_key in (
-        defaults.get("shape"),
-        defaults.get("type"),
-        defaults.get("part"),
-        "side",
-        "post",
-        "straight",
-        "single",
-        "bottom",
-        "lower",
-        "upper",
-    ):
-        if default_key and default_key in render_textures:
-            texture_keys.append(f"{parsed.token}#{default_key}")
-
-    texture_keys.append(base_token)
-
-    texture_key = next((key for key in texture_keys if key in textures), None)
+    texture_keys = _build_texture_key_candidates(
+        raw_token,
+        parsed,
+        base_token,
+        defaults,
+        render_textures,
+        textures,
+        view,
+        direction if view == "side" else None,
+    )
+    texture_key = _resolve_texture_key(texture_keys, textures)
 
     if texture_key is None:
         return False
 
     tex = textures[texture_key]
 
-    if size is not None and tex.size != (size, size):
-        tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
+    if view == "top":
+        tex = _prepare_topdown_texture(tex, base_token, direction, parsed.rotation)
 
-    img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
+    tex = _resize_texture(tex, size)
+    _paste_prepared_texture(img, tex, xy)
     return True
+
+
+def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
+    return _paste_token(img, textures, raw_token, xy, "top", size, draw)
+
+
+def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
+    return _paste_token(img, textures, raw_token, xy, "side", size, draw)
 
 
 def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundColor | None:

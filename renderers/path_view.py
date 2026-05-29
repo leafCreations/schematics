@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw
 
+import helpers.grid as grid_utils
 import helpers.landscape_utils as landscape_utils
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
@@ -25,20 +26,6 @@ def _get_offset_x(ctx: SchematicContext) -> int:
 
 def _get_offset_z(ctx: SchematicContext) -> int:
     return int(ctx.grid.get("offset_z", 0))
-
-
-def _get_structure_width(ctx: SchematicContext) -> int:
-    return max(
-        (len(row) for layer in ctx.layers for row in layer.get("cells", [])),
-        default=1,
-    )
-
-
-def _get_structure_depth(ctx: SchematicContext) -> int:
-    return max(
-        (len(layer.get("cells", [])) for layer in ctx.layers),
-        default=1,
-    )
 
 
 def _build_path_layout(ctx: SchematicContext) -> PathLayout:
@@ -174,7 +161,9 @@ def _get_structure_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z:
 
 
 def _is_inside_structure(ctx: SchematicContext, lx: int, lz: int) -> bool:
-    return 0 <= lx < _get_structure_width(ctx) and 0 <= lz < _get_structure_depth(ctx)
+    return 0 <= lx < grid_utils.get_structure_width(
+        ctx
+    ) and 0 <= lz < grid_utils.get_structure_depth(ctx)
 
 
 def _get_structure_raw_token(ctx: SchematicContext, layer_y: int, lx: int, lz: int) -> RawToken:
@@ -216,7 +205,7 @@ def _get_lighting_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: 
 
 
 def _is_lighting_row(ctx: SchematicContext, z: int) -> bool:
-    relative_z = z - (_get_offset_z(ctx) + _get_structure_depth(ctx))
+    relative_z = z - (_get_offset_z(ctx) + grid_utils.get_structure_depth(ctx))
 
     return (
         relative_z >= landscape_utils.LIGHTING_START_OFFSET

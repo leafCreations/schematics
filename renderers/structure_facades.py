@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw
 
+import helpers.grid as grid_utils
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.types import (
@@ -8,20 +9,6 @@ from helpers.types import (
     StructureFacadeLayout,
     Token,
 )
-
-
-def _get_structure_width(ctx: SchematicContext) -> int:
-    return max(
-        (len(row) for layer in ctx.layers for row in layer.get("cells", [])),
-        default=1,
-    )
-
-
-def _get_structure_depth(ctx: SchematicContext) -> int:
-    return max(
-        (len(layer.get("cells", [])) for layer in ctx.layers),
-        default=1,
-    )
 
 
 def _get_structure_height(ctx: SchematicContext) -> int:
@@ -34,8 +21,8 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
     panel_gap = 50
     side_count = 4
 
-    struct_w = _get_structure_width(ctx)
-    struct_h = _get_structure_depth(ctx)
+    struct_w = grid_utils.get_structure_width(ctx)
+    struct_h = grid_utils.get_structure_depth(ctx)
     max_layers = _get_structure_height(ctx)
 
     panel_w = max(struct_w, struct_h) * block_px
@@ -105,8 +92,8 @@ def _collect_north_south_elevation_layer(
     struct_elevations: FacadeElevations,
     layer_y: int,
 ):
-    struct_w = _get_structure_width(ctx)
-    struct_h = _get_structure_depth(ctx)
+    struct_w = grid_utils.get_structure_width(ctx)
+    struct_h = grid_utils.get_structure_depth(ctx)
 
     for x in range(struct_w):
         north_token = _find_first_visible_token_along_z(ctx, layer_y, x, range(struct_h))
@@ -126,8 +113,8 @@ def _collect_west_east_elevation_layer(
     struct_elevations: FacadeElevations,
     layer_y: int,
 ):
-    struct_w = _get_structure_width(ctx)
-    struct_h = _get_structure_depth(ctx)
+    struct_w = grid_utils.get_structure_width(ctx)
+    struct_h = grid_utils.get_structure_depth(ctx)
 
     for z in range(struct_h):
         west_token = _find_first_visible_token_along_x(ctx, layer_y, z, range(struct_w))
@@ -269,9 +256,9 @@ def _draw_structure_elevation_heading(
 
 def _get_view_token_count(ctx: SchematicContext, view_key: str) -> int:
     if view_key in ["N", "S"]:
-        return _get_structure_width(ctx)
+        return grid_utils.get_structure_width(ctx)
 
-    return _get_structure_depth(ctx)
+    return grid_utils.get_structure_depth(ctx)
 
 
 def _draw_structure_elevation_cell(
