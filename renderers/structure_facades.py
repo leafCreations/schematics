@@ -11,10 +11,6 @@ from helpers.types import (
 )
 
 
-def _get_structure_height(ctx: SchematicContext) -> int:
-    return max(len(ctx.layers), 1)
-
-
 def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeLayout:
     block_px = 30
     top_margin = 60
@@ -23,7 +19,7 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
 
     struct_w = grid_utils.get_structure_width(ctx)
     struct_h = grid_utils.get_structure_depth(ctx)
-    max_layers = _get_structure_height(ctx)
+    max_layers = grid_utils.get_structure_height(ctx)
 
     panel_w = max(struct_w, struct_h) * block_px
     panel_h = max_layers * block_px

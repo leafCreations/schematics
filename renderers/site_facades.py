@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw
 
+import helpers.grid as grid_utils
 import helpers.landscape_utils as landscape_utils
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
@@ -12,10 +13,6 @@ from helpers.types import (
 )
 
 
-def _get_site_size(ctx: SchematicContext) -> int:
-    return int(ctx.grid.get("site_size", 30))
-
-
 def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
     block_px = 30
     padding = 60
@@ -23,7 +20,7 @@ def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
     view_keys = ["N", "S", "W", "E"]
     layer_keys = [-1, 0, 1]
 
-    site_size = _get_site_size(ctx)
+    site_size = grid_utils.get_site_size(ctx)
     panel_w = site_size * block_px
 
     img_w = (panel_w * len(view_keys)) + (padding * (len(view_keys) + 1))
@@ -84,7 +81,7 @@ def _collect_site_north_south_layer(
     elevations: FacadeElevations,
     layer_y: int,
 ):
-    site_size = _get_site_size(ctx)
+    site_size = grid_utils.get_site_size(ctx)
 
     for x in range(site_size):
         north_token = _find_first_site_token_along_z(siteMap, layer_y, x, range(site_size))
@@ -106,7 +103,7 @@ def _collect_site_west_east_layer(
     elevations: FacadeElevations,
     layer_y: int,
 ):
-    site_size = _get_site_size(ctx)
+    site_size = grid_utils.get_site_size(ctx)
 
     for z in range(site_size):
         west_token = _find_first_site_token_along_x(siteMap, layer_y, z, range(site_size))
@@ -179,7 +176,7 @@ def _draw_site_facade_panel(
     current_y: int,
     layout: SiteFacadeLayout,
 ):
-    site_size = _get_site_size(ctx)
+    site_size = grid_utils.get_site_size(ctx)
 
     for step, layer_y in enumerate(layout["layer_keys"]):
         pixel_row = (len(layout["layer_keys"]) - 1) - step
@@ -234,39 +231,6 @@ def _draw_site_facade_cell(
 
     fallback_color = schematics_utils.get_background_color(token, default=(230, 230, 230))
     draw.rectangle(rect, fill=fallback_color)
-
-
-# def _draw_site_facade_cell_background(draw: ImageDraw.ImageDraw, token: Token, layers: Layers):
-#     if token == ".":
-#         background_color = (235, 245, 255)
-#     else:
-#         background_color = schematics_utils.get_background_color(token, default=(235, 245, 255))
-
-#     draw.rectangle(layers, fill=background_color)
-
-
-# def _draw_site_facade_cell_texture(
-#     img: Image.Image,
-#     draw: ImageDraw.ImageDraw,
-#     ctx: SchematicContext,
-#     token: Token,
-#     layers: Layers,
-#     bx: int,
-#     by: int,
-# ):
-#     if token in ctx.sideview_textures:
-#         tex = ctx.sideview_textures[token]
-
-#         img.paste(tex, (bx, by), tex if tex.mode == "RGBA" else None)
-
-#         return
-
-#     if token == ".":
-#         return
-
-#     fallback_color = schematics_utils.get_background_color(token, default=(230, 230, 230))
-
-#     draw.rectangle(layers, fill=fallback_color)
 
 
 def _build_site_facades_output_path(ctx: SchematicContext):

@@ -1,4 +1,3 @@
-from collections import Counter
 from typing import Literal
 
 from PIL import Image, ImageChops
@@ -14,19 +13,6 @@ _VIEW_DEFAULT_TEXTURE_KEYS: dict[TextureView, tuple[str, ...]] = {
     "top": ("top", "post", "straight", "single", "bottom", "lower", "upper"),
     "side": ("side", "post", "straight", "single", "bottom", "lower", "upper"),
 }
-
-
-def get_blockstate_value(blockstate: str | None, key: str) -> str | None:
-    if not blockstate:
-        return None
-
-    for part in blockstate.split(","):
-        name, _, value = part.partition("=")
-
-        if name.strip() == key:
-            return value.strip()
-
-    return None
 
 
 def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
@@ -67,29 +53,17 @@ def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
 
 
 def show_interior_view(token: Token) -> bool:
-    """Return whether this block should appear in interior/path overlays.
-
-    blocks.yaml may define showInteriorView: false at the token root
-    to hide interior-only blocks from landscaping/path views.
-    Missing values default to True.
-    """
     if token == ".":
         return False
 
     entry = BLOCK_REGISTRY.get(token, {})
-    schematic = entry.get("schematic", {})
-    return schematic.get("showInteriorView", True) is not False
+    visibility = entry.get("visibility", {})
+    interior_visible = visibility.get("interior")
 
-
-def _get_raw_token_direction(raw_token: RawToken) -> str | None:
-    if "@" not in raw_token:
-        return None
-
-    direction = raw_token.split("@", 1)[1]
-    direction = direction.split("#", 1)[0]
-    direction = direction.split(":", 1)[0]
-
-    return utils.normalize_direction(direction)
+    if interior_visible is not None:
+        return interior_visible
+    else:
+        return True
 
 
 def _build_directional_side_keys(
@@ -279,40 +253,6 @@ def get_inventory_group(token: Token) -> str:
         return category
 
     return get_display_name(token)
-
-
-def collect_inventory_counts(
-    raw_tokens: list[RawToken],
-) -> tuple[Counter, dict[str, Token]]:
-    grouped_counts = Counter()
-    group_icons = {}
-
-    for token in raw_tokens:
-        if token == ".":
-            continue
-
-        group_name = get_inventory_group(token)
-        grouped_counts[group_name] += 1
-
-        if group_name not in group_icons:
-            group_icons[group_name] = token
-
-    return grouped_counts, group_icons
-
-
-def material_sort_key(item: tuple[str, int]) -> str:
-    token, _count = item
-    return get_display_name(token).lower()
-
-
-SIDE_VIEW_TORCH_BACKING_BY_VIEW = {
-    "N": {"in"},
-    "S": {"is"},
-    "E": {"ie"},
-    "W": {"iw"},
-}
-
-SIDE_VIEW_TORCH_TOKENS = {"in", "is", "ie", "iw", "it"}
 
 
 def get_texture_for_render(token: Token, texture: Image.Image) -> Image.Image:

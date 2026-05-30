@@ -28,22 +28,10 @@ def _get_random_path_block() -> str:
     return "COBBLESTONE#mossy"
 
 
-def _get_site_size(ctx: SchematicContext) -> int:
-    return int(ctx.grid.get("site_size", 30))
-
-
-def _get_offset_x(ctx: SchematicContext) -> int:
-    return int(ctx.grid.get("offset_x", 0))
-
-
-def _get_offset_z(ctx: SchematicContext) -> int:
-    return int(ctx.grid.get("offset_z", 0))
-
-
 def generate_landscape_y_minus_1_sitelayer(ctx: SchematicContext) -> SiteLayer:
-    site_size = _get_site_size(ctx)
-    offset_x = _get_offset_x(ctx)
-    offset_z = _get_offset_z(ctx)
+    site_size = grid_utils.get_site_size(ctx)
+    offset_x = grid_utils.get_offset_x(ctx)
+    offset_z = grid_utils.get_offset_z(ctx)
     structure_depth = grid_utils.get_structure_depth(ctx)
 
     grid: SiteLayer = [["GRASS" for _ in range(site_size)] for _ in range(site_size)]
@@ -68,9 +56,9 @@ def generate_landscape_y_minus_1_sitelayer(ctx: SchematicContext) -> SiteLayer:
 
 
 def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
-    site_size = _get_site_size(ctx)
-    offset_x = _get_offset_x(ctx)
-    offset_z = _get_offset_z(ctx)
+    site_size = grid_utils.get_site_size(ctx)
+    offset_x = grid_utils.get_offset_x(ctx)
+    offset_z = grid_utils.get_offset_z(ctx)
     structure_width = grid_utils.get_structure_width(ctx)
     structure_depth = grid_utils.get_structure_depth(ctx)
 

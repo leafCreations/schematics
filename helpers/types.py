@@ -108,6 +108,7 @@ class StructureFacadeLayout(TypedDict):
     view_keys: list[str]
     layer_keys: list[int]
     headings: dict[str, str]
+    max_layers: int
 
 
 class MaterialsLayout(TypedDict):
