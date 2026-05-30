@@ -45,6 +45,9 @@ helpers/
   render_image.py       # Shared canvas creation for blueprint PNGs
   landscape_utils.py    # Path and site map generation
   paths.py              # Asset and output directory paths, schematic output naming
+  pipeline.py           # Render name validation and normalization
+  registry_blocks.py    # Shared Minecraft block ID / blockstate resolution
+  structure_loader.py   # Structure config validation and context building
   structure_tokens.py   # Token parsing (material, direction, variant)
   types.py              # TypedDicts and type aliases
   utils.py              # Structure loading and texture helpers
@@ -206,6 +209,8 @@ The `grid` object supports:
 * `site_size` — site footprint in blocks
 * `offset_x` / `offset_z` — structure placement on the site
 * `stair_local_x` — local X of the entry stair within the structure (defaults to `4`)
+* `site_structure_layers` — list positions into `layers` projected onto site Y=0/1 (defaults to `[0, 1]`)
+* `worldgen_base_y` — Minecraft Y base for world export (defaults to `-60`)
 
 ---
 

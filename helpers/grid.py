@@ -1,3 +1,4 @@
+import helpers.constants as constants
 from helpers.context import SchematicContext
 
 
@@ -15,6 +16,19 @@ def get_offset_z(ctx: SchematicContext) -> int:
 
 def get_stair_local_x(ctx: SchematicContext) -> int:
     return int(ctx.grid.get("stair_local_x", 4))
+
+
+def get_site_structure_layer_indices(ctx: SchematicContext) -> list[int]:
+    configured = ctx.grid.get("site_structure_layers")
+
+    if configured is not None:
+        return [int(index) for index in configured]
+
+    return constants.DEFAULT_SITE_STRUCTURE_LAYERS[: len(ctx.layers)]
+
+
+def get_worldgen_base_y(ctx: SchematicContext) -> int:
+    return int(ctx.grid.get("worldgen_base_y", constants.DEFAULT_WORLDGEN_BASE_Y))
 
 
 def get_structure_width(ctx: SchematicContext) -> int:

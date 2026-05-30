@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from helpers.types import BlockRegistryEntry, MappedTextureImages
+from helpers.types import BlockRegistryEntry, GridConfig, LayerConfig, MappedTextureImages
 
 
 @dataclass
@@ -10,8 +10,8 @@ class SchematicContext:
     stage: int
     name: str
 
-    layers: list[dict]
-    grid: dict
+    layers: list[LayerConfig]
+    grid: GridConfig
 
     block_registry: dict[str, BlockRegistryEntry]
 

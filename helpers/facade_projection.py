@@ -128,7 +128,6 @@ def draw_facade_cell(
         raw_token,
         (bx, by),
         block_px,
-        draw,
     ):
         return
 

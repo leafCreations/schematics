@@ -19,7 +19,7 @@ from helpers.types import (
 def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
     block_px = constants.BLOCK_PX
     padding = 60
-    top_margin = 80
+    top_margin = constants.SITE_FACADES_TOP_MARGIN
     view_keys = ["N", "S", "W", "E"]
     layer_keys = [-1, 0, 1]
 

@@ -1,64 +1,25 @@
-import importlib.util
-from pathlib import Path
-
 from PIL import Image
 
-import helpers.constants as constants
-from helpers.context import SchematicContext
-from helpers.paths import (
-    ASSET_FOLDER,
-    OUTPUT_SCHEMATICS_FOLDER,
-    OUTPUT_WORLDS_FOLDER,
-    TEMPLATE_FOLDER,
+from helpers.structure_loader import (
+    build_schematic_context,
+)
+from helpers.structure_loader import (
+    load_structure_config as _load_structure_config,
 )
 from helpers.types import BlockId
-from registries.loader import BLOCK_REGISTRY, compile_inventory_texture_set, compile_texture_set
+
+__all__ = [
+    "build_schematic_context",
+    "default_texture_name",
+    "load_structure_config",
+    "normalize_direction",
+    "rotate_directional_texture",
+    "split_block_id",
+]
 
 
-def load_structure_config(structure: str, stage: int) -> SchematicContext:
-    structure_file = f"structures/{structure}/stage{stage}_structure.py"
-
-    structure_path = Path(structure_file).resolve()
-
-    if not structure_path.exists():
-        raise FileNotFoundError(f"Structure file not found: {structure_path}")
-
-    module_name = structure_path.stem
-
-    spec = importlib.util.spec_from_file_location(module_name, structure_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load structure module: {structure_path}")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    if not hasattr(module, "STRUCTURE_CONFIG"):
-        raise AttributeError(f"{structure_path} must define STRUCTURE_CONFIG")
-
-    ctx = SchematicContext(
-        structure=module.STRUCTURE_CONFIG["structure"],
-        stage=module.STRUCTURE_CONFIG["stage"],
-        layers=module.STRUCTURE_CONFIG["layers"],
-        grid=module.STRUCTURE_CONFIG["grid"],
-        name=module.STRUCTURE_CONFIG["name"],
-        block_registry=BLOCK_REGISTRY,
-        assets_dir=ASSET_FOLDER / "textures/block",
-        output_schematics_dir=OUTPUT_SCHEMATICS_FOLDER / module.STRUCTURE_CONFIG["output_folder"],
-        output_worldgen_dir=OUTPUT_WORLDS_FOLDER / module.STRUCTURE_CONFIG["output_folder"],
-        worldgen_template_dir=TEMPLATE_FOLDER,
-    )
-
-    ctx.topdown_textures = compile_texture_set(
-        constants.TEXTURE_TOP, ctx.assets_dir, block_px=constants.BLOCK_PX
-    )
-    ctx.sideview_textures = compile_texture_set(
-        constants.TEXTURE_SIDE, ctx.assets_dir, block_px=constants.BLOCK_PX
-    )
-    ctx.inventory_textures = compile_inventory_texture_set(
-        ctx.assets_dir, block_px=constants.BLOCK_PX
-    )
-
-    return ctx
+def load_structure_config(structure: str, stage: int):
+    return _load_structure_config(structure, stage)
 
 
 # --- REGISTRY-DRIVEN SCHEMATIC HELPERS ---

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
+import helpers.registry_blocks as registry_blocks
 from helpers.context import SchematicContext
 from helpers.structure_tokens import ParsedToken, parse_structure_token
 from helpers.types import MaterialsIconList, MaterialsList, ParsedTokenMaterialsList, RawToken
@@ -65,28 +66,13 @@ def format_material_name(block_name: str) -> str:
 
 def resolve_material_block_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
     entry = ctx.block_registry[parsed.token]
-    defaults = entry.get("defaults", {})
-    material = parsed.material or entry.get("material_default")
-    variant = parsed.variant or defaults.get("variant")
-    minecraft = entry["minecraft"]
-
-    if "variants" in minecraft:
-        if variant is None:
-            raise ValueError(f"{parsed.token} requires a variant or defaults.variant")
-
-        block_name = minecraft["variants"][variant]["block"]
-    else:
-        block_name = minecraft["block"]
-
-    if material:
-        block_name = block_name.format(material=material)
-
+    block_name = registry_blocks.resolve_minecraft_block_id(entry, parsed)
     return block_name.split(":", 1)[-1]
 
 
 def should_count_material(parsed: ParsedToken, ctx: SchematicContext) -> bool:
     entry = ctx.block_registry[parsed.token]
-    behavior = entry["behavior"]
+    behavior = registry_blocks.get_block_behavior(entry)
 
     if behavior == "door" and parsed.variant == "upper":
         return False

@@ -13,7 +13,7 @@ from helpers.context import SchematicContext
 from helpers.types import (
     FloorBlueprintLayout,
     FloorBlueprintPanel,
-    Layers,
+    LayerSpecList,
     RawToken,
     Token,
 )
@@ -30,11 +30,11 @@ def _get_layer_depth(layer: dict) -> int:
     return max(len(layer.get("cells", [])), 1)
 
 
-def _build_layout(ctx: SchematicContext, layers: Layers) -> FloorBlueprintLayout:
+def _build_layout(ctx: SchematicContext, layers: LayerSpecList) -> FloorBlueprintLayout:
     block_px = constants.BLOCK_PX
-    padding = 50
+    padding = constants.RENDER_PADDING
     layer_gap = 80
-    top_margin = 120
+    top_margin = constants.LAYER_PANEL_TOP_MARGIN
     bottom_margin = 60
     inventory_w = 150
 
@@ -116,7 +116,7 @@ def _draw_block_cell(
     rect = [bx, by, bx + block_px, by + block_px]
 
     if token == ".":
-        draw.rectangle(rect, fill=(245, 245, 245), outline=(230, 230, 230))
+        draw.rectangle(rect, fill=constants.EMPTY_CELL_COLOR, outline=constants.EMPTY_CELL_OUTLINE)
         return
 
     draw.rectangle(rect, outline=(230, 230, 230))
@@ -132,14 +132,14 @@ def _draw_block_cell(
 
     draw.rectangle(
         rect,
-        fill=schematics_utils.get_background_color(token, default=(245, 245, 245)),
-        outline=(230, 230, 230),
+        fill=schematics_utils.get_background_color(token, default=constants.EMPTY_CELL_COLOR),
+        outline=constants.EMPTY_CELL_OUTLINE,
     )
 
 
 def _create_page_image(
     layout: FloorBlueprintLayout,
-    page_layers: Layers,
+    page_layers: LayerSpecList,
 ) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     layer_count = len(page_layers)
     rows = (layer_count + layout["columns"] - 1) // layout["columns"]
@@ -296,7 +296,7 @@ def _draw_compass(draw, img_w: int, padding: int, fonts: font_utils.Fonts):
     draw.text((cx - size - 18, cy - 7), "W", fill="black", font=fonts["layer"])
 
 
-def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: Layers):
+def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: LayerSpecList):
     layout: FloorBlueprintLayout = _build_layout(ctx, layers)
     fonts: font_utils.Fonts = font_utils.load_layer_panel_fonts()
 

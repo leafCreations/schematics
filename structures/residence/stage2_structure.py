@@ -1068,5 +1068,7 @@ STRUCTURE_CONFIG = {
         "offset_x": 10,
         "offset_z": 4,
         "stair_local_x": 4,
+        "site_structure_layers": [0, 1],
+        "worldgen_base_y": -60,
     },
 }

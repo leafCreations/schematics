@@ -1,30 +1,26 @@
 from PIL import Image
 
-import helpers.cells as cell_utils
 import helpers.constants as constants
 import helpers.grid as grid_utils
 import helpers.landscape_utils as landscape_utils
-import helpers.path_geometry as path_geometry
 import helpers.paths as paths
 import helpers.render_image as render_image
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.types import (
     BackgroundColor,
+    BBox,
     Cell,
-    Layers,
     PathLayout,
     PathPanel,
-    RawToken,
-    SiteLayer,
     Token,
 )
 
 
 def _build_path_layout(ctx: SchematicContext) -> PathLayout:
     block_px = constants.BLOCK_PX
-    padding = 50
-    top_margin = 80
+    padding = constants.RENDER_PADDING
+    top_margin = constants.PATH_VIEW_TOP_MARGIN
     layers = [-1, 0, 1]
 
     site_size = grid_utils.get_site_size(ctx)
@@ -78,91 +74,14 @@ def _draw_path_layer_panel(
     layer_y: int,
     panel: PathPanel,
     layout: PathLayout,
-    site_layer: SiteLayer,
+    site_map,
 ):
     site_size = grid_utils.get_site_size(ctx)
-    geom = path_geometry.get_path_geometry(ctx)
 
     for z in range(site_size):
         for x in range(site_size):
-            cell = _resolve_path_cell(ctx, layer_y, x, z, site_layer, geom)
+            cell = landscape_utils.resolve_path_view_cell(layer_y, x, z, site_map)
             _draw_path_cell(img, draw, ctx, cell, x, z, panel, layout)
-
-
-def _resolve_path_cell(
-    ctx: SchematicContext,
-    layer_y: int,
-    x: int,
-    z: int,
-    site_layer: SiteLayer,
-    geom: path_geometry.PathGeometry,
-) -> Cell:
-    base_token = site_layer[z][x]
-
-    cell = Cell(
-        base_token=base_token,
-        active_token=".",
-        is_ghost=False,
-        is_ground_layer=False,
-    )
-
-    if layer_y == -1:
-        cell["active_token"] = base_token
-        cell["is_ground_layer"] = True
-        return cell
-
-    structure_token = _get_structure_overlay_token(ctx, layer_y, x, z)
-
-    if structure_token != ".":
-        cell["active_token"] = structure_token
-        return cell
-
-    lighting_token = _get_lighting_overlay_token(ctx, layer_y, x, z, geom)
-
-    if lighting_token != ".":
-        cell["active_token"] = lighting_token
-        return cell
-
-    cell["active_token"] = base_token
-    cell["is_ghost"] = True
-
-    return cell
-
-
-def _get_structure_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: int) -> RawToken:
-    raw_token = cell_utils.get_structure_cell_at_site(ctx, layer_y, x, z)
-    token, _direction = schematics_utils.resolve_token_for_render(raw_token)
-
-    if token == ".":
-        return "."
-
-    if not schematics_utils.show_interior_view(token):
-        return "."
-
-    return raw_token
-
-
-def _get_lighting_overlay_token(
-    ctx: SchematicContext,
-    layer_y: int,
-    x: int,
-    z: int,
-    geom: path_geometry.PathGeometry,
-) -> Token:
-    if layer_y == 0:
-        lighting_token = "FENCE"
-    elif layer_y == 1:
-        lighting_token = "TORCH"
-    else:
-        return "."
-
-    if not geom.is_lighting_row(z):
-        return "."
-
-    if not geom.is_lighting_column(x):
-        return "."
-
-    return lighting_token
 
 
 def _draw_path_cell(
@@ -180,7 +99,7 @@ def _draw_path_cell(
     bx = panel["sx"] + (x * block_px)
     by = panel["sy"] + (z * block_px)
 
-    rect = [bx, by, bx + block_px, by + block_px]
+    rect: BBox = [bx, by, bx + block_px, by + block_px]
 
     base_background_color = _draw_base_path_cell(draw, cell["base_token"], rect)
 
@@ -189,12 +108,13 @@ def _draw_path_cell(
     _draw_path_cell_outline(draw, rect, cell["is_ghost"])
 
 
-def _draw_base_path_cell(draw, base_token: Token, layers: Layers) -> BackgroundColor:
+def _draw_base_path_cell(draw, base_token: Token, rect: BBox) -> BackgroundColor:
     base_background_color = schematics_utils.get_background_color(
-        base_token, default=(245, 245, 245)
+        base_token,
+        default=constants.EMPTY_CELL_COLOR,
     )
 
-    draw.rectangle(layers, fill=base_background_color)
+    draw.rectangle(rect, fill=base_background_color)
 
     return base_background_color
 
@@ -209,7 +129,7 @@ def _draw_active_path_cell(
     draw,
     ctx: SchematicContext,
     cell: Cell,
-    layers: Layers,
+    rect: BBox,
     bx: int,
     by: int,
     block_px: int,
@@ -238,18 +158,18 @@ def _draw_active_path_cell(
         return
 
     draw.rectangle(
-        layers,
+        rect,
         fill=schematics_utils.get_background_color(token, default=base_background_color),
     )
 
 
-def _draw_path_cell_outline(draw, layers: Layers, is_ghost: bool):
-    draw.rectangle(layers, outline=(40, 40, 40, 12 if is_ghost else 25))
+def _draw_path_cell_outline(draw, rect: BBox, is_ghost: bool):
+    draw.rectangle(rect, outline=(40, 40, 40, 12 if is_ghost else 25))
 
 
 def render_path_focused_blueprint(ctx: SchematicContext):
     layout = _build_path_layout(ctx)
-    site_layer = landscape_utils.generate_landscape_y_minus_1_sitelayer(ctx)
+    site_map = landscape_utils.generate_full_3d_landscape_sitemap(ctx)
 
     img, draw = render_image.create_canvas(layout["img_w"], layout["img_h"])
 
@@ -260,7 +180,7 @@ def render_path_focused_blueprint(ctx: SchematicContext):
 
         _draw_path_layer_header(draw, layer_y, panel)
 
-        _draw_path_layer_panel(img, draw, ctx, layer_y, panel, layout, site_layer)
+        _draw_path_layer_panel(img, draw, ctx, layer_y, panel, layout, site_map)
 
     output_path = paths.schematic_output_path(ctx, "site_topdown.png")
     img.save(output_path)

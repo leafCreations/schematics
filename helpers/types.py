@@ -22,7 +22,8 @@ LayerElevations: TypeAlias = dict[int, ElevationRows]
 SiteLayer: TypeAlias = list[list[str]]
 CellGrid: TypeAlias = list[list[str]]
 SiteMap: TypeAlias = dict[int, SiteLayer]
-Layers: TypeAlias = list[int]
+LayerSpecList: TypeAlias = list[dict]
+BBox: TypeAlias = list[int]
 RawTokenMaterialsList: TypeAlias = list[RawToken]
 MaterialsList: TypeAlias = list[tuple[str, int]]
 MaterialsIconList: TypeAlias = dict[str, str]
@@ -119,6 +120,57 @@ class Cell(TypedDict):
     is_ghost: bool
 
 
+class GridConfig(TypedDict, total=False):
+    site_size: int
+    offset_x: int
+    offset_z: int
+    stair_local_x: int
+    site_structure_layers: list[int]
+    worldgen_base_y: int
+
+
+class LayerConfig(TypedDict, total=False):
+    index: int
+    group: str
+    name: str
+    floor: str
+    cells: CellGrid
+
+
+class StructureConfig(TypedDict):
+    structure: str
+    stage: int
+    name: str
+    output_folder: str
+    layers: list[LayerConfig]
+    grid: GridConfig
+
+
+class MinecraftBlockVariant(TypedDict, total=False):
+    block: str
+    blockstates: dict[str, str | bool]
+
+
+class MinecraftBlockDefinition(TypedDict, total=False):
+    block: str
+    blockstates: dict[str, str | bool]
+    variants: dict[str, MinecraftBlockVariant]
+
+
+class RegistryRenderTextures(TypedDict, total=False):
+    top: str
+    side: str
+
+
+class RegistryRenderConfig(TypedDict, total=False):
+    textures: RegistryRenderTextures
+    inventory_image: str
+
+
+class RegistryVisibility(TypedDict, total=False):
+    interior: bool
+
+
 class MinecraftBlock(TypedDict):
     block: str
     blockstate: NotRequired[str | None]
@@ -133,7 +185,12 @@ class SchematicBlockData(TypedDict, total=False):
 
 
 class BlockRegistryEntry(TypedDict, total=False):
-    minecraft: MinecraftBlock
+    minecraft: MinecraftBlockDefinition
+    behavior: str
+    defaults: dict[str, str]
+    material_default: str
+    render: RegistryRenderConfig
+    visibility: RegistryVisibility
     schematic: SchematicBlockData
     display_name: str
     category: str

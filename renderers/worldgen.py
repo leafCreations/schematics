@@ -7,6 +7,12 @@ from amulet.level.formats.anvil_world import AnvilFormat
 
 from helpers.cells import get_cell
 from helpers.context import SchematicContext
+from helpers.grid import get_worldgen_base_y
+from helpers.registry_blocks import (
+    get_block_behavior,
+    resolve_minecraft_block_id,
+    resolve_minecraft_blockstates,
+)
 from helpers.structure_tokens import ParsedToken, parse_structure_token
 from registries.loader import BLOCK_REGISTRY
 
@@ -46,7 +52,7 @@ def should_fence_connect(raw_neighbor: str | None) -> bool:
     if entry is None:
         return False
 
-    return entry["behavior"] in FENCE_CONNECTABLE_BEHAVIORS
+    return get_block_behavior(entry) in FENCE_CONNECTABLE_BEHAVIORS
 
 
 def resolve_fence_adjacency(
@@ -77,7 +83,7 @@ def resolve_worldgen_token(
 ) -> ParsedToken:
     entry = BLOCK_REGISTRY[parsed.token]
 
-    if entry["behavior"] == "fence":
+    if get_block_behavior(entry) == "fence":
         return resolve_fence_adjacency(parsed, cells, x, z)
 
     return parsed
@@ -90,66 +96,25 @@ def generate_block(parsed: ParsedToken) -> Block:
         return BLOCK_CACHE[cache_key]
 
     entry = BLOCK_REGISTRY[parsed.token]
-
-    defaults = entry.get("defaults", {})
-
-    material = parsed.material or entry.get("material_default")
-    direction = parsed.direction or defaults.get("direction")
-    variant = parsed.variant or defaults.get("variant")
-
     minecraft = entry["minecraft"]
 
-    #
-    # Resolve variant
-    #
     if "variants" in minecraft:
+        variant = parsed.variant or entry.get("defaults", {}).get("variant")
+
         if variant is None:
             raise ValueError(f"{parsed.token} requires a variant or defaults.variant")
 
         variant_data = minecraft["variants"][variant]
-        block_name = variant_data["block"]
+        block_name = resolve_minecraft_block_id(entry, parsed)
         blockstates_template = variant_data.get("blockstates", {})
     else:
-        block_name = minecraft["block"]
+        block_name = resolve_minecraft_block_id(entry, parsed)
         blockstates_template = minecraft.get("blockstates", {})
 
-    #
-    # Material substitution
-    #
-    if material:
-        block_name = block_name.format(material=material)
+    resolved_blockstates = resolve_minecraft_blockstates(entry, parsed, blockstates_template)
 
-    #
-    # Resolve blockstates
-    #
-    resolved_blockstates = {}
-
-    format_values = {
-        **defaults,
-        **dict(parsed.states),
-        "material": material,
-        "direction": direction,
-        "variant": variant,
-        "half": parsed.variant or defaults.get("half"),
-        "part": parsed.variant or defaults.get("part"),
-        "type": parsed.variant or defaults.get("type"),
-        "shape": parsed.variant or defaults.get("shape"),
-    }
-
-    for state_name, state_value in blockstates_template.items():
-        if isinstance(state_value, str):
-            resolved_value = state_value.format(**format_values)
-        else:
-            resolved_value = state_value
-
-        resolved_blockstates[state_name] = str(resolved_value).lower()
-
-    #
-    # Create block
-    #
     if resolved_blockstates:
         state_string = ",".join(f"{key}={value}" for key, value in resolved_blockstates.items())
-
         generated_block = Block.from_string_blockstate(f"{block_name}[{state_string}]")
     else:
         namespace, base_name = block_name.split(":", 1)
@@ -161,23 +126,17 @@ def generate_block(parsed: ParsedToken) -> Block:
 
 
 def generate_minecraft_world(ctx: SchematicContext) -> None:
+    BLOCK_CACHE.clear()
+
     if ctx.output_worldgen_dir.exists():
         shutil.rmtree(ctx.output_worldgen_dir)
     shutil.copytree(ctx.worldgen_template_dir, ctx.output_worldgen_dir)
 
-    # Initialize AnvilFormat directly to avoid World() initialization crashes
     level = AnvilFormat(ctx.output_worldgen_dir)
-
-    # 2. CRITICAL: Explicitly open the format
-    # This mounts the directory and prepares the internal MCA readers
     level.open()
 
-    # 3. Define the dimension and base Y level for structure placement.
-    # Note: The base Y level should be chosen based on the structure's
-    # height and desired ground level in the world.
-    # For example, base_y = - 60 is used for super flat world.
     dimension = "minecraft:overworld"
-    base_y = -60  #
+    base_y = get_worldgen_base_y(ctx)
 
     print("🔨 TRANSLATING 3D TOKENS INTO ANVIL CHUNK MATRIX MAPS...")
     current_chunk = None
@@ -207,7 +166,6 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
                 if chunk_coords != last_coords:
                     if current_chunk is not None:
                         level.commit_chunk(current_chunk, dimension)
-                        # print(f"Committed chunk {chunk_x}, {chunk_z}")
 
                     try:
                         current_chunk = level.load_chunk(chunk_x, chunk_z, dimension)

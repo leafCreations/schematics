@@ -1,3 +1,4 @@
+import helpers.constants as constants
 import helpers.fonts as font_utils
 import helpers.materials as material_utils
 import helpers.paths as paths
@@ -14,7 +15,7 @@ def _build_material_layout(materials: MaterialsList) -> MaterialsLayout:
     row_h = 42
     header_h = 110
     footer_h = 35
-    padding = 50
+    padding = constants.RENDER_PADDING
     img_w = 700
 
     img_h = max(360, header_h + (len(materials) * row_h) + footer_h)

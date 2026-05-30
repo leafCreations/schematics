@@ -1,8 +1,10 @@
+import argparse
 import random
+import sys
 
 import helpers.constants as constants
+import helpers.pipeline as pipeline
 import helpers.utils as utils
-from helpers.context import SchematicContext
 from helpers.types import RenderList
 from renderers.registry import RENDER_REGISTRY
 
@@ -10,22 +12,16 @@ from renderers.registry import RENDER_REGISTRY
 random.seed(42)
 
 
-# --- MASTER PIPELINE RUNNER WRAPPER ---
 def build_stage_complete_schematics(
     structure: str, stage: int, renders: RenderList | str | None = None
 ):
-    if renders is None:
-        renders = [constants.RENDER_ALL]
-
-    if isinstance(renders, str):
-        renders = [renders]
-
-    renders = set(renders)
+    renders = pipeline.normalize_renders(renders)
+    pipeline.validate_render_names(renders)
 
     def should_render(name):
         return constants.RENDER_ALL in renders or name in renders
 
-    ctx: SchematicContext = utils.load_structure_config(structure, stage)
+    ctx = utils.load_structure_config(structure, stage)
 
     ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
 
@@ -43,9 +39,31 @@ def build_stage_complete_schematics(
     print("=" * 70 + "\n")
 
 
-if __name__ == "__main__":
-    build_stage_complete_schematics(
-        structure="residence",
-        stage=2,
-        renders=[constants.RENDER_ALL],
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Generate Minecraft schematic blueprints")
+    parser.add_argument("--structure", default="residence", help="Structure package name")
+    parser.add_argument("--stage", type=int, default=1, help="Structure stage number")
+    parser.add_argument(
+        "--renders",
+        nargs="+",
+        default=[constants.RENDER_ALL],
+        help="Render types to generate, or 'all'",
     )
+
+    args = parser.parse_args(argv)
+
+    try:
+        build_stage_complete_schematics(
+            structure=args.structure,
+            stage=args.stage,
+            renders=args.renders,
+        )
+    except (FileNotFoundError, ValueError, KeyError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
