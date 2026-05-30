@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw
 
+import helpers.constants as constants
 import helpers.grid as grid_utils
 import helpers.landscape_utils as landscape_utils
 import helpers.utils_schematics as schematics_utils
@@ -14,7 +15,7 @@ from helpers.types import (
 
 
 def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
-    block_px = 30
+    block_px = constants.BLOCK_PX
     padding = 60
     top_margin = 80
     view_keys = ["N", "S", "W", "E"]

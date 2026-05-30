@@ -1,7 +1,10 @@
 from PIL import Image, ImageDraw
 
+import helpers.cells as cell_utils
+import helpers.constants as constants
 import helpers.grid as grid_utils
 import helpers.landscape_utils as landscape_utils
+import helpers.path_geometry as path_geometry
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.types import (
@@ -17,7 +20,7 @@ from helpers.types import (
 
 
 def _build_path_layout(ctx: SchematicContext) -> PathLayout:
-    block_px = 30
+    block_px = constants.BLOCK_PX
     padding = 50
     top_margin = 80
     layers = [-1, 0, 1]
@@ -84,15 +87,21 @@ def _draw_path_layer_panel(
     site_layer: SiteLayer,
 ):
     site_size = grid_utils.get_site_size(ctx)
+    geom = path_geometry.get_path_geometry(ctx)
 
     for z in range(site_size):
         for x in range(site_size):
-            cell = _resolve_path_cell(ctx, layer_y, x, z, site_layer)
+            cell = _resolve_path_cell(ctx, layer_y, x, z, site_layer, geom)
             _draw_path_cell(img, draw, ctx, cell, x, z, panel, layout)
 
 
 def _resolve_path_cell(
-    ctx: SchematicContext, layer_y: int, x: int, z: int, site_layer: SiteLayer
+    ctx: SchematicContext,
+    layer_y: int,
+    x: int,
+    z: int,
+    site_layer: SiteLayer,
+    geom: path_geometry.PathGeometry,
 ) -> Cell:
     base_token = site_layer[z][x]
 
@@ -114,7 +123,7 @@ def _resolve_path_cell(
         cell["active_token"] = structure_token
         return cell
 
-    lighting_token = _get_lighting_overlay_token(ctx, layer_y, x, z)
+    lighting_token = _get_lighting_overlay_token(ctx, layer_y, x, z, geom)
 
     if lighting_token != ".":
         cell["active_token"] = lighting_token
@@ -127,13 +136,7 @@ def _resolve_path_cell(
 
 
 def _get_structure_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: int) -> RawToken:
-    lx = x - grid_utils.get_offset_x(ctx)
-    lz = z - grid_utils.get_offset_z(ctx)
-
-    if not _is_inside_structure(ctx, lx, lz):
-        return "."
-
-    raw_token = _get_structure_raw_token(ctx, layer_y, lx, lz)
+    raw_token = cell_utils.get_structure_cell_at_site(ctx, layer_y, x, z)
     token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
     if token == ".":
@@ -145,31 +148,13 @@ def _get_structure_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z:
     return raw_token
 
 
-def _is_inside_structure(ctx: SchematicContext, lx: int, lz: int) -> bool:
-    return 0 <= lx < grid_utils.get_structure_width(
-        ctx
-    ) and 0 <= lz < grid_utils.get_structure_depth(ctx)
-
-
-def _get_structure_raw_token(ctx: SchematicContext, layer_y: int, lx: int, lz: int) -> RawToken:
-    if layer_y < 0 or layer_y >= len(ctx.layers):
-        return "."
-
-    layer = ctx.layers[layer_y]
-    cells = layer.get("cells", [])
-
-    if lz >= len(cells):
-        return "."
-
-    row = cells[lz]
-
-    if lx >= len(row):
-        return "."
-
-    return row[lx]
-
-
-def _get_lighting_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: int) -> Token:
+def _get_lighting_overlay_token(
+    ctx: SchematicContext,
+    layer_y: int,
+    x: int,
+    z: int,
+    geom: path_geometry.PathGeometry,
+) -> Token:
     if layer_y == 0:
         lighting_token = "FENCE"
     elif layer_y == 1:
@@ -177,29 +162,13 @@ def _get_lighting_overlay_token(ctx: SchematicContext, layer_y: int, x: int, z: 
     else:
         return "."
 
-    if not _is_lighting_row(ctx, z):
+    if not geom.is_lighting_row(z):
         return "."
 
-    if not _is_lighting_column(ctx, x):
+    if not geom.is_lighting_column(x):
         return "."
 
     return lighting_token
-
-
-def _is_lighting_row(ctx: SchematicContext, z: int) -> bool:
-    relative_z = z - (grid_utils.get_offset_z(ctx) + grid_utils.get_structure_depth(ctx))
-
-    return (
-        relative_z >= landscape_utils.LIGHTING_START_OFFSET
-        and (relative_z - landscape_utils.LIGHTING_START_OFFSET) % landscape_utils.LIGHTING_SPACING
-        == 0
-    )
-
-
-def _is_lighting_column(ctx: SchematicContext, x: int) -> bool:
-    stair_center_x = grid_utils.get_offset_x(ctx) + 4
-
-    return x == stair_center_x - 2 or x == stair_center_x + 2
 
 
 def _draw_path_cell(
@@ -271,7 +240,7 @@ def _draw_active_path_cell(
         draw,
     ):
         if cell["is_ghost"]:
-            _apply_path_ghost_overlay(img, bx, by, 30)
+            _apply_path_ghost_overlay(img, bx, by, block_px)
 
         return
 

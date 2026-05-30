@@ -5,6 +5,7 @@ from amulet.api.chunk import Chunk
 from amulet.api.errors import ChunkDoesNotExist
 from amulet.level.formats.anvil_world import AnvilFormat
 
+from helpers.cells import get_cell
 from helpers.context import SchematicContext
 from helpers.structure_tokens import ParsedToken, parse_structure_token
 from registries.loader import BLOCK_REGISTRY
@@ -31,18 +32,6 @@ FENCE_CONNECTABLE_BEHAVIORS = {
 }
 
 
-def get_cell_at(cells: list[list[str]], x: int, z: int) -> str | None:
-    if z < 0 or z >= len(cells):
-        return None
-
-    row = cells[z]
-
-    if x < 0 or x >= len(row):
-        return None
-
-    return row[x]
-
-
 def should_fence_connect(raw_neighbor: str | None) -> bool:
     if raw_neighbor is None:
         return False
@@ -67,7 +56,7 @@ def resolve_fence_adjacency(
     z: int,
 ) -> ParsedToken:
     states = tuple(
-        (direction, should_fence_connect(get_cell_at(cells, x + dx, z + dz)))
+        (direction, should_fence_connect(get_cell(cells, x + dx, z + dz, empty=None)))
         for direction, (dx, dz) in DIRECTION_OFFSETS.items()
     )
 

@@ -1,5 +1,7 @@
 from PIL import Image, ImageDraw
 
+import helpers.cells as cell_utils
+import helpers.constants as constants
 import helpers.grid as grid_utils
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
@@ -12,7 +14,7 @@ from helpers.types import (
 
 
 def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeLayout:
-    block_px = 30
+    block_px = constants.BLOCK_PX
     top_margin = 60
     panel_gap = 50
     side_count = 4
@@ -132,7 +134,7 @@ def _find_first_visible_token_along_z(
     z_range: range,
 ):
     for z in z_range:
-        raw_token = _get_raw_token(ctx, layer_y, z, x)
+        raw_token = cell_utils.get_structure_cell(ctx, layer_y, x, z)
         token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
         if token != ".":
@@ -148,31 +150,13 @@ def _find_first_visible_token_along_x(
     x_range: range,
 ):
     for x in x_range:
-        raw_token = _get_raw_token(ctx, layer_y, z, x)
+        raw_token = cell_utils.get_structure_cell(ctx, layer_y, x, z)
         token, _direction = schematics_utils.resolve_token_for_render(raw_token)
 
         if token != ".":
             return raw_token
 
     return "."
-
-
-def _get_raw_token(ctx: SchematicContext, layer_y: int, z: int, x: int) -> RawToken:
-    if layer_y >= len(ctx.layers):
-        return "."
-
-    layer = ctx.layers[layer_y]
-    cells = layer.get("cells", [])
-
-    if z >= len(cells):
-        return "."
-
-    row = cells[z]
-
-    if x >= len(row):
-        return "."
-
-    return row[x]
 
 
 def _draw_structure_elevation_panels(

@@ -4,28 +4,28 @@ A modular Minecraft schematic rendering and world-generation toolkit written in 
 
 This project generates:
 
-* Top-down schematic blueprints
+* Top-down schematic blueprints (floor layers)
 * Roof plans
 * Structure side-view facades
-* Site landscaping blueprints
+* Site landscaping and path blueprints
 * Site elevation cross-sections
 * Material inventory sheets
-* Minecraft world generation output
+* Minecraft world output (via Amulet)
 
-The renderer is designed around a registry-driven architecture using YAML block definitions and modular rendering pipelines.
+The renderer uses a registry-driven architecture with YAML block definitions, a shared `SchematicContext`, and modular rendering pipelines.
 
 ---
 
 # Features
 
-* Registry-driven block rendering
-* Texture-based blueprint rendering
-* Multi-render pipeline architecture
-* Shared rendering context system
+* Registry-driven block rendering (`registries/blocks.yaml`)
+* Texture-based blueprint rendering (top and side views)
+* Multi-render pipeline with selective render execution
+* Shared rendering context and grid helpers
 * Path and landscaping generation
-* Layer-by-layer schematic visualization
+* Layer-by-layer schematic visualization with per-panel inventory
 * Material inventory generation
-* Future UI-ready render selection system
+* Minecraft world export via `amulet-core`
 
 ---
 
@@ -33,52 +33,60 @@ The renderer is designed around a registry-driven architecture using YAML block 
 
 ```text
 helpers/
-  context.py
-  paths.py
-  render_utils.py
-  utils_schematics.py
-  landscape_utils.py
+  constants.py          # Render type names and BLOCK_PX
+  context.py            # SchematicContext dataclass
+  cells.py              # Structure/site cell lookup
+  grid.py               # Site/structure dimension helpers
+  layers.py             # Layer grouping and floor/roof blueprint dispatch
+  path_geometry.py      # Path, trim, and lighting layout on the site
+  landscape_utils.py    # Path and site map generation
+  paths.py              # Asset and output directory paths
+  structure_tokens.py   # Token parsing (material, direction, variant)
+  types.py              # TypedDicts and type aliases
+  utils.py              # Structure loading and texture helpers
+  utils_schematics.py   # Token resolution, texture paste, colors
 
 registries/
-  blocks.yaml
-  loader.py
+  blocks.yaml           # Block registry
+  loader.py             # Registry load and texture compilation
 
 renderers/
-  top_view.py
-  roof.py
-  side_view.py
-  path_view.py
-  site_facades.py
-  materials.py
+  layer_panel.py        # Shared floor/roof panel renderer
+  top_view.py           # Floor blueprint entry point
+  roof.py               # Roof blueprint entry point
+  structure_facades.py  # Structure elevation facades
+  path_view.py          # Site path and landscaping plans
+  site_facades.py       # Site cross-section elevations
+  materials.py          # Materials inventory sheet
+  worldgen.py           # Minecraft world generation
 
 structures/
   residence/
-    stage1/
-    stage2/
+    stage1_structure.py
+    stage2_structure.py
 
-world_gen/
-
-assets/
+assets/                 # Block textures (not in repo; see .gitignore)
 output/
+  schematics/           # Rendered PNG blueprints
+  worlds/               # Generated Minecraft worlds
+template/               # Base world copied for worldgen
 
-render_main.py
+render_main.py          # Pipeline entry point
+pyproject.toml
 ```
-
----
-# World Gen Requirements
-
-1. Create a new world in Minecraft 26.1 or greater.
-2. create a folder called "template"
-3. Copy the world folders/files into the template directory
 
 ---
 
 # Development Setup
 
-## Install Pre-Commit:
+Requires **Python 3.11+**.
+
+On Ubuntu and other PEP 668 systems, use a virtual environment rather than installing into the system Python:
 
 ```bash
-pip install ruff pre-commit
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
 Install Git hooks:
@@ -95,73 +103,88 @@ ruff format .
 pre-commit run --all-files
 ```
 
-The pre-commit hook will automatically run Ruff before each commit.
+The pre-commit hook runs Ruff before each commit.
 
-## Requirements
+### Dependencies
 
-* Python 3.13+
-* Pillow (PIL)
-* PyYAML
+Runtime (via `pyproject.toml`):
 
-Install dependencies:
+* `Pillow`
+* `PyYAML`
+* `amulet-core` (world generation only)
 
-```bash
-pip install pillow pyyaml
-```
+Dev (optional):
+
+* `ruff`
+* `pre-commit`
+
+---
+
+# World Gen Requirements
+
+World generation copies a template world and writes blocks via Amulet.
+
+1. Create a new world in Minecraft 1.21 or later.
+2. Create a `template/` folder in the project root.
+3. Copy the world folders/files into `template/`.
+
+See [AMULET_INSTALL_NOTES.md](AMULET_INSTALL_NOTES.md) if you hit Amulet build or install issues.
 
 ---
 
 # Registry System
 
-The project uses a centralized YAML registry:
+Block definitions live in `registries/blocks.yaml`. Each entry can define:
 
-```text
-registries/blocks.yaml
-```
-
-Each block entry can define:
-
-* Minecraft block mapping
-* Texture mappings
-* Background colors
-* Display names
-* Render categories
+* `behavior` — placement logic (solid, fence, door, stairs, etc.)
+* `minecraft` — block id, variants, and blockstate templates
+* `render` — texture mappings, background colors, inventory images
+* `defaults` — default direction, variant, shape, etc.
+* `visibility` — e.g. `interior: false` to hide blocks from site/path views
+* `display_name` / `category` — materials list grouping
 
 Example:
 
 ```yaml
-G:
+GRASS:
+  behavior: solid
   minecraft:
     block: minecraft:grass_block
-
-  schematic:
-    top_texture: "grass_block_top.png"
+  render:
+    textures:
+      top: grass_block_top.png
     background_color: [95, 160, 75]
 
-  display_name: "Grass Block"
+FURNACE:
+  behavior: facing_block
+  defaults:
+    direction: north
+  minecraft:
+    block: minecraft:furnace
+    blockstates:
+      facing: "{direction}"
+  render:
+    textures:
+      top: furnace_front.png
+  visibility:
+    interior: false
 ```
+
+Textures are loaded from `assets/textures/block/` (and subfolders `block_assets/`, `item_assets/`, `custom/`).
 
 ---
 
 # Running the Renderer
 
-The main entry point is:
+Entry point: `build_stage_complete_schematics()` in `render_main.py`.
 
-```python
-build_stage_complete_schematics()
+From the project root (with venv active):
+
+```bash
+python render_main.py
 ```
 
-located in:
-
-```text
-render_main.py
-```
-
----
-
-# Example Usage
-
-## Generate All Render Types
+Or from Python:
 
 ```python
 from render_main import build_stage_complete_schematics
@@ -169,86 +192,100 @@ from render_main import build_stage_complete_schematics
 build_stage_complete_schematics(structure="residence", stage=1, renders="all")
 ```
 
+Structure definitions are loaded from `structures/{structure}/stage{N}_structure.py`. Each file must define `STRUCTURE_CONFIG` with `layers`, `grid`, `name`, and `output_folder`.
+
 ---
 
-## Generate Only Top-Down Blueprints
+# Example Usage
+
+## Generate all render types
 
 ```python
 from render_main import build_stage_complete_schematics
 
+build_stage_complete_schematics(structure="residence", stage=1, renders="all")
+```
+
+## Generate only top-down blueprints
+
+```python
 build_stage_complete_schematics(structure="residence", stage=1, renders="top_view")
 ```
 
----
-
-## Generate Multiple Specific Renderers
+## Generate multiple specific renderers
 
 ```python
-from render_main import build_stage_complete_schematics
-
 build_stage_complete_schematics(
-    structure="residence", stage=1, renders=["top_view", "roof", "materials"]
+    structure="residence",
+    stage=1,
+    renders=["top_view", "roof", "materials"],
 )
 ```
 
 ---
 
-# Tokens
+# Structure Tokens
 
-| Section       | Meaning         |
-| ------------- | --------------- |
-| `STAIRS`      | token type      |
-| `oak`         | material        |
-| `@north`      | direction       |
-| `#outer_left` | shape           |
-| `!-90`        | render rotation |
+Cells in structure layers use compact token strings:
 
-```
+| Section       | Meaning          | Example              |
+| ------------- | ---------------- | -------------------- |
+| Token         | Registry key     | `STAIRS`             |
+| `:material`   | Material         | `PLANKS:oak`         |
+| `@direction`  | Facing           | `DOOR:oak@north`     |
+| `#variant`    | Shape / part     | `STAIRS:oak@north#outer_left` |
+| `!rotation`   | Render rotation  | `FURNACE@east!-90`   |
+| `.`           | Empty cell       | `.`                  |
+
+Example: `STAIRS:oak@north#outer_left`
 
 ---
 
 # Available Render Types
 
-| Render Name    | Description                         |
-| -------------- | ----------------------------------- |
-| `top_view`     | Layer-by-layer blueprint panels     |
-| `roof`         | Roof blueprint render               |
-| `side_view`    | Structure facade elevations         |
-| `path`         | Landscaping and path top-down plans |
-| `site_facades` | Site cross-section elevations       |
-| `materials`    | Material inventory sheets           |
-' `worldgen`     | Generates structure in a world      |
-| `all`          | Execute all renderers               |
+| Render name          | Constant / CLI value   | Description                          |
+| -------------------- | ---------------------- | ------------------------------------ |
+| `top_view`           | `top_view`             | Layer-by-layer floor blueprint panels |
+| `roof`               | `roof`                 | Roof blueprint panels                |
+| `structure_facades`  | `structure_facades`    | Structure side-view elevations       |
+| `path`               | `path`                 | Landscaping and path top-down plans  |
+| `site_facades`       | `site_facades`         | Site cross-section elevations        |
+| `materials`          | `materials`            | Material inventory sheet             |
+| `worldgen`           | `worldgen`             | Generate structure in a Minecraft world |
+| `all`                | `all`                  | Run all renderers above              |
 
 ---
 
 # Output
 
-Generated files are written to:
+Schematic PNGs are written to:
 
 ```text
-output/
+output/schematics/{output_folder}/
 ```
 
-Example outputs:
+Generated worlds are written to:
 
-* Structure blueprint sheets
-* Roof plans
-* Site maps
-* Elevation renders
-* Materials lists
+```text
+output/worlds/{output_folder}/
+```
+
+Example schematic outputs:
+
+* `Structure_floor_1.png` — floor blueprint sheets
+* `{name}_structure_facades.png` — structure elevations
+* `{name}_site_topdown.png` — site path plans
+* `{name}_site_facades.png` — site cross-sections
+* `{name}_materials_list.png` — materials inventory
 
 ---
 
 # Design Goals
 
-This project is being structured to support:
-
 * Future PySide6 desktop UI integration
 * Modular renderer expansion
 * Additional structure presets
 * Advanced landscaping systems
-* Minecraft world export pipelines
 * Registry-driven customization
 
 ---
@@ -263,5 +300,3 @@ This project is being structured to support:
 * Advanced terrain generation
 * Multi-biome support
 * Animated build progression renders
-
----

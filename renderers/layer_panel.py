@@ -6,6 +6,7 @@ from contextlib import suppress
 
 from PIL import Image, ImageDraw, ImageFont
 
+import helpers.constants as constants
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.structure_tokens import parse_structure_token
@@ -56,7 +57,7 @@ def _get_layer_depth(layer: dict) -> int:
 
 
 def _build_layout(ctx: SchematicContext, layers: Layers) -> FloorBlueprintLayout:
-    block_px = 30
+    block_px = constants.BLOCK_PX
     padding = 50
     layer_gap = 80
     top_margin = 120

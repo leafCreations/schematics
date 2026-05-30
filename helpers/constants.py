@@ -7,5 +7,7 @@ RENDER_MATERIALS = "materials"
 RENDER_WORLDGEN = "worldgen"
 RENDER_ALL = "all"
 
+BLOCK_PX = 30
+
 TEXTURE_TOP = "top"
 TEXTURE_SIDE = "side"

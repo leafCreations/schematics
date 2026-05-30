@@ -1,0 +1,62 @@
+from helpers import grid as grid_utils
+from helpers.context import SchematicContext
+from helpers.types import CellGrid, RawToken
+
+
+def get_cell(
+    cells: CellGrid,
+    x: int,
+    z: int,
+    *,
+    empty: str | None = ".",
+) -> str | None:
+    """Return ``cells[z][x]``, or *empty* when out of bounds.
+
+    Pass ``empty=None`` when a missing neighbor should be distinguished from air
+    (e.g. fence adjacency in worldgen).
+    """
+    if z < 0 or z >= len(cells):
+        return empty
+
+    row = cells[z]
+
+    if x < 0 or x >= len(row):
+        return empty
+
+    return row[x]
+
+
+def get_structure_cell(
+    ctx: SchematicContext,
+    layer_y: int,
+    x: int,
+    z: int,
+    *,
+    empty: RawToken = ".",
+) -> RawToken:
+    """Return the raw token at local structure coordinates ``(layer_y, x, z)``."""
+    if layer_y < 0 or layer_y >= len(ctx.layers):
+        return empty
+
+    cells = ctx.layers[layer_y].get("cells", [])
+    result = get_cell(cells, x, z, empty=empty)
+
+    return empty if result is None else result
+
+
+def get_structure_cell_at_site(
+    ctx: SchematicContext,
+    layer_y: int,
+    global_x: int,
+    global_z: int,
+    *,
+    empty: RawToken = ".",
+) -> RawToken:
+    """Return the raw token at site coordinates, mapped into the structure grid."""
+    local_x = global_x - grid_utils.get_offset_x(ctx)
+    local_z = global_z - grid_utils.get_offset_z(ctx)
+
+    if not grid_utils.is_inside_structure(ctx, local_x, local_z):
+        return empty
+
+    return get_structure_cell(ctx, layer_y, local_x, local_z, empty=empty)

@@ -29,3 +29,7 @@ def get_structure_depth(ctx: SchematicContext) -> int:
         (len(layer.get("cells", [])) for layer in ctx.layers),
         default=1,
     )
+
+
+def is_inside_structure(ctx: SchematicContext, local_x: int, local_z: int) -> bool:
+    return 0 <= local_x < get_structure_width(ctx) and 0 <= local_z < get_structure_depth(ctx)

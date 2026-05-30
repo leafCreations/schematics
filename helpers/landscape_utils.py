@@ -1,16 +1,12 @@
 import random
 
 import helpers.grid as grid_utils
+import helpers.path_geometry as path_geometry
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.types import SiteLayer, SiteMap
 
-# Landscaping Rules
-PATH_WIDTH = 3
-TRIM_BLOCK = "GRAVEL"  # Gravel Block for path trim
-TRIM_WIDTH = 1
-LIGHTING_SPACING = 7
-LIGHTING_START_OFFSET = 10
+TRIM_BLOCK = "GRAVEL"
 
 
 def _get_random_path_block() -> str:
@@ -30,26 +26,15 @@ def _get_random_path_block() -> str:
 
 def generate_landscape_y_minus_1_sitelayer(ctx: SchematicContext) -> SiteLayer:
     site_size = grid_utils.get_site_size(ctx)
-    offset_x = grid_utils.get_offset_x(ctx)
-    offset_z = grid_utils.get_offset_z(ctx)
-    structure_depth = grid_utils.get_structure_depth(ctx)
+    geom = path_geometry.get_path_geometry(ctx)
 
     grid: SiteLayer = [["GRASS" for _ in range(site_size)] for _ in range(site_size)]
 
-    stair_global_center_x = offset_x + 4
-    stair_global_bottom_z = offset_z + (structure_depth - 1)
-    path_start_z = stair_global_bottom_z + 1
-
-    for z in range(path_start_z, site_size):
-        path_left = stair_global_center_x - (PATH_WIDTH // 2)
-        path_right = stair_global_center_x + (PATH_WIDTH // 2)
-        trim_left = path_left - TRIM_WIDTH
-        trim_right = path_right + TRIM_WIDTH
-
+    for z in range(geom.path_start_z, site_size):
         for x in range(site_size):
-            if path_left <= x <= path_right:
+            if geom.is_on_path(x, z):
                 grid[z][x] = _get_random_path_block()
-            elif trim_left <= x <= trim_right:
+            elif geom.is_on_trim(x, z):
                 grid[z][x] = TRIM_BLOCK
 
     return grid
@@ -61,6 +46,7 @@ def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
     offset_z = grid_utils.get_offset_z(ctx)
     structure_width = grid_utils.get_structure_width(ctx)
     structure_depth = grid_utils.get_structure_depth(ctx)
+    geom = path_geometry.get_path_geometry(ctx)
 
     site_map: SiteMap = {
         y: [["." for _ in range(site_size)] for _ in range(site_size)] for y in [-1, 0, 1]
@@ -68,32 +54,21 @@ def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
 
     y_minus_1 = generate_landscape_y_minus_1_sitelayer(ctx)
 
-    stair_global_center_x = offset_x + 4
-    stair_global_bottom_z = offset_z + (structure_depth - 1)
-    path_start_z = stair_global_bottom_z + 1
-
     for z in range(site_size):
         for x in range(site_size):
             site_map[-1][z][x] = y_minus_1[z][x]
 
-    for z in range(path_start_z, site_size):
-        path_left = stair_global_center_x - (PATH_WIDTH // 2)
-        path_right = stair_global_center_x + (PATH_WIDTH // 2)
-        trim_left = path_left - TRIM_WIDTH
-        trim_right = path_right + TRIM_WIDTH
-        relative_z = z - path_start_z
+    for z in range(geom.path_start_z, site_size):
+        if not geom.is_lighting_row(z):
+            continue
 
-        if (
-            relative_z >= LIGHTING_START_OFFSET
-            and (relative_z - LIGHTING_START_OFFSET) % LIGHTING_SPACING == 0
-        ):
-            if trim_left >= 0:
-                site_map[0][z][trim_left] = "FENCE"
-                site_map[1][z][trim_left] = "TORCH"
+        if geom.trim_left >= 0:
+            site_map[0][z][geom.trim_left] = "FENCE"
+            site_map[1][z][geom.trim_left] = "TORCH"
 
-            if trim_right < site_size:
-                site_map[0][z][trim_right] = "FENCE"
-                site_map[1][z][trim_right] = "TORCH"
+        if geom.trim_right < site_size:
+            site_map[0][z][geom.trim_right] = "FENCE"
+            site_map[1][z][geom.trim_right] = "TORCH"
 
     for y, layer in enumerate(ctx.layers[:2]):
         cells = layer.get("cells", [])

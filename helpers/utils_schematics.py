@@ -53,6 +53,10 @@ def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
 
 
 def show_interior_view(token: Token) -> bool:
+    """Return whether this block appears in site/path overlay views.
+
+    Reads ``visibility.interior`` from blocks.yaml. Defaults to True when omitted.
+    """
     if token == ".":
         return False
 
@@ -60,10 +64,7 @@ def show_interior_view(token: Token) -> bool:
     visibility = entry.get("visibility", {})
     interior_visible = visibility.get("interior")
 
-    if interior_visible is not None:
-        return interior_visible
-    else:
-        return True
+    return True if interior_visible is None else interior_visible
 
 
 def _build_directional_side_keys(
