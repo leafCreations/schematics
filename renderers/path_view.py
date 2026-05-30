@@ -1,10 +1,12 @@
-from PIL import Image, ImageDraw
+from PIL import Image
 
 import helpers.cells as cell_utils
 import helpers.constants as constants
 import helpers.grid as grid_utils
 import helpers.landscape_utils as landscape_utils
 import helpers.path_geometry as path_geometry
+import helpers.paths as paths
+import helpers.render_image as render_image
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.types import (
@@ -40,14 +42,6 @@ def _build_path_layout(ctx: SchematicContext) -> PathLayout:
         img_w=img_w,
         img_h=img_h,
     )
-
-
-def _create_path_image(layout: PathLayout) -> tuple[Image.Image, ImageDraw.ImageDraw]:
-    img = Image.new("RGB", (layout["img_w"], layout["img_h"]), (255, 255, 255))
-
-    draw = ImageDraw.Draw(img)
-
-    return img, draw
 
 
 def _draw_path_layer_header(draw, layer_y: int, panel: PathPanel):
@@ -254,15 +248,11 @@ def _draw_path_cell_outline(draw, layers: Layers, is_ghost: bool):
     draw.rectangle(layers, outline=(40, 40, 40, 12 if is_ghost else 25))
 
 
-def _build_path_output_path(ctx: SchematicContext) -> str:
-    return ctx.output_schematics_dir / f"{ctx.name.lower().replace(' ', '_')}_site_topdown.png"
-
-
 def render_path_focused_blueprint(ctx: SchematicContext):
     layout = _build_path_layout(ctx)
     site_layer = landscape_utils.generate_landscape_y_minus_1_sitelayer(ctx)
 
-    img, draw = _create_path_image(layout)
+    img, draw = render_image.create_canvas(layout["img_w"], layout["img_h"])
 
     _draw_path_title(draw, layout)
 
@@ -273,5 +263,5 @@ def render_path_focused_blueprint(ctx: SchematicContext):
 
         _draw_path_layer_panel(img, draw, ctx, layer_y, panel, layout, site_layer)
 
-    output_path = _build_path_output_path(ctx)
+    output_path = paths.schematic_output_path(ctx, "site_topdown.png")
     img.save(output_path)

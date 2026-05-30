@@ -1139,5 +1139,6 @@ STRUCTURE_CONFIG = {
         "site_size": 30,
         "offset_x": 10,
         "offset_z": 4,
+        "stair_local_x": 4,
     },
 }

@@ -27,16 +27,8 @@ RawTokenMaterialsList: TypeAlias = list[RawToken]
 MaterialsList: TypeAlias = list[tuple[str, int]]
 MaterialsIconList: TypeAlias = dict[str, str]
 ParsedTokenMaterialsList: TypeAlias = list[ParsedToken]
-# Block Aliases
-BlockStateValue: TypeAlias = str | bool
-
-BlockStates: TypeAlias = tuple[
-    tuple[str, BlockStateValue],
-    ...,
-]
 
 DirectionOffset: TypeAlias = tuple[int, int]
-
 DirectionOffsets: TypeAlias = dict[str, DirectionOffset]
 
 
@@ -107,7 +99,6 @@ class StructureFacadeLayout(TypedDict):
     img_w: int
     img_h: int
     view_keys: list[str]
-    layer_keys: list[int]
     headings: dict[str, str]
     max_layers: int
 

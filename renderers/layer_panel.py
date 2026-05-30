@@ -1,12 +1,14 @@
 # renderers/layer_panel.py
 
-import os
 from collections import Counter
 from contextlib import suppress
 
 from PIL import Image, ImageDraw, ImageFont
 
 import helpers.constants as constants
+import helpers.materials as material_utils
+import helpers.paths as paths
+import helpers.render_image as render_image
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.structure_tokens import parse_structure_token
@@ -18,7 +20,6 @@ from helpers.types import (
     RawToken,
     Token,
 )
-from renderers import materials
 
 MAX_PANELS_PER_ROW = 3
 MAX_PANEL_ROWS_PER_IMAGE = 3
@@ -34,15 +35,15 @@ def _build_layer_inventory(
     for raw_token in raw_tokens:
         parsed = parse_structure_token(raw_token)
 
-        if parsed is None or not materials._should_count_material(parsed, ctx):
+        if parsed is None or not material_utils.should_count_material(parsed, ctx):
             continue
 
-        block_name = materials._resolve_material_block_name(parsed, ctx)
-        group_name = materials._format_material_name(block_name)
+        block_name = material_utils.resolve_material_block_name(parsed, ctx)
+        group_name = material_utils.format_material_name(block_name)
 
         inventory_counts[group_name] += 1
         inventory_icons.setdefault(
-            group_name, materials._resolve_material_texture_name(parsed, ctx)
+            group_name, material_utils.resolve_material_texture_name(parsed, ctx)
         )
 
     return sorted(inventory_counts.items(), key=lambda item: item[0].lower()), inventory_icons
@@ -199,10 +200,7 @@ def _create_page_image(
         + layout["bottom_margin"],
     )
 
-    img = Image.new("RGB", (img_w, img_h), (255, 255, 255))
-    draw = ImageDraw.Draw(img)
-
-    return img, draw
+    return render_image.create_canvas(img_w, img_h)
 
 
 def _draw_page_title(
@@ -308,7 +306,7 @@ def _draw_inventory_icon(
     ly: int,
 ):
     if texture_name:
-        texture_path = materials._resolve_texture_path(ctx, texture_name)
+        texture_path = material_utils.resolve_texture_path(ctx, texture_name)
 
         if texture_path.exists():
             tex = Image.open(texture_path).convert("RGBA")
@@ -329,14 +327,11 @@ def _build_output_path(
     page_index: int,
     layout: FloorBlueprintLayout,
 ) -> str:
-    page_suffix = ""
+    page_suffix = f"_part_{page_index}" if len(layout["layer_pages"]) > 1 else ""
 
-    if len(layout["layer_pages"]) > 1:
-        page_suffix = f"_part_{page_index}"
-
-    return os.path.join(
-        ctx.output_schematics_dir,
-        f"Structure_{floor_name.lower().replace(' ', '_')}{page_suffix}.png",
+    return paths.schematic_output_file(
+        ctx,
+        f"Structure_{paths.name_slug(floor_name)}{page_suffix}.png",
     )
 
 

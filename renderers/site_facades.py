@@ -1,9 +1,11 @@
 from PIL import Image, ImageDraw
 
 import helpers.constants as constants
+import helpers.facade_projection as facade_projection
 import helpers.grid as grid_utils
 import helpers.landscape_utils as landscape_utils
-import helpers.utils_schematics as schematics_utils
+import helpers.paths as paths
+import helpers.render_image as render_image
 from helpers.context import SchematicContext
 from helpers.types import (
     FacadeElevations,
@@ -45,14 +47,6 @@ def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
     )
 
 
-def _create_site_facades_image(layout: SiteFacadeLayout):
-    img = Image.new("RGB", (layout["img_w"], layout["img_h"]), (255, 255, 255))
-
-    draw = ImageDraw.Draw(img)
-
-    return img, draw
-
-
 def _draw_site_facades_title(draw, layout: SiteFacadeLayout):
     draw.text(
         (layout["padding"], 20),
@@ -62,82 +56,18 @@ def _draw_site_facades_title(draw, layout: SiteFacadeLayout):
 
 
 def _collect_site_elevations(ctx: SchematicContext, siteMap: SiteMap) -> FacadeElevations:
-    elevations = FacadeElevations(
-        N={layer_y: [] for layer_y in [-1, 0, 1]},
-        S={layer_y: [] for layer_y in [-1, 0, 1]},
-        W={layer_y: [] for layer_y in [-1, 0, 1]},
-        E={layer_y: [] for layer_y in [-1, 0, 1]},
+    site_size = grid_utils.get_site_size(ctx)
+    layer_keys = [-1, 0, 1]
+
+    def get_token(layer_y: int, x: int, z: int) -> Token:
+        return siteMap[layer_y][z][x]
+
+    return facade_projection.collect_facade_elevations(
+        layer_keys,
+        site_size,
+        site_size,
+        get_token,
     )
-
-    for layer_y in [-1, 0, 1]:
-        _collect_site_north_south_layer(ctx, siteMap, elevations, layer_y)
-        _collect_site_west_east_layer(ctx, siteMap, elevations, layer_y)
-
-    return elevations
-
-
-def _collect_site_north_south_layer(
-    ctx: SchematicContext,
-    siteMap: SiteMap,
-    elevations: FacadeElevations,
-    layer_y: int,
-):
-    site_size = grid_utils.get_site_size(ctx)
-
-    for x in range(site_size):
-        north_token = _find_first_site_token_along_z(siteMap, layer_y, x, range(site_size))
-
-        south_token = _find_first_site_token_along_z(
-            siteMap,
-            layer_y,
-            x,
-            range(site_size - 1, -1, -1),
-        )
-
-        elevations["N"][layer_y].append(north_token)
-        elevations["S"][layer_y].append(south_token)
-
-
-def _collect_site_west_east_layer(
-    ctx: SchematicContext,
-    siteMap: SiteMap,
-    elevations: FacadeElevations,
-    layer_y: int,
-):
-    site_size = grid_utils.get_site_size(ctx)
-
-    for z in range(site_size):
-        west_token = _find_first_site_token_along_x(siteMap, layer_y, z, range(site_size))
-
-        east_token = _find_first_site_token_along_x(
-            siteMap,
-            layer_y,
-            z,
-            range(site_size - 1, -1, -1),
-        )
-
-        elevations["W"][layer_y].append(west_token)
-        elevations["E"][layer_y].append(east_token)
-
-
-def _find_first_site_token_along_z(siteMap: SiteMap, layer_y: int, x: int, z_range: range):
-    for z in z_range:
-        token = siteMap[layer_y][z][x]
-
-        if token != ".":
-            return token
-
-    return "."
-
-
-def _find_first_site_token_along_x(siteMap: SiteMap, layer_y: int, z: int, x_range: range):
-    for x in x_range:
-        token = siteMap[layer_y][z][x]
-
-        if token != ".":
-            return token
-
-    return "."
 
 
 def _draw_site_facade_panels(
@@ -185,57 +115,22 @@ def _draw_site_facade_panel(
 
         for col in range(site_size):
             token = tokens[col]
-            _draw_site_facade_cell(
+            bx = current_x + (col * layout["block_px"])
+            by = current_y + (pixel_row * layout["block_px"])
+
+            facade_projection.draw_facade_cell(
                 img,
                 draw,
                 ctx,
                 token,
-                col,
-                pixel_row,
-                current_x,
-                current_y,
-                layout,
+                bx,
+                by,
+                layout["block_px"],
+                empty_fill=(235, 245, 255),
+                empty_outline=None,
+                fallback_default=(230, 230, 230),
+                fallback_outline=None,
             )
-
-
-def _draw_site_facade_cell(
-    img: Image.Image,
-    draw: ImageDraw.ImageDraw,
-    ctx: SchematicContext,
-    token: Token,
-    col: int,
-    pixel_row: int,
-    current_x: int,
-    current_y: int,
-    layout: SiteFacadeLayout,
-):
-    block_px = layout["block_px"]
-
-    bx = current_x + (col * block_px)
-    by = current_y + (pixel_row * block_px)
-
-    rect = [bx, by, bx + block_px, by + block_px]
-
-    if token == ".":
-        draw.rectangle(rect, fill=(235, 245, 255))
-        return
-
-    if ctx.sideview_textures and schematics_utils.paste_sideview_token(
-        img,
-        ctx.sideview_textures,
-        token,
-        (bx, by),
-        block_px,
-        draw,
-    ):
-        return
-
-    fallback_color = schematics_utils.get_background_color(token, default=(230, 230, 230))
-    draw.rectangle(rect, fill=fallback_color)
-
-
-def _build_site_facades_output_path(ctx: SchematicContext):
-    return ctx.output_schematics_dir / f"{ctx.name.lower().replace(' ', '_')}_site_facades.png"
 
 
 def render_site_facades(ctx: SchematicContext):
@@ -243,11 +138,11 @@ def render_site_facades(ctx: SchematicContext):
     siteMap = landscape_utils.generate_full_3d_landscape_sitemap(ctx)
     elevations = _collect_site_elevations(ctx, siteMap)
 
-    img, draw = _create_site_facades_image(layout)
+    img, draw = render_image.create_canvas(layout["img_w"], layout["img_h"])
 
     _draw_site_facades_title(draw, layout)
 
     _draw_site_facade_panels(img, draw, ctx, elevations, layout)
 
-    output_path = _build_site_facades_output_path(ctx)
+    output_path = paths.schematic_output_path(ctx, "site_facades.png")
     img.save(output_path)

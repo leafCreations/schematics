@@ -19,6 +19,7 @@ include = ["helpers*", "renderers*", "registries*", "structures*"]
 
 [project.optional-dependencies]
 dev = [
+    "pytest",
     "ruff",
     "pre-commit",
 ]
@@ -41,3 +42,6 @@ select = [
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

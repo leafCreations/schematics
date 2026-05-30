@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from helpers import grid as grid_utils
 from helpers.context import SchematicContext
 
-STAIR_LOCAL_X = 4
 PATH_WIDTH = 3
 TRIM_WIDTH = 1
 LIGHTING_SPACING = 7
@@ -54,7 +53,7 @@ def get_path_geometry(ctx: SchematicContext) -> PathGeometry:
     structure_depth = grid_utils.get_structure_depth(ctx)
     site_size = grid_utils.get_site_size(ctx)
 
-    stair_center_x = offset_x + STAIR_LOCAL_X
+    stair_center_x = offset_x + grid_utils.get_stair_local_x(ctx)
     path_start_z = offset_z + structure_depth
 
     path_left = stair_center_x - (PATH_WIDTH // 2)

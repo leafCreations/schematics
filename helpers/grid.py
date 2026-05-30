@@ -13,6 +13,10 @@ def get_offset_z(ctx: SchematicContext) -> int:
     return int(ctx.grid.get("offset_z", 0))
 
 
+def get_stair_local_x(ctx: SchematicContext) -> int:
+    return int(ctx.grid.get("stair_local_x", 4))
+
+
 def get_structure_width(ctx: SchematicContext) -> int:
     return max(
         (len(row) for layer in ctx.layers for row in layer.get("cells", [])),

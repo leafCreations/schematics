@@ -36,11 +36,14 @@ helpers/
   constants.py          # Render type names and BLOCK_PX
   context.py            # SchematicContext dataclass
   cells.py              # Structure/site cell lookup
+  facade_projection.py  # Compass elevation projection for facade renderers
   grid.py               # Site/structure dimension helpers
   layers.py             # Layer grouping and floor/roof blueprint dispatch
   path_geometry.py      # Path, trim, and lighting layout on the site
+  materials.py          # Material resolution, counting, and inventory building
+  render_image.py       # Shared canvas creation for blueprint PNGs
   landscape_utils.py    # Path and site map generation
-  paths.py              # Asset and output directory paths
+  paths.py              # Asset and output directory paths, schematic output naming
   structure_tokens.py   # Token parsing (material, direction, variant)
   types.py              # TypedDicts and type aliases
   utils.py              # Structure loading and texture helpers
@@ -51,6 +54,7 @@ registries/
   loader.py             # Registry load and texture compilation
 
 renderers/
+  registry.py           # Render name → handler dispatch table
   layer_panel.py        # Shared floor/roof panel renderer
   top_view.py           # Floor blueprint entry point
   roof.py               # Roof blueprint entry point
@@ -71,7 +75,7 @@ output/
   worlds/               # Generated Minecraft worlds
 template/               # Base world copied for worldgen
 
-render_main.py          # Pipeline entry point
+render_main.py          # Pipeline entry point (dispatches via renderers/registry.py)
 pyproject.toml
 ```
 
@@ -100,6 +104,7 @@ Run checks manually:
 ```bash
 ruff check .
 ruff format .
+pytest
 pre-commit run --all-files
 ```
 
@@ -115,6 +120,7 @@ Runtime (via `pyproject.toml`):
 
 Dev (optional):
 
+* `pytest`
 * `ruff`
 * `pre-commit`
 
@@ -193,6 +199,12 @@ build_stage_complete_schematics(structure="residence", stage=1, renders="all")
 ```
 
 Structure definitions are loaded from `structures/{structure}/stage{N}_structure.py`. Each file must define `STRUCTURE_CONFIG` with `layers`, `grid`, `name`, and `output_folder`.
+
+The `grid` object supports:
+
+* `site_size` — site footprint in blocks
+* `offset_x` / `offset_z` — structure placement on the site
+* `stair_local_x` — local X of the entry stair within the structure (defaults to `4`)
 
 ---
 
