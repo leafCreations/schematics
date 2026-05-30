@@ -25,6 +25,19 @@ def get_layer_group(layer: dict) -> str:
     return "Floor"
 
 
+def get_layer_display_name(layer: dict) -> str:
+    if layer.get("name"):
+        return str(layer["name"])
+
+    if layer.get("group"):
+        return str(layer["group"])
+
+    if "index" in layer:
+        return f"Layer {layer['index']}"
+
+    return "Layer"
+
+
 def render_layer_group_blueprints(ctx: SchematicContext, *, roofs: bool) -> None:
     label = "roof" if roofs else "floor"
     print(f"  ↳ Rendering {label} blueprint panels...")

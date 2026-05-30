@@ -1,21 +1,18 @@
 # renderers/layer_panel.py
 
-from collections import Counter
-from contextlib import suppress
-
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 import helpers.constants as constants
+import helpers.fonts as font_utils
+import helpers.layers as layer_utils
 import helpers.materials as material_utils
 import helpers.paths as paths
 import helpers.render_image as render_image
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
-from helpers.structure_tokens import parse_structure_token
 from helpers.types import (
     FloorBlueprintLayout,
     FloorBlueprintPanel,
-    Fonts,
     Layers,
     RawToken,
     Token,
@@ -23,30 +20,6 @@ from helpers.types import (
 
 MAX_PANELS_PER_ROW = 3
 MAX_PANEL_ROWS_PER_IMAGE = 3
-
-
-def _build_layer_inventory(
-    raw_tokens: list[RawToken],
-    ctx: SchematicContext,
-) -> tuple[list[tuple[str, int]], dict[str, str]]:
-    inventory_counts = Counter()
-    inventory_icons = {}
-
-    for raw_token in raw_tokens:
-        parsed = parse_structure_token(raw_token)
-
-        if parsed is None or not material_utils.should_count_material(parsed, ctx):
-            continue
-
-        block_name = material_utils.resolve_material_block_name(parsed, ctx)
-        group_name = material_utils.format_material_name(block_name)
-
-        inventory_counts[group_name] += 1
-        inventory_icons.setdefault(
-            group_name, material_utils.resolve_material_texture_name(parsed, ctx)
-        )
-
-    return sorted(inventory_counts.items(), key=lambda item: item[0].lower()), inventory_icons
 
 
 def _get_layer_width(layer: dict) -> int:
@@ -94,32 +67,19 @@ def _build_layout(ctx: SchematicContext, layers: Layers) -> FloorBlueprintLayout
     )
 
 
-def _load_fonts() -> Fonts:
-    fonts = {
-        "floor": ImageFont.load_default(),
-        "layer": ImageFont.load_default(),
-        "inventory": ImageFont.load_default(),
-    }
-
-    with suppress(OSError):
-        fonts["inventory"] = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
-
-    return fonts
-
-
 def _draw_layer_panel(
     img,
     draw,
     ctx: SchematicContext,
     layer: dict,
     panel: FloorBlueprintPanel,
-    fonts: Fonts,
+    fonts: font_utils.Fonts,
 ):
     sx = panel["sx"]
     sy = panel["sy"]
     block_px = panel["block_px"]
 
-    layer_name = str(layer.get("name", "Layer"))
+    layer_name = layer_utils.get_layer_display_name(layer)
     layer_width = _get_layer_width(layer)
     layer_depth = _get_layer_depth(layer)
 
@@ -167,7 +127,6 @@ def _draw_block_cell(
         raw_token,
         (bx, by),
         block_px,
-        draw,
     ):
         return
 
@@ -209,7 +168,7 @@ def _draw_page_title(
     floor_name: str,
     page_index: int,
     layout: FloorBlueprintLayout,
-    fonts: Fonts,
+    fonts: font_utils.Fonts,
 ):
     page_title = f"{ctx.name} - {floor_name}"
 
@@ -236,7 +195,7 @@ def _get_panel_position(index: int, layout: FloorBlueprintLayout) -> FloorBluepr
     )
 
 
-def _draw_layer_header(draw, layer_name: str, sx: int, sy: int, fonts: Fonts):
+def _draw_layer_header(draw, layer_name: str, sx: int, sy: int, fonts: font_utils.Fonts):
     draw.text((sx, sy - 40), layer_name, fill="black", font=fonts["layer"])
 
 
@@ -247,7 +206,7 @@ def _draw_grid_labels(
     block_px: int,
     layer_width: int,
     layer_depth: int,
-    fonts: Fonts,
+    fonts: font_utils.Fonts,
 ):
     for x in range(layer_width):
         draw.text(
@@ -272,9 +231,12 @@ def _draw_inventory_panel(
     ctx: SchematicContext,
     panel: FloorBlueprintPanel,
     panel_materials: list[RawToken],
-    fonts: Fonts,
+    fonts: font_utils.Fonts,
 ):
-    inventory, inventory_icons = _build_layer_inventory(panel_materials, ctx)
+    inventory, inventory_icons = material_utils.build_material_inventory_from_raw_tokens(
+        panel_materials,
+        ctx,
+    )
 
     lx = panel["sx"] + panel["panel_w"] + 20
     sy = panel["sy"]
@@ -292,33 +254,9 @@ def _draw_inventory_panel(
 
         texture_name = inventory_icons.get(group_name)
 
-        _draw_inventory_icon(img, draw, ctx, texture_name, lx, ly)
+        material_utils.draw_inventory_icon(img, draw, ctx, texture_name, lx, ly, size=25)
 
         draw.text((lx + 35, ly + 5), f"x {count}", fill="black", font=fonts["inventory"])
-
-
-def _draw_inventory_icon(
-    img,
-    draw,
-    ctx: SchematicContext,
-    texture_name: str | None,
-    lx: int,
-    ly: int,
-):
-    if texture_name:
-        texture_path = material_utils.resolve_texture_path(ctx, texture_name)
-
-        if texture_path.exists():
-            tex = Image.open(texture_path).convert("RGBA")
-            tex = tex.resize((25, 25), resample=Image.Resampling.NEAREST)
-            img.paste(tex, (lx, ly), tex)
-            return
-
-    draw.rectangle(
-        [lx, ly, lx + 25, ly + 25],
-        fill=(230, 230, 230),
-        outline=(80, 80, 80),
-    )
 
 
 def _build_output_path(
@@ -335,7 +273,7 @@ def _build_output_path(
     )
 
 
-def _draw_compass(draw, img_w: int, padding: int, fonts: Fonts):
+def _draw_compass(draw, img_w: int, padding: int, fonts: font_utils.Fonts):
     cx = img_w - padding - 45
     cy = 45
     size = 32
@@ -360,7 +298,7 @@ def _draw_compass(draw, img_w: int, padding: int, fonts: Fonts):
 
 def render_layer_blueprint(ctx: SchematicContext, floor_name: str, layers: Layers):
     layout: FloorBlueprintLayout = _build_layout(ctx, layers)
-    fonts: Fonts = _load_fonts()
+    fonts: font_utils.Fonts = font_utils.load_layer_panel_fonts()
 
     for page_index, page_layers in enumerate(layout["layer_pages"], start=1):
         img, draw = _create_page_image(layout, page_layers)

@@ -2,7 +2,7 @@
 
 from typing import NotRequired, TypeAlias, TypedDict
 
-from PIL import Image, ImageFont
+from PIL import Image
 
 from helpers.structure_tokens import ParsedToken
 
@@ -137,7 +137,3 @@ class BlockRegistryEntry(TypedDict, total=False):
     schematic: SchematicBlockData
     display_name: str
     category: str
-
-
-# Complex Types
-Fonts: TypeAlias = dict[str, ImageFont.ImageFont]

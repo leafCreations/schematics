@@ -37,6 +37,7 @@ helpers/
   context.py            # SchematicContext dataclass
   cells.py              # Structure/site cell lookup
   facade_projection.py  # Compass elevation projection for facade renderers
+  fonts.py              # Shared DejaVu font loading for blueprint renderers
   grid.py               # Site/structure dimension helpers
   layers.py             # Layer grouping and floor/roof blueprint dispatch
   path_geometry.py      # Path, trim, and lighting layout on the site
@@ -108,7 +109,7 @@ pytest
 pre-commit run --all-files
 ```
 
-The pre-commit hook runs Ruff before each commit.
+The pre-commit hook runs Ruff and pytest before each commit.
 
 ### Dependencies
 

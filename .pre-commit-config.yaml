@@ -5,3 +5,24 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: bash
+        args:
+          - -c
+          - |
+            root="$(git rev-parse --show-toplevel)"
+            if [ -x "$root/.venv/bin/pytest" ]; then
+              exec "$root/.venv/bin/pytest"
+            elif [ -x "$root/venv/bin/pytest" ]; then
+              exec "$root/venv/bin/pytest"
+            else
+              echo "pytest not found. Run: pip install -e \".[dev]\" in the project venv." >&2
+              exit 1
+            fi
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -166,7 +166,6 @@ def _paste_token(
     xy,
     view: TextureView,
     size: int | None = None,
-    draw=None,
 ) -> bool:
     parsed = parse_structure_token(raw_token)
 
@@ -208,12 +207,12 @@ def _paste_token(
     return True
 
 
-def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
-    return _paste_token(img, textures, raw_token, xy, "top", size, draw)
+def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None) -> bool:
+    return _paste_token(img, textures, raw_token, xy, "top", size)
 
 
-def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None, draw=None) -> bool:
-    return _paste_token(img, textures, raw_token, xy, "side", size, draw)
+def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None) -> bool:
+    return _paste_token(img, textures, raw_token, xy, "side", size)
 
 
 def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundColor | None:
@@ -235,25 +234,6 @@ def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundCol
         return tuple(background_color)
 
     return default
-
-
-def get_display_name(token: Token) -> str:
-    entry = BLOCK_REGISTRY.get(token)
-
-    if entry:
-        return entry.get("display_name", token)
-
-    return token
-
-
-def get_inventory_group(token: Token) -> str:
-    entry = BLOCK_REGISTRY.get(token, {})
-
-    category = entry.get("category")
-    if category:
-        return category
-
-    return get_display_name(token)
 
 
 def get_texture_for_render(token: Token, texture: Image.Image) -> Image.Image:

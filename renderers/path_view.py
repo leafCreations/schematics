@@ -231,7 +231,6 @@ def _draw_active_path_cell(
         active_token,
         (bx, by),
         block_px,
-        draw,
     ):
         if cell["is_ghost"]:
             _apply_path_ghost_overlay(img, bx, by, block_px)

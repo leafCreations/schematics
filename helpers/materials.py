@@ -1,9 +1,11 @@
 from collections import Counter
 from pathlib import Path
 
+from PIL import Image, ImageDraw
+
 from helpers.context import SchematicContext
 from helpers.structure_tokens import ParsedToken, parse_structure_token
-from helpers.types import MaterialsIconList, MaterialsList, ParsedTokenMaterialsList
+from helpers.types import MaterialsIconList, MaterialsList, ParsedTokenMaterialsList, RawToken
 
 
 def resolve_texture_path(ctx: SchematicContext, texture_name: str) -> Path:
@@ -112,3 +114,41 @@ def build_material_inventory(
     materials = sorted(material_counts.items(), key=lambda item: item[0].lower())
 
     return materials, material_icons
+
+
+def build_material_inventory_from_raw_tokens(
+    raw_tokens: list[RawToken],
+    ctx: SchematicContext,
+) -> tuple[MaterialsList, MaterialsIconList]:
+    parsed_tokens = [
+        parsed
+        for raw_token in raw_tokens
+        if (parsed := parse_structure_token(raw_token)) is not None
+    ]
+
+    return build_material_inventory(parsed_tokens, ctx)
+
+
+def draw_inventory_icon(
+    img: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    ctx: SchematicContext,
+    texture_name: str | None,
+    x: int,
+    y: int,
+    size: int = 25,
+) -> None:
+    if texture_name:
+        texture_path = resolve_texture_path(ctx, texture_name)
+
+        if texture_path.exists():
+            tex = Image.open(texture_path).convert("RGBA")
+            tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
+            img.paste(tex, (x, y), tex)
+            return
+
+    draw.rectangle(
+        [x, y, x + size, y + size],
+        fill=(230, 230, 230),
+        outline=(80, 80, 80),
+    )

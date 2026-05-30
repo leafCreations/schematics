@@ -1,19 +1,16 @@
-from PIL import Image, ImageFont
-
+import helpers.fonts as font_utils
 import helpers.materials as material_utils
 import helpers.paths as paths
 import helpers.render_image as render_image
 from helpers.context import SchematicContext
 from helpers.types import (
-    Fonts,
     MaterialsIconList,
     MaterialsLayout,
     MaterialsList,
-    RawTokenMaterialsList,
 )
 
 
-def _build_material_layout(materials: RawTokenMaterialsList) -> MaterialsLayout:
+def _build_material_layout(materials: MaterialsList) -> MaterialsLayout:
     row_h = 42
     header_h = 110
     footer_h = 35
@@ -34,30 +31,12 @@ def _build_material_layout(materials: RawTokenMaterialsList) -> MaterialsLayout:
     return layout
 
 
-def _load_material_fonts() -> Fonts:
-    fonts = {
-        "title": ImageFont.load_default(),
-        "header": ImageFont.load_default(),
-        "body": ImageFont.load_default(),
-        "count": ImageFont.load_default(),
-    }
-
-    try:
-        fonts["title"] = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
-
-        fonts["header"] = ImageFont.truetype("DejaVuSans-Bold.ttf", 16)
-
-        fonts["body"] = ImageFont.truetype("DejaVuSans.ttf", 15)
-
-        fonts["count"] = ImageFont.truetype("DejaVuSans-Bold.ttf", 15)
-
-    except Exception:
-        pass
-
-    return fonts
-
-
-def _draw_material_header(draw, ctx: SchematicContext, layout: MaterialsLayout, fonts: Fonts):
+def _draw_material_header(
+    draw,
+    ctx: SchematicContext,
+    layout: MaterialsLayout,
+    fonts: font_utils.Fonts,
+):
     padding = layout["padding"]
     img_w = layout["img_w"]
 
@@ -84,7 +63,7 @@ def _draw_material_rows(
     materials_list: MaterialsList,
     material_icons: MaterialsIconList,
     layout: MaterialsLayout,
-    fonts: Fonts,
+    fonts: font_utils.Fonts,
 ):
     y = layout["heading_h"]
 
@@ -93,7 +72,15 @@ def _draw_material_rows(
 
         icon_token = material_icons.get(group_name)
 
-        _draw_material_icon(img, draw, ctx, icon_token, y, layout)
+        material_utils.draw_inventory_icon(
+            img,
+            draw,
+            ctx,
+            icon_token,
+            layout["padding"] + 8,
+            y,
+            size=30,
+        )
 
         _draw_material_text(draw, group_name, count, y, layout, fonts)
 
@@ -111,36 +98,8 @@ def _draw_material_row_background(draw, idx: int, y: int, layout: MaterialsLayou
     draw.rectangle([padding - 10, y - 6, img_w - padding + 10, y + row_h - 8], fill=(248, 248, 248))
 
 
-def _draw_material_icon(
-    img,
-    draw,
-    ctx: SchematicContext,
-    texture_name: str | None,
-    y: int,
-    layout: MaterialsLayout,
-):
-    padding = layout["padding"]
-    icon_x = padding + 8
-    icon_y = y
-
-    if texture_name:
-        texture_path = material_utils.resolve_texture_path(ctx, texture_name)
-
-        if texture_path.exists():
-            tex = Image.open(texture_path).convert("RGBA")
-            tex = tex.resize((30, 30), resample=Image.Resampling.NEAREST)
-            img.paste(tex, (icon_x, icon_y), tex)
-            return
-
-    draw.rectangle(
-        [icon_x, icon_y, icon_x + 30, icon_y + 30],
-        fill=(230, 230, 230),
-        outline=(80, 80, 80),
-    )
-
-
 def _draw_material_text(
-    draw, group_name: str, count: int, y: int, layout: MaterialsLayout, fonts: Fonts
+    draw, group_name: str, count: int, y: int, layout: MaterialsLayout, fonts: font_utils.Fonts
 ):
     padding = layout["padding"]
     img_w = layout["img_w"]
@@ -155,7 +114,7 @@ def _draw_material_text(
     )
 
 
-def _draw_material_footer(draw, layout: MaterialsLayout, fonts: Fonts):
+def _draw_material_footer(draw, layout: MaterialsLayout, fonts: font_utils.Fonts):
     padding = layout["padding"]
     img_w = layout["img_w"]
     img_h = layout["img_h"]
@@ -181,7 +140,7 @@ def render_materials_inventory_blueprint(ctx: SchematicContext):
     materials, material_icons = material_utils.build_material_inventory(parsed_tokens, ctx)
 
     layout = _build_material_layout(materials)
-    fonts = _load_material_fonts()
+    fonts = font_utils.load_materials_fonts()
 
     img, draw = render_image.create_canvas(layout["img_w"], layout["img_h"])
 
