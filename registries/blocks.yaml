@@ -1,30 +1,72 @@
 DIRT:
   behavior: solid
+  display_name: "Dirt"
+  category: terrain
+  ui:
+    label: Dirt
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
   minecraft:
     block: minecraft:dirt
+
 DIRT_PATH:
   behavior: solid
+  display_name: "Dirt Path"
+  category: terrain
+  ui:
+    label: "Dirt Path"
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
   minecraft:
     block: minecraft:dirt_path
   render:
-    textures:
-      top: dirt_path_top.png
+    top: dirt_path_top.png
 
 GRASS:
   behavior: solid
+  display_name: "Grass"
+  category: terrain
+  ui:
+    label: Grass
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
   minecraft:
     block: minecraft:grass_block
   render:
-    textures:
-      top: grass_block_top.png
+    top: grass_block_top.png
     background_color: [95, 160, 75]
+
 GRAVEL:
   behavior: solid
+  display_name: "Gravel"
+  category: terrain
+  ui:
+    label: Gravel
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
   minecraft:
     block: minecraft:gravel
 
 COBBLESTONE:
   behavior: solid
+  display_name: "Cobblestone"
+  category: terrain
+  ui:
+    label: Cobblestone
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+    variants:
+      - mossy
   defaults:
     variant: normal
   minecraft:
@@ -36,27 +78,57 @@ COBBLESTONE:
 
 LOG:
   behavior: log
+  display_name: "{material} Log"
+  category: wood
   material_default: oak
+  ui:
+    label: "{material} Log"
+    palette: wood
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+    variants:
+      - east_west
+      - north_south
   defaults:
     orientation: vertical
   minecraft:
     block: minecraft:{material}_log
     blockstates:
-      vertical: y
-      east_west: x
-      north_south: z
+      axis: "{axis}"
   render:
     textures:
       top: "{material}_log_top.png"
       side: "{material}_log.png"
+    inventory_image: "{material}_log.png"
+
 PLANKS:
   behavior: solid
+  display_name: "{material} Planks"
+  category: wood
   material_default: oak
+  ui:
+    label: "{material} Planks"
+    palette: wood
+    requires_material: true
+    requires_direction: false
+    requires_variant: false
   minecraft:
     block: "minecraft:{material}_planks"
+
 SLAB:
   behavior: slab
+  display_name: "{material} Slab"
+  category: building
   material_default: oak
+  ui:
+    label: "{material} Slab"
+    palette: blocks
+    requires_material: true
+    requires_direction: false
+    requires_variant: false
+    variants:
+      - top
   defaults:
     type: bottom
   minecraft:
@@ -64,13 +136,19 @@ SLAB:
     blockstates:
       type: "{type}"
   render:
-    textures:
-      top: "{material}_planks.png"
-      side: "{material}_slab.png"
-    inventory_image: /custom/oak_slab.png
+    top: "{material}_planks.png"
+    side: "{material}_slab.png"
 
 FURNACE:
   behavior: facing_block
+  display_name: "{material} Furnace"
+  category: functional
+  ui:
+    label: "{material} Furnace"
+    palette: furnace
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
   defaults:
     direction: north
   minecraft:
@@ -78,24 +156,41 @@ FURNACE:
     blockstates:
       facing: "{direction}"
   render:
-    textures:
-      top: furnace_front.png
+    top: furnace_front.png
     inventory_image: furnace_front.png
   visibility:
-    interior: False
+    interior: false
 
 CRAFTING_TABLE:
   behavior: solid
+  display_name: "Crafting Table"
+  category: functional
+  ui:
+    label: "Crafting Table"
+    palette: crafting
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
   minecraft:
     block: minecraft:crafting_table
   render:
-    textures:
-      top: crafting_table_top.png
+    top: crafting_table_top.png
   visibility:
-    interior: False
+    interior: false
 
 TORCH:
   behavior: torch
+  display_name: "Torch"
+  category: lighting
+  ui:
+    label: Torch
+    palette: lighting
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
+    variants:
+      - soul
+      - wall
   defaults:
     variant: normal
     direction: north
@@ -110,11 +205,26 @@ TORCH:
         blockstates:
           facing: "{direction}"
   render:
+    textures:
+      top:
+        soul: soul_torch.png
+        wall: wall_torch.png
+      side:
+        soul: soul_torch.png
+        wall: wall_torch.png
     inventory_image: torch.png
 
 DOOR:
   behavior: door
+  display_name: "{material} Door"
+  category: functional
   material_default: oak
+  ui:
+    label: "{material} Door"
+    palette: doors
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
   defaults:
     direction: north
     half: lower
@@ -131,11 +241,18 @@ DOOR:
     textures:
       upper: "{material}_door_top.png"
       lower: "{material}_door_bottom.png"
-    inventory_image: /custom/oak_door.png
 
 FENCE:
   behavior: fence
+  display_name: "{material} Fence"
+  category: building
   material_default: oak
+  ui:
+    label: "{material} Fence"
+    palette: fence
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
   defaults:
     north: false
     south: false
@@ -150,17 +267,30 @@ FENCE:
       west: "{west}"
   render:
     textures:
-      post: "/custom/{material}_fence_side.png"
-      end: "/custom/{material}_fence_side.png"
-      straight: "/custom/{material}_fence_side.png"
-      corner: "/custom/{material}_fence_side.png"
-      tee: "/custom/{material}_fence_side.png"
-      cross: "/custom/{material}_fence_side.png"
-    inventory_image: /custom/oak_fence_side.png
+      post: "{material}_fence_inventory.png"
+      end: "{material}_fence_end.png"
+      straight: "{material}_fence_inventory.png"
+      corner: "{material}_fence_corner.png"
+      tee: "{material}_fence_tee.png"
+      cross: "{material}_fence_cross.png"
+    inventory_image: "{material}_fence_inventory.png"
 
 STAIRS:
   behavior: stairs
+  display_name: "{material} Stairs"
+  category: building
   material_default: oak
+  ui:
+    label: "{material} Stairs"
+    palette: stairs
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+    variants:
+      - outer_left
+      - outer_right
+      - inner_left
+      - inner_right
   defaults:
     direction: north
     half: bottom
@@ -173,56 +303,84 @@ STAIRS:
       half: "{half}"
       shape: "{shape}"
   render:
-    rotation: "{rotation}"
     textures:
       top:
-        straight: "/custom/{material}_stairs_top.png"
-        outer_left: "/custom/{material}_stairs_outer_left.png"
-        outer_right: "/custom/{material}_stairs_outer_left.png"
-        inner_left: "/custom/{material}_stairs_inner_left.png"
-        inner_right: "/custom/{material}_stairs_inner_right.png"
+        straight: "{material}_planks.png"
+        outer_left: "{material}_planks.png"
+        outer_right: "{material}_planks.png"
+        inner_left: "{material}_planks.png"
+        inner_right: "{material}_planks.png"
       side:
-        north: "/custom/{material}_stairs_north.png"
-        south: "/custom/{material}_stairs_south.png"
-        east: "/custom/{material}_stairs_side_west_east.png"
-        west: "/custom/{material}_stairs_side_west_east.png"
-    inventory_image: /custom/oak_stairs_south.png
+        north: "{material}_planks.png"
+        south: "{material}_planks.png"
+        east: "{material}_planks.png"
+        west: "{material}_planks.png"
 
 BED:
   behavior: bed
+  display_name: "{color} Bed"
+  category: functional
+  color_default: red
+  ui:
+    label: "{color} Bed"
+    palette: beds
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
   defaults:
     direction: north
     part: head
   minecraft:
-    block: minecraft:red_bed
+    block: minecraft:{color}_bed
     blockstates:
       facing: "{direction}"
       part: "{part}"
       occupied: false
   render:
     textures:
-      head: /custom/red_bed_top.png
-      foot: /custom/red_bed_bottom.png
-    inventory_image: /custom/red_bed.png
+      head: "{color}_bed_head.png"
+      foot: "{color}_bed_foot.png"
   visibility:
-    interior: False
+    interior: false
 
 CHEST:
   behavior: chest
+  display_name: "{material} Chest"
+  category: functional
   material_default: oak
+  ui:
+    label: "{material} Chest"
+    palette: chests
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
+    variants:
+      - left
+      - right
   defaults:
     direction: north
-    type: single
+    variant: single
   minecraft:
-    block: minecraft:chest
-    blockstates:
-      facing: "{direction}"
-      type: "{type}"
+    variants:
+      single:
+        block: minecraft:chest
+        blockstates:
+          facing: "{direction}"
+      left:
+        block: minecraft:chest
+        blockstates:
+          type: left
+          facing: "{direction}"
+      right:
+        block: minecraft:chest
+        blockstates:
+          type: right
+          facing: "{direction}"
   render:
     textures:
-      single: /custom/chest.png
-      left: /custom/double_chest_left.png
-      right: /custom/double_chest_right.png
-    inventory_image: /custom/chest.png
+      single: chest_single.png
+      left: chest_left.png
+      right: chest_right.png
+    inventory_image: chest_single.png
   visibility:
-    interior: False
+    interior: false

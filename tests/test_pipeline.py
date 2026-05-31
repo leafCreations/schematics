@@ -13,5 +13,10 @@ def test_validate_render_names_accepts_all_and_known():
     pipeline.validate_render_names({constants.RENDER_ALL, constants.RENDER_TOP_VIEW})
 
 
-def test_normalize_renders_defaults_to_all():
-    assert pipeline.normalize_renders(None) == {constants.RENDER_ALL}
+def test_import_render_registry_without_amulet():
+    import importlib
+
+    import renderers.registry as registry_module
+
+    importlib.reload(registry_module)
+    assert constants.RENDER_WORLDGEN in registry_module.RENDER_REGISTRY

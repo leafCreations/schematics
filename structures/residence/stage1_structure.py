@@ -132,7 +132,7 @@ STRUCTURE_DATA = [
             ],
             [
                 "PLANKS:oak",
-                "BED@north#head",
+                "BED:blue@north#head",
                 ".",
                 ".",
                 ".",
@@ -143,7 +143,7 @@ STRUCTURE_DATA = [
             ],
             [
                 "PLANKS:oak",
-                "BED@north#foot",
+                "BED:blue@north#foot",
                 ".",
                 ".",
                 ".",

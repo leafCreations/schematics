@@ -3,6 +3,26 @@ from pathlib import Path
 import pytest
 
 from helpers.context import SchematicContext
+from helpers.paths import BLOCK_TEXTURES_FOLDER
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "requires_assets: test needs the local assets/ folder with Minecraft textures",
+    )
+
+
+@pytest.fixture
+def assets_dir() -> Path:
+    return BLOCK_TEXTURES_FOLDER
+
+
+@pytest.fixture
+def sprite_size() -> int:
+    from helpers import constants
+
+    return constants.BLOCK_PX
 
 
 @pytest.fixture

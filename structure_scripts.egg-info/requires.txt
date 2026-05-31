@@ -1,7 +1,13 @@
-amulet-core
 Pillow
 PyYAML
 
 [dev]
+pytest
 ruff
 pre-commit
+
+[worldgen]
+amulet-core==1.9.40
+amulet-rocksdb==1.0.3
+cmake>=4.1
+ninja

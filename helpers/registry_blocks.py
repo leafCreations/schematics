@@ -1,5 +1,17 @@
+from helpers.log_orientation import orientation_to_axis, resolve_log_orientation
 from helpers.structure_tokens import ParsedToken
 from helpers.types import BlockRegistryEntry
+
+
+def resolve_token_color(entry: BlockRegistryEntry, parsed: ParsedToken) -> str:
+    defaults = entry.get("defaults", {})
+    return (
+        parsed.material
+        or entry.get("color_default")
+        or entry.get("material_default")
+        or defaults.get("color")
+        or "red"
+    )
 
 
 def resolve_token_fields(
@@ -25,8 +37,12 @@ def resolve_minecraft_block_id(entry: BlockRegistryEntry, parsed: ParsedToken) -
     else:
         block_name = minecraft["block"]
 
-    if material:
+    if material and "{material}" in block_name:
         block_name = block_name.format(material=material)
+
+    color = resolve_token_color(entry, parsed)
+    if "{color}" in block_name:
+        block_name = block_name.format(color=color)
 
     return block_name
 
@@ -38,10 +54,13 @@ def resolve_minecraft_blockstates(
 ) -> dict[str, str]:
     material, direction, variant, defaults = resolve_token_fields(entry, parsed)
 
+    color = resolve_token_color(entry, parsed)
+
     format_values = {
         **defaults,
         **dict(parsed.states),
         "material": material,
+        "color": color,
         "direction": direction,
         "variant": variant,
         "half": parsed.variant or defaults.get("half"),
@@ -49,6 +68,11 @@ def resolve_minecraft_blockstates(
         "type": parsed.variant or defaults.get("type"),
         "shape": parsed.variant or defaults.get("shape"),
     }
+
+    if entry.get("behavior") == "log":
+        orientation = resolve_log_orientation(parsed, entry)
+        format_values["orientation"] = orientation
+        format_values["axis"] = orientation_to_axis(orientation)
 
     resolved_blockstates: dict[str, str] = {}
 

@@ -5,8 +5,8 @@ from amulet.api.chunk import Chunk
 from amulet.api.errors import ChunkDoesNotExist
 from amulet.level.formats.anvil_world import AnvilFormat
 
-from helpers.cells import get_cell
 from helpers.context import SchematicContext
+from helpers.fence_adjacency import resolve_fence_adjacency
 from helpers.grid import get_worldgen_base_y
 from helpers.registry_blocks import (
     get_block_behavior,
@@ -17,62 +17,6 @@ from helpers.structure_tokens import ParsedToken, parse_structure_token
 from registries.loader import BLOCK_REGISTRY
 
 BLOCK_CACHE: dict[ParsedToken, Block] = {}
-
-DIRECTION_OFFSETS = {
-    "north": (0, -1),
-    "south": (0, 1),
-    "east": (1, 0),
-    "west": (-1, 0),
-}
-
-FENCE_CONNECTABLE_BEHAVIORS = {
-    "solid",
-    "facing_block",
-    "fence",
-    "log",
-    "slab",
-    "stairs",
-    "door",
-    "bed",
-    "chest",
-}
-
-
-def should_fence_connect(raw_neighbor: str | None) -> bool:
-    if raw_neighbor is None:
-        return False
-
-    parsed_neighbor = parse_structure_token(raw_neighbor)
-
-    if parsed_neighbor is None:
-        return False
-
-    entry = BLOCK_REGISTRY.get(parsed_neighbor.token)
-
-    if entry is None:
-        return False
-
-    return get_block_behavior(entry) in FENCE_CONNECTABLE_BEHAVIORS
-
-
-def resolve_fence_adjacency(
-    parsed: ParsedToken,
-    cells: list[list[str]],
-    x: int,
-    z: int,
-) -> ParsedToken:
-    states = tuple(
-        (direction, should_fence_connect(get_cell(cells, x + dx, z + dz, empty=None)))
-        for direction, (dx, dz) in DIRECTION_OFFSETS.items()
-    )
-
-    return ParsedToken(
-        token=parsed.token,
-        material=parsed.material,
-        direction=parsed.direction,
-        variant=parsed.variant,
-        states=states,
-    )
 
 
 def resolve_worldgen_token(

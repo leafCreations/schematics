@@ -27,6 +27,7 @@ BBox: TypeAlias = list[int]
 RawTokenMaterialsList: TypeAlias = list[RawToken]
 MaterialsList: TypeAlias = list[tuple[str, int]]
 MaterialsIconList: TypeAlias = dict[str, str]
+MaterialsIconTokens: TypeAlias = dict[str, ParsedToken]
 ParsedTokenMaterialsList: TypeAlias = list[ParsedToken]
 
 DirectionOffset: TypeAlias = tuple[int, int]

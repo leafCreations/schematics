@@ -2,10 +2,17 @@ from typing import Literal
 
 from PIL import Image, ImageChops
 
+import helpers.registry_blocks as registry_blocks
 import helpers.utils as utils
+from helpers.fence_adjacency import (
+    classify_fence_variant,
+    fence_facing_for_connections,
+    resolve_fence_connections,
+)
+from helpers.log_orientation import resolve_log_orientation
 from helpers.structure_tokens import ParsedToken, parse_structure_token
-from helpers.types import BackgroundColor, MappedTextureImages, RawToken, Token
-from registries.loader import BLOCK_REGISTRY
+from helpers.types import BackgroundColor, CellGrid, MappedTextureImages, RawToken, Token
+from registries.loader import BLOCK_REGISTRY, get_render_textures
 
 TextureView = Literal["top", "side"]
 
@@ -46,6 +53,7 @@ def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
             direction=parsed.direction or defaults.get("direction", ""),
             variant=parsed.variant or defaults.get("variant", ""),
             material=parsed.material or entry.get("material_default", ""),
+            color=registry_blocks.resolve_token_color(entry, parsed),
             part=parsed.variant or defaults.get("part", ""),
         )
 
@@ -103,6 +111,12 @@ def _build_texture_key_candidates(
     if view == "side":
         texture_keys.extend(_build_directional_side_keys(raw_token, parsed.token, direction))
 
+    if parsed.material:
+        color_prefix = f"{parsed.token}:{parsed.material}"
+        if parsed.variant:
+            texture_keys.append(f"{color_prefix}#{parsed.variant}")
+        texture_keys.append(color_prefix)
+
     if raw_token in textures:
         texture_keys.append(raw_token)
 
@@ -134,29 +148,91 @@ def _resize_texture(tex: Image.Image, size: int | None) -> Image.Image:
     return tex
 
 
+_CORNER_STAIR_FACING_CCW = {"N": 0, "E": 90, "S": 180, "W": 270}
+# Corner stair sprites are baked in south-facing orientation; rotate to match ``@direction``.
+_CORNER_STAIR_BAKE_FACING = "S"
+
+
+def _is_corner_stair_shape(parsed: ParsedToken, entry: dict) -> bool:
+    if entry.get("behavior") != "stairs":
+        return False
+
+    shape = parsed.variant or entry.get("defaults", {}).get("shape", "straight")
+    return shape != "straight"
+
+
+def _corner_stair_facing_rotation(direction: str | None) -> int:
+    if direction is None:
+        return 0
+
+    target = _CORNER_STAIR_FACING_CCW.get(direction)
+    if target is None:
+        return 0
+
+    base = _CORNER_STAIR_FACING_CCW[_CORNER_STAIR_BAKE_FACING]
+    return (target - base) % 360
+
+
+def corner_stair_facing_rotation(direction: str | None) -> int:
+    return _corner_stair_facing_rotation(direction)
+
+
+def is_corner_stair_shape(parsed: ParsedToken, entry: dict) -> bool:
+    return _is_corner_stair_shape(parsed, entry)
+
+
+def _build_log_texture_keys(parsed: ParsedToken, orientation: str) -> list[str]:
+    keys: list[str] = []
+
+    if parsed.material:
+        if orientation != "vertical":
+            keys.append(f"LOG:{parsed.material}#{orientation}")
+        keys.append(f"LOG:{parsed.material}")
+
+    if orientation != "vertical":
+        keys.append(f"LOG#{orientation}")
+
+    keys.append(parsed.token)
+    return keys
+
+
 def _prepare_topdown_texture(
     tex: Image.Image,
     base_token: Token,
     direction: str | None,
     rotation: int,
+    *,
+    corner_stair_shape: bool = False,
 ) -> Image.Image:
     tex = get_texture_for_render(base_token, tex)
 
-    if direction:
+    if corner_stair_shape:
+        facing_rotation = _corner_stair_facing_rotation(direction)
+        if facing_rotation:
+            tex = utils.rotate_texture_by_degrees(tex, facing_rotation)
+    elif direction:
         tex = utils.rotate_directional_texture(tex, direction)
 
     if rotation:
-        tex = tex.rotate(
-            -rotation,
-            expand=False,
-            resample=Image.Resampling.NEAREST,
-        )
+        tex = utils.rotate_texture_by_degrees(tex, rotation)
 
     return tex
 
 
 def _paste_prepared_texture(img, tex: Image.Image, xy) -> None:
     img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
+
+
+def _build_fence_texture_keys(parsed: ParsedToken, variant: str) -> list[str]:
+    keys: list[str] = []
+
+    if parsed.material:
+        keys.append(f"FENCE:{parsed.material}#{variant}")
+        keys.append(f"FENCE:{parsed.material}")
+
+    keys.append(f"FENCE#{variant}")
+    keys.append(parsed.token)
+    return keys
 
 
 def _paste_token(
@@ -166,6 +242,10 @@ def _paste_token(
     xy,
     view: TextureView,
     size: int | None = None,
+    *,
+    layer_cells: CellGrid | None = None,
+    cell_x: int | None = None,
+    cell_z: int | None = None,
 ) -> bool:
     parsed = parse_structure_token(raw_token)
 
@@ -175,23 +255,38 @@ def _paste_token(
     base_token, resolved_direction = resolve_token_for_render(raw_token)
     entry = BLOCK_REGISTRY.get(parsed.token, {})
     defaults = entry.get("defaults", {})
-    render_textures = entry.get("render", {}).get("textures", {})
+    render_textures = get_render_textures(entry)
+    direction = resolved_direction
 
     if view == "side":
         direction = parsed.direction or resolved_direction or defaults.get("direction")
-    else:
-        direction = resolved_direction
 
-    texture_keys = _build_texture_key_candidates(
-        raw_token,
-        parsed,
-        base_token,
-        defaults,
-        render_textures,
-        textures,
-        view,
-        direction if view == "side" else None,
-    )
+    if (
+        view == "top"
+        and entry.get("behavior") == "fence"
+        and layer_cells is not None
+        and cell_x is not None
+        and cell_z is not None
+    ):
+        connections = resolve_fence_connections(layer_cells, cell_x, cell_z)
+        variant = classify_fence_variant(connections)
+        direction = fence_facing_for_connections(variant, connections)
+        texture_keys = _build_fence_texture_keys(parsed, variant)
+    elif view == "top" and entry.get("behavior") == "log":
+        orientation = resolve_log_orientation(parsed, entry)
+        texture_keys = _build_log_texture_keys(parsed, orientation)
+    else:
+        texture_keys = _build_texture_key_candidates(
+            raw_token,
+            parsed,
+            base_token,
+            defaults,
+            render_textures,
+            textures,
+            view,
+            direction if view == "side" else None,
+        )
+
     texture_key = _resolve_texture_key(texture_keys, textures)
 
     if texture_key is None:
@@ -200,15 +295,46 @@ def _paste_token(
     tex = textures[texture_key]
 
     if view == "top":
-        tex = _prepare_topdown_texture(tex, base_token, direction, parsed.rotation)
+        tex = _prepare_topdown_texture(
+            tex,
+            base_token,
+            direction,
+            parsed.rotation,
+            corner_stair_shape=_is_corner_stair_shape(parsed, entry),
+        )
+
+        if entry.get("behavior") == "log":
+            orientation = resolve_log_orientation(parsed, entry)
+            if orientation == "east_west":
+                tex = utils.rotate_texture_by_degrees(tex, 90)
 
     tex = _resize_texture(tex, size)
     _paste_prepared_texture(img, tex, xy)
     return True
 
 
-def paste_topdown_token(img, textures, raw_token: RawToken, xy, size=None) -> bool:
-    return _paste_token(img, textures, raw_token, xy, "top", size)
+def paste_topdown_token(
+    img,
+    textures,
+    raw_token: RawToken,
+    xy,
+    size=None,
+    *,
+    layer_cells: CellGrid | None = None,
+    cell_x: int | None = None,
+    cell_z: int | None = None,
+) -> bool:
+    return _paste_token(
+        img,
+        textures,
+        raw_token,
+        xy,
+        "top",
+        size,
+        layer_cells=layer_cells,
+        cell_x=cell_x,
+        cell_z=cell_z,
+    )
 
 
 def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None) -> bool:

@@ -95,7 +95,19 @@ def _draw_layer_panel(
             bx = sx + (x * block_px)
             by = sy + (z * block_px)
 
-            _draw_block_cell(img, draw, ctx, raw_token, token, bx, by, block_px)
+            _draw_block_cell(
+                img,
+                draw,
+                ctx,
+                raw_token,
+                token,
+                bx,
+                by,
+                block_px,
+                layer_cells=layer.get("cells", []),
+                cell_x=x,
+                cell_z=z,
+            )
 
             if token != ".":
                 panel_materials.append(raw_token)
@@ -112,6 +124,10 @@ def _draw_block_cell(
     bx: int,
     by: int,
     block_px: int,
+    *,
+    layer_cells=None,
+    cell_x: int | None = None,
+    cell_z: int | None = None,
 ):
     rect = [bx, by, bx + block_px, by + block_px]
 
@@ -127,6 +143,9 @@ def _draw_block_cell(
         raw_token,
         (bx, by),
         block_px,
+        layer_cells=layer_cells,
+        cell_x=cell_x,
+        cell_z=cell_z,
     ):
         return
 
@@ -233,9 +252,11 @@ def _draw_inventory_panel(
     panel_materials: list[RawToken],
     fonts: font_utils.Fonts,
 ):
-    inventory, inventory_icons = material_utils.build_material_inventory_from_raw_tokens(
-        panel_materials,
-        ctx,
+    inventory, inventory_icons, inventory_icon_tokens = (
+        material_utils.build_material_inventory_from_raw_tokens(
+            panel_materials,
+            ctx,
+        )
     )
 
     lx = panel["sx"] + panel["panel_w"] + 20
@@ -254,7 +275,16 @@ def _draw_inventory_panel(
 
         texture_name = inventory_icons.get(group_name)
 
-        material_utils.draw_inventory_icon(img, draw, ctx, texture_name, lx, ly, size=25)
+        material_utils.draw_inventory_icon(
+            img,
+            draw,
+            ctx,
+            texture_name,
+            lx,
+            ly,
+            size=25,
+            parsed=inventory_icon_tokens.get(group_name),
+        )
 
         draw.text((lx + 35, ly + 5), f"x {count}", fill="black", font=fonts["inventory"])
 

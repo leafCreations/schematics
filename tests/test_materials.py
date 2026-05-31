@@ -1,3 +1,5 @@
+import pytest
+
 from helpers import materials as material_utils
 from helpers.structure_tokens import ParsedToken
 
@@ -38,7 +40,7 @@ def test_build_material_inventory_from_raw_tokens():
     inventory, icons = material_utils.build_material_inventory_from_raw_tokens(
         ["PLANKS:oak", "PLANKS:oak", "."],
         ctx,
-    )
+    )[:2]
 
     assert inventory == [("Oak Planks", 2)]
     assert "Oak Planks" in icons
@@ -55,10 +57,392 @@ def test_build_material_inventory_matches_raw_token_wrapper():
     )
     parsed = [ParsedToken(token="PLANKS", material="oak")]
 
-    from_raw = material_utils.build_material_inventory_from_raw_tokens(["PLANKS:oak"], ctx)
-    from_parsed = material_utils.build_material_inventory(parsed, ctx)
+    from_raw = material_utils.build_material_inventory_from_raw_tokens(["PLANKS:oak"], ctx)[:2]
+    from_parsed = material_utils.build_material_inventory(parsed, ctx)[:2]
 
     assert from_raw == from_parsed
+
+
+def test_resolve_material_texture_name_handles_nested_stair_textures():
+    ctx = _ctx_with_registry(
+        {
+            "STAIRS": {
+                "behavior": "stairs",
+                "material_default": "oak",
+                "defaults": {"shape": "straight"},
+                "minecraft": {"block": "minecraft:{material}_stairs"},
+                "render": {
+                    "textures": {
+                        "top": {
+                            "straight": "{material}_planks.png",
+                            "outer_left": "{material}_planks.png",
+                        }
+                    }
+                },
+            },
+        }
+    )
+
+    straight = material_utils.resolve_material_texture_name(
+        ParsedToken(token="STAIRS", material="oak"),
+        ctx,
+    )
+    outer_left = material_utils.resolve_material_texture_name(
+        ParsedToken(token="STAIRS", material="oak", variant="outer_left"),
+        ctx,
+    )
+
+    assert straight == "oak_planks.png"
+    assert outer_left == "oak_planks.png"
+
+
+def test_resolve_material_inventory_icon_prefers_generated_sprites(tmp_path):
+    from PIL import Image
+
+    from helpers import materials as material_utils
+    from helpers.paths import GENERATED_ASSETS_FOLDER
+    from helpers.sprite_baker.cache import save_cached
+
+    ctx = _ctx_with_registry(
+        {
+            "SLAB": {
+                "behavior": "slab",
+                "material_default": "oak",
+                "defaults": {"type": "bottom"},
+                "minecraft": {"block": "minecraft:{material}_slab"},
+                "render": {"top": "{material}_planks.png"},
+            },
+            "STAIRS": {
+                "behavior": "stairs",
+                "material_default": "oak",
+                "defaults": {"shape": "straight"},
+                "minecraft": {"block": "minecraft:{material}_stairs"},
+                "render": {"textures": {"top": {"straight": "{material}_planks.png"}}},
+            },
+        }
+    )
+
+    save_cached(
+        "top",
+        "SLAB:oak",
+        Image.new("RGBA", (16, 16), (1, 2, 3, 255)),
+        generated_root=tmp_path,
+    )
+    save_cached(
+        "top",
+        "STAIRS:oak",
+        Image.new("RGBA", (16, 16), (4, 5, 6, 255)),
+        generated_root=tmp_path,
+    )
+
+    original_root = GENERATED_ASSETS_FOLDER
+    material_utils.GENERATED_ASSETS_FOLDER = tmp_path
+
+    try:
+        slab_icon = material_utils.resolve_material_inventory_icon(
+            ParsedToken(token="SLAB", material="oak"),
+            ctx,
+        )
+        stairs_icon = material_utils.resolve_material_inventory_icon(
+            ParsedToken(token="STAIRS", material="oak"),
+            ctx,
+        )
+    finally:
+        material_utils.GENERATED_ASSETS_FOLDER = original_root
+
+    assert slab_icon == "generated:SLAB:oak"
+    assert stairs_icon == "generated:STAIRS:oak"
+
+
+def test_resolve_material_sprite_key_for_stair_shapes():
+    ctx = _ctx_with_registry(
+        {
+            "STAIRS": {
+                "behavior": "stairs",
+                "defaults": {"shape": "straight"},
+                "minecraft": {"block": "minecraft:{material}_stairs"},
+            },
+        }
+    )
+
+    straight = material_utils.resolve_material_sprite_key(
+        ParsedToken(token="STAIRS", material="oak"),
+        ctx,
+    )
+    outer_left = material_utils.resolve_material_sprite_key(
+        ParsedToken(token="STAIRS", material="oak", variant="outer_left"),
+        ctx,
+    )
+
+    assert straight == "STAIRS:oak"
+    assert outer_left == "STAIRS:oak#outer_left"
+
+
+def test_build_material_inventory_prefers_generated_stair_shape(tmp_path):
+    from PIL import Image
+
+    from helpers import materials as material_utils
+    from helpers.paths import GENERATED_ASSETS_FOLDER
+    from helpers.sprite_baker.cache import save_cached
+
+    ctx = _ctx_with_registry(
+        {
+            "STAIRS": {
+                "behavior": "stairs",
+                "material_default": "oak",
+                "defaults": {"shape": "straight"},
+                "minecraft": {"block": "minecraft:{material}_stairs"},
+                "render": {"top": "{material}_planks.png"},
+            },
+        }
+    )
+
+    save_cached(
+        "top",
+        "STAIRS:oak",
+        Image.new("RGBA", (16, 16), (1, 1, 1, 255)),
+        generated_root=tmp_path,
+    )
+    save_cached(
+        "top",
+        "STAIRS:oak#outer_left",
+        Image.new("RGBA", (16, 16), (2, 2, 2, 255)),
+        generated_root=tmp_path,
+    )
+
+    original_root = GENERATED_ASSETS_FOLDER
+    material_utils.GENERATED_ASSETS_FOLDER = tmp_path
+
+    try:
+        parsed = [
+            ParsedToken(token="STAIRS", material="oak", direction="south"),
+            ParsedToken(token="STAIRS", material="oak", direction="south", variant="outer_left"),
+        ]
+        _, icons, icon_tokens = material_utils.build_material_inventory(parsed, ctx)
+    finally:
+        material_utils.GENERATED_ASSETS_FOLDER = original_root
+
+    assert icons["Oak Stairs"] == "generated:STAIRS:oak#outer_left"
+    assert icon_tokens["Oak Stairs"].variant == "outer_left"
+
+
+def test_resolve_material_sprite_key_for_fence_material():
+    ctx = _ctx_with_registry(
+        {
+            "FENCE": {
+                "behavior": "fence",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_fence"},
+            },
+        }
+    )
+
+    key = material_utils.resolve_material_sprite_key(
+        ParsedToken(token="FENCE", material="oak"),
+        ctx,
+    )
+
+    assert key == "FENCE:oak"
+
+
+def test_resolve_material_inventory_icon_uses_fence_inventory_view(tmp_path):
+    from PIL import Image
+
+    from helpers.paths import GENERATED_ASSETS_FOLDER
+    from helpers.sprite_baker.cache import save_cached
+
+    ctx = _ctx_with_registry(
+        {
+            "FENCE": {
+                "behavior": "fence",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_fence"},
+                "render": {"inventory_image": "{material}_fence_inventory.png"},
+            },
+        }
+    )
+
+    save_cached(
+        "inventory",
+        "FENCE:oak",
+        Image.new("RGBA", (16, 16), (10, 20, 30, 255)),
+        generated_root=tmp_path,
+    )
+    save_cached(
+        "top",
+        "FENCE:oak",
+        Image.new("RGBA", (16, 16), (99, 88, 77, 255)),
+        generated_root=tmp_path,
+    )
+
+    original_root = GENERATED_ASSETS_FOLDER
+    material_utils.GENERATED_ASSETS_FOLDER = tmp_path
+
+    try:
+        icon = material_utils.resolve_material_inventory_icon(
+            ParsedToken(token="FENCE", material="oak"),
+            ctx,
+        )
+    finally:
+        material_utils.GENERATED_ASSETS_FOLDER = original_root
+
+    assert icon == "generated:FENCE:oak"
+
+
+@pytest.mark.requires_assets
+def test_draw_inventory_icon_uses_inventory_view_without_parsed():
+    from pathlib import Path
+
+    from PIL import Image, ImageDraw
+
+    from helpers.materials import draw_inventory_icon
+    from helpers.sprite_baker.cache import load_generated_sprite
+
+    ctx = _ctx_with_registry(
+        {
+            "FENCE": {
+                "behavior": "fence",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_fence"},
+            },
+        }
+    )
+    ctx.assets_dir = Path("assets/textures/block")
+
+    inv_ref = load_generated_sprite("inventory", "FENCE:oak", 25)
+
+    img = Image.new("RGBA", (25, 25), (0, 0, 0, 0))
+    draw_inventory_icon(
+        img,
+        ImageDraw.Draw(img),
+        ctx,
+        "generated:FENCE:oak",
+        0,
+        0,
+        25,
+        parsed=None,
+    )
+
+    assert img.tobytes() == inv_ref.tobytes()
+
+
+@pytest.mark.requires_assets
+def test_resolve_material_inventory_icon_defers_fence_bake_to_draw(tmp_path):
+    from pathlib import Path
+
+    from helpers import materials as material_utils
+    from helpers.sprite_baker import runtime_bake as runtime_bake_module
+
+    ctx = _ctx_with_registry(
+        {
+            "FENCE": {
+                "behavior": "fence",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_fence"},
+                "render": {"inventory_image": "{material}_fence_inventory.png"},
+            },
+        }
+    )
+    ctx.assets_dir = Path("assets/textures/block")
+
+    original_materials_root = material_utils.GENERATED_ASSETS_FOLDER
+    original_runtime_root = runtime_bake_module.GENERATED_ASSETS_FOLDER
+    material_utils.GENERATED_ASSETS_FOLDER = tmp_path
+    runtime_bake_module.GENERATED_ASSETS_FOLDER = tmp_path
+
+    try:
+        icon = material_utils.resolve_material_inventory_icon(
+            ParsedToken(token="FENCE", material="oak"),
+            ctx,
+        )
+        baked_path = tmp_path / "inventory" / "FENCE_oak.png"
+    finally:
+        material_utils.GENERATED_ASSETS_FOLDER = original_materials_root
+        runtime_bake_module.GENERATED_ASSETS_FOLDER = original_runtime_root
+
+    assert icon == "generated:FENCE:oak"
+    assert not baked_path.exists()
+
+
+@pytest.mark.requires_assets
+def test_draw_inventory_icon_uses_side_view_for_stairs():
+    from pathlib import Path
+
+    from PIL import Image, ImageDraw
+
+    from helpers.materials import draw_inventory_icon
+    from helpers.sprite_baker.cache import load_generated_sprite
+
+    ctx = _ctx_with_registry(
+        {
+            "STAIRS": {
+                "behavior": "stairs",
+                "material_default": "oak",
+                "defaults": {"shape": "straight"},
+                "minecraft": {"block": "minecraft:{material}_stairs"},
+                "render": {"textures": {"top": {"straight": "{material}_planks.png"}}},
+            },
+        }
+    )
+    ctx.assets_dir = Path("assets/textures/block")
+
+    side_ref = load_generated_sprite("side", "STAIRS:oak", 25)
+    top_ref = load_generated_sprite("top", "STAIRS:oak", 25)
+    if side_ref is None or top_ref is None:
+        pytest.skip("baked STAIRS:oak side/top sprites not available")
+
+    img = Image.new("RGBA", (25, 25), (0, 0, 0, 0))
+    draw_inventory_icon(
+        img,
+        ImageDraw.Draw(img),
+        ctx,
+        "generated:STAIRS:oak",
+        0,
+        0,
+        25,
+        parsed=ParsedToken(token="STAIRS", material="oak"),
+    )
+
+    assert img.tobytes() == side_ref.tobytes()
+    assert img.tobytes() != top_ref.tobytes()
+
+
+def test_resolve_material_inventory_icon_defers_stairs_bake_to_draw(tmp_path):
+    from pathlib import Path
+
+    from helpers import materials as material_utils
+    from helpers.sprite_baker import runtime_bake as runtime_bake_module
+
+    ctx = _ctx_with_registry(
+        {
+            "STAIRS": {
+                "behavior": "stairs",
+                "material_default": "oak",
+                "defaults": {"shape": "straight"},
+                "minecraft": {"block": "minecraft:{material}_stairs"},
+                "render": {"textures": {"top": {"straight": "{material}_planks.png"}}},
+            },
+        }
+    )
+    ctx.assets_dir = Path("assets/textures/block")
+
+    original_materials_root = material_utils.GENERATED_ASSETS_FOLDER
+    original_runtime_root = runtime_bake_module.GENERATED_ASSETS_FOLDER
+    material_utils.GENERATED_ASSETS_FOLDER = tmp_path
+    runtime_bake_module.GENERATED_ASSETS_FOLDER = tmp_path
+
+    try:
+        icon = material_utils.resolve_material_inventory_icon(
+            ParsedToken(token="STAIRS", material="oak"),
+            ctx,
+        )
+        baked_path = tmp_path / "side" / "STAIRS_oak.png"
+    finally:
+        material_utils.GENERATED_ASSETS_FOLDER = original_materials_root
+        runtime_bake_module.GENERATED_ASSETS_FOLDER = original_runtime_root
+
+    assert icon == "generated:STAIRS:oak"
+    assert not baked_path.exists()
 
 
 def test_should_count_material_skips_door_upper():
@@ -70,11 +454,122 @@ def test_should_count_material_skips_door_upper():
     assert material_utils.should_count_material(parsed, ctx) is False
 
 
+def test_resolve_material_sprite_key_for_door_material():
+    ctx = _ctx_with_registry(
+        {
+            "DOOR": {
+                "behavior": "door",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_door"},
+            },
+        }
+    )
+
+    key = material_utils.resolve_material_sprite_key(
+        ParsedToken(token="DOOR", material="oak", variant="lower"),
+        ctx,
+    )
+
+    assert key == "DOOR:oak"
+
+
+def test_resolve_material_inventory_icon_uses_generated_door(tmp_path):
+    from PIL import Image
+
+    from helpers import materials as material_utils
+    from helpers.paths import GENERATED_ASSETS_FOLDER
+    from helpers.sprite_baker.cache import save_cached
+
+    ctx = _ctx_with_registry(
+        {
+            "DOOR": {
+                "behavior": "door",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_door"},
+                "render": {
+                    "textures": {
+                        "upper": "{material}_door_top.png",
+                        "lower": "{material}_door_bottom.png",
+                    },
+                },
+            },
+        }
+    )
+
+    save_cached(
+        "inventory",
+        "DOOR:oak",
+        Image.new("RGBA", (16, 16), (4, 5, 6, 255)),
+        generated_root=tmp_path,
+    )
+
+    original_root = GENERATED_ASSETS_FOLDER
+    material_utils.GENERATED_ASSETS_FOLDER = tmp_path
+
+    try:
+        icon = material_utils.resolve_material_inventory_icon(
+            ParsedToken(token="DOOR", material="oak", variant="lower"),
+            ctx,
+        )
+    finally:
+        material_utils.GENERATED_ASSETS_FOLDER = original_root
+
+    assert icon == "generated:DOOR:oak"
+
+
+def test_resolve_material_inventory_icon_defers_door_bake_to_draw(tmp_path):
+    from pathlib import Path
+
+    from helpers import materials as material_utils
+    from helpers.sprite_baker import runtime_bake as runtime_bake_module
+
+    ctx = _ctx_with_registry(
+        {
+            "DOOR": {
+                "behavior": "door",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_door"},
+                "render": {
+                    "textures": {
+                        "upper": "{material}_door_top.png",
+                        "lower": "{material}_door_bottom.png",
+                    },
+                },
+            },
+        }
+    )
+    ctx.assets_dir = Path("assets/textures/block")
+
+    original_materials_root = material_utils.GENERATED_ASSETS_FOLDER
+    original_runtime_root = runtime_bake_module.GENERATED_ASSETS_FOLDER
+    material_utils.GENERATED_ASSETS_FOLDER = tmp_path
+    runtime_bake_module.GENERATED_ASSETS_FOLDER = tmp_path
+
+    try:
+        icon = material_utils.resolve_material_inventory_icon(
+            ParsedToken(token="DOOR", material="oak", variant="lower"),
+            ctx,
+        )
+        baked_path = tmp_path / "inventory" / "DOOR_oak.png"
+    finally:
+        material_utils.GENERATED_ASSETS_FOLDER = original_materials_root
+        runtime_bake_module.GENERATED_ASSETS_FOLDER = original_runtime_root
+
+    assert icon == "generated:DOOR:oak"
+    assert not baked_path.exists()
+
+
 def test_should_count_material_skips_bed_foot():
     ctx = _ctx_with_registry(
-        {"BED": {"behavior": "bed", "minecraft": {"block": "minecraft:red_bed"}}}
+        {
+            "BED": {
+                "behavior": "bed",
+                "color_default": "red",
+                "minecraft": {"block": "minecraft:{color}_bed"},
+            }
+        }
     )
-    parsed = ParsedToken(token="BED", material="red", variant="foot")
+    parsed = ParsedToken(token="BED", material="black", variant="foot")
 
     assert material_utils.should_count_material(parsed, ctx) is False
 

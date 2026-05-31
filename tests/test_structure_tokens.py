@@ -36,3 +36,12 @@ def test_full_token_with_rotation():
         variant="outer_left",
         rotation=-90,
     )
+
+
+def test_bed_color_direction_and_part():
+    assert parse_structure_token("BED:black@north#head") == ParsedToken(
+        token="BED",
+        material="black",
+        direction="north",
+        variant="head",
+    )

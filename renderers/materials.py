@@ -6,6 +6,7 @@ import helpers.render_image as render_image
 from helpers.context import SchematicContext
 from helpers.types import (
     MaterialsIconList,
+    MaterialsIconTokens,
     MaterialsLayout,
     MaterialsList,
 )
@@ -63,6 +64,7 @@ def _draw_material_rows(
     ctx: SchematicContext,
     materials_list: MaterialsList,
     material_icons: MaterialsIconList,
+    material_icon_tokens: MaterialsIconTokens,
     layout: MaterialsLayout,
     fonts: font_utils.Fonts,
 ):
@@ -81,6 +83,7 @@ def _draw_material_rows(
             layout["padding"] + 8,
             y,
             size=30,
+            parsed=material_icon_tokens.get(group_name),
         )
 
         _draw_material_text(draw, group_name, count, y, layout, fonts)
@@ -138,7 +141,10 @@ def _draw_material_footer(draw, layout: MaterialsLayout, fonts: font_utils.Fonts
 def render_materials_inventory_blueprint(ctx: SchematicContext):
     parsed_tokens = material_utils.collect_material_tokens(ctx)
 
-    materials, material_icons = material_utils.build_material_inventory(parsed_tokens, ctx)
+    materials, material_icons, material_icon_tokens = material_utils.build_material_inventory(
+        parsed_tokens,
+        ctx,
+    )
 
     layout = _build_material_layout(materials)
     fonts = font_utils.load_materials_fonts()
@@ -147,7 +153,9 @@ def render_materials_inventory_blueprint(ctx: SchematicContext):
 
     _draw_material_header(draw, ctx, layout, fonts)
 
-    _draw_material_rows(img, draw, ctx, materials, material_icons, layout, fonts)
+    _draw_material_rows(
+        img, draw, ctx, materials, material_icons, material_icon_tokens, layout, fonts
+    )
 
     _draw_material_footer(draw, layout, fonts)
 

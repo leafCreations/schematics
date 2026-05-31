@@ -4,14 +4,41 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 import helpers.registry_blocks as registry_blocks
+import helpers.utils as utils
 from helpers.context import SchematicContext
+from helpers.paths import ASSET_FOLDER, GENERATED_ASSETS_FOLDER
+from helpers.sprite_baker.cache import load_cached
+from helpers.sprite_baker.compose_slab import resolve_slab_placement
+from helpers.sprite_baker.runtime_bake import load_or_bake_generated_sprite
+from helpers.sprite_baker.stair_shapes import STAIR_SHAPES
 from helpers.structure_tokens import ParsedToken, parse_structure_token
-from helpers.types import MaterialsIconList, MaterialsList, ParsedTokenMaterialsList, RawToken
+from helpers.types import (
+    MaterialsIconList,
+    MaterialsIconTokens,
+    MaterialsList,
+    ParsedTokenMaterialsList,
+    RawToken,
+)
+from helpers.utils_schematics import (
+    corner_stair_facing_rotation,
+    is_corner_stair_shape,
+    resolve_token_for_render,
+)
+from registries.loader import resolve_registry_texture_filename
+
+GENERATED_ICON_PREFIX = "generated:"
+BAKEABLE_INVENTORY_BEHAVIORS = frozenset(
+    {"slab", "stairs", "bed", "chest", "fence", "torch", "log", "door"}
+)
+INVENTORY_VIEW_BEHAVIORS = frozenset({"bed", "fence", "torch", "stairs", "door"})
 
 
 def resolve_texture_path(ctx: SchematicContext, texture_name: str) -> Path:
     if texture_name.startswith("/custom/"):
         return ctx.assets_dir / "custom" / texture_name.removeprefix("/custom/")
+
+    if texture_name.startswith("/item/"):
+        return ASSET_FOLDER / "textures" / "item" / texture_name.removeprefix("/item/")
 
     return ctx.assets_dir / texture_name
 
@@ -24,26 +51,215 @@ def resolve_material_texture_name(parsed: ParsedToken, ctx: SchematicContext) ->
     variant = parsed.variant or defaults.get("variant")
 
     render = entry.get("render", {})
-    textures = render.get("textures", {})
-
     inventory_image = render.get("inventory_image")
 
     if inventory_image:
         texture_name = inventory_image
-    elif variant and variant in textures:
-        texture_name = textures[variant]
-    elif "top" in textures:
-        texture_name = textures["top"]
-    elif "side" in textures:
-        texture_name = textures["side"]
     else:
-        block_name = resolve_material_block_name(parsed, ctx)
-        texture_name = f"{block_name}.png"
+        texture_name = resolve_registry_texture_filename(
+            entry,
+            "top",
+            material=material,
+            variant=variant,
+        )
 
-    if material:
+        if texture_name is None:
+            block_name = resolve_material_block_name(parsed, ctx)
+            texture_name = f"{block_name}.png"
+
+    if material and isinstance(texture_name, str):
         texture_name = texture_name.format(material=material)
 
     return texture_name
+
+
+def resolve_material_sprite_key(parsed: ParsedToken, ctx: SchematicContext) -> str | None:
+    entry = ctx.block_registry.get(parsed.token)
+
+    if entry is None:
+        return None
+
+    behavior = registry_blocks.get_block_behavior(entry)
+
+    if behavior not in BAKEABLE_INVENTORY_BEHAVIORS:
+        return None
+
+    key = parsed.token
+
+    if behavior == "stairs":
+        material = parsed.material or entry.get("material_default")
+        if material:
+            key = f"{key}:{material}"
+
+        shape = (
+            parsed.variant
+            if parsed.variant in STAIR_SHAPES
+            else entry.get("defaults", {}).get("shape", "straight")
+        )
+
+        if shape and shape != "straight":
+            key = f"{key}#{shape}"
+    elif behavior == "slab":
+        material = parsed.material or entry.get("material_default")
+        if material:
+            key = f"{key}:{material}"
+
+        placement = resolve_slab_placement(parsed.variant, entry)
+
+        if placement == "top":
+            key = f"{key}#top"
+    elif behavior == "bed":
+        color = registry_blocks.resolve_token_color(entry, parsed)
+        key = f"{key}:{color}"
+    elif behavior == "fence":
+        material = parsed.material or entry.get("material_default")
+        if material:
+            key = f"{key}:{material}"
+    elif behavior == "torch":
+        variant = parsed.variant or entry.get("defaults", {}).get("variant", "normal")
+        if variant and variant != "normal":
+            key = f"{key}#{variant}"
+    elif behavior == "log" or behavior == "door":
+        material = parsed.material or entry.get("material_default")
+        if material:
+            key = f"{key}:{material}"
+
+    return key
+
+
+def _behavior_for_sprite_key(sprite_key: str, ctx: SchematicContext) -> str | None:
+    parsed = parse_structure_token(sprite_key)
+
+    if parsed is None:
+        return None
+
+    entry = ctx.block_registry.get(parsed.token)
+
+    if entry is None:
+        return None
+
+    return registry_blocks.get_block_behavior(entry)
+
+
+def _inventory_behavior(
+    *,
+    sprite_key: str | None = None,
+    parsed: ParsedToken | None = None,
+    ctx: SchematicContext,
+) -> str | None:
+    if parsed is not None:
+        entry = ctx.block_registry.get(parsed.token, {})
+        return registry_blocks.get_block_behavior(entry)
+
+    if sprite_key is not None:
+        return _behavior_for_sprite_key(sprite_key, ctx)
+
+    return None
+
+
+def _generated_inventory_view(behavior: str | None) -> str:
+    if behavior == "stairs":
+        return "side"
+
+    if behavior in INVENTORY_VIEW_BEHAVIORS:
+        return "inventory"
+
+    return "top"
+
+
+def _is_generated_inventory_icon(icon: str) -> bool:
+    return icon.startswith(GENERATED_ICON_PREFIX)
+
+
+def _inventory_icon_priority(icon: str, parsed: ParsedToken, entry: dict) -> tuple[int, int]:
+    generated = int(_is_generated_inventory_icon(icon))
+    shaped = 0
+
+    if registry_blocks.get_block_behavior(entry) == "stairs":
+        shape = parsed.variant or entry.get("defaults", {}).get("shape", "straight")
+        shaped = int(shape != "straight")
+
+    return (generated, shaped)
+
+
+def _should_replace_inventory_icon(
+    current_icon: str,
+    current_parsed: ParsedToken,
+    current_entry: dict,
+    new_icon: str,
+    new_parsed: ParsedToken,
+    new_entry: dict,
+) -> bool:
+    return _inventory_icon_priority(new_icon, new_parsed, new_entry) > _inventory_icon_priority(
+        current_icon,
+        current_parsed,
+        current_entry,
+    )
+
+
+def _prepare_generated_inventory_icon(
+    tex: Image.Image,
+    parsed: ParsedToken,
+    entry: dict,
+    raw_token: RawToken | None = None,
+) -> Image.Image:
+    if raw_token is not None:
+        _, direction = resolve_token_for_render(raw_token)
+    else:
+        direction = utils.normalize_direction(
+            parsed.direction or entry.get("defaults", {}).get("direction")
+        )
+
+    behavior = registry_blocks.get_block_behavior(entry)
+
+    if behavior != "stairs" and is_corner_stair_shape(parsed, entry):
+        facing_rotation = corner_stair_facing_rotation(direction)
+        if facing_rotation:
+            tex = utils.rotate_texture_by_degrees(tex, facing_rotation)
+
+    if parsed.rotation:
+        tex = utils.rotate_texture_by_degrees(tex, parsed.rotation)
+
+    return tex
+
+
+def resolve_material_inventory_icon(parsed: ParsedToken, ctx: SchematicContext) -> str:
+    sprite_key = resolve_material_sprite_key(parsed, ctx)
+    entry = ctx.block_registry.get(parsed.token, {})
+    behavior = registry_blocks.get_block_behavior(entry)
+
+    if sprite_key is not None:
+        if behavior in INVENTORY_VIEW_BEHAVIORS:
+            return f"{GENERATED_ICON_PREFIX}{sprite_key}"
+
+        view = _generated_inventory_view(behavior)
+
+        if behavior in BAKEABLE_INVENTORY_BEHAVIORS:
+            from helpers import constants
+
+            if (
+                load_or_bake_generated_sprite(
+                    view,
+                    sprite_key,
+                    constants.BLOCK_PX,
+                    behavior=behavior,
+                    textures_dir=ctx.assets_dir,
+                    generated_root=GENERATED_ASSETS_FOLDER,
+                )
+                is not None
+            ):
+                return f"{GENERATED_ICON_PREFIX}{sprite_key}"
+        elif load_cached(view, sprite_key, generated_root=GENERATED_ASSETS_FOLDER):
+            return f"{GENERATED_ICON_PREFIX}{sprite_key}"
+
+        if (
+            behavior not in INVENTORY_VIEW_BEHAVIORS
+            and view != "top"
+            and load_cached("top", sprite_key, generated_root=GENERATED_ASSETS_FOLDER)
+        ):
+            return f"{GENERATED_ICON_PREFIX}{sprite_key}"
+
+    return resolve_material_texture_name(parsed, ctx)
 
 
 def collect_material_tokens(ctx: SchematicContext) -> ParsedTokenMaterialsList:
@@ -83,36 +299,66 @@ def should_count_material(parsed: ParsedToken, ctx: SchematicContext) -> bool:
 def build_material_inventory(
     parsed_tokens: ParsedTokenMaterialsList,
     ctx: SchematicContext,
-) -> tuple[MaterialsList, MaterialsIconList]:
+    *,
+    raw_tokens: list[RawToken] | None = None,
+) -> tuple[MaterialsList, MaterialsIconList, MaterialsIconTokens]:
     material_counts = Counter()
-    material_icons = {}
+    material_icons: MaterialsIconList = {}
+    material_icon_tokens: MaterialsIconTokens = {}
 
-    for parsed in parsed_tokens:
+    token_pairs = (
+        zip(raw_tokens, parsed_tokens, strict=True)
+        if raw_tokens is not None
+        else ((None, parsed) for parsed in parsed_tokens)
+    )
+
+    for _raw_token, parsed in token_pairs:
         if not should_count_material(parsed, ctx):
             continue
 
+        entry = ctx.block_registry[parsed.token]
         block_name = resolve_material_block_name(parsed, ctx)
         material_name = format_material_name(block_name)
+        icon = resolve_material_inventory_icon(parsed, ctx)
 
         material_counts[material_name] += 1
-        material_icons.setdefault(material_name, resolve_material_texture_name(parsed, ctx))
+
+        if material_name not in material_icons:
+            material_icons[material_name] = icon
+            material_icon_tokens[material_name] = parsed
+            continue
+
+        if _should_replace_inventory_icon(
+            material_icons[material_name],
+            material_icon_tokens[material_name],
+            ctx.block_registry[material_icon_tokens[material_name].token],
+            icon,
+            parsed,
+            entry,
+        ):
+            material_icons[material_name] = icon
+            material_icon_tokens[material_name] = parsed
 
     materials = sorted(material_counts.items(), key=lambda item: item[0].lower())
 
-    return materials, material_icons
+    return materials, material_icons, material_icon_tokens
 
 
 def build_material_inventory_from_raw_tokens(
     raw_tokens: list[RawToken],
     ctx: SchematicContext,
-) -> tuple[MaterialsList, MaterialsIconList]:
+) -> tuple[MaterialsList, MaterialsIconList, MaterialsIconTokens]:
     parsed_tokens = [
         parsed
         for raw_token in raw_tokens
         if (parsed := parse_structure_token(raw_token)) is not None
     ]
 
-    return build_material_inventory(parsed_tokens, ctx)
+    filtered_raw_tokens = [
+        raw_token for raw_token in raw_tokens if parse_structure_token(raw_token) is not None
+    ]
+
+    return build_material_inventory(parsed_tokens, ctx, raw_tokens=filtered_raw_tokens)
 
 
 def draw_inventory_icon(
@@ -123,7 +369,51 @@ def draw_inventory_icon(
     x: int,
     y: int,
     size: int = 25,
+    *,
+    parsed: ParsedToken | None = None,
+    raw_token: RawToken | None = None,
 ) -> None:
+    if texture_name and texture_name.startswith(GENERATED_ICON_PREFIX):
+        sprite_key = texture_name.removeprefix(GENERATED_ICON_PREFIX)
+        behavior = _inventory_behavior(sprite_key=sprite_key, parsed=parsed, ctx=ctx)
+
+        view = _generated_inventory_view(behavior)
+
+        if behavior in BAKEABLE_INVENTORY_BEHAVIORS:
+            tex = load_or_bake_generated_sprite(
+                view,
+                sprite_key,
+                size,
+                behavior=behavior,
+                textures_dir=ctx.assets_dir,
+                generated_root=GENERATED_ASSETS_FOLDER,
+            )
+        else:
+            from helpers.sprite_baker.cache import load_generated_sprite
+
+            tex = load_generated_sprite(
+                view,
+                sprite_key,
+                size,
+                generated_root=GENERATED_ASSETS_FOLDER,
+            )
+
+        if tex is None and behavior not in INVENTORY_VIEW_BEHAVIORS and view != "top":
+            tex = load_generated_sprite(
+                "top",
+                sprite_key,
+                size,
+                generated_root=GENERATED_ASSETS_FOLDER,
+            )
+
+        if tex is not None:
+            if parsed is not None:
+                entry = ctx.block_registry.get(parsed.token, {})
+                tex = _prepare_generated_inventory_icon(tex, parsed, entry, raw_token=raw_token)
+
+            img.paste(tex, (x, y), tex)
+            return
+
     if texture_name:
         texture_path = resolve_texture_path(ctx, texture_name)
 

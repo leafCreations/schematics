@@ -14,6 +14,7 @@ __all__ = [
     "load_structure_config",
     "normalize_direction",
     "rotate_directional_texture",
+    "rotate_texture_by_degrees",
     "split_block_id",
 ]
 
@@ -71,9 +72,32 @@ def rotate_directional_texture(texture: Image.Image, direction: str | None) -> I
     if direction is None or direction == "N":
         return texture.copy()
     if direction == "E":
-        return texture.transpose(Image.Transpose.ROTATE_90)
+        return texture.transpose(Image.Transpose.ROTATE_270)
     if direction == "S":
         return texture.transpose(Image.Transpose.ROTATE_180)
     if direction == "W":
-        return texture.transpose(Image.Transpose.ROTATE_270)
+        return texture.transpose(Image.Transpose.ROTATE_90)
     return texture.copy()
+
+
+def rotate_texture_by_degrees(texture: Image.Image, degrees: int) -> Image.Image:
+    """Rotate a square texture by schematic ``!rotation`` degrees.
+
+    Cardinal angles use transpose for pixel-perfect rotation. Other values fall
+    back to ``Image.rotate`` to preserve legacy behavior.
+    """
+    if degrees == 0:
+        return texture.copy()
+
+    effective = (-degrees) % 360
+
+    if effective == 0:
+        return texture.copy()
+    if effective == 90:
+        return texture.transpose(Image.Transpose.ROTATE_90)
+    if effective == 180:
+        return texture.transpose(Image.Transpose.ROTATE_180)
+    if effective == 270:
+        return texture.transpose(Image.Transpose.ROTATE_270)
+
+    return texture.rotate(-degrees, expand=False, resample=Image.Resampling.NEAREST)

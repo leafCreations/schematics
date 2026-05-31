@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable
 
 import helpers.constants as constants
@@ -9,10 +10,31 @@ from renderers import (
     site_facades,
     structure_facades,
     top_view,
-    worldgen,
 )
 
 RenderFn = Callable[[SchematicContext], None]
+
+
+def _render_worldgen(ctx: SchematicContext) -> None:
+    try:
+        from renderers import worldgen
+    except ModuleNotFoundError as exc:
+        missing = exc.name or ""
+        if missing == "amulet" or missing.startswith("amulet"):
+            py_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+            raise RuntimeError(
+                "Worldgen requires amulet-core, which is not installed in this environment.\n\n"
+                "Install worldgen dependencies (Python 3.11 required):\n"
+                '  pip install -e ".[dev]"\n'
+                "  ./scripts/install_worldgen.sh --reuse\n\n"
+                "Or build from source (slow):\n"
+                "  ./scripts/install_worldgen.sh\n\n"
+                f"This interpreter is Python {py_version}."
+            ) from exc
+        raise
+
+    worldgen.generate_minecraft_world(ctx)
+
 
 RENDER_REGISTRY: dict[str, tuple[str, RenderFn]] = {
     constants.RENDER_TOP_VIEW: (
@@ -41,6 +63,6 @@ RENDER_REGISTRY: dict[str, tuple[str, RenderFn]] = {
     ),
     constants.RENDER_WORLDGEN: (
         "Minecraft World",
-        worldgen.generate_minecraft_world,
+        _render_worldgen,
     ),
 }

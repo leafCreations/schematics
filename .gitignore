@@ -1,20 +1,38 @@
-# root related
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Virtual environments
 .venv/
-.vscode/
+
+# Tool caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# IDEs
+.vscode/
+
+# Packaging
 *.egg-info/
 
-# project related
+# Project generated files
 assets/
 output/
 *.ogg
-helpers/__pycache__/
-registries/__pycache__/
-renderers/__pycache__/
-structures/residence/__pycache__/
+
+# Experimental files
 experimental/
 template/
+
+# Build artifacts
+build/
+dist/
+
+# Coverage
+.coverage
+htmlcov/
+
+# OS files
+.DS_Store

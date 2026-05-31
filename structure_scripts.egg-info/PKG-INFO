@@ -2,9 +2,14 @@ Metadata-Version: 2.4
 Name: structure_scripts
 Version: 0.1.0
 Requires-Python: >=3.11
-Requires-Dist: amulet-core
 Requires-Dist: Pillow
 Requires-Dist: PyYAML
+Provides-Extra: worldgen
+Requires-Dist: amulet-core==1.9.40; extra == "worldgen"
+Requires-Dist: amulet-rocksdb==1.0.3; extra == "worldgen"
+Requires-Dist: cmake>=4.1; extra == "worldgen"
+Requires-Dist: ninja; extra == "worldgen"
 Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
 Requires-Dist: ruff; extra == "dev"
 Requires-Dist: pre-commit; extra == "dev"

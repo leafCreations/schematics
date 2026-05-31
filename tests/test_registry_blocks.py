@@ -26,3 +26,25 @@ def test_resolve_minecraft_block_id_requires_variant():
 
     with pytest.raises(ValueError, match="variant"):
         resolve_minecraft_block_id(entry, parsed)
+
+
+def test_resolve_minecraft_block_id_applies_bed_color():
+    entry = {
+        "behavior": "bed",
+        "color_default": "red",
+        "minecraft": {"block": "minecraft:{color}_bed"},
+    }
+    parsed = ParsedToken(token="BED", material="black")
+
+    assert resolve_minecraft_block_id(entry, parsed) == "minecraft:black_bed"
+
+
+def test_resolve_minecraft_block_id_uses_bed_color_default():
+    entry = {
+        "behavior": "bed",
+        "color_default": "red",
+        "minecraft": {"block": "minecraft:{color}_bed"},
+    }
+    parsed = ParsedToken(token="BED")
+
+    assert resolve_minecraft_block_id(entry, parsed) == "minecraft:red_bed"
