@@ -193,5 +193,3 @@ class BlockRegistryEntry(TypedDict, total=False):
     render: RegistryRenderConfig
     visibility: RegistryVisibility
     schematic: SchematicBlockData
-    display_name: str
-    category: str

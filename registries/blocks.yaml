@@ -1,7 +1,5 @@
 DIRT:
   behavior: solid
-  display_name: "Dirt"
-  category: terrain
   ui:
     label: Dirt
     palette: terrain
@@ -13,8 +11,6 @@ DIRT:
 
 DIRT_PATH:
   behavior: solid
-  display_name: "Dirt Path"
-  category: terrain
   ui:
     label: "Dirt Path"
     palette: terrain
@@ -28,8 +24,6 @@ DIRT_PATH:
 
 GRASS:
   behavior: solid
-  display_name: "Grass"
-  category: terrain
   ui:
     label: Grass
     palette: terrain
@@ -44,8 +38,6 @@ GRASS:
 
 GRAVEL:
   behavior: solid
-  display_name: "Gravel"
-  category: terrain
   ui:
     label: Gravel
     palette: terrain
@@ -57,8 +49,6 @@ GRAVEL:
 
 COBBLESTONE:
   behavior: solid
-  display_name: "Cobblestone"
-  category: terrain
   ui:
     label: Cobblestone
     palette: terrain
@@ -78,8 +68,6 @@ COBBLESTONE:
 
 LOG:
   behavior: log
-  display_name: "{material} Log"
-  category: wood
   material_default: oak
   ui:
     label: "{material} Log"
@@ -104,8 +92,6 @@ LOG:
 
 PLANKS:
   behavior: solid
-  display_name: "{material} Planks"
-  category: wood
   material_default: oak
   ui:
     label: "{material} Planks"
@@ -118,8 +104,6 @@ PLANKS:
 
 SLAB:
   behavior: slab
-  display_name: "{material} Slab"
-  category: building
   material_default: oak
   ui:
     label: "{material} Slab"
@@ -141,10 +125,8 @@ SLAB:
 
 FURNACE:
   behavior: facing_block
-  display_name: "{material} Furnace"
-  category: functional
   ui:
-    label: "{material} Furnace"
+    label: Furnace
     palette: furnace
     requires_material: false
     requires_direction: true
@@ -163,8 +145,6 @@ FURNACE:
 
 CRAFTING_TABLE:
   behavior: solid
-  display_name: "Crafting Table"
-  category: functional
   ui:
     label: "Crafting Table"
     palette: crafting
@@ -180,8 +160,6 @@ CRAFTING_TABLE:
 
 TORCH:
   behavior: torch
-  display_name: "Torch"
-  category: lighting
   ui:
     label: Torch
     palette: lighting
@@ -216,8 +194,6 @@ TORCH:
 
 DOOR:
   behavior: door
-  display_name: "{material} Door"
-  category: functional
   material_default: oak
   ui:
     label: "{material} Door"
@@ -244,8 +220,6 @@ DOOR:
 
 FENCE:
   behavior: fence
-  display_name: "{material} Fence"
-  category: building
   material_default: oak
   ui:
     label: "{material} Fence"
@@ -277,8 +251,6 @@ FENCE:
 
 STAIRS:
   behavior: stairs
-  display_name: "{material} Stairs"
-  category: building
   material_default: oak
   ui:
     label: "{material} Stairs"
@@ -318,8 +290,6 @@ STAIRS:
 
 BED:
   behavior: bed
-  display_name: "{color} Bed"
-  category: functional
   color_default: red
   ui:
     label: "{color} Bed"
@@ -345,11 +315,9 @@ BED:
 
 CHEST:
   behavior: chest
-  display_name: "{material} Chest"
-  category: functional
   material_default: oak
   ui:
-    label: "{material} Chest"
+    label: Chest
     palette: chests
     requires_material: false
     requires_direction: true

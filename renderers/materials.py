@@ -132,7 +132,7 @@ def _draw_material_footer(draw, layout: MaterialsLayout, fonts: font_utils.Fonts
 
     draw.text(
         (padding, img_h - 25),
-        "Counts are grouped by registry category when present; otherwise by display name.",
+        "Counts are grouped by Minecraft block display name from the generated catalog.",
         fill=(110, 110, 110),
         font=fonts["body"],
     )

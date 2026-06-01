@@ -2,12 +2,14 @@
 
 Block definitions live in `registries/blocks.yaml`. Each entry can define:
 
+* `ui` — editor metadata (label, palette tab, required fields, variants)
 * `behavior` — placement logic (solid, fence, door, stairs, etc.)
 * `minecraft` — block id, variants, and blockstate templates
 * `render` — texture mappings, background colors, inventory images
 * `defaults` — default direction, variant, shape, etc.
 * `visibility` — e.g. `interior: false` to hide blocks from site/path views
-* `display_name` / `category` — optional UI metadata on behavior tokens; materials list labels come from the generated block catalog (`registries/generated/catalog.json`)
+
+Materials list labels come from the generated block catalog (`registries/generated/catalog.json`), not from `blocks.yaml`. See [Block catalog](#block-catalog) below.
 
 ## Example entries
 

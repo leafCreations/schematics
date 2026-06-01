@@ -20,10 +20,27 @@ See [worldgen.md](worldgen.md) and [../AMULET_INSTALL_NOTES.md](../AMULET_INSTAL
 
 ## Git hooks
 
-Install hooks (auto-fixes Ruff issues and re-stages files before each commit):
+Install hooks (Ruff fix/format + re-stage on each commit):
 
 ```bash
 pre-commit install
+```
+
+**Default commit:** runs Ruff only (~instant). Tests are not re-run on every commit.
+
+**When you want tests before committing:**
+
+```bash
+pytest
+# or
+pre-commit run pytest --hook-stage manual
+```
+
+**Run everything (Ruff + pytest):**
+
+```bash
+pre-commit run --all-files --hook-stage manual
+pre-commit run ruff-fix-format --all-files
 ```
 
 Fix lint/format issues manually at any time:
@@ -40,8 +57,6 @@ ruff format .
 pytest
 pre-commit run --all-files
 ```
-
-The pre-commit hook runs Ruff (with `--fix`, re-staging changed files) and pytest before each commit.
 
 ## Dependencies
 
