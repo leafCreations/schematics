@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw
 
 import helpers.registry_blocks as registry_blocks
 import helpers.utils as utils
+from helpers.block_catalog import catalog_display_name
 from helpers.context import SchematicContext
 from helpers.paths import ASSET_FOLDER, GENERATED_ASSETS_FOLDER
 from helpers.sprite_baker.cache import load_cached
@@ -280,6 +281,17 @@ def format_material_name(block_name: str) -> str:
     return block_name.replace("_", " ").title()
 
 
+def resolve_material_display_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
+    entry = ctx.block_registry[parsed.token]
+    block_id = registry_blocks.resolve_minecraft_block_id(entry, parsed)
+    display_name = catalog_display_name(block_id)
+
+    if display_name is not None:
+        return display_name
+
+    return format_material_name(block_id.split(":", 1)[-1])
+
+
 def resolve_material_block_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
     entry = ctx.block_registry[parsed.token]
     block_name = registry_blocks.resolve_minecraft_block_id(entry, parsed)
@@ -317,8 +329,7 @@ def build_material_inventory(
             continue
 
         entry = ctx.block_registry[parsed.token]
-        block_name = resolve_material_block_name(parsed, ctx)
-        material_name = format_material_name(block_name)
+        material_name = resolve_material_display_name(parsed, ctx)
         icon = resolve_material_inventory_icon(parsed, ctx)
 
         material_counts[material_name] += 1

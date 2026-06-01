@@ -20,6 +20,7 @@ pre-commit install
 Bake block sprites (required before first render; `assets/` is not in the repo):
 
 ```bash
+.venv/bin/python scripts/generate_catalog.py   # if catalog missing/outdated
 .venv/bin/python scripts/bake_sprites.py --type simple --view top --all --force
 .venv/bin/python scripts/bake_sprites.py --type stairs --view top --all --force
 .venv/bin/python scripts/bake_sprites.py --type fence --view top --all --force

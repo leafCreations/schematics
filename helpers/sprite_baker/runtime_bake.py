@@ -6,6 +6,7 @@ from PIL import Image
 
 from helpers.paths import BLOCK_TEXTURES_FOLDER, GENERATED_ASSETS_FOLDER
 from helpers.sprite_baker.cache import load_generated_sprite, load_or_bake
+from helpers.sprite_baker.demo import SpriteBakeError
 from helpers.sprite_baker.registry import get_composer
 from helpers.sprite_baker.setup import register_default_composers
 
@@ -18,6 +19,24 @@ def _ensure_composers() -> None:
     if not _composers_registered:
         register_default_composers()
         _composers_registered = True
+
+
+def behavior_for_bake_key(key: str) -> str | None:
+    from helpers.registry_blocks import get_block_behavior
+    from helpers.sprite_baker.compose_simple import parse_bake_key
+    from registries.loader import BLOCK_REGISTRY
+
+    try:
+        parsed = parse_bake_key(key)
+    except SpriteBakeError:
+        return None
+
+    entry = BLOCK_REGISTRY.get(parsed.token)
+
+    if entry is None:
+        return None
+
+    return get_block_behavior(entry)
 
 
 def load_or_bake_generated_sprite(
@@ -59,3 +78,31 @@ def load_or_bake_generated_sprite(
         return image.resize((block_px, block_px), Image.Resampling.NEAREST)
 
     return image
+
+
+def try_runtime_bake_sprite(
+    view: str,
+    key: str,
+    block_px: int,
+    *,
+    textures_dir: Path,
+    generated_root: Path = GENERATED_ASSETS_FOLDER,
+) -> Image.Image | None:
+    """Bake a missing generated sprite when a composer exists for the registry key."""
+    _ensure_composers()
+    behavior = behavior_for_bake_key(key)
+
+    if behavior is None or get_composer(behavior) is None:
+        return None
+
+    try:
+        return load_or_bake_generated_sprite(
+            view,
+            key,
+            block_px,
+            behavior=behavior,
+            textures_dir=textures_dir,
+            generated_root=generated_root,
+        )
+    except SpriteBakeError:
+        return None

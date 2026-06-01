@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import pytest
 
 from helpers import materials as material_utils
+from helpers.block_catalog import save_block_catalog
 from helpers.structure_tokens import ParsedToken
 
 
@@ -27,38 +30,81 @@ def _ctx_with_registry(block_registry: dict):
     )
 
 
-def test_build_material_inventory_from_raw_tokens():
+def _build_inventory_with_catalog(raw_tokens, ctx, catalog_path):
+    import helpers.block_catalog as block_catalog_module
+
+    original_path = block_catalog_module.CATALOG_PATH
+    block_catalog_module.CATALOG_PATH = catalog_path
+    block_catalog_module._catalog_cache = None
+
+    try:
+        return material_utils.build_material_inventory_from_raw_tokens(raw_tokens, ctx)
+    finally:
+        block_catalog_module.CATALOG_PATH = original_path
+        block_catalog_module._catalog_cache = None
+
+
+def _build_inventory_with_catalog_parsed(parsed_tokens, ctx, catalog_path):
+    import helpers.block_catalog as block_catalog_module
+
+    original_path = block_catalog_module.CATALOG_PATH
+    block_catalog_module.CATALOG_PATH = catalog_path
+    block_catalog_module._catalog_cache = None
+
+    try:
+        return material_utils.build_material_inventory(parsed_tokens, ctx)
+    finally:
+        block_catalog_module.CATALOG_PATH = original_path
+        block_catalog_module._catalog_cache = None
+
+
+def test_build_material_inventory_from_raw_tokens(tmp_path: Path):
+    catalog_path = tmp_path / "catalog.json"
+    save_block_catalog(
+        {
+            "minecraft:oak_planks": {"display_name": "Oak Planks"},
+        },
+        path=catalog_path,
+    )
+
     ctx = _ctx_with_registry(
         {
             "PLANKS": {
                 "behavior": "solid",
-                "minecraft": {"block": "minecraft:oak_planks"},
+                "minecraft": {"block": "minecraft:{material}_planks"},
             },
         }
     )
 
-    inventory, icons = material_utils.build_material_inventory_from_raw_tokens(
+    inventory, icons = _build_inventory_with_catalog(
         ["PLANKS:oak", "PLANKS:oak", "."],
         ctx,
+        catalog_path,
     )[:2]
 
     assert inventory == [("Oak Planks", 2)]
     assert "Oak Planks" in icons
 
 
-def test_build_material_inventory_matches_raw_token_wrapper():
+def test_build_material_inventory_matches_raw_token_wrapper(tmp_path: Path):
+    catalog_path = tmp_path / "catalog.json"
+    save_block_catalog(
+        {"minecraft:oak_planks": {"display_name": "Oak Planks"}},
+        path=catalog_path,
+    )
+
     ctx = _ctx_with_registry(
         {
             "PLANKS": {
                 "behavior": "solid",
-                "minecraft": {"block": "minecraft:oak_planks"},
+                "minecraft": {"block": "minecraft:{material}_planks"},
             },
         }
     )
     parsed = [ParsedToken(token="PLANKS", material="oak")]
 
-    from_raw = material_utils.build_material_inventory_from_raw_tokens(["PLANKS:oak"], ctx)[:2]
-    from_parsed = material_utils.build_material_inventory(parsed, ctx)[:2]
+    from_raw = _build_inventory_with_catalog(["PLANKS:oak"], ctx, catalog_path)[:2]
+    from_parsed = _build_inventory_with_catalog_parsed(parsed, ctx, catalog_path)[:2]
 
     assert from_raw == from_parsed
 
@@ -443,6 +489,85 @@ def test_resolve_material_inventory_icon_defers_stairs_bake_to_draw(tmp_path):
 
     assert icon == "generated:STAIRS:oak"
     assert not baked_path.exists()
+
+
+def test_resolve_material_display_name_uses_catalog(tmp_path: Path):
+    catalog_path = tmp_path / "catalog.json"
+    save_block_catalog(
+        {
+            "minecraft:oak_door": {"display_name": "Oak Door"},
+            "minecraft:blue_bed": {"display_name": "Blue Bed"},
+            "minecraft:grass_block": {"display_name": "Grass Block"},
+        },
+        path=catalog_path,
+    )
+
+    import helpers.block_catalog as block_catalog_module
+
+    original_path = block_catalog_module.CATALOG_PATH
+    block_catalog_module.CATALOG_PATH = catalog_path
+    block_catalog_module._catalog_cache = None
+
+    ctx = _ctx_with_registry(
+        {
+            "DOOR": {
+                "behavior": "door",
+                "material_default": "oak",
+                "minecraft": {"block": "minecraft:{material}_door"},
+            },
+            "BED": {
+                "behavior": "bed",
+                "color_default": "red",
+                "minecraft": {"block": "minecraft:{color}_bed"},
+            },
+            "GRASS": {
+                "behavior": "solid",
+                "minecraft": {"block": "minecraft:grass_block"},
+            },
+        }
+    )
+
+    try:
+        assert (
+            material_utils.resolve_material_display_name(
+                ParsedToken(token="DOOR", material="oak"),
+                ctx,
+            )
+            == "Oak Door"
+        )
+        assert (
+            material_utils.resolve_material_display_name(
+                ParsedToken(token="BED", material="blue"),
+                ctx,
+            )
+            == "Blue Bed"
+        )
+        assert (
+            material_utils.resolve_material_display_name(ParsedToken(token="GRASS"), ctx)
+            == "Grass Block"
+        )
+    finally:
+        block_catalog_module.CATALOG_PATH = original_path
+        block_catalog_module._catalog_cache = None
+
+
+def test_resolve_material_display_name_falls_back_to_block_name():
+    ctx = _ctx_with_registry(
+        {
+            "PLANKS": {
+                "behavior": "solid",
+                "minecraft": {"block": "minecraft:dark_oak_planks"},
+            },
+        }
+    )
+
+    assert (
+        material_utils.resolve_material_display_name(
+            ParsedToken(token="PLANKS", material="dark_oak"),
+            ctx,
+        )
+        == "Dark Oak Planks"
+    )
 
 
 def test_should_count_material_skips_door_upper():

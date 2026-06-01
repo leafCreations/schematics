@@ -153,3 +153,45 @@ def test_bake_demo_planks_integration(tmp_path: Path):
         loader_module.GENERATED_ASSETS_FOLDER = previous_root
 
     assert textures["PLANKS"].getpixel((0, 0)) == image.getpixel((0, 0))
+
+
+def test_behavior_for_bake_key():
+    from helpers.sprite_baker.runtime_bake import behavior_for_bake_key
+
+    assert behavior_for_bake_key("STAIRS:oak#outer_left") == "stairs"
+    assert behavior_for_bake_key("PLANKS") == "solid"
+    assert behavior_for_bake_key("NOT_A_TOKEN") is None
+
+
+@pytest.mark.requires_assets
+def test_compile_texture_set_runtime_bakes_missing_sprite(tmp_path: Path):
+    if not (BLOCK_TEXTURES_FOLDER / "oak_planks.png").exists():
+        pytest.skip("oak_planks.png not available")
+
+    from registries.loader import compile_texture_set
+
+    generated_root = tmp_path / "generated"
+    assert not generated_root.exists()
+
+    import helpers.paths as paths_module
+    import registries.loader as loader_module
+
+    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
+    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
+    paths_module.GENERATED_ASSETS_FOLDER = generated_root
+    loader_module.GENERATED_ASSETS_FOLDER = generated_root
+
+    try:
+        textures = compile_texture_set(
+            "top",
+            str(BLOCK_TEXTURES_FOLDER),
+            block_px=constants.BLOCK_PX,
+        )
+    finally:
+        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
+        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
+
+    assert "STAIRS" in textures
+    assert textures["STAIRS"].getpixel((5, 20))[3] == 255
+    assert textures["STAIRS"].getpixel((5, 5))[3] == 0
+    assert (generated_root / "top" / "STAIRS.png").exists()

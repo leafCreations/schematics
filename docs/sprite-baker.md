@@ -54,7 +54,13 @@ Baked files use sanitized keys:
 
 ## Runtime baking
 
-If a generated sprite is missing at render time, `helpers/sprite_baker/runtime_bake.py` can compose and cache it on demand for inventory behaviors (slabs, stairs, fences, etc.).
+`compile_texture_set()` and `compile_inventory_texture_set()` load cached sprites from `assets/generated/` first. When a registry-mapped bake key is missing from cache, `helpers/sprite_baker/runtime_bake.py` composes it from vanilla textures, writes the PNG to the cache, and returns it — so fresh clones can render without running the bake CLI first.
+
+Only keys present in the registry texture mapping are baked on demand during compile. Extra material variants listed by `_generated_bake_keys()` are loaded from disk when pre-baked, not composed eagerly during startup.
+
+Material inventory panels use the same path via `load_or_bake_generated_sprite()` for generated icon behaviors.
+
+Pre-baking with the CLI is still useful for CI, bulk updates, and verifying output before commit.
 
 ## Source code
 

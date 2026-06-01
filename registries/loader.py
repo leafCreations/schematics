@@ -41,32 +41,22 @@ def compile_inventory_texture_set(
 ) -> MappedTextureImages:
     mapping = _build_inventory_texture_mapping()
     loaded = {}
+    generated_keys = _generated_bake_keys("inventory")
+    generated_root = GENERATED_ASSETS_FOLDER
 
-    for key in set(mapping.keys()) | _generated_bake_keys("inventory"):
-        generated = load_generated_sprite(
+    for key in set(mapping.keys()) | generated_keys:
+        texture = _load_token_texture(
             "inventory",
             key,
-            block_px,
-            generated_root=GENERATED_ASSETS_FOLDER,
+            mapping=mapping,
+            assets_dir=assets_dir,
+            block_px=block_px,
+            generated_keys=generated_keys,
+            generated_root=generated_root,
         )
 
-        if generated is not None:
-            loaded[key] = generated
-            continue
-
-        filename = mapping.get(key)
-
-        if filename is None:
-            continue
-
-        path = _find_texture_path(assets_dir, filename)
-
-        if path is None:
-            continue
-
-        loaded[key] = (
-            Image.open(path).convert("RGBA").resize((block_px, block_px), Image.Resampling.NEAREST)
-        )
+        if texture is not None:
+            loaded[key] = texture
 
     return loaded
 
@@ -365,6 +355,55 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     return keys
 
 
+def _load_token_texture(
+    texture_type: TextureType,
+    token: str,
+    *,
+    mapping: MappedTextureNames,
+    assets_dir: str,
+    block_px: int,
+    generated_keys: set[str],
+    generated_root: Path = GENERATED_ASSETS_FOLDER,
+) -> Image.Image | None:
+    generated = load_generated_sprite(
+        texture_type,
+        token,
+        block_px,
+        generated_root=generated_root,
+    )
+
+    if generated is not None:
+        return generated
+
+    # Only bake keys the registry maps for rendering. Extra generated_keys exist so
+    # pre-baked CLI output is picked up from disk without baking every variant here.
+    if token in generated_keys and token in mapping:
+        from helpers.sprite_baker.runtime_bake import try_runtime_bake_sprite
+
+        baked = try_runtime_bake_sprite(
+            texture_type,
+            token,
+            block_px,
+            textures_dir=Path(assets_dir),
+            generated_root=generated_root,
+        )
+
+        if baked is not None:
+            return baked
+
+    filename = mapping.get(token)
+
+    if filename is None:
+        return None
+
+    path = _find_texture_path(assets_dir, filename)
+
+    if path is None:
+        return None
+
+    return Image.open(path).convert("RGBA").resize((block_px, block_px), Image.Resampling.NEAREST)
+
+
 def compile_texture_set(
     texture_type: TextureType,
     assets_dir: str,
@@ -372,31 +411,21 @@ def compile_texture_set(
 ) -> MappedTextureImages:
     mapping = _build_registry_texture_mapping(texture_type)
     loaded = {}
+    generated_keys = _generated_bake_keys(texture_type)
+    generated_root = GENERATED_ASSETS_FOLDER
 
-    for token in set(mapping.keys()) | _generated_bake_keys(texture_type):
-        generated = load_generated_sprite(
+    for token in set(mapping.keys()) | generated_keys:
+        texture = _load_token_texture(
             texture_type,
             token,
-            block_px,
-            generated_root=GENERATED_ASSETS_FOLDER,
+            mapping=mapping,
+            assets_dir=assets_dir,
+            block_px=block_px,
+            generated_keys=generated_keys,
+            generated_root=generated_root,
         )
 
-        if generated is not None:
-            loaded[token] = generated
-            continue
-
-        filename = mapping.get(token)
-
-        if filename is None:
-            continue
-
-        path = _find_texture_path(assets_dir, filename)
-
-        if path is None:
-            continue
-
-        loaded[token] = (
-            Image.open(path).convert("RGBA").resize((block_px, block_px), Image.Resampling.NEAREST)
-        )
+        if texture is not None:
+            loaded[token] = texture
 
     return loaded

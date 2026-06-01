@@ -7,7 +7,7 @@ Block definitions live in `registries/blocks.yaml`. Each entry can define:
 * `render` — texture mappings, background colors, inventory images
 * `defaults` — default direction, variant, shape, etc.
 * `visibility` — e.g. `interior: false` to hide blocks from site/path views
-* `display_name` / `category` — materials list grouping
+* `display_name` / `category` — optional UI metadata on behavior tokens; materials list labels come from the generated block catalog (`registries/generated/catalog.json`)
 
 ## Example entries
 
@@ -52,3 +52,19 @@ For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture
 * `compile_inventory_texture_set(assets_dir, block_px)` — load inventory icon textures
 
 Structure layer cells reference registry tokens. See [structure-tokens.md](structure-tokens.md) for the token string format.
+
+## Block catalog
+
+Material inventory labels and future UI block pickers use `registries/generated/catalog.json`, generated from Minecraft assets:
+
+```bash
+.venv/bin/python scripts/generate_catalog.py
+```
+
+The script reads:
+
+* `assets/blockstates/*.json` → block ids (`minecraft:stone`)
+* `assets/lang/en_us.json` → display names (`block.minecraft.stone` → `"Stone"`)
+* `assets/textures/block/` → default texture filenames when present
+
+Each registry token still resolves to a Minecraft block id via `blocks.yaml`; the catalog supplies the human-readable name for that id. Regenerate the catalog when assets are updated.
