@@ -1,0 +1,5 @@
+label: Chests
+tokens:
+- CHEST
+blocks:
+- minecraft:trapped_chest

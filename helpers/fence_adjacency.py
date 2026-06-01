@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from helpers.cells import get_cell
 from helpers.registry_blocks import get_block_behavior
+from helpers.registry_lookup import get_block_entry
 from helpers.structure_tokens import ParsedToken, parse_structure_token
 from helpers.types import CellGrid, RawToken
-from registries.loader import BLOCK_REGISTRY
 
 DIRECTION_OFFSETS = {
     "north": (0, -1),
@@ -50,7 +50,7 @@ def should_fence_connect(raw_neighbor: RawToken | None) -> bool:
     if parsed_neighbor is None:
         return False
 
-    entry = BLOCK_REGISTRY.get(parsed_neighbor.token)
+    entry = get_block_entry(parsed_neighbor)
 
     if entry is None:
         return False

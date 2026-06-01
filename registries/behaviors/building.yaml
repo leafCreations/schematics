@@ -1,0 +1,88 @@
+SLAB:
+  behavior: slab
+  material_default: oak
+  ui:
+    label: '{material} Slab'
+    palette: blocks
+    requires_material: true
+    requires_direction: false
+    requires_variant: false
+    variants:
+    - top
+  defaults:
+    type: bottom
+  minecraft:
+    block: minecraft:{material}_slab
+    blockstates:
+      type: '{type}'
+  render:
+    top: '{material}_planks.png'
+    side: '{material}_slab.png'
+FENCE:
+  behavior: fence
+  material_default: oak
+  ui:
+    label: '{material} Fence'
+    palette: fence
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+  defaults:
+    north: false
+    south: false
+    east: false
+    west: false
+  minecraft:
+    block: minecraft:{material}_fence
+    blockstates:
+      north: '{north}'
+      south: '{south}'
+      east: '{east}'
+      west: '{west}'
+  render:
+    textures:
+      post: '{material}_fence_inventory.png'
+      end: '{material}_fence_end.png'
+      straight: '{material}_fence_inventory.png'
+      corner: '{material}_fence_corner.png'
+      tee: '{material}_fence_tee.png'
+      cross: '{material}_fence_cross.png'
+    inventory_image: '{material}_fence_inventory.png'
+STAIRS:
+  behavior: stairs
+  material_default: oak
+  ui:
+    label: '{material} Stairs'
+    palette: stairs
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+    variants:
+    - outer_left
+    - outer_right
+    - inner_left
+    - inner_right
+  defaults:
+    direction: north
+    half: bottom
+    shape: straight
+    rotation: 0
+  minecraft:
+    block: minecraft:{material}_stairs
+    blockstates:
+      facing: '{direction}'
+      half: '{half}'
+      shape: '{shape}'
+  render:
+    textures:
+      top:
+        straight: '{material}_planks.png'
+        outer_left: '{material}_planks.png'
+        outer_right: '{material}_planks.png'
+        inner_left: '{material}_planks.png'
+        inner_right: '{material}_planks.png'
+      side:
+        north: '{material}_planks.png'
+        south: '{material}_planks.png'
+        east: '{material}_planks.png'
+        west: '{material}_planks.png'

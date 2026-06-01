@@ -1,0 +1,6 @@
+label: Lighting
+tokens:
+- TORCH
+blocks:
+- minecraft:lantern
+- minecraft:soul_lantern

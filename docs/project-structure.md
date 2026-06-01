@@ -16,6 +16,7 @@ helpers/
   paths.py              # Asset and output directory paths, schematic output naming
   pipeline.py           # Render name validation and normalization
   registry_blocks.py    # Shared Minecraft block ID / blockstate resolution
+  registry_lookup.py    # Behavior + catalog block entry resolution
   structure_loader.py   # Structure config validation and context building
   structure_tokens.py   # Token parsing (material, direction, variant)
   types.py              # TypedDicts and type aliases
@@ -24,7 +25,9 @@ helpers/
   sprite_baker/         # Procedural sprite baking (see sprite-baker.md)
 
 registries/
-  blocks.yaml           # Block registry
+  behaviors/            # Semantic block behavior definitions
+  palettes/             # UI palette groupings (tokens + minecraft: ids)
+  generated/            # catalog.json from assets
   loader.py             # Registry load and texture compilation
 
 renderers/

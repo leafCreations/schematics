@@ -10,9 +10,15 @@ from helpers.fence_adjacency import (
     resolve_fence_connections,
 )
 from helpers.log_orientation import resolve_log_orientation
+from helpers.registry_lookup import (
+    get_block_entry,
+    is_minecraft_block_token,
+    load_catalog_texture_image,
+    registry_lookup_token,
+)
 from helpers.structure_tokens import ParsedToken, parse_structure_token
 from helpers.types import BackgroundColor, CellGrid, MappedTextureImages, RawToken, Token
-from registries.loader import BLOCK_REGISTRY, get_render_textures
+from registries.loader import get_render_textures
 
 TextureView = Literal["top", "side"]
 
@@ -28,8 +34,8 @@ def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
     if parsed is None:
         return ".", None
 
-    token = parsed.token
-    entry = BLOCK_REGISTRY.get(token)
+    token = registry_lookup_token(parsed)
+    entry = get_block_entry(parsed)
 
     if not entry:
         return token, utils.normalize_direction(parsed.direction)
@@ -63,12 +69,17 @@ def resolve_token_for_render(raw_token: RawToken) -> tuple[Token, str | None]:
 def show_interior_view(token: Token) -> bool:
     """Return whether this block appears in site/path overlay views.
 
-    Reads ``visibility.interior`` from blocks.yaml. Defaults to True when omitted.
+    Reads ``visibility.interior`` from the behavior registry. Defaults to True when omitted.
     """
     if token == ".":
         return False
 
-    entry = BLOCK_REGISTRY.get(token, {})
+    parsed = parse_structure_token(token)
+
+    if parsed is None:
+        return False
+
+    entry = get_block_entry(parsed) or {}
     visibility = entry.get("visibility", {})
     interior_visible = visibility.get("interior")
 
@@ -253,7 +264,7 @@ def _paste_token(
         return False
 
     base_token, resolved_direction = resolve_token_for_render(raw_token)
-    entry = BLOCK_REGISTRY.get(parsed.token, {})
+    entry = get_block_entry(parsed) or {}
     defaults = entry.get("defaults", {})
     render_textures = get_render_textures(entry)
     direction = resolved_direction
@@ -288,6 +299,18 @@ def _paste_token(
         )
 
     texture_key = _resolve_texture_key(texture_keys, textures)
+
+    if texture_key is None and is_minecraft_block_token(parsed):
+        block_px = size if size is not None else 30
+        tex = load_catalog_texture_image(parsed, view, block_px)
+
+        if tex is not None:
+            if view == "top" and parsed.rotation:
+                tex = utils.rotate_texture_by_degrees(tex, parsed.rotation)
+
+            tex = _resize_texture(tex, size)
+            _paste_prepared_texture(img, tex, xy)
+            return True
 
     if texture_key is None:
         return False
@@ -342,7 +365,12 @@ def paste_sideview_token(img, textures, raw_token: RawToken, xy, size=None) -> b
 
 
 def get_background_color(token: Token, default=(245, 245, 245)) -> BackgroundColor | None:
-    entry = BLOCK_REGISTRY.get(token, {})
+    parsed = parse_structure_token(token)
+
+    if parsed is None:
+        return default
+
+    entry = get_block_entry(parsed) or {}
     render = entry.get("render", {})
 
     background_color = render.get("background_color")

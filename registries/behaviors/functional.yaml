@@ -1,0 +1,121 @@
+FURNACE:
+  behavior: facing_block
+  ui:
+    label: Furnace
+    palette: furnace
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
+  defaults:
+    direction: north
+  minecraft:
+    block: minecraft:furnace
+    blockstates:
+      facing: '{direction}'
+  render:
+    top: furnace_front.png
+    inventory_image: furnace_front.png
+  visibility:
+    interior: false
+CRAFTING_TABLE:
+  behavior: solid
+  ui:
+    label: Crafting Table
+    palette: crafting
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:crafting_table
+  render:
+    top: crafting_table_top.png
+  visibility:
+    interior: false
+DOOR:
+  behavior: door
+  material_default: oak
+  ui:
+    label: '{material} Door'
+    palette: doors
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+  defaults:
+    direction: north
+    half: lower
+    hinge: left
+    open: false
+  minecraft:
+    block: minecraft:{material}_door
+    blockstates:
+      facing: '{direction}'
+      half: '{half}'
+      hinge: '{hinge}'
+      open: '{open}'
+  render:
+    textures:
+      upper: '{material}_door_top.png'
+      lower: '{material}_door_bottom.png'
+BED:
+  behavior: bed
+  color_default: red
+  ui:
+    label: '{color} Bed'
+    palette: beds
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+  defaults:
+    direction: north
+    part: head
+  minecraft:
+    block: minecraft:{color}_bed
+    blockstates:
+      facing: '{direction}'
+      part: '{part}'
+      occupied: false
+  render:
+    textures:
+      head: '{color}_bed_head.png'
+      foot: '{color}_bed_foot.png'
+  visibility:
+    interior: false
+CHEST:
+  behavior: chest
+  material_default: oak
+  ui:
+    label: Chest
+    palette: chests
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
+    variants:
+    - left
+    - right
+  defaults:
+    direction: north
+    variant: single
+  minecraft:
+    variants:
+      single:
+        block: minecraft:chest
+        blockstates:
+          facing: '{direction}'
+      left:
+        block: minecraft:chest
+        blockstates:
+          type: left
+          facing: '{direction}'
+      right:
+        block: minecraft:chest
+        blockstates:
+          type: right
+          facing: '{direction}'
+  render:
+    textures:
+      single: chest_single.png
+      left: chest_left.png
+      right: chest_right.png
+    inventory_image: chest_single.png
+  visibility:
+    interior: false

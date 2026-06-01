@@ -8,6 +8,7 @@ import helpers.utils as utils
 from helpers.block_catalog import catalog_display_name
 from helpers.context import SchematicContext
 from helpers.paths import ASSET_FOLDER, GENERATED_ASSETS_FOLDER
+from helpers.registry_lookup import get_block_entry
 from helpers.sprite_baker.cache import load_cached
 from helpers.sprite_baker.compose_slab import resolve_slab_placement
 from helpers.sprite_baker.runtime_bake import load_or_bake_generated_sprite
@@ -45,7 +46,11 @@ def resolve_texture_path(ctx: SchematicContext, texture_name: str) -> Path:
 
 
 def resolve_material_texture_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
-    entry = ctx.block_registry[parsed.token]
+    entry = get_block_entry(parsed)
+
+    if entry is None:
+        raise ValueError(f"Unknown block token: {parsed.token}")
+
     defaults = entry.get("defaults", {})
 
     material = parsed.material or entry.get("material_default")
@@ -75,7 +80,7 @@ def resolve_material_texture_name(parsed: ParsedToken, ctx: SchematicContext) ->
 
 
 def resolve_material_sprite_key(parsed: ParsedToken, ctx: SchematicContext) -> str | None:
-    entry = ctx.block_registry.get(parsed.token)
+    entry = get_block_entry(parsed)
 
     if entry is None:
         return None
@@ -134,7 +139,7 @@ def _behavior_for_sprite_key(sprite_key: str, ctx: SchematicContext) -> str | No
     if parsed is None:
         return None
 
-    entry = ctx.block_registry.get(parsed.token)
+    entry = get_block_entry(parsed)
 
     if entry is None:
         return None
@@ -149,7 +154,7 @@ def _inventory_behavior(
     ctx: SchematicContext,
 ) -> str | None:
     if parsed is not None:
-        entry = ctx.block_registry.get(parsed.token, {})
+        entry = get_block_entry(parsed) or {}
         return registry_blocks.get_block_behavior(entry)
 
     if sprite_key is not None:
@@ -226,7 +231,7 @@ def _prepare_generated_inventory_icon(
 
 def resolve_material_inventory_icon(parsed: ParsedToken, ctx: SchematicContext) -> str:
     sprite_key = resolve_material_sprite_key(parsed, ctx)
-    entry = ctx.block_registry.get(parsed.token, {})
+    entry = get_block_entry(parsed) or {}
     behavior = registry_blocks.get_block_behavior(entry)
 
     if sprite_key is not None:
@@ -282,7 +287,11 @@ def format_material_name(block_name: str) -> str:
 
 
 def resolve_material_display_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
-    entry = ctx.block_registry[parsed.token]
+    entry = get_block_entry(parsed)
+
+    if entry is None:
+        return format_material_name(parsed.token)
+
     block_id = registry_blocks.resolve_minecraft_block_id(entry, parsed)
     display_name = catalog_display_name(block_id)
 
@@ -293,13 +302,21 @@ def resolve_material_display_name(parsed: ParsedToken, ctx: SchematicContext) ->
 
 
 def resolve_material_block_name(parsed: ParsedToken, ctx: SchematicContext) -> str:
-    entry = ctx.block_registry[parsed.token]
+    entry = get_block_entry(parsed)
+
+    if entry is None:
+        return parsed.token.lower()
+
     block_name = registry_blocks.resolve_minecraft_block_id(entry, parsed)
     return block_name.split(":", 1)[-1]
 
 
 def should_count_material(parsed: ParsedToken, ctx: SchematicContext) -> bool:
-    entry = ctx.block_registry[parsed.token]
+    entry = get_block_entry(parsed)
+
+    if entry is None:
+        return False
+
     behavior = registry_blocks.get_block_behavior(entry)
 
     if behavior == "door" and parsed.variant == "upper":
@@ -328,7 +345,11 @@ def build_material_inventory(
         if not should_count_material(parsed, ctx):
             continue
 
-        entry = ctx.block_registry[parsed.token]
+        entry = get_block_entry(parsed)
+
+        if entry is None:
+            continue
+
         material_name = resolve_material_display_name(parsed, ctx)
         icon = resolve_material_inventory_icon(parsed, ctx)
 
@@ -342,7 +363,7 @@ def build_material_inventory(
         if _should_replace_inventory_icon(
             material_icons[material_name],
             material_icon_tokens[material_name],
-            ctx.block_registry[material_icon_tokens[material_name].token],
+            get_block_entry(material_icon_tokens[material_name]) or {},
             icon,
             parsed,
             entry,
@@ -419,7 +440,7 @@ def draw_inventory_icon(
 
         if tex is not None:
             if parsed is not None:
-                entry = ctx.block_registry.get(parsed.token, {})
+                entry = get_block_entry(parsed) or {}
                 tex = _prepare_generated_inventory_icon(tex, parsed, entry, raw_token=raw_token)
 
             img.paste(tex, (x, y), tex)

@@ -1,0 +1,10 @@
+label: Terrain
+tokens:
+- DIRT
+- DIRT_PATH
+- GRASS
+- GRAVEL
+- COBBLESTONE
+blocks:
+- minecraft:stone
+- minecraft:mossy_cobblestone

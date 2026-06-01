@@ -1,0 +1,33 @@
+TORCH:
+  behavior: torch
+  ui:
+    label: Torch
+    palette: lighting
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
+    variants:
+    - soul
+    - wall
+  defaults:
+    variant: normal
+    direction: north
+  minecraft:
+    variants:
+      normal:
+        block: minecraft:torch
+      soul:
+        block: minecraft:soul_torch
+      wall:
+        block: minecraft:wall_torch
+        blockstates:
+          facing: '{direction}'
+  render:
+    textures:
+      top:
+        soul: soul_torch.png
+        wall: wall_torch.png
+      side:
+        soul: soul_torch.png
+        wall: wall_torch.png
+    inventory_image: torch.png

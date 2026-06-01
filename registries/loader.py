@@ -9,10 +9,58 @@ from helpers.paths import BLOCK_TEXTURES_FOLDER, GENERATED_ASSETS_FOLDER
 from helpers.sprite_baker.cache import load_generated_sprite
 from helpers.types import MappedTextureImages, MappedTextureNames, TextureType
 
-REGISTRY_PATH = Path(__file__).parent / "blocks.yaml"
+REGISTRIES_DIR = Path(__file__).parent
+BEHAVIORS_DIR = REGISTRIES_DIR / "behaviors"
+PALETTES_DIR = REGISTRIES_DIR / "palettes"
+LEGACY_REGISTRY_PATH = REGISTRIES_DIR / "blocks.yaml"
 
-with open(REGISTRY_PATH) as f:
-    BLOCK_REGISTRY = yaml.safe_load(f)
+
+def load_behavior_registry() -> dict[str, Any]:
+    registry: dict[str, Any] = {}
+
+    if BEHAVIORS_DIR.is_dir():
+        for path in sorted(BEHAVIORS_DIR.glob("*.yaml")):
+            entries = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+            if not isinstance(entries, dict):
+                raise ValueError(f"{path} must contain a YAML mapping of registry tokens")
+
+            for token, entry in entries.items():
+                if token in registry:
+                    raise ValueError(f"Duplicate registry token {token!r} in {path}")
+
+                registry[token] = entry
+
+        return registry
+
+    if LEGACY_REGISTRY_PATH.is_file():
+        legacy = yaml.safe_load(LEGACY_REGISTRY_PATH.read_text(encoding="utf-8")) or {}
+        return legacy
+
+    raise FileNotFoundError(
+        f"No behavior registry found; expected {BEHAVIORS_DIR}/*.yaml or {LEGACY_REGISTRY_PATH}"
+    )
+
+
+def load_block_palettes() -> dict[str, dict[str, Any]]:
+    palettes: dict[str, dict[str, Any]] = {}
+
+    if not PALETTES_DIR.is_dir():
+        return palettes
+
+    for path in sorted(PALETTES_DIR.glob("*.yaml")):
+        palette = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+        if not isinstance(palette, dict):
+            raise ValueError(f"{path} must contain a YAML mapping")
+
+        palettes[path.stem] = palette
+
+    return palettes
+
+
+BLOCK_REGISTRY = load_behavior_registry()
+BLOCK_PALETTES = load_block_palettes()
 
 
 def _default_texture_name(block_id: str) -> str:

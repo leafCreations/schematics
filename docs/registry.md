@@ -1,6 +1,6 @@
 # Registry System
 
-Block definitions live in `registries/blocks.yaml`. Each entry can define:
+Block behavior definitions live in `registries/behaviors/*.yaml`. UI palette groupings live in `registries/palettes/*.yaml`. Each behavior entry can define:
 
 * `ui` — editor metadata (label, palette tab, required fields, variants)
 * `behavior` — placement logic (solid, fence, door, stairs, etc.)
@@ -9,9 +9,33 @@ Block definitions live in `registries/blocks.yaml`. Each entry can define:
 * `defaults` — default direction, variant, shape, etc.
 * `visibility` — e.g. `interior: false` to hide blocks from site/path views
 
-Materials list labels come from the generated block catalog (`registries/generated/catalog.json`), not from `blocks.yaml`. See [Block catalog](#block-catalog) below.
+Materials list labels come from the generated block catalog (`registries/generated/catalog.json`), not from the behavior registry. See [Block catalog](#block-catalog) below.
 
-## Example entries
+## Layout
+
+```
+registries/
+  behaviors/     # Semantic tokens (GRASS, STAIRS, DOOR, …)
+  palettes/      # UI groups: tokens + optional minecraft: block ids
+  generated/     # catalog.json from assets
+  loader.py
+```
+
+Palettes reference semantic tokens and/or raw Minecraft block ids:
+
+```yaml
+# registries/palettes/terrain.yaml
+tokens:
+  - GRASS
+  - DIRT
+blocks:
+  - minecraft:stone
+  - minecraft:mossy_cobblestone
+```
+
+Structure layers can use either semantic tokens (`PLANKS:oak`) or catalog-backed cells (`minecraft:stone`). The latter synthesizes a solid behavior entry at lookup time.
+
+## Example behavior entries
 
 ```yaml
 GRASS:
@@ -44,16 +68,25 @@ Textures are loaded from `assets/textures/block/` (and subfolders `block_assets/
 
 For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture_set()` prefers baked sprites under `assets/generated/` when available. See [sprite-baker.md](sprite-baker.md).
 
+`minecraft:` cells load textures from the catalog when not present in the compiled registry texture set.
+
 ## Loader API
 
 `registries/loader.py` provides:
 
-* `BLOCK_REGISTRY` — parsed YAML entries
+* `BLOCK_REGISTRY` — merged behavior entries from `behaviors/*.yaml`
+* `BLOCK_PALETTES` — palette definitions from `palettes/*.yaml`
 * `build_registry_texture_mapping(view)` — token → vanilla texture filename
 * `compile_texture_set(view, assets_dir, block_px)` — load textures for schematic rendering
 * `compile_inventory_texture_set(assets_dir, block_px)` — load inventory icon textures
 
-Structure layer cells reference registry tokens. See [structure-tokens.md](structure-tokens.md) for the token string format.
+`helpers/registry_lookup.py` provides:
+
+* `get_block_entry(parsed)` — behavior registry or synthesized catalog entry
+* `registry_lookup_token(parsed)` — lookup key for rendering/worldgen
+* `load_catalog_texture_image(parsed, view, size)` — catalog texture fallback
+
+Structure layer cells reference registry tokens or `minecraft:` block ids. See [structure-tokens.md](structure-tokens.md) for the token string format.
 
 ## Block catalog
 
@@ -69,4 +102,4 @@ The script reads:
 * `assets/lang/en_us.json` → display names (`block.minecraft.stone` → `"Stone"`)
 * `assets/textures/block/` → default texture filenames when present
 
-Each registry token still resolves to a Minecraft block id via `blocks.yaml`; the catalog supplies the human-readable name for that id. Regenerate the catalog when assets are updated.
+Semantic tokens resolve to Minecraft block ids via the behavior registry; `minecraft:` cells use the catalog directly for names and textures. Regenerate the catalog when assets are updated.

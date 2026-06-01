@@ -1,0 +1,66 @@
+DIRT:
+  behavior: solid
+  ui:
+    label: Dirt
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:dirt
+DIRT_PATH:
+  behavior: solid
+  ui:
+    label: Dirt Path
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:dirt_path
+  render:
+    top: dirt_path_top.png
+GRASS:
+  behavior: solid
+  ui:
+    label: Grass
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:grass_block
+  render:
+    top: grass_block_top.png
+    background_color:
+    - 95
+    - 160
+    - 75
+GRAVEL:
+  behavior: solid
+  ui:
+    label: Gravel
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:gravel
+COBBLESTONE:
+  behavior: solid
+  ui:
+    label: Cobblestone
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+    variants:
+    - mossy
+  defaults:
+    variant: normal
+  minecraft:
+    variants:
+      normal:
+        block: minecraft:cobblestone
+      mossy:
+        block: minecraft:mossy_cobblestone

@@ -1,0 +1,34 @@
+LOG:
+  behavior: log
+  material_default: oak
+  ui:
+    label: '{material} Log'
+    palette: wood
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+    variants:
+    - east_west
+    - north_south
+  defaults:
+    orientation: vertical
+  minecraft:
+    block: minecraft:{material}_log
+    blockstates:
+      axis: '{axis}'
+  render:
+    textures:
+      top: '{material}_log_top.png'
+      side: '{material}_log.png'
+    inventory_image: '{material}_log.png'
+PLANKS:
+  behavior: solid
+  material_default: oak
+  ui:
+    label: '{material} Planks'
+    palette: wood
+    requires_material: true
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:{material}_planks

@@ -13,8 +13,8 @@ from helpers.registry_blocks import (
     resolve_minecraft_block_id,
     resolve_minecraft_blockstates,
 )
+from helpers.registry_lookup import get_block_entry, registry_lookup_token
 from helpers.structure_tokens import ParsedToken, parse_structure_token
-from registries.loader import BLOCK_REGISTRY
 
 BLOCK_CACHE: dict[ParsedToken, Block] = {}
 
@@ -25,7 +25,10 @@ def resolve_worldgen_token(
     x: int,
     z: int,
 ) -> ParsedToken:
-    entry = BLOCK_REGISTRY[parsed.token]
+    entry = get_block_entry(parsed)
+
+    if entry is None:
+        raise ValueError(f"Unknown block token: {registry_lookup_token(parsed)}")
 
     if get_block_behavior(entry) == "fence":
         return resolve_fence_adjacency(parsed, cells, x, z)
@@ -39,7 +42,10 @@ def generate_block(parsed: ParsedToken) -> Block:
     if cache_key in BLOCK_CACHE:
         return BLOCK_CACHE[cache_key]
 
-    entry = BLOCK_REGISTRY[parsed.token]
+    entry = get_block_entry(parsed)
+
+    if entry is None:
+        raise ValueError(f"Unknown block token: {registry_lookup_token(parsed)}")
     minecraft = entry["minecraft"]
 
     if "variants" in minecraft:
@@ -98,8 +104,8 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
                 if parsed is None:
                     continue
 
-                if parsed.token not in ctx.block_registry:
-                    raise KeyError(f"Unknown block token: {parsed.token}")
+                if get_block_entry(parsed) is None:
+                    raise KeyError(f"Unknown block token: {registry_lookup_token(parsed)}")
 
                 global_x = ctx.grid["offset_x"] + x_idx
 
