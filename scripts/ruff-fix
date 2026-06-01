@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Run Ruff lint fixes and formatting.
+#
+# Usage:
+#   scripts/ruff-fix              # fix entire repo
+#   scripts/ruff-fix path/to/file # fix specific paths
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+if [[ -x "$ROOT/.venv/bin/ruff" ]]; then
+  RUFF="$ROOT/.venv/bin/ruff"
+elif command -v ruff >/dev/null 2>&1; then
+  RUFF=ruff
+else
+  echo "ruff not found. Run: pip install -e \".[dev]\" in the project venv." >&2
+  exit 1
+fi
+
+if (($# > 0)); then
+  TARGETS=("$@")
+else
+  TARGETS=("helpers" "registries" "renderers" "structures" "scripts" "tests" "render_main.py")
+fi
+
+"$RUFF" check --fix "${TARGETS[@]}"
+"$RUFF" format "${TARGETS[@]}"
+
+echo "Ruff fix + format complete."
