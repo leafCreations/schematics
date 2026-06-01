@@ -3,6 +3,8 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 import helpers.constants as constants
 from helpers.context import SchematicContext
 from helpers.paths import (
@@ -128,6 +130,46 @@ def build_schematic_context(config: StructureConfig) -> SchematicContext:
     return ctx
 
 
+def load_structure_yaml(path: Path) -> StructureConfig:
+    if not path.exists():
+        raise FileNotFoundError(f"Structure file not found: {path}")
+
+    with path.open(encoding="utf-8") as handle:
+        data = yaml.safe_load(handle)
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a YAML mapping")
+
+    base_dir = path.parent
+    layers: list[dict[str, Any]]
+
+    if "layer_files" in data:
+        layers = []
+
+        for layer_file in data["layer_files"]:
+            layer_path = base_dir / layer_file
+
+            if not layer_path.is_file():
+                raise FileNotFoundError(f"Layer file not found: {layer_path}")
+
+            with layer_path.open(encoding="utf-8") as handle:
+                layer = yaml.safe_load(handle)
+
+            if not isinstance(layer, dict):
+                raise ValueError(f"{layer_path} must contain a YAML mapping")
+
+            layers.append(layer)
+    elif "layers" in data:
+        layers = data["layers"]
+    else:
+        raise ValueError(f"{path} must define either 'layer_files' or 'layers'")
+
+    config = {**data, "layers": layers}
+    config.pop("layer_files", None)
+
+    return validate_structure_config(config)
+
+
 def load_structure_module(path: Path) -> StructureConfig:
     if not path.exists():
         raise FileNotFoundError(f"Structure file not found: {path}")
@@ -146,7 +188,29 @@ def load_structure_module(path: Path) -> StructureConfig:
     return validate_structure_config(module.STRUCTURE_CONFIG)
 
 
+def resolve_structure_source(structure: str, stage: int) -> Path:
+    yaml_path = STRUCTURES_FOLDER / structure / f"stage{stage}" / "structure.yaml"
+
+    if yaml_path.is_file():
+        return yaml_path
+
+    python_path = STRUCTURES_FOLDER / structure / f"stage{stage}_structure.py"
+
+    if python_path.is_file():
+        return python_path
+
+    raise FileNotFoundError(
+        f"No structure definition found for {structure} stage {stage}; "
+        f"expected {yaml_path} or {python_path}"
+    )
+
+
 def load_structure_config(structure: str, stage: int) -> SchematicContext:
-    structure_path = STRUCTURES_FOLDER / structure / f"stage{stage}_structure.py"
-    config = load_structure_module(structure_path.resolve())
+    structure_path = resolve_structure_source(structure, stage).resolve()
+
+    if structure_path.suffix == ".yaml":
+        config = load_structure_yaml(structure_path)
+    else:
+        config = load_structure_module(structure_path)
+
     return build_schematic_context(config)

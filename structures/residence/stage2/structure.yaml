@@ -1,0 +1,20 @@
+structure: residence
+stage: 2
+name: Residence Stage 2
+output_folder: stage2_residence
+grid:
+  site_size: 30
+  offset_x: 10
+  offset_z: 4
+  stair_local_x: 4
+  site_structure_layers:
+  - 0
+  - 1
+  worldgen_base_y: -60
+layer_files:
+- layers/layer_00.yaml
+- layers/layer_01.yaml
+- layers/layer_02.yaml
+- layers/layer_03.yaml
+- layers/layer_04.yaml
+- layers/layer_05.yaml

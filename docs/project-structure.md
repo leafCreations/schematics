@@ -40,8 +40,12 @@ renderers/
 
 structures/
   residence/
-    stage1_structure.py
-    stage2_structure.py
+    stage1/
+      structure.yaml
+      layers/
+    stage2/
+      structure.yaml
+      layers/
 
 assets/
   textures/block/       # Vanilla block textures (not in repo; see .gitignore)
@@ -49,6 +53,8 @@ assets/
 
 scripts/
   bake_sprites.py       # CLI to bake generated sprites
+  generate_catalog.py   # Build registries/generated/catalog.json from assets
+  migrate_structure_to_yaml.py  # Convert stage{N}_structure.py to YAML layout
   ruff-fix              # Run ruff check --fix and format
 
 output/

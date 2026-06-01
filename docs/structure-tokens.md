@@ -19,7 +19,20 @@ Tokens are parsed by `helpers/structure_tokens.py` into a `ParsedToken` with fie
 
 ## Structure files
 
-Structure definitions live in `structures/{structure}/stage{N}_structure.py`. Each file must define `STRUCTURE_CONFIG` with `layers`, `grid`, `name`, and `output_folder`.
+Structure definitions live under `structures/{structure}/stage{N}/`:
+
+```text
+structures/residence/stage1/
+  structure.yaml      # metadata, grid, layer file list
+  layers/
+    layer_00.yaml     # index, group, cells grid
+    layer_01.yaml
+    ...
+```
+
+Legacy Python modules (`stage{N}_structure.py`) are still supported if no YAML folder exists.
+
+Each stage must define `structure`, `stage`, `name`, `output_folder`, `grid`, and either `layer_files` or inline `layers`.
 
 The `grid` object supports:
 
