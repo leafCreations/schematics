@@ -706,3 +706,64 @@ def test_should_count_material_counts_normal_blocks():
     parsed = ParsedToken(token="PLANKS", material="oak")
 
     assert material_utils.should_count_material(parsed, ctx) is True
+
+
+def test_draw_inventory_icon_uses_catalog_fallback_for_minecraft_block(monkeypatch):
+    from PIL import Image, ImageDraw
+
+    from helpers.materials import draw_inventory_icon
+    from helpers.structure_tokens import parse_structure_token
+
+    catalog_tex = Image.new("RGBA", (16, 16), (10, 20, 30, 255))
+
+    def fake_load_catalog_texture_image(parsed, view, size):
+        return catalog_tex.resize((size, size))
+
+    monkeypatch.setattr(
+        material_utils,
+        "load_catalog_texture_image",
+        fake_load_catalog_texture_image,
+    )
+
+    img = Image.new("RGBA", (25, 25), (255, 255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    ctx = _ctx_with_registry({})
+    parsed = parse_structure_token("minecraft:stone")
+
+    draw_inventory_icon(
+        img,
+        draw,
+        ctx,
+        texture_name="missing_stone.png",
+        x=0,
+        y=0,
+        size=25,
+        parsed=parsed,
+    )
+
+    assert img.getpixel((0, 0))[:3] == (10, 20, 30)
+
+
+def test_draw_inventory_icon_gray_placeholder_without_catalog_fallback():
+    from PIL import Image, ImageDraw
+
+    from helpers.materials import draw_inventory_icon
+    from helpers.structure_tokens import ParsedToken
+
+    img = Image.new("RGBA", (25, 25), (255, 255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    ctx = _ctx_with_registry({})
+    parsed = ParsedToken(token="UNKNOWN")
+
+    draw_inventory_icon(
+        img,
+        draw,
+        ctx,
+        texture_name="missing.png",
+        x=0,
+        y=0,
+        size=25,
+        parsed=parsed,
+    )
+
+    assert img.getpixel((12, 12))[:3] == (230, 230, 230)

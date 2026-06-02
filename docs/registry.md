@@ -68,7 +68,7 @@ Textures are loaded from `assets/textures/block/` (and subfolders `block_assets/
 
 For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture_set()` prefers baked sprites under `assets/generated/` when available. See [sprite-baker.md](sprite-baker.md).
 
-`minecraft:` cells load textures from the catalog when not present in the compiled registry texture set.
+`minecraft:` cells load textures from the catalog when not present in the compiled registry texture set, including materials-list inventory icons.
 
 ## Loader API
 
@@ -76,6 +76,7 @@ For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture
 
 * `BLOCK_REGISTRY` — merged behavior entries from `behaviors/*.yaml`
 * `BLOCK_PALETTES` — palette definitions from `palettes/*.yaml`
+* `validate_palettes()` — fail fast when palette tokens, catalog blocks, or behavior palette refs are inconsistent
 * `build_registry_texture_mapping(view)` — token → vanilla texture filename
 * `compile_texture_set(view, assets_dir, block_px)` — load textures for schematic rendering
 * `compile_inventory_texture_set(assets_dir, block_px)` — load inventory icon textures
@@ -85,6 +86,14 @@ For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture
 * `get_block_entry(parsed)` — behavior registry or synthesized catalog entry
 * `registry_lookup_token(parsed)` — lookup key for rendering/worldgen
 * `load_catalog_texture_image(parsed, view, size)` — catalog texture fallback
+
+`helpers/block_picker.py` provides the UI-facing picker resolution:
+
+* `list_palettes()` / `resolve_palette(name)` — palette tabs as structured `PickerPalette` / `PickerEntry`
+* `picker_entry_for_token(token)` / `picker_entry_for_block_id(block_id)` — single entries
+* `enumerate_token_materials(template)` — valid materials/colors for a templated token, derived from the catalog (e.g. `minecraft:{material}_planks` → `oak`, `birch`, …)
+* `cell_token(entry, material)` — the structure-layer cell string to write for a selection
+* `format_entry_label(entry, material)` — catalog-resolved display label per material
 
 Structure layer cells reference registry tokens or `minecraft:` block ids. See [structure-tokens.md](structure-tokens.md) for the token string format.
 

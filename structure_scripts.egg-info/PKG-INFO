@@ -13,3 +13,5 @@ Provides-Extra: dev
 Requires-Dist: pytest; extra == "dev"
 Requires-Dist: ruff; extra == "dev"
 Requires-Dist: pre-commit; extra == "dev"
+Provides-Extra: ui
+Requires-Dist: PySide6>=6.6; extra == "ui"

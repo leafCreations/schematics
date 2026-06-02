@@ -1,3 +1,4 @@
+import pytest
 from PIL import Image
 
 import helpers.constants as constants
@@ -117,3 +118,13 @@ def test_paste_corner_stair_matches_worldgen_facing():
     assert cutout_corner("STAIRS:oak@south#outer_right") == "TR"
     assert cutout_corner("STAIRS:oak@north#outer_right") == "BL"
     assert cutout_corner("STAIRS:oak@north#outer_left") == "BR"
+
+
+@pytest.mark.requires_assets
+def test_resolve_cell_texture_returns_planks_image():
+    textures = compile_texture_set("top", str(ASSET_FOLDER), constants.BLOCK_PX)
+    image = schematics_utils.resolve_cell_texture("PLANKS:oak", textures, size=constants.BLOCK_PX)
+
+    assert image is not None
+    assert image.size == (constants.BLOCK_PX, constants.BLOCK_PX)
+    assert image.getpixel((0, 0))[3] == 255

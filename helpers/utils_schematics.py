@@ -246,22 +246,20 @@ def _build_fence_texture_keys(parsed: ParsedToken, variant: str) -> list[str]:
     return keys
 
 
-def _paste_token(
-    img,
-    textures: MappedTextureImages,
+def resolve_cell_texture(
     raw_token: RawToken,
-    xy,
-    view: TextureView,
-    size: int | None = None,
+    textures: MappedTextureImages,
     *,
+    view: TextureView = "top",
+    size: int | None = None,
     layer_cells: CellGrid | None = None,
     cell_x: int | None = None,
     cell_z: int | None = None,
-) -> bool:
+) -> Image.Image | None:
     parsed = parse_structure_token(raw_token)
 
     if parsed is None:
-        return False
+        return None
 
     base_token, resolved_direction = resolve_token_for_render(raw_token)
     entry = get_block_entry(parsed) or {}
@@ -308,18 +306,16 @@ def _paste_token(
             if view == "top" and parsed.rotation:
                 tex = utils.rotate_texture_by_degrees(tex, parsed.rotation)
 
-            tex = _resize_texture(tex, size)
-            _paste_prepared_texture(img, tex, xy)
-            return True
+            return _resize_texture(tex, size)
 
     if texture_key is None:
-        return False
+        return None
 
     tex = textures[texture_key]
 
     if view == "top":
         tex = _prepare_topdown_texture(
-            tex,
+            tex.copy(),
             base_token,
             direction,
             parsed.rotation,
@@ -331,7 +327,34 @@ def _paste_token(
             if orientation == "east_west":
                 tex = utils.rotate_texture_by_degrees(tex, 90)
 
-    tex = _resize_texture(tex, size)
+    return _resize_texture(tex, size)
+
+
+def _paste_token(
+    img,
+    textures: MappedTextureImages,
+    raw_token: RawToken,
+    xy,
+    view: TextureView,
+    size: int | None = None,
+    *,
+    layer_cells: CellGrid | None = None,
+    cell_x: int | None = None,
+    cell_z: int | None = None,
+) -> bool:
+    tex = resolve_cell_texture(
+        raw_token,
+        textures,
+        view=view,
+        size=size,
+        layer_cells=layer_cells,
+        cell_x=cell_x,
+        cell_z=cell_z,
+    )
+
+    if tex is None:
+        return False
+
     _paste_prepared_texture(img, tex, xy)
     return True
 

@@ -28,7 +28,12 @@ registries/
   behaviors/            # Semantic block behavior definitions
   palettes/             # UI palette groupings (tokens + minecraft: ids)
   generated/            # catalog.json from assets
-  loader.py             # Registry load and texture compilation
+  validate.py            # Palette/behavior/catalog integrity checks
+
+ui/
+  document.py            # Layer YAML load/save for the editor
+  main_window.py         # PySide6 editor shell
+  widgets/               # Palette, grid, and properties panels
 
 renderers/
   registry.py           # Render name → handler dispatch table

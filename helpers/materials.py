@@ -8,7 +8,11 @@ import helpers.utils as utils
 from helpers.block_catalog import catalog_display_name
 from helpers.context import SchematicContext
 from helpers.paths import ASSET_FOLDER, GENERATED_ASSETS_FOLDER
-from helpers.registry_lookup import get_block_entry
+from helpers.registry_lookup import (
+    get_block_entry,
+    is_minecraft_block_token,
+    load_catalog_texture_image,
+)
 from helpers.sprite_baker.cache import load_cached
 from helpers.sprite_baker.compose_slab import resolve_slab_placement
 from helpers.sprite_baker.runtime_bake import load_or_bake_generated_sprite
@@ -393,6 +397,25 @@ def build_material_inventory_from_raw_tokens(
     return build_material_inventory(parsed_tokens, ctx, raw_tokens=filtered_raw_tokens)
 
 
+def _paste_catalog_inventory_icon(
+    img: Image.Image,
+    parsed: ParsedToken,
+    x: int,
+    y: int,
+    size: int,
+) -> bool:
+    if not is_minecraft_block_token(parsed):
+        return False
+
+    tex = load_catalog_texture_image(parsed, "top", size)
+
+    if tex is None:
+        return False
+
+    img.paste(tex, (x, y), tex)
+    return True
+
+
 def draw_inventory_icon(
     img: Image.Image,
     draw: ImageDraw.ImageDraw,
@@ -454,6 +477,9 @@ def draw_inventory_icon(
             tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
             img.paste(tex, (x, y), tex)
             return
+
+    if parsed is not None and _paste_catalog_inventory_icon(img, parsed, x, y, size):
+        return
 
     draw.rectangle(
         [x, y, x + size, y + size],

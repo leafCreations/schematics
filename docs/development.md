@@ -16,6 +16,39 @@ For world generation, also install the optional Amulet stack:
 pip install -e ".[dev,worldgen]"
 ```
 
+For the desktop structure editor:
+
+```bash
+pip install -e ".[dev,ui]"
+python -m ui --structure residence --stage 1
+```
+
+Left-click places the selected palette block; right-click clears a cell. Unsaved edits show `*` in the title bar and on the Save button.
+
+### Linux Qt system libraries
+
+PySide6 6.5+ needs a few X11 libraries that pip does not install. If startup fails with
+`Could not load the Qt platform plugin "xcb"` or mentions `xcb-cursor0`, install:
+
+```bash
+sudo apt install libxcb-cursor0
+```
+
+Optional but recommended on multi-monitor X11 setups:
+
+```bash
+sudo apt install libxcb-xinerama0
+```
+
+On a Wayland session you can often bypass X11 entirely:
+
+```bash
+QT_QPA_PLATFORM=wayland python -m ui --structure residence --stage 1
+```
+
+The editor runs a preflight check on Linux and prints these instructions when the
+libraries are missing.
+
 See [worldgen.md](worldgen.md) and [../AMULET_INSTALL_NOTES.md](../AMULET_INSTALL_NOTES.md) if Amulet install fails.
 
 ## Git hooks
