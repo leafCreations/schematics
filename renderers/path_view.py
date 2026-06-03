@@ -23,18 +23,22 @@ def _build_path_layout(ctx: SchematicContext) -> PathLayout:
     top_margin = constants.PATH_VIEW_TOP_MARGIN
     layers = [-1, 0, 1]
 
-    site_size = grid_utils.get_site_size(ctx)
-    panel_dim = site_size * block_px
+    site_width = grid_utils.get_site_width(ctx)
+    site_depth = grid_utils.get_site_depth(ctx)
+    panel_w = site_width * block_px
+    panel_h = site_depth * block_px
 
-    img_w = (panel_dim * len(layers)) + (padding * (len(layers) + 1))
-    img_h = top_margin + panel_dim + 80
+    img_w = (panel_w * len(layers)) + (padding * (len(layers) + 1))
+    img_h = top_margin + panel_h + 80
 
     return PathLayout(
         block_px=block_px,
         padding=padding,
         top_margin=top_margin,
         layers=layers,
-        panel_dim=panel_dim,
+        panel_dim=max(panel_w, panel_h),
+        panel_w=panel_w,
+        panel_h=panel_h,
         img_w=img_w,
         img_h=img_h,
     )
@@ -57,7 +61,7 @@ def _draw_path_title(draw, layout: PathLayout):
 
 
 def _get_path_panel_position(col_idx: int, layout: PathLayout) -> PathPanel:
-    sx = layout["padding"] + col_idx * (layout["panel_dim"] + layout["padding"])
+    sx = layout["padding"] + col_idx * (layout["panel_w"] + layout["padding"])
 
     sy = layout["top_margin"]
 
@@ -76,10 +80,11 @@ def _draw_path_layer_panel(
     layout: PathLayout,
     site_map,
 ):
-    site_size = grid_utils.get_site_size(ctx)
+    site_width = grid_utils.get_site_width(ctx)
+    site_depth = grid_utils.get_site_depth(ctx)
 
-    for z in range(site_size):
-        for x in range(site_size):
+    for z in range(site_depth):
+        for x in range(site_width):
             cell = landscape_utils.resolve_path_view_cell(layer_y, x, z, site_map)
             _draw_path_cell(img, draw, ctx, cell, x, z, panel, layout)
 

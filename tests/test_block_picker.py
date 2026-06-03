@@ -5,6 +5,7 @@ from helpers.block_picker import (
     format_entry_label,
     list_palettes,
     picker_entry_for_block_id,
+    picker_entry_for_cell,
     picker_entry_for_token,
     resolve_palette,
 )
@@ -35,6 +36,7 @@ def test_picker_entry_for_templated_token():
     entry = picker_entry_for_token("PLANKS")
 
     assert entry is not None
+    assert entry.label == "Planks"
     assert entry.requires_material is True
     assert entry.material_field == "material"
     assert "oak" in entry.materials
@@ -88,7 +90,60 @@ def test_cell_token_includes_direction_and_variant():
     assert cell_token(cobblestone, variant="mossy") == "COBBLESTONE#mossy"
 
     door = picker_entry_for_token("DOOR")
+    assert door.variants == ("lower", "upper")
     assert cell_token(door, "oak", direction="west") == "DOOR:oak@west"
+    assert cell_token(door, "oak", direction="west", variant="upper") == "DOOR:oak@west#upper"
+
+    bed = picker_entry_for_token("BED")
+    assert bed is not None
+    assert bed.label == "Bed"
+    assert bed.variants == ("head", "foot")
+    assert cell_token(bed, "blue", direction="north", variant="head") == "BED:blue@north#head"
+    assert cell_token(bed, "blue", direction="north", variant="foot") == "BED:blue@north#foot"
+
+
+def test_cell_token_includes_block_states():
+    lantern = picker_entry_for_token("LANTERN")
+
+    assert lantern is not None
+    assert cell_token(lantern, states=(("hanging", True),)) == "LANTERN;hanging=true"
+
+
+def test_cell_token_includes_optional_variant_without_requires_variant():
+    lantern = picker_entry_for_token("LANTERN")
+
+    assert lantern is not None
+    assert lantern.requires_variant is False
+    assert lantern.variants == ("soul",)
+    assert cell_token(lantern, variant="soul") == "LANTERN#soul"
+
+
+def test_picker_entry_for_cell_semantic_token():
+    entry = picker_entry_for_cell("LANTERN#soul")
+
+    assert entry is not None
+    assert entry.token == "LANTERN"
+    assert entry.palette == "lighting"
+
+
+def test_picker_entry_for_cell_catalog_block():
+    entry = picker_entry_for_cell("minecraft:stone")
+
+    assert entry is not None
+    assert entry.is_catalog_block is True
+    assert entry.token == "minecraft:stone"
+
+
+def test_picker_entry_for_cell_empty_returns_none():
+    assert picker_entry_for_cell(".") is None
+
+
+def test_cell_token_copper_lantern_variants():
+    copper = picker_entry_for_token("COPPER_LANTERN")
+
+    assert copper is not None
+    assert cell_token(copper, variant="exposed") == "COPPER_LANTERN#exposed"
+    assert cell_token(copper, variant="waxed_oxidized") == "COPPER_LANTERN#waxed_oxidized"
 
 
 def test_format_entry_label_uses_catalog():

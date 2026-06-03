@@ -6,12 +6,15 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QLabel,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
 from helpers.block_picker import PickerEntry, cell_token, format_entry_label
-from helpers.structure_tokens import parse_structure_token
+from helpers.lantern_placement import HANGING_STATE, explicit_hanging
+from helpers.structure_tokens import BlockStates, parse_structure_token
+from ui.texture_cache import DEFAULT_ICON_SIZE, GridTextureCache
 
 _DEFAULT_VARIANT_LABEL = "(default)"
 
@@ -24,14 +27,20 @@ class PropertiesPanel(QWidget):
         self._mode_label = QLabel("Select a palette block to paint, or enable Eraser.")
         self._title = QLabel("")
         self._cell_preview = QLabel("")
+        self._brush_preview = QLabel()
+        self._brush_preview.setFixedSize(DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE)
+        self._texture_cache: GridTextureCache | None = None
         self._material_combo = QComboBox()
         self._direction_combo = QComboBox()
         self._variant_combo = QComboBox()
+        self._hanging_combo = QComboBox()
         self._active_entry: PickerEntry | None = None
+        self._selected_cell: tuple[int, int] | None = None
 
         self._material_combo.currentTextChanged.connect(self._on_brush_option_changed)
         self._direction_combo.currentTextChanged.connect(self._on_brush_option_changed)
         self._variant_combo.currentTextChanged.connect(self._on_brush_option_changed)
+        self._hanging_combo.currentTextChanged.connect(self._on_brush_option_changed)
 
         for direction in ("north", "south", "east", "west"):
             self._direction_combo.addItem(direction)
@@ -41,7 +50,11 @@ class PropertiesPanel(QWidget):
         picker_form.addRow("Label", self._title)
         picker_form.addRow("Material", self._material_combo)
         picker_form.addRow("Direction", self._direction_combo)
-        picker_form.addRow("Variant", self._variant_combo)
+        self._variant_label = QLabel("Variant")
+        picker_form.addRow(self._variant_label, self._variant_combo)
+        self._hanging_label = QLabel("Hanging")
+        picker_form.addRow(self._hanging_label, self._hanging_combo)
+        picker_form.addRow("Preview", self._brush_preview)
         picker_form.addRow("Cell token", self._cell_preview)
 
         cell_group = QGroupBox("Grid cell")
@@ -53,7 +66,8 @@ class PropertiesPanel(QWidget):
         layout.addWidget(self._mode_label)
         layout.addWidget(picker_group)
         layout.addWidget(cell_group)
-        layout.addStretch(1)
+
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
         self._picker_group = picker_group
         self._cell_group = cell_group
@@ -61,6 +75,9 @@ class PropertiesPanel(QWidget):
 
     def active_entry(self) -> PickerEntry | None:
         return self._active_entry
+
+    def set_texture_cache(self, texture_cache: GridTextureCache | None) -> None:
+        self._texture_cache = texture_cache
 
     def build_placement_token(self) -> str | None:
         entry = self._active_entry
@@ -71,10 +88,11 @@ class PropertiesPanel(QWidget):
         material = self._selected_material()
         direction = self._selected_direction()
         variant = self._selected_variant()
+        states = self._selected_block_states()
 
-        return cell_token(entry, material, direction=direction, variant=variant)
+        return cell_token(entry, material, direction=direction, variant=variant, states=states)
 
-    def show_picker_entry(self, entry: PickerEntry) -> None:
+    def show_picker_entry(self, entry: PickerEntry, *, emit_brush: bool = True) -> None:
         self._active_entry = entry
         self._mode_label.setText("Paint brush active — left-click grid cells to place.")
         self._picker_group.setEnabled(True)
@@ -106,21 +124,51 @@ class PropertiesPanel(QWidget):
         self._variant_combo.clear()
         self._variant_combo.setEnabled(bool(entry.variants))
 
-        if entry.variants:
+        if entry.behavior == "bed" and set(entry.variants) == {"head", "foot"}:
+            self._variant_label.setText("Part")
+            self._variant_combo.addItems(["head", "foot"])
+            self._variant_combo.setCurrentText("head")
+        elif entry.behavior == "door" and set(entry.variants) == {"lower", "upper"}:
+            self._variant_label.setText("Half")
+            self._variant_combo.addItems(["lower", "upper"])
+            self._variant_combo.setCurrentText("lower")
+        elif entry.variants:
+            self._variant_label.setText("Variant")
             self._variant_combo.addItem(_DEFAULT_VARIANT_LABEL)
             self._variant_combo.addItems(entry.variants)
         else:
+            self._variant_label.setText("Variant")
             self._variant_combo.addItem("—")
 
         self._variant_combo.blockSignals(False)
+
+        self._hanging_combo.blockSignals(True)
+        self._hanging_combo.clear()
+
+        if entry.behavior == "lantern":
+            self._hanging_label.setVisible(True)
+            self._hanging_combo.setVisible(True)
+            self._hanging_combo.setEnabled(True)
+            self._hanging_combo.addItems(["Auto", "Hanging", "Standing"])
+            self._hanging_combo.setCurrentText("Auto")
+        else:
+            self._hanging_label.setVisible(False)
+            self._hanging_combo.setVisible(False)
+            self._hanging_combo.setEnabled(False)
+            self._hanging_combo.addItem("—")
+
+        self._hanging_combo.blockSignals(False)
         self._refresh_entry_preview()
-        self.brush_changed.emit()
+
+        if emit_brush:
+            self.brush_changed.emit()
 
     def clear_picker_entry(self) -> None:
         self._reset_picker_fields()
         self.brush_changed.emit()
 
     def show_grid_cell(self, row: int, col: int, raw_token: str) -> None:
+        self._selected_cell = (row, col)
         parsed = parse_structure_token(raw_token)
         lines = [f"Position: row {row}, col {col}", f"Raw: {raw_token or '.'}"]
 
@@ -131,6 +179,7 @@ class PropertiesPanel(QWidget):
                     f"Material: {parsed.material or '—'}",
                     f"Direction: {parsed.direction or '—'}",
                     f"Variant: {parsed.variant or '—'}",
+                    f"Hanging: {self._format_hanging_display(parsed)}",
                 ]
             )
 
@@ -138,8 +187,68 @@ class PropertiesPanel(QWidget):
         self._cell_group.setEnabled(True)
 
     def clear_grid_cell(self) -> None:
+        self._selected_cell = None
         self._cell_info.setText("No cell selected.")
         self._cell_group.setEnabled(False)
+
+    def selected_cell(self) -> tuple[int, int] | None:
+        return self._selected_cell
+
+    def sync_brush_from_cell(self, raw_token: str) -> None:
+        """Load brush combos from a grid cell when it matches the active palette token."""
+        if self._active_entry is None or raw_token == ".":
+            return
+
+        parsed = parse_structure_token(raw_token)
+
+        if parsed is None:
+            return
+
+        if self._active_entry.is_catalog_block:
+            if raw_token != self._active_entry.token:
+                return
+        elif parsed.token != self._active_entry.token:
+            return
+
+        self._material_combo.blockSignals(True)
+        self._direction_combo.blockSignals(True)
+        self._variant_combo.blockSignals(True)
+
+        if parsed.material and self._material_combo.isEnabled():
+            material_index = self._material_combo.findText(parsed.material)
+
+            if material_index >= 0:
+                self._material_combo.setCurrentIndex(material_index)
+
+        if parsed.direction and self._direction_combo.isEnabled():
+            direction_index = self._direction_combo.findText(parsed.direction)
+
+            if direction_index >= 0:
+                self._direction_combo.setCurrentIndex(direction_index)
+
+        if parsed.variant and self._variant_combo.isEnabled():
+            variant_index = self._variant_combo.findText(parsed.variant)
+
+            if variant_index >= 0:
+                self._variant_combo.setCurrentIndex(variant_index)
+
+        self._material_combo.blockSignals(False)
+        self._direction_combo.blockSignals(False)
+        if self._active_entry is not None and self._active_entry.behavior == "lantern":
+            self._hanging_combo.blockSignals(True)
+            hanging = explicit_hanging(parsed)
+
+            if hanging is None:
+                self._hanging_combo.setCurrentText("Auto")
+            elif hanging:
+                self._hanging_combo.setCurrentText("Hanging")
+            else:
+                self._hanging_combo.setCurrentText("Standing")
+
+            self._hanging_combo.blockSignals(False)
+
+        self._variant_combo.blockSignals(False)
+        self._refresh_entry_preview()
 
     def _on_brush_option_changed(self, _value: str) -> None:
         self._refresh_entry_preview()
@@ -163,7 +272,7 @@ class PropertiesPanel(QWidget):
         return self._direction_combo.currentText()
 
     def _selected_variant(self) -> str | None:
-        if self._active_entry is None or not self._active_entry.variants:
+        if self._active_entry is None or not self._variant_combo.isEnabled():
             return None
 
         variant = self._variant_combo.currentText()
@@ -173,21 +282,65 @@ class PropertiesPanel(QWidget):
 
         return variant
 
+    def _selected_block_states(self) -> BlockStates:
+        if self._active_entry is None or self._active_entry.behavior != "lantern":
+            return ()
+
+        mode = self._hanging_combo.currentText()
+
+        if mode == "Hanging":
+            return ((HANGING_STATE, True),)
+
+        if mode == "Standing":
+            return ((HANGING_STATE, False),)
+
+        return ()
+
+    @staticmethod
+    def _format_hanging_display(parsed) -> str:
+        hanging = explicit_hanging(parsed)
+
+        if hanging is None:
+            return "auto"
+
+        return "true" if hanging else "false"
+
     def _refresh_entry_preview(self) -> None:
         token = self.build_placement_token()
 
         if token is None or self._active_entry is None:
             self._cell_preview.setText("—")
+            self._brush_preview.clear()
             return
 
         label = format_entry_label(self._active_entry, self._selected_material())
         self._cell_preview.setText(f"{token}\n({label})")
+        self._refresh_brush_preview(token)
+
+    def _refresh_brush_preview(self, token: str) -> None:
+        if self._texture_cache is None:
+            self._brush_preview.clear()
+            return
+
+        self._texture_cache.invalidate_token(token)
+        icon = self._texture_cache.icon_for_cell(token)
+
+        if icon is None:
+            self._brush_preview.clear()
+            return
+
+        self._brush_preview.setPixmap(
+            icon.pixmap(self._texture_cache.qt_icon_size()),
+        )
 
     def _reset_picker_fields(self) -> None:
         self._active_entry = None
         self._picker_group.setEnabled(False)
         self._cell_group.setEnabled(False)
+        self._hanging_label.setVisible(False)
+        self._hanging_combo.setVisible(False)
         self._mode_label.setText("Select a palette block to paint, or enable Eraser.")
         self._title.setText("—")
         self._cell_preview.setText("—")
+        self._brush_preview.clear()
         self._cell_info.setText("No cell selected.")

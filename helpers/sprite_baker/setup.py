@@ -2,6 +2,7 @@ from helpers.sprite_baker.compose_bed import compose_bed_entry
 from helpers.sprite_baker.compose_chest import compose_chest_entry
 from helpers.sprite_baker.compose_door import compose_door_entry
 from helpers.sprite_baker.compose_fence import compose_fence_entry
+from helpers.sprite_baker.compose_lantern import compose_lantern_entry
 from helpers.sprite_baker.compose_log import compose_log_entry
 from helpers.sprite_baker.compose_simple import compose_simple_entry
 from helpers.sprite_baker.compose_slab import compose_slab_entry
@@ -21,3 +22,4 @@ def register_default_composers() -> None:
     register_composer("fence", compose_fence_entry)
     register_composer("log", compose_log_entry)
     register_composer("torch", compose_torch_entry)
+    register_composer("lantern", compose_lantern_entry)

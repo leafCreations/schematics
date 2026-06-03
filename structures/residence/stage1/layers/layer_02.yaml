@@ -2,15 +2,15 @@ index: 2
 group: Floor 1
 cells:
 - - LOG:oak
-  - minecraft:spruce_planks
-  - minecraft:spruce_planks
-  - minecraft:spruce_planks
-  - minecraft:spruce_planks
-  - minecraft:spruce_planks
-  - minecraft:spruce_planks
-  - minecraft:spruce_planks
+  - PLANKS:oak
+  - PLANKS:oak
+  - PLANKS:oak
+  - PLANKS:oak
+  - PLANKS:oak
+  - PLANKS:oak
+  - PLANKS:oak
   - LOG:oak
-- - minecraft:spruce_planks
+- - PLANKS:oak
   - .
   - .
   - .
@@ -18,8 +18,8 @@ cells:
   - .
   - .
   - .
-  - minecraft:spruce_planks
-- - minecraft:spruce_planks
+  - PLANKS:oak
+- - PLANKS:oak
   - .
   - .
   - .
@@ -27,8 +27,8 @@ cells:
   - .
   - .
   - .
-  - minecraft:spruce_planks
-- - minecraft:spruce_planks
+  - PLANKS:oak
+- - PLANKS:oak
   - TORCH@east#wall
   - .
   - .
@@ -36,7 +36,7 @@ cells:
   - .
   - .
   - TORCH@west#wall
-  - minecraft:spruce_planks
+  - PLANKS:oak
 - - FENCE:oak
   - .
   - .
@@ -46,7 +46,7 @@ cells:
   - .
   - .
   - FENCE:oak
-- - minecraft:spruce_planks
+- - PLANKS:oak
   - .
   - .
   - .
@@ -54,8 +54,8 @@ cells:
   - .
   - .
   - .
-  - minecraft:spruce_planks
-- - minecraft:spruce_planks
+  - PLANKS:oak
+- - PLANKS:oak
   - .
   - .
   - .
@@ -63,8 +63,8 @@ cells:
   - .
   - .
   - .
-  - minecraft:spruce_planks
-- - minecraft:spruce_planks
+  - PLANKS:oak
+- - PLANKS:oak
   - .
   - .
   - .
@@ -72,22 +72,22 @@ cells:
   - .
   - .
   - .
-  - minecraft:spruce_planks
+  - PLANKS:oak
 - - LOG:oak
-  - minecraft:spruce_planks
+  - PLANKS:oak
   - FENCE:oak
-  - minecraft:spruce_planks
+  - PLANKS:oak
   - DOOR:oak@north#upper
-  - minecraft:spruce_planks
+  - PLANKS:oak
   - FENCE:oak
-  - minecraft:spruce_planks
+  - PLANKS:oak
   - LOG:oak
 - - .
   - .
   - .
-  - minecraft:lantern
+  - COPPER_LANTERN#exposed
   - .
-  - minecraft:lantern
+  - LANTERN
   - .
   - .
   - .

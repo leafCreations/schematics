@@ -31,3 +31,79 @@ TORCH:
         soul: soul_torch.png
         wall: wall_torch.png
     inventory_image: torch.png
+
+LANTERN:
+  behavior: lantern
+  ui:
+    label: Lantern
+    palette: lighting
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+    variants:
+    - soul
+  defaults:
+    variant: normal
+  minecraft:
+    variants:
+      normal:
+        block: minecraft:lantern
+        blockstates:
+          hanging: '{hanging}'
+      soul:
+        block: minecraft:soul_lantern
+        blockstates:
+          hanging: '{hanging}'
+
+COPPER_LANTERN:
+  behavior: lantern
+  ui:
+    label: Copper Lantern
+    palette: lighting
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+    variants:
+    - exposed
+    - weathered
+    - oxidized
+    - waxed
+    - waxed_exposed
+    - waxed_weathered
+    - waxed_oxidized
+  defaults:
+    variant: normal
+  minecraft:
+    variants:
+      normal:
+        block: minecraft:copper_lantern
+        blockstates:
+          hanging: '{hanging}'
+      exposed:
+        block: minecraft:exposed_copper_lantern
+        blockstates:
+          hanging: '{hanging}'
+      weathered:
+        block: minecraft:weathered_copper_lantern
+        blockstates:
+          hanging: '{hanging}'
+      oxidized:
+        block: minecraft:oxidized_copper_lantern
+        blockstates:
+          hanging: '{hanging}'
+      waxed:
+        block: minecraft:waxed_copper_lantern
+        blockstates:
+          hanging: '{hanging}'
+      waxed_exposed:
+        block: minecraft:waxed_exposed_copper_lantern
+        blockstates:
+          hanging: '{hanging}'
+      waxed_weathered:
+        block: minecraft:waxed_weathered_copper_lantern
+        blockstates:
+          hanging: '{hanging}'
+      waxed_oxidized:
+        block: minecraft:waxed_oxidized_copper_lantern
+        blockstates:
+          hanging: '{hanging}'

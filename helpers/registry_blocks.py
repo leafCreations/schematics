@@ -58,7 +58,6 @@ def resolve_minecraft_blockstates(
 
     format_values = {
         **defaults,
-        **dict(parsed.states),
         "material": material,
         "color": color,
         "direction": direction,
@@ -68,6 +67,12 @@ def resolve_minecraft_blockstates(
         "type": parsed.variant or defaults.get("type"),
         "shape": parsed.variant or defaults.get("shape"),
     }
+
+    for state_key, state_value in parsed.states:
+        if isinstance(state_value, bool):
+            format_values[state_key] = "true" if state_value else "false"
+        else:
+            format_values[state_key] = str(state_value)
 
     if entry.get("behavior") == "log":
         orientation = resolve_log_orientation(parsed, entry)

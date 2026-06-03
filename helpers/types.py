@@ -64,6 +64,8 @@ class PathLayout(TypedDict):
     top_margin: int
     layers: list[int]
     panel_dim: int
+    panel_w: int
+    panel_h: int
     img_w: int
     img_h: int
 
@@ -122,10 +124,14 @@ class Cell(TypedDict):
 
 
 class GridConfig(TypedDict, total=False):
+    site_width: int
+    site_depth: int
     site_size: int
     offset_x: int
     offset_z: int
-    stair_local_x: int
+    placement: str
+    path_center_local_x: int
+    stair_local_x: int  # deprecated alias of path_center_local_x
     site_structure_layers: list[int]
     worldgen_base_y: int
 

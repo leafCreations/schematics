@@ -23,3 +23,4 @@ class SchematicContext:
     topdown_textures: MappedTextureImages | None = None
     sideview_textures: MappedTextureImages | None = None
     inventory_textures: MappedTextureImages = field(default_factory=dict)
+    site_ground: list[list[str]] | None = None

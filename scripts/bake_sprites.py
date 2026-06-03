@@ -19,6 +19,7 @@ from helpers.sprite_baker.compose_bed import compose_bed, list_bed_bake_keys
 from helpers.sprite_baker.compose_chest import compose_chest, list_chest_bake_keys
 from helpers.sprite_baker.compose_door import compose_door, list_door_bake_keys
 from helpers.sprite_baker.compose_fence import compose_fence, list_fence_bake_keys
+from helpers.sprite_baker.compose_lantern import compose_lantern, list_lantern_bake_keys
 from helpers.sprite_baker.compose_log import compose_log, list_log_bake_keys
 from helpers.sprite_baker.compose_simple import compose_simple, list_simple_bake_keys
 from helpers.sprite_baker.compose_slab import compose_slab, list_slab_bake_keys
@@ -43,13 +44,14 @@ def _parse_args() -> argparse.Namespace:
             "chest",
             "fence",
             "torch",
+            "lantern",
             "log",
             "demo",
         ],
         default="simple",
         help=(
             "Bake mode: simple solids, slabs, stairs, doors, beds, chests, "
-            "fences, torches, logs, or Phase 0 demo"
+            "fences, torches, lanterns, logs, or Phase 0 demo"
         ),
     )
     parser.add_argument(
@@ -111,12 +113,14 @@ def _resolve_keys(args: argparse.Namespace) -> list[str]:
             return list_fence_bake_keys(args.view, textures_dir=args.textures_dir)
         if args.type == "torch":
             return list_torch_bake_keys(args.view)
+        if args.type == "lantern":
+            return list_lantern_bake_keys(args.view)
         if args.type == "log":
             return list_log_bake_keys(args.view, textures_dir=args.textures_dir)
 
         raise SpriteBakeError(
             "--all is only supported with --type simple, slab, stairs, door, bed, "
-            "chest, fence, torch, or log"
+            "chest, fence, torch, lantern, or log"
         )
 
     if args.key:
@@ -198,6 +202,16 @@ def _bake_key(args: argparse.Namespace, key: str) -> Path:
 
         def bake_fn():
             return compose_torch(
+                key=key,
+                view=args.view,
+                size=args.size,
+                textures_dir=args.textures_dir,
+            )
+
+    elif args.type == "lantern":
+
+        def bake_fn():
+            return compose_lantern(
                 key=key,
                 view=args.view,
                 size=args.size,

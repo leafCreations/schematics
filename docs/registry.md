@@ -23,14 +23,14 @@ registries/
 
 Palettes reference semantic tokens and/or raw Minecraft block ids:
 
-```yaml
-# registries/palettes/terrain.yaml
-tokens:
-  - GRASS
-  - DIRT
-blocks:
-  - minecraft:stone
-  - minecraft:mossy_cobblestone
+```text
+registries/palettes/
+  terrain.yaml      # Dirt, grass, cobblestone, …
+  wood.yaml           # Log, planks
+  functional.yaml     # Furnace, crafting table, chest, door, bed
+  building.yaml       # Slab, fence, stairs
+  lighting.yaml       # Torch, lantern, soul lantern, copper lanterns (`hanging` blockstate)
+  …
 ```
 
 Structure layers can use either semantic tokens (`PLANKS:oak`) or catalog-backed cells (`minecraft:stone`). The latter synthesizes a solid behavior entry at lookup time.
@@ -95,7 +95,9 @@ For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture
 * `cell_token(entry, material)` — the structure-layer cell string to write for a selection
 * `format_entry_label(entry, material)` — catalog-resolved display label per material
 
-Structure layer cells reference registry tokens or `minecraft:` block ids. See [structure-tokens.md](structure-tokens.md) for the token string format.
+Editor usage: [ui.md](ui.md).
+
+Structure layer cells reference registry tokens or `minecraft:` block ids. See [structure-tokens.md](structure-tokens.md) for the token string format. The structure editor uses the same tokens when painting cells — see [ui.md](ui.md).
 
 ## Block catalog
 

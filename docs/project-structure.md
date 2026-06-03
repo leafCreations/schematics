@@ -17,6 +17,7 @@ helpers/
   pipeline.py           # Render name validation and normalization
   registry_blocks.py    # Shared Minecraft block ID / blockstate resolution
   registry_lookup.py    # Behavior + catalog block entry resolution
+  block_picker.py       # UI palette resolution and placement tokens
   structure_loader.py   # Structure config validation and context building
   structure_tokens.py   # Token parsing (material, direction, variant)
   types.py              # TypedDicts and type aliases
@@ -31,9 +32,11 @@ registries/
   validate.py            # Palette/behavior/catalog integrity checks
 
 ui/
-  document.py            # Layer YAML load/save for the editor
-  main_window.py         # PySide6 editor shell
-  widgets/               # Palette, grid, and properties panels
+  document.py           # Layer YAML load/save for the editor
+  main_window.py        # PySide6 editor shell (see ui.md)
+  platform.py           # Linux Qt preflight
+  texture_cache.py      # Grid icon cache
+  widgets/              # Palette, grid, and properties panels
 
 renderers/
   registry.py           # Render name → handler dispatch table

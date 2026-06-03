@@ -2,15 +2,15 @@ index: 3
 group: Floor 1
 cells:
 - - LOG:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
   - LOG:oak
-- - PLANKS:oak
+- - LOG:oak@north#north_south
   - .
   - .
   - .
@@ -18,8 +18,8 @@ cells:
   - .
   - .
   - .
-  - PLANKS:oak
-- - PLANKS:oak
+  - LOG:oak@north#north_south
+- - LOG:oak@north#north_south
   - .
   - .
   - .
@@ -27,8 +27,8 @@ cells:
   - .
   - .
   - .
-  - PLANKS:oak
-- - PLANKS:oak
+  - LOG:oak@north#north_south
+- - LOG:oak@north#north_south
   - .
   - .
   - .
@@ -36,8 +36,8 @@ cells:
   - .
   - .
   - .
-  - PLANKS:oak
-- - PLANKS:oak
+  - LOG:oak@north#north_south
+- - LOG:oak@north#north_south
   - .
   - .
   - .
@@ -45,8 +45,8 @@ cells:
   - .
   - .
   - .
-  - PLANKS:oak
-- - PLANKS:oak
+  - LOG:oak@north#north_south
+- - LOG:oak@north#north_south
   - .
   - .
   - .
@@ -54,8 +54,8 @@ cells:
   - .
   - .
   - .
-  - PLANKS:oak
-- - PLANKS:oak
+  - LOG:oak@north#north_south
+- - LOG:oak@north#north_south
   - .
   - .
   - .
@@ -63,8 +63,8 @@ cells:
   - .
   - .
   - .
-  - PLANKS:oak
-- - PLANKS:oak
+  - LOG:oak@north#north_south
+- - LOG:oak@north#north_south
   - .
   - .
   - .
@@ -72,22 +72,22 @@ cells:
   - .
   - .
   - .
-  - PLANKS:oak
+  - LOG:oak@north#north_south
 - - LOG:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
-  - PLANKS:oak
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
+  - LOG:oak@north#east_west
   - LOG:oak
 - - .
   - .
   - .
+  - SLAB:oak
   - .
-  - .
-  - .
+  - SLAB:oak
   - .
   - .
   - .

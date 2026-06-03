@@ -40,12 +40,29 @@ def test_validate_structure_config_accepts_minimal_config():
     assert len(validated["layers"]) == 1
 
 
-def test_validate_structure_config_rejects_missing_grid_key():
+def test_validate_structure_config_rejects_missing_site_dimensions():
     config = _minimal_config()
     del config["grid"]["site_size"]
 
-    with pytest.raises(ValueError, match="site_size"):
+    with pytest.raises(ValueError, match="site_width"):
         validate_structure_config(config)
+
+
+def test_validate_structure_config_accepts_rectangular_site():
+    config = _minimal_config(
+        grid={
+            "site_width": 20,
+            "site_depth": 10,
+            "offset_x": 1,
+            "offset_z": 2,
+            "site_structure_layers": [0],
+        }
+    )
+
+    validated = validate_structure_config(config)
+
+    assert validated["grid"]["site_width"] == 20
+    assert validated["grid"]["site_depth"] == 10
 
 
 def test_validate_structure_config_rejects_non_rectangular_layer():

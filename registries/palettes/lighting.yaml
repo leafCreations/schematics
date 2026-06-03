@@ -1,6 +1,5 @@
 label: Lighting
 tokens:
 - TORCH
-blocks:
-- minecraft:lantern
-- minecraft:soul_lantern
+- LANTERN
+- COPPER_LANTERN

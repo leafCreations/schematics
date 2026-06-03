@@ -3,7 +3,7 @@ SLAB:
   material_default: oak
   ui:
     label: '{material} Slab'
-    palette: blocks
+    palette: building
     requires_material: true
     requires_direction: false
     requires_variant: false
@@ -23,7 +23,7 @@ FENCE:
   material_default: oak
   ui:
     label: '{material} Fence'
-    palette: fence
+    palette: building
     requires_material: true
     requires_direction: true
     requires_variant: false
@@ -53,7 +53,7 @@ STAIRS:
   material_default: oak
   ui:
     label: '{material} Stairs'
-    palette: stairs
+    palette: building
     requires_material: true
     requires_direction: true
     requires_variant: false

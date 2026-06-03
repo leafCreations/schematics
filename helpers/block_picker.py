@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from helpers.block_catalog import catalog_display_name, load_block_catalog, normalize_block_id
+from helpers.registry_lookup import is_minecraft_block_token, minecraft_block_id
+from helpers.structure_tokens import BlockStates, format_block_states, parse_structure_token
 from registries.loader import BLOCK_PALETTES, BLOCK_REGISTRY
 
 _PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
@@ -104,6 +106,23 @@ def enumerate_token_materials(
     return tuple(sorted(materials))
 
 
+def _resolve_list_label(token: str, entry: dict[str, Any]) -> str:
+    """Short palette list label without material/color (chosen in the paint brush)."""
+    ui = entry.get("ui", {})
+    label_template = ui.get("label", "")
+
+    if _PLACEHOLDER_RE.search(label_template):
+        stripped = _PLACEHOLDER_RE.sub("", label_template).strip()
+
+        if stripped:
+            return stripped
+
+    if label_template and "{" not in label_template:
+        return label_template
+
+    return token.replace("_", " ").title()
+
+
 def _resolve_label(entry: dict[str, Any], material: str | None) -> str:
     ui = entry.get("ui", {})
     label_template = ui.get("label", "")
@@ -149,7 +168,7 @@ def picker_entry_for_token(
 
     return PickerEntry(
         token=token,
-        label=_resolve_label(entry, material_default if requires_material else None),
+        label=_resolve_list_label(token, entry),
         behavior=entry.get("behavior", "solid"),
         palette=ui.get("palette", ""),
         block_template=block_template,
@@ -161,6 +180,31 @@ def picker_entry_for_token(
         variants=tuple(ui.get("variants", []) or ()),
         materials=materials,
     )
+
+
+def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
+    """Return the palette entry that matches a structure-layer cell token."""
+    parsed = parse_structure_token(raw_token)
+
+    if parsed is None:
+        return None
+
+    if is_minecraft_block_token(parsed):
+        block_id = minecraft_block_id(parsed)
+
+        for palette in list_palettes():
+            for entry in palette.entries:
+                if entry.token == block_id:
+                    return entry
+
+        return picker_entry_for_block_id(block_id)
+
+    for palette in list_palettes():
+        for entry in palette.entries:
+            if not entry.is_catalog_block and entry.token == parsed.token:
+                return entry
+
+    return picker_entry_for_token(parsed.token)
 
 
 def picker_entry_for_block_id(
@@ -188,6 +232,7 @@ def cell_token(
     *,
     direction: str | None = None,
     variant: str | None = None,
+    states: BlockStates | None = None,
 ) -> str:
     """Return the structure-layer cell string for a picker selection."""
     if entry.is_catalog_block:
@@ -206,6 +251,9 @@ def cell_token(
 
     if variant:
         token = f"{token}#{variant}"
+
+    if states:
+        token = f"{token};{format_block_states(states)}"
 
     return token
 

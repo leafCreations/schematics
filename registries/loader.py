@@ -384,6 +384,7 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     from helpers.sprite_baker.compose_chest import list_chest_bake_keys
     from helpers.sprite_baker.compose_door import list_door_bake_keys
     from helpers.sprite_baker.compose_fence import list_fence_bake_keys
+    from helpers.sprite_baker.compose_lantern import list_lantern_bake_keys
     from helpers.sprite_baker.compose_log import list_log_bake_keys
     from helpers.sprite_baker.compose_simple import list_planks_bake_keys
     from helpers.sprite_baker.compose_slab import list_slab_bake_keys
@@ -399,6 +400,7 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     keys.update(list_slab_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_stairs_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_torch_bake_keys(texture_type))
+    keys.update(list_lantern_bake_keys(texture_type))
 
     return keys
 
@@ -423,9 +425,9 @@ def _load_token_texture(
     if generated is not None:
         return generated
 
-    # Only bake keys the registry maps for rendering. Extra generated_keys exist so
-    # pre-baked CLI output is picked up from disk without baking every variant here.
-    if token in generated_keys and token in mapping:
+    # Bake procedurally composed sprites for registry keys (including variant keys
+    # listed by _generated_bake_keys() that are not in the flat texture mapping).
+    if token in generated_keys:
         from helpers.sprite_baker.runtime_bake import try_runtime_bake_sprite
 
         baked = try_runtime_bake_sprite(

@@ -8,6 +8,7 @@ from amulet.level.formats.anvil_world import AnvilFormat
 from helpers.context import SchematicContext
 from helpers.fence_adjacency import resolve_fence_adjacency
 from helpers.grid import get_worldgen_base_y
+from helpers.lantern_placement import resolve_lantern_worldgen
 from helpers.registry_blocks import (
     get_block_behavior,
     resolve_minecraft_block_id,
@@ -21,7 +22,8 @@ BLOCK_CACHE: dict[ParsedToken, Block] = {}
 
 def resolve_worldgen_token(
     parsed: ParsedToken,
-    cells: list[list[str]],
+    ctx: SchematicContext,
+    layer_array_index: int,
     x: int,
     z: int,
 ) -> ParsedToken:
@@ -31,7 +33,11 @@ def resolve_worldgen_token(
         raise ValueError(f"Unknown block token: {registry_lookup_token(parsed)}")
 
     if get_block_behavior(entry) == "fence":
+        cells = ctx.layers[layer_array_index]["cells"]
         return resolve_fence_adjacency(parsed, cells, x, z)
+
+    if get_block_behavior(entry) == "lantern":
+        return resolve_lantern_worldgen(parsed, ctx, layer_array_index, x, z)
 
     return parsed
 
@@ -92,7 +98,7 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
     current_chunk = None
     last_coords = None
 
-    for layer in ctx.layers:
+    for layer_array_index, layer in enumerate(ctx.layers):
         actual_y = base_y + layer["index"]
 
         for z_idx, row in enumerate(layer["cells"]):
@@ -124,7 +130,13 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
 
                     last_coords = chunk_coords
 
-                resolved = resolve_worldgen_token(parsed, layer["cells"], x_idx, z_idx)
+                resolved = resolve_worldgen_token(
+                    parsed,
+                    ctx,
+                    layer_array_index,
+                    x_idx,
+                    z_idx,
+                )
                 block_to_place = generate_block(resolved)
 
                 current_chunk.set_block(

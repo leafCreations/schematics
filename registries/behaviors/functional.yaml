@@ -2,7 +2,7 @@ FURNACE:
   behavior: facing_block
   ui:
     label: Furnace
-    palette: furnace
+    palette: functional
     requires_material: false
     requires_direction: true
     requires_variant: false
@@ -21,7 +21,7 @@ CRAFTING_TABLE:
   behavior: solid
   ui:
     label: Crafting Table
-    palette: crafting
+    palette: functional
     requires_material: false
     requires_direction: false
     requires_variant: false
@@ -36,10 +36,13 @@ DOOR:
   material_default: oak
   ui:
     label: '{material} Door'
-    palette: doors
+    palette: functional
     requires_material: true
     requires_direction: true
     requires_variant: false
+    variants:
+    - lower
+    - upper
   defaults:
     direction: north
     half: lower
@@ -61,10 +64,13 @@ BED:
   color_default: red
   ui:
     label: '{color} Bed'
-    palette: beds
+    palette: functional
     requires_material: true
     requires_direction: true
     requires_variant: false
+    variants:
+    - head
+    - foot
   defaults:
     direction: north
     part: head
@@ -85,7 +91,7 @@ CHEST:
   material_default: oak
   ui:
     label: Chest
-    palette: chests
+    palette: functional
     requires_material: false
     requires_direction: true
     requires_variant: false

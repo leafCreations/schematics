@@ -1,0 +1,279 @@
+# Structure Editor (UI)
+
+PySide6 desktop editor for structure layer YAML. Browse and edit `structures/{structure}/stage{N}/layers/*.yaml` with registry-driven block palettes, Minecraft texture previews in the grid, and per-layer save.
+
+The editor shares the same token grammar, registry, and texture pipeline as the blueprint renderers. See [structure-tokens.md](structure-tokens.md) and [registry.md](registry.md) for token and palette details.
+
+## Install
+
+Requires **Python 3.11+** and the optional `[ui]` extra:
+
+```bash
+pip install -e ".[dev,ui]"
+```
+
+Block textures must exist under `assets/textures/block/` (same as rendering). Generated sprites under `assets/generated/` improve stairs, fences, doors, and similar blocks — see [sprite-baker.md](sprite-baker.md).
+
+## Launch
+
+```bash
+python -m ui --structure residence --stage 1
+```
+
+| Flag | Default | Meaning |
+| ---- | ------- | ------- |
+| `--structure` | `residence` | Structure package under `structures/` |
+| `--stage` | `1` | Stage number |
+
+Equivalent entry points:
+
+```bash
+python -m ui.main_window --structure residence --stage 1
+```
+
+## Window layout
+
+Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview and placement), and **Render** (generate blueprint outputs).
+
+### Structure tab
+
+```text
+┌─────────────┬──────────────────────────────┬──────────────┐
+│  Category ▼ │  Layer ▼  [Eraser] [Save *]  │  Properties  │
+│  Blocks     │  ┌────────────────────────┐  │  Paint brush │
+│  (list)     │  │  Structure grid        │  │  Grid cell   │
+│             │  └────────────────────────┘  │  Materials   │
+└─────────────┴──────────────────────────────┴──────────────┘
+```
+
+| Area | Role |
+| ---- | ---- |
+| **Palettes** (left) | Category dropdown plus block list from `registries/palettes/*.yaml` |
+| **Structure grid** (center) | Current layer `cells` — paint and erase; use **Structure size** to grow (pad with `.`) or shrink (trim east/south) |
+| **Properties** (right) | Brush options (material, direction, variant) and inspector for the selected cell |
+| **Materials** (right) | Live inventory; **Current layer** (default) or **All layers** from the scope dropdown — same grouping as the materials render; updates when you paint, erase, or switch layers |
+| **Structure size** (left) | Set width (x) and depth (z), then **Resize grid** — applies to every layer; cannot exceed site dimensions; **Show block tooltips on hover** (same editor preference as Site tab) |
+| **Layer** dropdown | Switch between `layer_files` listed in `structure.yaml` |
+| **Eraser** | Toggle erase mode (left-click clears cells) |
+| **Save Layer** | Write the current layer back to its YAML file |
+
+### Site tab
+
+```text
+┌────────────────────────────────────┬──────────────────┐
+│  Site preview: …     [Save Site *] │  Site width/depth│
+│  ┌────────────────────────────┐  │  Placement 3×3   │
+│  │  Full site grid (read-only) │  │  Offset summary  │
+│  │  structure at offset        │  │                  │
+│  └────────────────────────────┘  │                  │
+└────────────────────────────────────┴──────────────────┘
+```
+
+| Area | Role |
+| ---- | ---- |
+| **Site grid** (center) | `site_width` × `site_depth` preview; structure layer shown at `offset_x` / `offset_z` (faded green = open site; white = structure blocks); path **fence/torch** on long **trim block** runs (≥8 contiguous trim cells; first post at +10 along the run, then every 7) |
+| **Site settings** (right) | `site_width`, `site_depth`, nine placement anchors, derived offsets; **Show block tooltips on hover** (shared with Structure tab, persisted locally) |
+| **Nudge placement** (right) | Arrow buttons; same as keyboard arrows when structure is selected |
+| **Site preview** | First layer in `grid.site_structure_layers` (same layer path/site renders use for the ground floor) |
+| **Save Site Settings** | Write `structure.yaml` grid fields and `site_ground` |
+| **Path brush** (right) | **Path width** (default 3, odd); **Orientation** (row or column strip centered on the click); **Trim block** (default GRAVEL); **Path variety** checkboxes; **Path brush** / **Eraser** / **Clear all paths**; repainting an existing path updates only that strip, not the whole path leg |
+
+**Precise placement:** click any block in the structure footprint on the site grid (highlighted), then use **arrow keys** or **↑↓←→** nudge buttons to move it one block at a time. Offsets update live; anchor presets stay in sync when close.
+
+### Render tab
+
+| Control | Role |
+| ------- | ---- |
+| **Render types** | Checkboxes for each renderer in `render_main.py` (top view, roof, facades, path, materials, worldgen) |
+| **All render types** | Same as `renders all` on the CLI |
+| **Generate Renders** | Runs the pipeline in a background thread; status bar shows progress |
+| **Open schematic output folder** | Opens `output/schematics/{output_folder}/` in the file manager |
+
+Renders always load from **saved** YAML on disk. If you have unsaved layers or site settings, the editor prompts to save before generating (or you can render the last saved version).
+
+Worldgen is only available when `amulet` is installed; see [worldgen.md](worldgen.md).
+
+## Editing workflow
+
+### Paint a block
+
+1. Choose a **Category** in the dropdown (Terrain, Wood, Functional, Building, …).
+2. Pick a block in the list below.
+2. Set **Material**, **Direction**, or **Variant** in the properties panel when the token requires them.
+3. Confirm the **Cell token** preview (e.g. `STAIRS:oak@north#outer_left`).
+4. **Left-click** a grid cell to place that token (or select a cell already placed with the same token type).
+
+**Middle-click** a non-empty cell to select that block in the palette and load its material, variant, direction, and hanging options into the paint brush (also selects the cell for the grid-cell panel).
+
+Changing **Material**, **Direction**, **Part**, or **Variant** updates the selected cell immediately — you do not need to click the cell again.
+
+Placement strings are built by `helpers/block_picker.py` → `cell_token()`, matching the grammar in [structure-tokens.md](structure-tokens.md).
+
+### Erase
+
+**Structure tab**
+
+- **Right-click** any cell → sets `.` (empty).
+- Or enable **Eraser** and **left-click** to clear.
+
+**Site tab (paths)**
+
+- **Right-click** an open site cell → clears every path/trim cell on that **row** (horizontal orientation) or **column** (vertical orientation). Fence/torch overlays disappear when no trim remains on the site.
+- Enable **Eraser** in the path panel and **left-click** → same row/column erase as right-click.
+- **Clear all paths** removes every painted path/trim cell on the site (confirmation dialog). Undo applies to all of the above.
+
+### Site placement
+
+Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not layer files):
+
+- **Site width (x)** and **Site depth (z)** — rectangular footprint for path view, site facades, and worldgen (e.g. 20×10). Legacy YAML may still use `site_size: 30` for a 30×30 square.
+- **Placement** — nine anchors (top/middle/bottom × left/center/right). **Center** is the default; offsets are computed from structure and site dimensions and written as `offset_x` / `offset_z` (and `placement` when saved).
+- Read-only summary shows structure size (from layer cells) and the resulting offset.
+
+### Save
+
+- **Save Layer** writes only the active layer file (e.g. `layers/layer_00.yaml`).
+- **Save Site Settings** writes `structure.yaml` grid fields (`site_width`, `site_depth`, `placement`, `offset_x`, `offset_z`).
+- Unsaved layers or site settings show `*` in the window title and on the matching button.
+- Switching layers or quitting with unsaved changes prompts **Save / Discard / Cancel**.
+
+### Undo and redo
+
+**Edit → Undo** (`Ctrl+Z`) and **Edit → Redo** (`Ctrl+Shift+Z` / `Ctrl+Y`) apply to:
+
+* **Paint and erase** on the structure grid (one step per cell change, current layer and site preview stay in sync)
+* Structure grid **resize** (all layers)
+* **Site** width, depth, and placement anchor
+* Structure **nudge** on the site preview (offsets)
+* **Path brush**, path **erase**, and **clear all paths** on the site ground layer
+
+### Generate renders
+
+**From the editor:** open the **Render** tab, choose render types, and click **Generate Renders**. Save layers and site settings first so disk matches your edits.
+
+**From the CLI** (same pipeline):
+
+```bash
+python render_main.py --structure residence --stage 1
+```
+
+See [render-types.md](render-types.md) for individual render types and output paths.
+
+## Palette and brush behavior
+
+Palettes are loaded via `list_palettes()` in `helpers/block_picker.py`. The block list shows a short type name (e.g. **Planks**, **Log**); material and color are chosen in the paint brush, not in the list label.
+
+* **Semantic tokens** (`PLANKS`, `STAIRS`, …) — behavior + `ui:` metadata from `registries/behaviors/`
+* **Catalog blocks** (`minecraft:stone`, …) — display names and textures from `registries/generated/catalog.json`
+
+| Brush field | When shown | Example |
+| ----------- | ---------- | ------- |
+| Material | `requires_material: true` | `PLANKS` → `oak`, `spruce`, … (from catalog) |
+| Direction | `requires_direction: true` | `@north`, `@south`, … |
+| Variant | `ui.variants` non-empty | `#mossy` on `COBBLESTONE`; stair shapes on `STAIRS` |
+| Part | `BED` (`head` / `foot`) | `BED:blue@north#head`, `BED:blue@north#foot` |
+| Half | `DOOR` (`lower` / `upper`) | `DOOR:oak@north#lower`, `DOOR:oak@north#upper` |
+| Hanging | `LANTERN` | **Auto** (worldgen: `true` if layer above has a block); **Hanging** → `;hanging=true`; **Standing** → `;hanging=false` |
+| (default) variant | First combo item on other tokens | Omits `#variant` (e.g. plain `COBBLESTONE`) |
+
+Integrity checks for palette ↔ registry ↔ catalog references: `registries/validate.py` (`validate_palettes()`).
+
+## Grid textures
+
+The grid does not use text labels for placed blocks. Each cell icon is resolved by:
+
+1. `GridTextureCache` — compiles the registry top-view texture set (same as schematics).
+2. `resolve_cell_texture()` in `helpers/utils_schematics.py` — token → image, including fence adjacency and catalog fallback for `minecraft:` cells.
+
+Fence icons refresh on neighboring cells when you paint or erase adjacent blocks.
+
+## Files touched by the editor
+
+```text
+structures/residence/stage1/
+  structure.yaml          # metadata + layer_files list (read-only in UI today)
+  layers/
+    layer_00.yaml           # index, group, cells — edited and saved per layer
+    layer_01.yaml
+    ...
+```
+
+Layer YAML shape:
+
+```yaml
+index: 0
+group: Floor 1
+cells:
+  - - COBBLESTONE
+    - PLANKS:oak
+    - .
+```
+
+The editor loads `structure.yaml`, resolves `layer_files` paths, and keeps layers in memory until **Save Layer** flushes the active layer to disk.
+
+## Package layout
+
+```text
+ui/
+  __main__.py           # CLI: python -m ui
+  main_window.py        # MainWindow, dirty tracking, save prompts
+  document.py           # StructureDocument load/save
+  platform.py           # Linux Qt library preflight
+  texture_cache.py      # PIL → QIcon, compile_texture_set cache
+  widgets/
+    palette_panel.py    # Category dropdown + block list
+    grid.py             # Structure layer grid (paint/erase)
+    structure_size_panel.py  # Footprint width/depth + resize
+    site_grid.py        # Scaled read-only site footprint preview
+    render_panel.py     # Render type checkboxes and generate action
+  site_cells.py         # Site ↔ structure coordinate mapping
+  render_worker.py      # Background QThread render jobs
+    materials_panel.py  # Live all-layer materials table
+    properties_panel.py # Brush + cell inspector
+  editor_materials.py # Shared inventory context for the UI
+  materials_icons.py    # Inventory icon cache for the materials table
+```
+
+Shared helpers (not under `ui/`):
+
+| Module | Role |
+| ------ | ---- |
+| `helpers/block_picker.py` | Palette resolution, `cell_token()`, material enumeration |
+| `helpers/registry_lookup.py` | `get_block_entry()`, catalog solid entries |
+| `helpers/structure_loader.py` | Same structure paths as `render_main.py` |
+| `registries/validate.py` | Palette integrity tests |
+
+## Linux troubleshooting
+
+PySide6 needs system libraries pip does not install. If startup fails with `Could not load the Qt platform plugin "xcb"`:
+
+```bash
+sudo apt install libxcb-cursor0
+```
+
+On Wayland:
+
+```bash
+QT_QPA_PLATFORM=wayland python -m ui --structure residence --stage 1
+```
+
+The editor runs `ui/platform.py` preflight on Linux and prints install hints when libraries are missing. Install notes: [development.md](development.md).
+
+## Current scope and roadmap
+
+**Implemented (UI-0 / UI-1):**
+
+* Palette browser and layer grid with texture icons
+* Paint / erase / per-layer save with unsaved indicators
+* Direction, material, and variant in placed tokens
+* **Render** tab — generate schematics/worldgen from the editor (background job)
+* Live **Materials** list on the Structure tab (current layer or all layers)
+* Undo/redo for paint/erase, structure resize, site grid, and placement nudge
+
+**Not yet:**
+
+* Live render preview pane (embedded thumbnails in the editor)
+* Copy/paste, fill tools
+* New structure / stage wizard
+
+See [roadmap.md](roadmap.md) for longer-term plans.

@@ -34,9 +34,9 @@ from registries.loader import resolve_registry_texture_filename
 
 GENERATED_ICON_PREFIX = "generated:"
 BAKEABLE_INVENTORY_BEHAVIORS = frozenset(
-    {"slab", "stairs", "bed", "chest", "fence", "torch", "log", "door"}
+    {"slab", "stairs", "bed", "chest", "fence", "torch", "lantern", "log", "door"}
 )
-INVENTORY_VIEW_BEHAVIORS = frozenset({"bed", "fence", "torch", "stairs", "door"})
+INVENTORY_VIEW_BEHAVIORS = frozenset({"bed", "fence", "torch", "lantern", "stairs", "door"})
 
 
 def resolve_texture_path(ctx: SchematicContext, texture_name: str) -> Path:
@@ -125,7 +125,7 @@ def resolve_material_sprite_key(parsed: ParsedToken, ctx: SchematicContext) -> s
         material = parsed.material or entry.get("material_default")
         if material:
             key = f"{key}:{material}"
-    elif behavior == "torch":
+    elif behavior in {"torch", "lantern"}:
         variant = parsed.variant or entry.get("defaults", {}).get("variant", "normal")
         if variant and variant != "normal":
             key = f"{key}#{variant}"
@@ -270,6 +270,19 @@ def resolve_material_inventory_icon(parsed: ParsedToken, ctx: SchematicContext) 
             return f"{GENERATED_ICON_PREFIX}{sprite_key}"
 
     return resolve_material_texture_name(parsed, ctx)
+
+
+def collect_raw_tokens_from_layers(layers: list[dict]) -> list[RawToken]:
+    """Flatten non-empty cells from all layer grids (editor and previews)."""
+    tokens: list[RawToken] = []
+
+    for layer in layers:
+        for row in layer.get("cells", []):
+            for raw_cell in row:
+                if raw_cell and raw_cell != ".":
+                    tokens.append(raw_cell)
+
+    return tokens
 
 
 def collect_material_tokens(ctx: SchematicContext) -> ParsedTokenMaterialsList:

@@ -49,7 +49,9 @@ class GridTextureCache:
         if raw_token == ".":
             return None
 
-        cache_key = (raw_token, row if row is not None else -1, col if col is not None else -1)
+        cache_row = row if row is not None else -1
+        cache_col = col if col is not None else -1
+        cache_key = (raw_token, cache_row, cache_col)
 
         if cache_key in self._icon_cache:
             return self._icon_cache[cache_key]
@@ -71,8 +73,27 @@ class GridTextureCache:
         self._icon_cache[cache_key] = icon
         return icon
 
+    def set_icon_size(self, icon_size: int) -> None:
+        if icon_size == self.icon_size:
+            return
+
+        self.icon_size = icon_size
+        self.clear_cache()
+
     def qt_icon_size(self) -> QSize:
         return QSize(self.icon_size, self.icon_size)
 
     def clear_cache(self) -> None:
         self._icon_cache.clear()
+
+    def invalidate_cell(self, row: int, col: int) -> None:
+        """Drop cached icons for a grid cell so token/variant changes repaint."""
+        self._icon_cache = {
+            key: icon for key, icon in self._icon_cache.items() if key[1] != row or key[2] != col
+        }
+
+    def invalidate_token(self, raw_token: str) -> None:
+        """Drop cached icons for a token (all cells plus brush preview slot)."""
+        self._icon_cache = {
+            key: icon for key, icon in self._icon_cache.items() if key[0] != raw_token
+        }

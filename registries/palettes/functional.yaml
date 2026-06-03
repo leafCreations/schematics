@@ -1,0 +1,11 @@
+label: Functional
+tokens:
+- FURNACE
+- CRAFTING_TABLE
+- CHEST
+- DOOR
+- BED
+blocks:
+- minecraft:blast_furnace
+- minecraft:smoker
+- minecraft:trapped_chest

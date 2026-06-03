@@ -50,7 +50,7 @@ Outputs go to `output/schematics/{output_folder}/`.
 | [docs/development.md](docs/development.md) | Venv, dependencies, Ruff, pre-commit, pytest |
 | [docs/project-structure.md](docs/project-structure.md) | Repository layout |
 | [docs/registry.md](docs/registry.md) | Behavior registry, palettes, and texture loading |
-| [docs/structure-tokens.md](docs/structure-tokens.md) | Cell token syntax (`:material`, `@direction`, `#variant`) |
+| [docs/ui.md](docs/ui.md) | Desktop structure editor (PySide6) |
 | [docs/sprite-baker.md](docs/sprite-baker.md) | Baking `assets/generated/` sprites |
 | [docs/render-types.md](docs/render-types.md) | Renderers, examples, output paths |
 | [docs/worldgen.md](docs/worldgen.md) | Template world and Amulet export |
@@ -60,6 +60,7 @@ Outputs go to `output/schematics/{output_folder}/`.
 ## Features
 
 * Registry-driven block rendering (`registries/behaviors/`, `registries/palettes/`)
+* PySide6 structure editor for layer YAML ([docs/ui.md](docs/ui.md))
 * Procedural sprite baker with cached generated textures
 * Top and side schematic views with per-panel material inventory
 * Multi-render pipeline with selective execution

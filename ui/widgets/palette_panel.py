@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QLabel, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
-from helpers.block_picker import PickerEntry, list_palettes
+from helpers.block_picker import PickerEntry, PickerPalette, list_palettes
 
 _ENTRY_ROLE = 256
 
@@ -13,24 +13,51 @@ class PalettePanel(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self._tabs = QTabWidget(self)
-        self._lists: dict[str, QListWidget] = {}
+        self._palettes: list[PickerPalette] = list_palettes()
+        self._palettes_by_name = {palette.name: palette for palette in self._palettes}
+
+        self._category_label = QLabel("Category")
+        self._category_combo = QComboBox()
+        self._blocks_label = QLabel("Blocks")
+        self._block_list = QListWidget()
+        self._block_list.currentItemChanged.connect(self._on_item_changed)
+
+        for palette in self._palettes:
+            self._category_combo.addItem(palette.label, palette.name)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._tabs)
+        layout.addWidget(self._category_label)
+        layout.addWidget(self._category_combo)
+        layout.addWidget(self._blocks_label)
+        layout.addWidget(self._block_list, stretch=1)
 
-        for palette in list_palettes():
-            list_widget = QListWidget(self._tabs)
-            list_widget.currentItemChanged.connect(self._on_item_changed)
+        self._category_combo.currentIndexChanged.connect(self._on_category_changed)
 
+        if self._palettes:
+            self._populate_block_list(self._palettes[0].name)
+
+    def _on_category_changed(self, _index: int) -> None:
+        palette_name = self._category_combo.currentData()
+
+        if isinstance(palette_name, str):
+            self._populate_block_list(palette_name)
+
+    def _populate_block_list(self, palette_name: str) -> None:
+        palette = self._palettes_by_name.get(palette_name)
+
+        self._block_list.blockSignals(True)
+        self._block_list.clear()
+
+        if palette is not None:
             for entry in palette.entries:
                 item = QListWidgetItem(entry.label)
                 item.setData(_ENTRY_ROLE, entry)
-                list_widget.addItem(item)
+                self._block_list.addItem(item)
 
-            self._lists[palette.name] = list_widget
-            self._tabs.addTab(list_widget, palette.label)
+        self._block_list.clearSelection()
+        self._block_list.setCurrentRow(-1)
+        self._block_list.blockSignals(False)
 
     def _on_item_changed(
         self,
@@ -46,22 +73,24 @@ class PalettePanel(QWidget):
             self.entry_selected.emit(entry)
 
     def select_entry(self, entry: PickerEntry) -> None:
-        list_widget = self._lists.get(entry.palette)
+        palette_index = self._category_combo.findData(entry.palette)
 
-        if list_widget is None:
+        if palette_index < 0:
             return
 
-        for row in range(list_widget.count()):
-            item = list_widget.item(row)
+        if self._category_combo.currentIndex() != palette_index:
+            self._category_combo.setCurrentIndex(palette_index)
+        else:
+            self._populate_block_list(entry.palette)
+
+        for row in range(self._block_list.count()):
+            item = self._block_list.item(row)
             candidate = item.data(_ENTRY_ROLE)
 
             if candidate == entry:
-                list_widget.setCurrentItem(item)
+                self._block_list.setCurrentItem(item)
                 return
 
     def clear_selection(self) -> None:
-        current = self._tabs.currentWidget()
-
-        if isinstance(current, QListWidget):
-            current.clearSelection()
-            current.setCurrentRow(-1)
+        self._block_list.clearSelection()
+        self._block_list.setCurrentRow(-1)

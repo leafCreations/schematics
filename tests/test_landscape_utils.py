@@ -1,4 +1,5 @@
 from helpers import landscape_utils
+from helpers.path_strip import TRIM_BLOCK
 
 
 def test_resolve_path_view_cell_ground_layer():
@@ -39,3 +40,57 @@ def test_resolve_path_view_cell_ghosts_base_when_no_overlay():
 
     assert cell["active_token"] == "GRASS"
     assert cell["is_ghost"] is True
+
+
+def test_generate_full_3d_landscape_uses_ctx_site_ground(ctx):
+    """Path render pipeline (path_view → generate_full_3d_landscape_sitemap) reads editor ground."""
+    site_width = 30
+    site_depth = 30
+    custom = [["GRASS" for _ in range(site_width)] for _ in range(site_depth)]
+    custom[12][9] = "DIRT_PATH"
+    custom[12][10] = TRIM_BLOCK
+
+    ctx.site_ground = custom
+    site_map = landscape_utils.generate_full_3d_landscape_sitemap(ctx)
+
+    assert site_map[-1][12][9] == "DIRT_PATH"
+    assert site_map[-1][12][10] == TRIM_BLOCK
+    assert site_map[-1][0][0] == "GRASS"
+
+
+def test_generate_full_3d_landscape_vertical_path_lighting(ctx):
+    """Column-painted paths place fences on east/west trim, spaced along z."""
+    site_width = 12
+    site_depth = 30
+    custom = [["GRASS" for _ in range(site_width)] for _ in range(site_depth)]
+
+    for site_z in range(10, 26):
+        custom[site_z][2] = "GRAVEL"
+        custom[site_z][3] = "DIRT_PATH"
+        custom[site_z][4] = "DIRT_PATH"
+        custom[site_z][5] = "DIRT_PATH"
+        custom[site_z][6] = "GRAVEL"
+
+    ctx.grid["path_orientation"] = "vertical"
+    ctx.grid["site_width"] = site_width
+    ctx.grid["site_depth"] = site_depth
+    ctx.grid["offset_x"] = 0
+    ctx.grid["offset_z"] = 0
+    ctx.site_ground = custom
+    site_map = landscape_utils.generate_full_3d_landscape_sitemap(ctx)
+
+    assert site_map[0][20][2] == "FENCE"
+    assert site_map[1][20][2] == "TORCH"
+    assert site_map[0][20][6] == "FENCE"
+    assert site_map[-1][15][4] == "DIRT_PATH"
+    assert site_map[0][15][2] == "."
+
+
+def test_generate_full_3d_landscape_auto_path_when_site_ground_missing(ctx):
+    ctx.grid["path_orientation"] = "vertical"
+    ctx.site_ground = None
+    site_map = landscape_utils.generate_full_3d_landscape_sitemap(ctx)
+
+    # Auto path below structure footprint (path_start_z=7, center x=11).
+    assert site_map[-1][10][11] not in ("GRASS", ".")
+    assert site_map[-1][6][11] == "GRASS"

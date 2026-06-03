@@ -20,6 +20,8 @@ _VISIBLE_FACES = {
     "south": ["south", "up", "down", "east", "west"],
     "up": ["up"],
     "down": ["down"],
+    # Top-down orthographic view (lantern cage + cap); chain added separately in compose_lantern.
+    "hanging_top": ["up", "north", "south", "east", "west"],
 }
 
 
@@ -198,6 +200,27 @@ def _render_model(
                 crop = crop.rotate(-face_rotation, expand=True)
 
             canvas.alpha_composite(crop, (paste_x, paste_y))
+
+
+def alpha_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:
+    """Return (min_x, min_y, max_x, max_y) for non-transparent pixels."""
+    pixels = image.load()
+    width, height = image.size
+    min_x, min_y = width, height
+    max_x = max_y = -1
+
+    for y in range(height):
+        for x in range(width):
+            if pixels[x, y][3]:
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x)
+                max_y = max(max_y, y)
+
+    if max_x < 0:
+        return None
+
+    return min_x, min_y, max_x, max_y
 
 
 def render_block_model(

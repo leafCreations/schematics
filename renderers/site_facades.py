@@ -23,8 +23,8 @@ def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
     view_keys = ["N", "S", "W", "E"]
     layer_keys = [-1, 0, 1]
 
-    site_size = grid_utils.get_site_size(ctx)
-    panel_w = site_size * block_px
+    site_width = grid_utils.get_site_width(ctx)
+    panel_w = site_width * block_px
 
     img_w = (panel_w * len(view_keys)) + (padding * (len(view_keys) + 1))
     img_h = top_margin + 50 + (len(layer_keys) * block_px) + 60
@@ -56,7 +56,8 @@ def _draw_site_facades_title(draw, layout: SiteFacadeLayout):
 
 
 def _collect_site_elevations(ctx: SchematicContext, siteMap: SiteMap) -> FacadeElevations:
-    site_size = grid_utils.get_site_size(ctx)
+    site_width = grid_utils.get_site_width(ctx)
+    site_depth = grid_utils.get_site_depth(ctx)
     layer_keys = [-1, 0, 1]
 
     def get_token(layer_y: int, x: int, z: int) -> Token:
@@ -64,8 +65,8 @@ def _collect_site_elevations(ctx: SchematicContext, siteMap: SiteMap) -> FacadeE
 
     return facade_projection.collect_facade_elevations(
         layer_keys,
-        site_size,
-        site_size,
+        site_width,
+        site_depth,
         get_token,
     )
 
@@ -107,13 +108,13 @@ def _draw_site_facade_panel(
     current_y: int,
     layout: SiteFacadeLayout,
 ):
-    site_size = grid_utils.get_site_size(ctx)
+    site_width = grid_utils.get_site_width(ctx)
 
     for step, layer_y in enumerate(layout["layer_keys"]):
         pixel_row = (len(layout["layer_keys"]) - 1) - step
         tokens = panel_data[layer_y]
 
-        for col in range(site_size):
+        for col in range(site_width):
             token = tokens[col]
             bx = current_x + (col * layout["block_px"])
             by = current_y + (pixel_row * layout["block_px"])

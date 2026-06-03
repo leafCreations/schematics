@@ -1,4 +1,8 @@
-from helpers.structure_tokens import ParsedToken, parse_structure_token
+from helpers.structure_tokens import (
+    ParsedToken,
+    format_structure_token,
+    parse_structure_token,
+)
 
 
 def test_empty_cell_returns_none():
@@ -45,3 +49,17 @@ def test_bed_color_direction_and_part():
         direction="north",
         variant="head",
     )
+
+
+def test_block_states_suffix():
+    assert parse_structure_token("LANTERN#soul;hanging=false") == ParsedToken(
+        token="LANTERN",
+        variant="soul",
+        states=(("hanging", False),),
+    )
+
+
+def test_format_structure_token_round_trip():
+    parsed = parse_structure_token("LANTERN#soul;hanging=true!90")
+
+    assert format_structure_token(parsed) == "LANTERN#soul;hanging=true!90"

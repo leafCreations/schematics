@@ -22,6 +22,7 @@ Many block sprites are composed procedurally from vanilla textures and cached un
 | `chest`    | Chest variants                                   |
 | `fence`    | Fence post/straight/corner and inventory models    |
 | `torch`    | Standing, soul, and wall torches                 |
+| `lantern`  | Hanging and soul lanterns from block models      |
 | `log`      | Log orientations per material                    |
 
 ### Views

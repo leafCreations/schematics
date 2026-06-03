@@ -1,6 +1,0 @@
-label: Furnace
-tokens:
-- FURNACE
-blocks:
-- minecraft:blast_furnace
-- minecraft:smoker

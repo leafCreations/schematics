@@ -2,6 +2,4 @@ label: Wood
 tokens:
 - LOG
 - PLANKS
-blocks:
-- minecraft:spruce_planks
-- minecraft:birch_planks
+blocks: []

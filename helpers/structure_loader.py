@@ -7,6 +7,7 @@ import yaml
 
 import helpers.constants as constants
 from helpers.context import SchematicContext
+from helpers.grid import resolve_site_dimensions
 from helpers.paths import (
     ASSET_FOLDER,
     OUTPUT_SCHEMATICS_FOLDER,
@@ -14,11 +15,12 @@ from helpers.paths import (
     STRUCTURES_FOLDER,
     TEMPLATE_FOLDER,
 )
+from helpers.site_ground import validate_site_ground
 from helpers.types import GridConfig, LayerConfig, StructureConfig
 from registries.loader import BLOCK_REGISTRY, compile_inventory_texture_set, compile_texture_set
 
 REQUIRED_CONFIG_KEYS = ("structure", "stage", "name", "output_folder", "layers", "grid")
-REQUIRED_GRID_KEYS = ("site_size", "offset_x", "offset_z")
+REQUIRED_GRID_KEYS = ("offset_x", "offset_z")
 
 
 def validate_grid_config(grid: dict[str, Any], *, path: str = "grid") -> GridConfig:
@@ -27,12 +29,26 @@ def validate_grid_config(grid: dict[str, Any], *, path: str = "grid") -> GridCon
     if missing:
         raise ValueError(f"{path} missing required keys: {', '.join(missing)}")
 
+    has_legacy_site = "site_size" in grid
+    has_rectangular_site = "site_width" in grid and "site_depth" in grid
+
+    if not has_legacy_site and not has_rectangular_site:
+        raise ValueError(
+            f"{path} must define site_size (square site) or both site_width and site_depth",
+        )
+
+    normalized = dict(grid)
+    site_width, site_depth = resolve_site_dimensions(normalized)
+    normalized["site_width"] = site_width
+    normalized["site_depth"] = site_depth
+    grid = normalized
+
     site_structure_layers = grid.get("site_structure_layers")
 
     if site_structure_layers is not None and not isinstance(site_structure_layers, list):
         raise ValueError(f"{path}.site_structure_layers must be a list of layer list indices")
 
-    return grid  # type: ignore[return-value]
+    return grid  # type: ignore[return-value]  # normalized site_width/site_depth
 
 
 def validate_layer(layer: dict[str, Any], layer_idx: int) -> LayerConfig:
@@ -94,10 +110,21 @@ def validate_structure_config(config: dict[str, Any]) -> StructureConfig:
                 f"expected 0..{len(validated_layers) - 1}"
             )
 
+    site_width, site_depth = resolve_site_dimensions(grid)
+    site_ground = None
+
+    if "site_ground" in config:
+        site_ground = validate_site_ground(
+            config["site_ground"],
+            site_width,
+            site_depth,
+        )
+
     return {
         **config,
         "grid": grid,
         "layers": validated_layers,
+        "site_ground": site_ground,
     }  # type: ignore[return-value]
 
 
@@ -115,6 +142,7 @@ def build_schematic_context(config: StructureConfig) -> SchematicContext:
         output_schematics_dir=OUTPUT_SCHEMATICS_FOLDER / validated["output_folder"],
         output_worldgen_dir=OUTPUT_WORLDS_FOLDER / validated["output_folder"],
         worldgen_template_dir=TEMPLATE_FOLDER,
+        site_ground=validated.get("site_ground"),
     )
 
     ctx.topdown_textures = compile_texture_set(
