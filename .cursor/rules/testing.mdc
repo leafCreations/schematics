@@ -1,0 +1,21 @@
+---
+description: Run targeted pytest during development; full suite only when appropriate
+alwaysApply: true
+---
+
+# Testing workflow
+
+When verifying changes in this repo:
+
+1. **While iterating** — run **targeted** tests mapped to what you changed, e.g.:
+   - `pytest tests/test_cells.py -q` after `helpers/cells.py`
+   - `pytest tests/test_ui_document.py tests/test_main_window.py -q` after `ui/`
+   - `pytest tests/test_palette_integrity.py -q` after `registries/`
+
+2. **Do not** run the full `pytest` suite after every small edit unless the user asks or the change is broad (core loader, `conftest.py`, many packages).
+
+3. **Pre-commit** uses `scripts/pre-commit-pytest.sh` (staged paths → related tests; full suite on unmapped/core changes).
+
+4. **Suggest full suite** (`pytest` or `pre-commit run pytest --all-files`) before PRs or after large refactors.
+
+Use the path mappings in `scripts/pre-commit-pytest.sh` as a guide for which tests to run manually.

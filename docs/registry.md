@@ -76,7 +76,8 @@ For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture
 
 * `BLOCK_REGISTRY` — merged behavior entries from `behaviors/*.yaml`
 * `BLOCK_PALETTES` — palette definitions from `palettes/*.yaml`
-* `validate_palettes()` — fail fast when palette tokens, catalog blocks, or behavior palette refs are inconsistent
+* `reload_registries()` — reload YAML into the module-level dicts (called when the editor starts; palette picker caches are cleared)
+* `validate_palettes()` — fail fast on palette refs, behavior shape (`behavior`, `minecraft`), UI placeholder consistency, and missing top textures when `assets/textures/block` is present (runs on pre-commit)
 * `build_registry_texture_mapping(view)` — token → vanilla texture filename
 * `compile_texture_set(view, assets_dir, block_px)` — load textures for schematic rendering
 * `compile_inventory_texture_set(assets_dir, block_px)` — load inventory icon textures

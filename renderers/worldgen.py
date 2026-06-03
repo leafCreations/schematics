@@ -111,7 +111,7 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
                     continue
 
                 if get_block_entry(parsed) is None:
-                    raise KeyError(f"Unknown block token: {registry_lookup_token(parsed)}")
+                    raise ValueError(f"Unknown block token: {registry_lookup_token(parsed)}")
 
                 global_x = ctx.grid["offset_x"] + x_idx
 

@@ -182,6 +182,36 @@ def picker_entry_for_token(
     )
 
 
+_picker_by_registry_token: dict[str, PickerEntry] | None = None
+_picker_by_block_id: dict[str, PickerEntry] | None = None
+
+
+def clear_picker_entry_cache() -> None:
+    global _picker_by_registry_token, _picker_by_block_id
+    _picker_by_registry_token = None
+    _picker_by_block_id = None
+
+
+def _ensure_picker_entry_indexes(*, catalog: dict[str, Any] | None = None) -> None:
+    global _picker_by_registry_token, _picker_by_block_id
+
+    if _picker_by_registry_token is not None and _picker_by_block_id is not None:
+        return
+
+    by_registry: dict[str, PickerEntry] = {}
+    by_block: dict[str, PickerEntry] = {}
+
+    for palette in list_palettes(catalog=catalog):
+        for entry in palette.entries:
+            if entry.is_catalog_block:
+                by_block[entry.token] = entry
+            else:
+                by_registry[entry.token] = entry
+
+    _picker_by_registry_token = by_registry
+    _picker_by_block_id = by_block
+
+
 def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
     """Return the palette entry that matches a structure-layer cell token."""
     parsed = parse_structure_token(raw_token)
@@ -189,22 +219,15 @@ def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
     if parsed is None:
         return None
 
+    _ensure_picker_entry_indexes()
+
     if is_minecraft_block_token(parsed):
         block_id = minecraft_block_id(parsed)
+        assert _picker_by_block_id is not None
+        return _picker_by_block_id.get(block_id) or picker_entry_for_block_id(block_id)
 
-        for palette in list_palettes():
-            for entry in palette.entries:
-                if entry.token == block_id:
-                    return entry
-
-        return picker_entry_for_block_id(block_id)
-
-    for palette in list_palettes():
-        for entry in palette.entries:
-            if not entry.is_catalog_block and entry.token == parsed.token:
-                return entry
-
-    return picker_entry_for_token(parsed.token)
+    assert _picker_by_registry_token is not None
+    return _picker_by_registry_token.get(parsed.token) or picker_entry_for_token(parsed.token)
 
 
 def picker_entry_for_block_id(

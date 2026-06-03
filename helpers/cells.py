@@ -28,17 +28,21 @@ def get_cell(
 
 def get_structure_cell(
     ctx: SchematicContext,
-    layer_y: int,
+    layer_array_index: int,
     x: int,
     z: int,
     *,
     empty: RawToken = ".",
 ) -> RawToken:
-    """Return the raw token at local structure coordinates ``(layer_y, x, z)``."""
-    if layer_y < 0 or layer_y >= len(ctx.layers):
+    """Return the raw token at local structure coordinates ``(x, z)``.
+
+    ``layer_array_index`` is the position in ``ctx.layers`` (0 = first layer file),
+    **not** the layer file's worldgen ``index`` field.
+    """
+    if layer_array_index < 0 or layer_array_index >= len(ctx.layers):
         return empty
 
-    cells = ctx.layers[layer_y].get("cells", [])
+    cells = ctx.layers[layer_array_index].get("cells", [])
     result = get_cell(cells, x, z, empty=empty)
 
     return empty if result is None else result
@@ -46,17 +50,20 @@ def get_structure_cell(
 
 def get_structure_cell_at_site(
     ctx: SchematicContext,
-    layer_y: int,
+    layer_array_index: int,
     global_x: int,
     global_z: int,
     *,
     empty: RawToken = ".",
 ) -> RawToken:
-    """Return the raw token at site coordinates, mapped into the structure grid."""
+    """Return the raw token at site coordinates, mapped into the structure grid.
+
+    See :func:`get_structure_cell` for ``layer_array_index`` semantics.
+    """
     local_x = global_x - grid_utils.get_offset_x(ctx)
     local_z = global_z - grid_utils.get_offset_z(ctx)
 
     if not grid_utils.is_inside_structure(ctx, local_x, local_z):
         return empty
 
-    return get_structure_cell(ctx, layer_y, local_x, local_z, empty=empty)
+    return get_structure_cell(ctx, layer_array_index, local_x, local_z, empty=empty)

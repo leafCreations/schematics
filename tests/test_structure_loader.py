@@ -1,10 +1,14 @@
+from pathlib import Path
+
 import pytest
+import yaml
 
 from helpers.paths import STRUCTURES_FOLDER
 from helpers.structure_loader import (
     load_structure_config,
     load_structure_yaml,
     resolve_structure_source,
+    validate_layers_consistent_dimensions,
     validate_structure_config,
 )
 
@@ -103,6 +107,43 @@ def test_load_structure_yaml_residence_stage1():
     assert config["layers"][0]["cells"][0][0] == "COBBLESTONE#mossy"
 
 
+def test_load_structure_yaml_residence_stage2():
+    path = STRUCTURES_FOLDER / "residence" / "stage2" / "structure.yaml"
+    config = load_structure_yaml(path)
+
+    assert config["structure"] == "residence"
+    assert config["stage"] == 2
+    assert len(config["layers"]) == 6
+
+
+def test_load_structure_yaml_discovers_layer_files(tmp_path: Path):
+    import shutil
+
+    src = STRUCTURES_FOLDER / "residence" / "stage1"
+    dest = tmp_path / "stage"
+    shutil.copytree(src / "layers", dest / "layers")
+    structure_path = dest / "structure.yaml"
+    data = yaml.safe_load((src / "structure.yaml").read_text(encoding="utf-8"))
+    del data["layer_files"]
+    structure_path.write_text(
+        yaml.safe_dump(data, default_flow_style=False, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    config = load_structure_yaml(structure_path)
+
+    assert len(config["layers"]) == 6
+
+
+def test_validate_structure_config_rejects_unknown_cell_token():
+    config = _minimal_config(
+        layers=[{"index": 0, "cells": [["NOT_A_REAL_TOKEN"]]}],
+    )
+
+    with pytest.raises(ValueError, match="unknown or invalid cell tokens"):
+        validate_structure_config(config)
+
+
 def test_resolve_structure_source_prefers_yaml():
     path = resolve_structure_source("residence", 1)
 
@@ -116,3 +157,36 @@ def test_load_structure_config_builds_context_from_yaml():
     assert ctx.stage == 1
     assert len(ctx.layers) == 6
     assert ctx.topdown_textures
+
+
+def test_validate_structure_config_rejects_duplicate_layer_index():
+    config = _minimal_config(
+        layers=[
+            {"index": 0, "cells": [["."]]},
+            {"index": 0, "cells": [["."]]},
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Duplicate layer index"):
+        validate_structure_config(config)
+
+
+def test_validate_structure_config_rejects_mismatched_layer_dimensions():
+    config = _minimal_config(
+        layers=[
+            {"index": 0, "cells": [[".", "."], [".", "."]]},
+            {"index": 1, "cells": [["."]]},
+        ]
+    )
+
+    with pytest.raises(ValueError, match="same width and depth"):
+        validate_structure_config(config)
+
+
+def test_validate_layers_consistent_dimensions_accepts_matching_layers():
+    layers = [
+        {"index": 0, "cells": [[".", "."], [".", "."]]},
+        {"index": 1, "cells": [[".", "."], [".", "."]]},
+    ]
+
+    validate_layers_consistent_dimensions(layers)

@@ -49,27 +49,30 @@ See [worldgen.md](worldgen.md) and [../AMULET_INSTALL_NOTES.md](../AMULET_INSTAL
 
 ## Git hooks
 
-Install hooks (Ruff fix/format + re-stage on each commit):
+Install hooks (Ruff, palette validation, targeted pytest on each commit):
 
 ```bash
 pre-commit install
 ```
 
-**Default commit:** runs Ruff only (~instant). Tests are not re-run on every commit.
+**Default commit** runs:
 
-**When you want tests before committing:**
+1. **Ruff** — fix/format staged Python, re-stage
+2. **`validate_palettes()`** — registry/palette integrity
+3. **Targeted pytest** — `scripts/pre-commit-pytest.sh` maps staged paths to related tests (see the `case` branches in that script). Unmapped or core changes (e.g. `registries/loader.py`, `conftest.py`) run the **full** suite.
+
+**Full test suite** (before a PR or after a large refactor):
 
 ```bash
 pytest
-# or
-pre-commit run pytest --hook-stage manual
+# or via hooks on all files:
+pre-commit run pytest --all-files
 ```
 
-**Run everything (Ruff + pytest):**
+**Run all hooks without committing:**
 
 ```bash
-pre-commit run --all-files --hook-stage manual
-pre-commit run ruff-fix-format --all-files
+pre-commit run --all-files
 ```
 
 Fix lint/format issues manually at any time:
@@ -83,9 +86,11 @@ scripts/ruff-fix
 ```bash
 ruff check .
 ruff format .
-pytest
+pytest                    # full suite
 pre-commit run --all-files
 ```
+
+While editing, run only the tests you care about, e.g. `pytest tests/test_ui_document.py -q`.
 
 ## Dependencies
 

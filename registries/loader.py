@@ -63,6 +63,22 @@ BLOCK_REGISTRY = load_behavior_registry()
 BLOCK_PALETTES = load_block_palettes()
 
 
+def reload_registries() -> None:
+    """Reload behavior and palette YAML from disk (editor startup, tests)."""
+    fresh_registry = load_behavior_registry()
+    fresh_palettes = load_block_palettes()
+    BLOCK_REGISTRY.clear()
+    BLOCK_REGISTRY.update(fresh_registry)
+    BLOCK_PALETTES.clear()
+    BLOCK_PALETTES.update(fresh_palettes)
+
+    from helpers.block_picker import clear_picker_entry_cache
+    from helpers.registry_lookup import clear_registry_lookup_caches
+
+    clear_picker_entry_cache()
+    clear_registry_lookup_caches()
+
+
 def _default_texture_name(block_id: str) -> str:
     _namespace, block_name = block_id.split(":", 1) if ":" in block_id else ("minecraft", block_id)
     return f"{block_name}.png"

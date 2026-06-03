@@ -31,7 +31,7 @@ def test_get_structure_cell(ctx):
     assert cell_utils.get_structure_cell(ctx, 1, 1, 1) == "4"
 
 
-def test_get_structure_cell_invalid_layer_returns_empty(ctx):
+def test_get_structure_cell_invalid_layer_array_index_returns_empty(ctx):
     assert cell_utils.get_structure_cell(ctx, -1, 0, 0) == "."
     assert cell_utils.get_structure_cell(ctx, 99, 0, 0) == "."
 

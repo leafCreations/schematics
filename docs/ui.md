@@ -109,6 +109,8 @@ Changing **Material**, **Direction**, **Part**, or **Variant** updates the selec
 
 Placement strings are built by `helpers/block_picker.py` → `cell_token()`, matching the grammar in [structure-tokens.md](structure-tokens.md).
 
+Opening a structure or saving a layer/site file runs the same validation as render/worldgen (grid, layer dimensions, duplicate worldgen `index`, and **unknown cell tokens** in layers and `site_ground`).
+
 ### Erase
 
 **Structure tab**

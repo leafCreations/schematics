@@ -8,22 +8,16 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: validate-palettes
+        name: validate palette/registry integrity
+        entry: scripts/pre-commit-validate-palettes.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
       - id: pytest
-        name: pytest
-        stages: [manual]
-        entry: bash
-        args:
-          - -c
-          - |
-            root="$(git rev-parse --show-toplevel)"
-            if [ -x "$root/.venv/bin/pytest" ]; then
-              exec "$root/.venv/bin/pytest"
-            elif [ -x "$root/venv/bin/pytest" ]; then
-              exec "$root/venv/bin/pytest"
-            else
-              echo "pytest not found. Run: pip install -e \".[dev]\" in the project venv." >&2
-              exit 1
-            fi
-        language: system
+        name: pytest (targeted by staged paths)
+        entry: scripts/pre-commit-pytest.sh
+        language: script
         pass_filenames: false
         always_run: true

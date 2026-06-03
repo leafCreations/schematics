@@ -64,8 +64,8 @@ def _collect_structure_elevations(
     struct_w = grid_utils.get_structure_width(ctx)
     struct_h = grid_utils.get_structure_depth(ctx)
 
-    def get_token(layer_y: int, x: int, z: int) -> RawToken:
-        return cell_utils.get_structure_cell(ctx, layer_y, x, z)
+    def get_token(layer_array_index: int, x: int, z: int) -> RawToken:
+        return cell_utils.get_structure_cell(ctx, layer_array_index, x, z)
 
     return facade_projection.collect_facade_elevations(
         list(range(max_layers)),

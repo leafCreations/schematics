@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
             stage=args.stage,
             renders=args.renders,
         )
-    except (FileNotFoundError, ValueError, KeyError) as exc:
+    except (FileNotFoundError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 

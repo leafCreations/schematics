@@ -16,11 +16,152 @@ from helpers.paths import (
     TEMPLATE_FOLDER,
 )
 from helpers.site_ground import validate_site_ground
+from helpers.structure_tokens import parse_structure_token
 from helpers.types import GridConfig, LayerConfig, StructureConfig
 from registries.loader import BLOCK_REGISTRY, compile_inventory_texture_set, compile_texture_set
 
 REQUIRED_CONFIG_KEYS = ("structure", "stage", "name", "output_folder", "layers", "grid")
 REQUIRED_GRID_KEYS = ("offset_x", "offset_z")
+
+INLINE_LAYERS_EDITOR_MESSAGE = (
+    "uses inline layers; split into layers/*.yaml and add layer_files "
+    "(see structures/residence/stage2/structure.yaml)"
+)
+
+
+def discover_layer_paths(base_dir: Path) -> list[Path]:
+    """Return sorted ``layers/layer_*.yaml`` paths when present."""
+    layers_dir = base_dir / "layers"
+
+    if not layers_dir.is_dir():
+        return []
+
+    return sorted(layers_dir.glob("layer_*.yaml"))
+
+
+def load_layers_from_paths(layer_paths: list[Path]) -> list[dict[str, Any]]:
+    layers: list[dict[str, Any]] = []
+
+    for layer_path in layer_paths:
+        if not layer_path.is_file():
+            raise FileNotFoundError(f"Layer file not found: {layer_path}")
+
+        with layer_path.open(encoding="utf-8") as handle:
+            layer = yaml.safe_load(handle)
+
+        if not isinstance(layer, dict):
+            raise ValueError(f"{layer_path} must contain a YAML mapping")
+
+        layers.append(layer)
+
+    return layers
+
+
+def resolve_layer_paths(
+    path: Path,
+    data: dict[str, Any],
+    *,
+    for_editor: bool = False,
+) -> list[Path]:
+    """Resolve layer YAML paths from ``layer_files`` or ``layers/layer_*.yaml``."""
+    base_dir = path.parent
+
+    if "layer_files" in data:
+        return [base_dir / layer_file for layer_file in data["layer_files"]]
+
+    if for_editor and "layers" in data:
+        raise ValueError(f"{path} {INLINE_LAYERS_EDITOR_MESSAGE}")
+
+    discovered = discover_layer_paths(base_dir)
+
+    if discovered:
+        return discovered
+
+    if "layers" in data:
+        raise ValueError(
+            f"{path} uses inline layers; use layer_files or layers/layer_*.yaml on disk"
+        )
+
+    raise ValueError(f"{path} must define layer_files, inline layers, or layers/layer_*.yaml")
+
+
+def load_structure_layers(path: Path, data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Load layer dicts for CLI/render: layer_files, inline ``layers``, or discovery."""
+    inline = data.get("layers")
+
+    if "layer_files" in data:
+        return load_layers_from_paths(resolve_layer_paths(path, data))
+
+    if isinstance(inline, list) and inline and isinstance(inline[0], dict):
+        return inline
+
+    discovered = discover_layer_paths(path.parent)
+
+    if discovered:
+        return load_layers_from_paths(discovered)
+
+    raise ValueError(f"{path} must define layer_files, inline layers, or layers/layer_*.yaml")
+
+
+def collect_structure_cell_token_errors(config: dict[str, Any]) -> list[str]:
+    """Return errors for non-empty cells that do not resolve in the registry/catalog."""
+    from helpers.registry_lookup import get_block_entry
+
+    errors: list[str] = []
+
+    for layer_idx, layer in enumerate(config.get("layers", []) or []):
+        cells = layer.get("cells", [])
+
+        for row_idx, row in enumerate(cells):
+            for col_idx, raw_token in enumerate(row):
+                if raw_token == ".":
+                    continue
+
+                parsed = parse_structure_token(raw_token)
+
+                if parsed is None:
+                    errors.append(
+                        f"layer {layer_idx} cell ({row_idx}, {col_idx}): "
+                        f"invalid token {raw_token!r}"
+                    )
+                    continue
+
+                if get_block_entry(parsed) is None:
+                    errors.append(
+                        f"layer {layer_idx} cell ({row_idx}, {col_idx}): "
+                        f"unknown token {raw_token!r}"
+                    )
+
+    site_ground = config.get("site_ground")
+
+    if site_ground:
+        for row_idx, row in enumerate(site_ground):
+            for col_idx, raw_token in enumerate(row):
+                if raw_token == ".":
+                    continue
+
+                parsed = parse_structure_token(raw_token)
+
+                if parsed is None:
+                    errors.append(
+                        f"site_ground ({row_idx}, {col_idx}): invalid token {raw_token!r}"
+                    )
+                    continue
+
+                if get_block_entry(parsed) is None:
+                    errors.append(
+                        f"site_ground ({row_idx}, {col_idx}): unknown token {raw_token!r}"
+                    )
+
+    return errors
+
+
+def validate_structure_cell_tokens(config: dict[str, Any]) -> None:
+    errors = collect_structure_cell_token_errors(config)
+
+    if errors:
+        joined = "\n".join(f"  - {error}" for error in errors)
+        raise ValueError(f"Structure contains unknown or invalid cell tokens:\n{joined}")
 
 
 def validate_grid_config(grid: dict[str, Any], *, path: str = "grid") -> GridConfig:
@@ -77,6 +218,33 @@ def validate_layer(layer: dict[str, Any], layer_idx: int) -> LayerConfig:
     return layer  # type: ignore[return-value]
 
 
+def layer_grid_dimensions(layer: dict[str, Any]) -> tuple[int, int]:
+    """Return (width, depth) for a layer's ``cells`` grid."""
+    cells = layer["cells"]
+    return len(cells[0]), len(cells)
+
+
+def validate_layers_consistent_dimensions(layers: list[dict[str, Any]]) -> None:
+    """Require every layer to use the same width and depth."""
+    if len(layers) < 2:
+        return
+
+    ref_width, ref_depth = layer_grid_dimensions(layers[0])
+    mismatched: list[int] = []
+
+    for layer_idx, layer in enumerate(layers[1:], start=1):
+        width, depth = layer_grid_dimensions(layer)
+
+        if (width, depth) != (ref_width, ref_depth):
+            mismatched.append(layer_idx)
+
+    if mismatched:
+        raise ValueError(
+            f"All layers must share the same width and depth ({ref_width}x{ref_depth}); "
+            f"layer(s) {mismatched} differ"
+        )
+
+
 def validate_structure_config(config: dict[str, Any]) -> StructureConfig:
     missing = [key for key in REQUIRED_CONFIG_KEYS if key not in config]
 
@@ -90,15 +258,15 @@ def validate_structure_config(config: dict[str, Any]) -> StructureConfig:
         raise ValueError("STRUCTURE_CONFIG.layers must be a non-empty list")
 
     validated_layers = [validate_layer(layer, idx) for idx, layer in enumerate(layers)]
+    validate_layers_consistent_dimensions(validated_layers)
 
     layer_indices = [layer["index"] for layer in validated_layers]
     duplicate_indices = {index for index in layer_indices if layer_indices.count(index) > 1}
 
     if duplicate_indices:
-        warnings.warn(
+        raise ValueError(
             f"Duplicate layer index values {sorted(duplicate_indices)}; "
-            "worldgen will overwrite blocks at the same Y level.",
-            stacklevel=2,
+            "each layer must have a unique index for worldgen"
         )
 
     site_structure_layers = grid.get("site_structure_layers", [0, 1])
@@ -119,6 +287,8 @@ def validate_structure_config(config: dict[str, Any]) -> StructureConfig:
             site_width,
             site_depth,
         )
+
+    validate_structure_cell_tokens(config)
 
     return {
         **config,
@@ -168,30 +338,7 @@ def load_structure_yaml(path: Path) -> StructureConfig:
     if not isinstance(data, dict):
         raise ValueError(f"{path} must contain a YAML mapping")
 
-    base_dir = path.parent
-    layers: list[dict[str, Any]]
-
-    if "layer_files" in data:
-        layers = []
-
-        for layer_file in data["layer_files"]:
-            layer_path = base_dir / layer_file
-
-            if not layer_path.is_file():
-                raise FileNotFoundError(f"Layer file not found: {layer_path}")
-
-            with layer_path.open(encoding="utf-8") as handle:
-                layer = yaml.safe_load(handle)
-
-            if not isinstance(layer, dict):
-                raise ValueError(f"{layer_path} must contain a YAML mapping")
-
-            layers.append(layer)
-    elif "layers" in data:
-        layers = data["layers"]
-    else:
-        raise ValueError(f"{path} must define either 'layer_files' or 'layers'")
-
+    layers = load_structure_layers(path, data)
     config = {**data, "layers": layers}
     config.pop("layer_files", None)
 
@@ -199,6 +346,15 @@ def load_structure_yaml(path: Path) -> StructureConfig:
 
 
 def load_structure_module(path: Path) -> StructureConfig:
+    """Load a legacy ``stage{N}_structure.py`` module (deprecated; use YAML)."""
+    warnings.warn(
+        f"Python structure modules are deprecated ({path.name}); "
+        f"migrate to {path.parent / 'structure.yaml'} "
+        "(see scripts/migrate_structure_to_yaml.py).",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     if not path.exists():
         raise FileNotFoundError(f"Structure file not found: {path}")
 

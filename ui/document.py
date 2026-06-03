@@ -10,7 +10,12 @@ import yaml
 
 from helpers.grid import resolve_site_dimensions
 from helpers.site_ground import ensure_site_ground
-from helpers.structure_loader import resolve_structure_source
+from helpers.structure_loader import (
+    load_layers_from_paths,
+    resolve_layer_paths,
+    resolve_structure_source,
+    validate_structure_config,
+)
 
 
 @dataclass
@@ -29,28 +34,20 @@ def resolve_structure_path(structure: str, stage: int) -> Path:
 
 def resolve_layer_file_paths(path: Path, data: dict[str, Any]) -> list[Path]:
     """Return layer paths from ``layer_files`` or sorted ``layers/layer_*.yaml``."""
-    base_dir = path.parent
+    return resolve_layer_paths(path, data, for_editor=True)
 
-    if "layer_files" in data:
-        return [base_dir / layer_file for layer_file in data["layer_files"]]
 
-    if "layers" in data:
-        raise ValueError(
-            f"{path} uses inline layers; split into layers/*.yaml and add layer_files "
-            "for the editor (see structures/residence/stage2/structure.yaml)"
-        )
+def structure_config_from_document(document: StructureDocument) -> dict[str, Any]:
+    """Build a render-pipeline config dict from an in-memory editor document."""
+    config = dict(document.metadata)
+    config["layers"] = document.layers
+    config["site_ground"] = document.site_ground
+    return config
 
-    layers_dir = base_dir / "layers"
 
-    if layers_dir.is_dir():
-        discovered = sorted(layers_dir.glob("layer_*.yaml"))
-
-        if discovered:
-            return discovered
-
-    raise ValueError(
-        f"{path} must define layer_files or contain layers/layer_*.yaml for the editor"
-    )
+def validate_structure_document(document: StructureDocument) -> None:
+    """Run the same validation as render/worldgen on the editor document."""
+    validate_structure_config(structure_config_from_document(document))
 
 
 def load_structure_document(path: Path) -> StructureDocument:
@@ -70,18 +67,7 @@ def load_structure_document(path: Path) -> StructureDocument:
     else:
         layer_files = [layer_path.relative_to(base_dir).as_posix() for layer_path in layer_paths]
 
-    layers: list[dict[str, Any]] = []
-
-    for layer_path in layer_paths:
-        if not layer_path.is_file():
-            raise FileNotFoundError(f"Layer file not found: {layer_path}")
-
-        layer = yaml.safe_load(layer_path.read_text(encoding="utf-8"))
-
-        if not isinstance(layer, dict):
-            raise ValueError(f"{layer_path} must contain a YAML mapping")
-
-        layers.append(layer)
+    layers = load_layers_from_paths(layer_paths)
 
     metadata = {
         key: value
@@ -93,7 +79,7 @@ def load_structure_document(path: Path) -> StructureDocument:
     site_width, site_depth = resolve_site_dimensions(grid)
     site_ground = ensure_site_ground(data.get("site_ground"), site_width, site_depth)
 
-    return StructureDocument(
+    document = StructureDocument(
         structure_path=path,
         metadata=metadata,
         layer_files=layer_files,
@@ -101,6 +87,8 @@ def load_structure_document(path: Path) -> StructureDocument:
         layers=layers,
         site_ground=site_ground,
     )
+    validate_structure_document(document)
+    return document
 
 
 def load_layer(path: Path) -> dict[str, Any]:
@@ -112,7 +100,15 @@ def load_layer(path: Path) -> dict[str, Any]:
     return layer
 
 
-def save_layer(path: Path, layer: dict[str, Any]) -> None:
+def save_layer(
+    path: Path,
+    layer: dict[str, Any],
+    *,
+    document: StructureDocument | None = None,
+) -> None:
+    if document is not None:
+        validate_structure_document(document)
+
     path.write_text(
         yaml.safe_dump(layer, default_flow_style=False, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
@@ -125,7 +121,11 @@ def save_structure_metadata(
     *,
     layer_files: list[str],
     site_ground: list[list[str]],
+    document: StructureDocument | None = None,
 ) -> None:
+    if document is not None:
+        validate_structure_document(document)
+
     payload = dict(metadata)
     payload["layer_files"] = layer_files
     payload["site_ground"] = site_ground

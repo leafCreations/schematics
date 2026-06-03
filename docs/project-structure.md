@@ -4,7 +4,7 @@
 helpers/
   constants.py          # Render type names and BLOCK_PX
   context.py            # SchematicContext dataclass
-  cells.py              # Structure/site cell lookup
+  cells.py              # Structure/site cell lookup (layer_array_index = layers list position)
   facade_projection.py  # Compass elevation projection for facade renderers
   fonts.py              # Shared DejaVu font loading for blueprint renderers
   grid.py               # Site/structure dimension helpers

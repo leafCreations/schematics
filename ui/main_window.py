@@ -39,7 +39,12 @@ from helpers.path_strip import (
 )
 from helpers.paths import OUTPUT_SCHEMATICS_FOLDER
 from helpers.site_ground import resize_site_ground
-from ui.document import StructureDocument, open_structure, save_layer, save_structure_metadata
+from ui.document import (
+    StructureDocument,
+    open_structure,
+    save_layer,
+    save_structure_metadata,
+)
 from ui.editor_history import apply_history_state, capture_history_state
 from ui.editor_materials import build_editor_materials_context, structure_material_inventory
 from ui.editor_prefs import block_tooltips_enabled, set_block_tooltips_enabled
@@ -87,13 +92,12 @@ class MainWindow(QMainWindow):
         self._status = QStatusBar()
         self._status.showMessage("Loading block textures...")
         QApplication.processEvents()
-        self._structure_texture_cache = GridTextureCache()
-        self._site_texture_cache = GridTextureCache()
-        self._structure_grid = LayerGridWidget(self._structure_texture_cache)
-        self._site_grid_view = SiteGridView(self._site_texture_cache)
+        self._grid_texture_cache = GridTextureCache()
+        self._structure_grid = LayerGridWidget(self._grid_texture_cache)
+        self._site_grid_view = SiteGridView(self._grid_texture_cache)
         self._palette_panel = PalettePanel()
         self._properties_panel = PropertiesPanel()
-        self._properties_panel.set_texture_cache(self._structure_texture_cache)
+        self._properties_panel.set_texture_cache(self._grid_texture_cache)
         self._materials_context = build_editor_materials_context()
         self._materials_icon_cache = MaterialsIconCache(self._materials_context)
         self._materials_panel = MaterialsPanel(self._materials_icon_cache)
@@ -305,8 +309,7 @@ class MainWindow(QMainWindow):
                 dirty_structure_holder=dirty_flag,
             )
             self._dirty_structure = dirty_flag[0]
-            self._structure_texture_cache.clear_cache()
-            self._site_texture_cache.clear_cache()
+            self._grid_texture_cache.clear_cache()
             self._show_layer(self._current_layer_index)
             self._site_settings_panel.load_from_metadata(
                 self._document.metadata,
@@ -363,6 +366,8 @@ class MainWindow(QMainWindow):
                 "Paint structure cells — palette and brush on the right.",
                 4000,
             )
+            self._balance_structure_tools_splitter()
+            self._sync_structure_size_controls()
         elif index == 1:
             self._status.showMessage(
                 "Click the structure, then arrow keys or nudge buttons to move it.",
@@ -375,9 +380,6 @@ class MainWindow(QMainWindow):
                 self._site_grid_view.set_path_eraser_active(True)
             else:
                 self._site_grid_view.set_structure_selected(True)
-        elif index == 0:
-            self._balance_structure_tools_splitter()
-            self._sync_structure_size_controls()
         else:
             self._status.showMessage(
                 "Choose render types and generate — save layers first so disk matches the editor.",
@@ -514,8 +516,7 @@ class MainWindow(QMainWindow):
         for layer_index in range(len(self._document.layers)):
             self._mark_layer_dirty(layer_index)
 
-        self._structure_texture_cache.clear_cache()
-        self._site_texture_cache.clear_cache()
+        self._grid_texture_cache.clear_cache()
         self._show_layer(self._current_layer_index)
         self._site_settings_panel.load_from_metadata(
             self._document.metadata,
@@ -605,7 +606,7 @@ class MainWindow(QMainWindow):
         token = self._properties_panel.build_placement_token()
 
         if token is not None:
-            self._structure_texture_cache.invalidate_token(token)
+            self._grid_texture_cache.invalidate_token(token)
 
         self._apply_brush_to_selected_cell()
 
@@ -805,7 +806,7 @@ class MainWindow(QMainWindow):
         grid["trim_block"] = self._site_path_panel.trim_block()
         grid["path_variety_blocks"] = self._site_path_panel.path_variety_blocks()
         self._dirty_structure = True
-        self._site_texture_cache.clear_cache()
+        self._grid_texture_cache.clear_cache()
         self._refresh_site_preview()
         self._update_save_site_button()
         self._update_window_title()
@@ -847,7 +848,7 @@ class MainWindow(QMainWindow):
             return
 
         self._dirty_structure = True
-        self._site_texture_cache.clear_cache()
+        self._grid_texture_cache.clear_cache()
         self._refresh_site_preview()
         self._update_save_site_button()
         self._update_window_title()
@@ -877,7 +878,7 @@ class MainWindow(QMainWindow):
             return
 
         self._dirty_structure = True
-        self._site_texture_cache.clear_cache()
+        self._grid_texture_cache.clear_cache()
         self._refresh_site_preview()
         self._update_save_site_button()
         self._update_window_title()
@@ -939,7 +940,7 @@ class MainWindow(QMainWindow):
             site_depth,
         )
         self._dirty_structure = True
-        self._site_texture_cache.clear_cache()
+        self._grid_texture_cache.clear_cache()
         self._refresh_site_preview()
         self._sync_structure_size_controls()
         self._sync_path_panel_from_metadata()
@@ -965,7 +966,11 @@ class MainWindow(QMainWindow):
                 self._document.metadata,
                 layer_files=self._document.layer_files,
                 site_ground=self._document.site_ground,
+                document=self._document,
             )
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid structure", str(exc))
+            return False
         except OSError as exc:
             QMessageBox.critical(self, "Save failed", str(exc))
             return False
@@ -989,7 +994,10 @@ class MainWindow(QMainWindow):
         path = self._document.layer_paths[layer_index]
 
         try:
-            save_layer(path, layer)
+            save_layer(path, layer, document=self._document)
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid structure", str(exc))
+            return False
         except OSError as exc:
             QMessageBox.critical(self, "Save failed", str(exc))
             return False
@@ -1129,7 +1137,20 @@ class MainWindow(QMainWindow):
 
 
 def build_main_window(structure: str, stage: int) -> MainWindow:
-    document = open_structure(structure, stage)
+    from registries.loader import reload_registries
+
+    reload_registries()
+
+    try:
+        document = open_structure(structure, stage)
+    except ValueError as exc:
+        QMessageBox.critical(
+            None,
+            "Cannot open structure",
+            f"{structure} stage {stage} failed validation:\n\n{exc}",
+        )
+        raise
+
     return MainWindow(document, structure=structure, stage=stage)
 
 

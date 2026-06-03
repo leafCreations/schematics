@@ -15,6 +15,10 @@ from registries.loader import (
 _catalog_solid_cache: dict[str, dict] = {}
 
 
+def clear_registry_lookup_caches() -> None:
+    _catalog_solid_cache.clear()
+
+
 def is_minecraft_block_token(parsed: ParsedToken) -> bool:
     return parsed.token == "minecraft" and bool(parsed.material)
 
