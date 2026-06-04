@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any
 
 from helpers.layer_management import layer_label
@@ -22,21 +23,86 @@ def collect_layer_groups(
     layers: list[dict[str, Any]],
     grid: dict[str, Any] | None = None,
 ) -> list[str]:
-    """Unique group names in layer order, then any ``grid.groups`` without layers."""
-    groups: list[str] = []
+    """Group names in ``grid.groups`` order, then any groups only present on layers."""
+    from_layers: list[str] = []
 
     for index, layer in enumerate(layers):
         name = layer_label(layer, index)
 
-        if name not in groups:
-            groups.append(name)
+        if name not in from_layers:
+            from_layers.append(name)
 
-    if grid is not None:
-        for name in get_defined_groups(grid):
-            if name not in groups:
-                groups.append(name)
+    if grid is None:
+        return from_layers
 
-    return groups
+    defined = get_defined_groups(grid)
+
+    if not defined:
+        return from_layers
+
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    for name in defined:
+        ordered.append(name)
+        seen.add(name)
+
+    for name in from_layers:
+        if name not in seen:
+            ordered.append(name)
+
+    return ordered
+
+
+def set_defined_groups(grid: dict[str, Any], names: list[str]) -> None:
+    """Persist the full group list order on ``grid.groups``."""
+    cleaned = [name.strip() for name in names if name.strip()]
+
+    if cleaned:
+        grid["groups"] = cleaned
+    else:
+        grid.pop("groups", None)
+
+
+def move_group(
+    layers: list[dict[str, Any]],
+    grid: dict[str, Any],
+    group_name: str,
+    delta: int,
+) -> list[int] | None:
+    """Move a group up (``delta=-1``) or down (``delta=1``).
+
+    Returns a layer list permutation mapping each new index to an old index,
+    or ``None`` when the move is not allowed.
+    """
+    groups = collect_layer_groups(layers, grid)
+
+    if group_name not in groups:
+        return None
+
+    index = groups.index(group_name)
+    new_index = index + delta
+
+    if new_index < 0 or new_index >= len(groups):
+        return None
+
+    groups[index], groups[new_index] = groups[new_index], groups[index]
+    set_defined_groups(grid, groups)
+
+    buckets: dict[str, list[int]] = defaultdict(list)
+
+    for layer_index, layer in enumerate(layers):
+        buckets[layer_label(layer, layer_index)].append(layer_index)
+
+    permutation: list[int] = []
+
+    for name in groups:
+        permutation.extend(buckets.pop(name, []))
+
+    for indices in buckets.values():
+        permutation.extend(indices)
+
+    return permutation
 
 
 def layer_indices_in_group(layers: list[dict[str, Any]], group: str) -> list[int]:
@@ -61,11 +127,11 @@ def group_name_exists(
 def add_defined_group(grid: dict[str, Any], name: str) -> None:
     """Register an empty group on ``grid.groups``."""
     normalized = name.strip()
-    groups = get_defined_groups(grid)
+    groups = collect_layer_groups([], grid)
 
     if normalized not in groups:
         groups.append(normalized)
-        grid["groups"] = groups
+        set_defined_groups(grid, groups)
 
 
 def rename_group(

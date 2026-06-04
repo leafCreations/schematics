@@ -5,7 +5,7 @@ from __future__ import annotations
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QToolButton
 
-from ui.toolbar_icons import panel_icon_size
+from ui.toolbar_icons import panel_close_icon, panel_icon_size
 
 PANEL_BUTTON_STYLE = """
 QToolButton {
@@ -42,3 +42,7 @@ def make_panel_tool_button(
     button.setStyleSheet(PANEL_BUTTON_STYLE)
     button.clicked.connect(clicked)
     return button
+
+
+def make_panel_close_button(*, tooltip: str, clicked) -> QToolButton:
+    return make_panel_tool_button(panel_close_icon(), tooltip, clicked=clicked)

@@ -1,0 +1,34 @@
+---
+description: Summarize new UI/config properties at the end of a task
+globs: ui/**/*.py,helpers/**/*.py,docs/ui.md
+alwaysApply: true
+---
+
+# New properties — report at end of task
+
+When you add or change **tunable properties** (styling constants, widget flags, preference keys, menu actions, getters/setters), finish the work with a short **Properties** section in your final message to the user.
+
+## What counts
+
+- Module constants used for look-and-feel (e.g. `_HEADER_TEXT`, `_AXIS_HEADER_PX`)
+- Widget state (`_show_axis_labels`, `set_show_axis_labels`, `show_axis_labels()`)
+- Persisted prefs (`display.grid_axis_labels` in `config/editor_settings.yaml` / user YAML, `grid_axis_labels_enabled()`)
+- View/menu wiring (`_grid_axis_labels_action`, `_apply_*_pref`)
+
+## End-of-task summary format
+
+Use a compact table or bullet list: **name**, **where** (file or key), **role**, **default** if relevant.
+
+Example (axis labels):
+
+| Property | Location | Role |
+| -------- | -------- | ---- |
+| `_HEADER_TEXT` | `ui/widgets/grid.py` | Header label color |
+| `_show_axis_labels` | `LayerGridWidget` | Show column numbers / row letters |
+| `display.grid_axis_labels` | `config/editor_settings.yaml` | Saved View-menu preference |
+
+Do **not** skip this summary when the change introduced new properties the user may want to find or tweak later — even if the main task was something else (feature, bugfix, refactor).
+
+## Code placement
+
+Keep constants with related code (typically top of module, near the widget). “End of process” means **end of your response**, not necessarily end of the file.

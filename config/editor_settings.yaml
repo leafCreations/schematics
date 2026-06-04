@@ -1,0 +1,16 @@
+# Default application settings for the Structure Editor.
+#
+# The editor loads this file from the repo, then merges overrides from:
+#   ~/.config/structure_scripts/editor_settings.yaml
+# (or $XDG_CONFIG_HOME/structure_scripts/editor_settings.yaml)
+#
+# Override path: STRUCTURE_SCRIPTS_EDITOR_SETTINGS=/path/to/editor_settings.yaml
+
+display:
+  block_tooltips: true
+  grid_axis_labels: true
+
+panels:
+  compass: true
+  materials: true
+  structure_settings: true

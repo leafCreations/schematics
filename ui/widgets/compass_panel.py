@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap, QPolygonF
-from PySide6.QtWidgets import QGroupBox, QLabel, QToolButton, QWidget
+from PySide6.QtWidgets import QGroupBox, QLabel, QWidget
 
 from helpers.paths import UI_ASSETS_FOLDER
 from ui.widgets.panel_header import create_titled_panel_layout
+from ui.widgets.panel_tool_button import make_panel_close_button
 
 _COMPASS_SVG = UI_ASSETS_FOLDER / "compass.svg"
 _ROSE_SIZE = 80
@@ -132,12 +133,10 @@ class CompassPanel(QGroupBox):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        close_button = QToolButton()
-        close_button.setText("×")
-        close_button.setToolTip("Hide compass")
-        close_button.setAutoRaise(True)
-        close_button.setFixedSize(22, 22)
-        close_button.clicked.connect(self.close_requested.emit)
+        close_button = make_panel_close_button(
+            tooltip="Hide compass",
+            clicked=self.close_requested.emit,
+        )
 
         layout = create_titled_panel_layout(self, "Compass", [close_button])
         layout.setSpacing(4)

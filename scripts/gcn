@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Short alias target: commit without pre-commit pytest (see scripts/commit-no-pytest).
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/commit-no-pytest" "$@"

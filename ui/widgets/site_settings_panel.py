@@ -25,6 +25,7 @@ from helpers.grid_placement import (
     structure_dimensions_from_layers,
     structure_fits_site,
 )
+from ui.widgets.panel_header import create_nested_group_layout
 
 _PLACEMENT_GRID = (
     ("top_left", 0, 0),
@@ -66,8 +67,10 @@ class SiteSettingsPanel(QWidget):
         )
         self._block_tooltips.toggled.connect(self.block_tooltips_changed.emit)
 
-        placement_group = QGroupBox("Placement on site")
-        placement_layout = QGridLayout(placement_group)
+        placement_group = QGroupBox()
+        placement_layout = create_nested_group_layout(placement_group, "Placement on site")
+        placement_grid = QGridLayout()
+        placement_layout.addLayout(placement_grid)
         placement_layout.setSpacing(4)
 
         for placement, row, col in _PLACEMENT_GRID:
@@ -78,10 +81,12 @@ class SiteSettingsPanel(QWidget):
                 lambda checked, value=placement: self._on_placement_clicked(value)
             )
             self._placement_buttons[placement] = button
-            placement_layout.addWidget(button, row, col)
+            placement_grid.addWidget(button, row, col)
 
-        site_group = QGroupBox("Site grid")
-        site_form = QFormLayout(site_group)
+        site_group = QGroupBox()
+        site_layout = create_nested_group_layout(site_group, "Site grid")
+        site_form = QFormLayout()
+        site_layout.addLayout(site_form)
         site_form.addRow("Site width (x)", self._site_width)
         site_form.addRow("Site depth (z)", self._site_depth)
         site_form.addRow("Structure", self._footprint_label)

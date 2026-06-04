@@ -104,6 +104,50 @@ def remap_site_structure_layers_after_swap(
     ]
 
 
+def remap_indices_after_permutation(indices: set[int], permutation: list[int]) -> set[int]:
+    inverse = [0] * len(permutation)
+
+    for new_index, old_index in enumerate(permutation):
+        inverse[old_index] = new_index
+
+    return {inverse[idx] for idx in indices if 0 <= idx < len(inverse)}
+
+
+def remap_site_structure_layers_after_permutation(
+    grid: dict[str, Any],
+    permutation: list[int],
+) -> None:
+    """Remap ``site_structure_layers`` after layers are reordered."""
+    indices = grid.get("site_structure_layers")
+
+    if not isinstance(indices, list):
+        return
+
+    inverse = [0] * len(permutation)
+
+    for new_index, old_index in enumerate(permutation):
+        inverse[old_index] = new_index
+
+    grid["site_structure_layers"] = [
+        inverse[idx] for idx in indices if isinstance(idx, int) and 0 <= idx < len(inverse)
+    ]
+
+
+def reorder_layers_in_document(document: Any, permutation: list[int]) -> None:
+    """Reorder layers using *permutation* where ``permutation[new_index]`` is the old index."""
+    layer_count = len(document.layers)
+
+    if len(permutation) != layer_count:
+        raise ValueError("permutation length must match layer count")
+
+    document.layers = [document.layers[old_index] for old_index in permutation]
+    document.layer_files = [document.layer_files[old_index] for old_index in permutation]
+    document.layer_paths = [document.layer_paths[old_index] for old_index in permutation]
+
+    grid = document.metadata.setdefault("grid", {})
+    remap_site_structure_layers_after_permutation(grid, permutation)
+
+
 def remap_indices_after_swap(indices: set[int], index_a: int, index_b: int) -> set[int]:
     remapped: set[int] = set()
 

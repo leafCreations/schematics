@@ -6,8 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QFrame, QGroupBox, QVBoxLayout
+from PySide6.QtWidgets import QFrame, QGroupBox
 
+from ui.widgets.panel_header import create_titled_panel_layout
+from ui.widgets.panel_tool_button import make_panel_close_button
 from ui.widgets.structure_properties_panel import StructurePropertiesPanel
 from ui.widgets.structure_size_panel import StructureSizePanel
 
@@ -16,9 +18,15 @@ class StructureSettingsPanel(QGroupBox):
     properties_changed = Signal()
     resize_requested = Signal(int, int)
     block_tooltips_changed = Signal(bool)
+    close_requested = Signal()
 
     def __init__(self, parent=None) -> None:
-        super().__init__("Structure", parent)
+        super().__init__(parent)
+        close_button = make_panel_close_button(
+            tooltip="Hide structure settings",
+            clicked=self.close_requested.emit,
+        )
+        layout = create_titled_panel_layout(self, "Structure", [close_button])
         self._properties = StructurePropertiesPanel()
         self._size = StructureSizePanel()
 
@@ -30,7 +38,6 @@ class StructureSettingsPanel(QGroupBox):
         divider.setFrameShape(QFrame.Shape.HLine)
         divider.setFrameShadow(QFrame.Shadow.Sunken)
 
-        layout = QVBoxLayout(self)
         layout.addWidget(self._properties)
         layout.addWidget(divider)
         layout.addWidget(self._size)

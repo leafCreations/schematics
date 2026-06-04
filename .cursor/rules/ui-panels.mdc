@@ -1,34 +1,73 @@
 ---
-description: QGroupBox panels with title and icon buttons on one row
+description: All editor panels use a bold title row via panel_header helpers
 globs: ui/widgets/**/*.py,docs/ui.md
 alwaysApply: false
 ---
 
-# UI panel layout (title + actions)
+# UI panels — bold title required
 
-When adding or changing a **QGroupBox** panel that has header icon buttons (add/delete/copy/paste, close, etc.), use the shared pattern — do **not** use `QGroupBox("Title")` plus a separate action row below the title.
+**Every new or refactored editor panel** (left column, right column, nested sections) must use a **bold title row** from `ui/widgets/panel_header.py`. Do not use `QGroupBox("Title")`, plain `QLabel` panel titles, or the native `QGroupBox` title for the panel name.
 
-## Title row
+## Title helpers
 
-- `ui/widgets/panel_header.py` — `create_titled_panel_layout(panel, title, trailing_widgets)` returns the panel `QVBoxLayout` with **bold title left, buttons right** on one row (e.g. `Compass … ×`, `Layers … + − ⎘ ⎗`).
-- Call `super().__init__(parent)` with **no** `setTitle` argument; the helper calls `setTitle("")`.
+| Helper | When to use |
+| ------ | ----------- |
+| `create_titled_panel_layout(panel, title, trailing_widgets)` | Title + header buttons (Groups, Layers, Compass `×`, …) |
+| `create_simple_titled_panel_layout(panel, title)` | Title only (Palettes, Materials, Selector, Structure, …) |
+| `create_nested_group_layout(group, title)` | Nested `QGroupBox` sections (Selected Block, Site grid, Render types, …) |
 
-## Icon buttons
+All three call `add_panel_title_row`, which sets the title `QLabel` font to **bold**.
 
-- Size: `panel_icon_size()` from `ui/toolbar_icons.py` (currently 18×18).
+## Setup checklist for a new panel
+
+1. Subclass `QGroupBox` (or wrap content in a `QGroupBox` inside a column).
+2. `super().__init__(parent)` — **no** title string argument.
+3. `layout = create_simple_titled_panel_layout(self, "Panel name")` (or `create_titled_panel_layout` if there are header buttons).
+4. Add fields and controls to `layout` below the title row.
+5. Wire signals in `ui/main_window.py`; document in `docs/ui.md`.
+
+## Do not
+
+- `QGroupBox("My panel")` for the outer or nested section title
+- Duplicate title styling in per-panel stylesheets
+- Skip the title row on “small” panels (palette, tool hints, settings blocks included)
+
+## Icon buttons (when needed)
+
+- Size: `panel_icon_size()` from `ui/toolbar_icons.py` (18×18).
 - Factory: `make_panel_tool_button(icon, tooltip, clicked=...)` from `ui/widgets/panel_tool_button.py`.
-- Icons: `layer_*_icon(size=panel_icon_size().width())` (or new helpers in `toolbar_icons.py` with optional `size=`).
-- Expose panel actions via **signals**; wire handlers in `ui/main_window.py`.
+- Dismissible panels: `make_panel_close_button` (`assets/ui/window-close.svg`) + `close_requested` signal; add a matching checkable **View** menu action in `ui/main_window.py`.
+- Expose actions via **signals**; wire in `ui/main_window.py`.
 
 ## Examples
 
-- `ui/widgets/layer_list_panel.py` — Layers + four actions
-- `ui/widgets/groups_panel.py` — Groups + four actions; extra fields (e.g. Name) go on **rows below** the title row
-- `ui/widgets/compass_panel.py` — Compass + close `×`
+- `palette_panel.py` — `create_simple_titled_panel_layout(self, "Palettes")`
+- `layer_list_panel.py` / `groups_panel.py` — `create_titled_panel_layout` + four actions
+- `properties_panel.py` — nested `create_nested_group_layout` for Selected Block / Grid cell
+
+## Structure tab right column (no gaps when hiding)
+
+The right column uses a flat `QVBoxLayout` (`_structure_tools_layout` in `ui/main_window.py`) — **not** a vertical `QSplitter` between inspector and materials.
+
+When adding or removing a panel from that column:
+
+1. `addWidget(panel)` in stack order (tool hints → `_properties_panel` → `_materials_panel`).
+2. Register collapsible panels in `_update_structure_tools_column_layout()` (the loop that sets `QSizePolicy.Maximum` on compass, tool hints, and properties).
+3. On every show/hide (close button, View menu, tool toggle): call `_update_structure_tools_column_layout()`.
+4. Only **one** stretch target: `_materials_panel` when visible; otherwise a bottom `QSpacerItem` pushes panels to the top.
+
+Do **not** give the whole column `stretch=1` on a splitter or container that stays tall when a child is hidden — that recreates empty gaps below Selected Block / Grid cell.
+
+## Structure tab left column (no gaps when hiding)
+
+The left column uses `_palette_column_layout` in `ui/main_window.py`:
+
+1. **Palettes** — only stretch target (`stretch=1`, grows at the top).
+2. **Groups**, **Layers**, **Structure** — `QSizePolicy.Maximum`; call `_update_palette_column_layout()` when hiding Structure (close button or **View → Structure settings**).
+
+Do not put `stretch=1` on the bottom panel or a wrapper that stays tall when Structure is hidden.
 
 ## Toolbar vs panel
 
 - **Panel** header icons: 18px, `panel_header` + `make_panel_tool_button`.
 - **Grid header** toolbar (eraser/save): 22px, `toolbar_icon_size()`, `LayerActionToolbar` / `QToolBar`.
-
-Document new panels in `docs/ui.md` under the Structure tab table.

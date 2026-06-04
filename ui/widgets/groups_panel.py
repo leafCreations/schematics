@@ -19,6 +19,8 @@ from ui.toolbar_icons import (
     layer_add_icon,
     layer_copy_icon,
     layer_delete_icon,
+    layer_move_down_icon,
+    layer_move_up_icon,
     layer_paste_icon,
     layer_visible_off_icon,
     panel_icon_size,
@@ -103,6 +105,8 @@ class GroupsPanel(QGroupBox):
     copy_requested = Signal()
     paste_requested = Signal()
     group_renamed = Signal(str, str)
+    move_up_requested = Signal()
+    move_down_requested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -157,9 +161,27 @@ class GroupsPanel(QGroupBox):
         self._list = QListWidget()
         self._list.currentRowChanged.connect(self._on_row_changed)
 
+        self._up_button = make_panel_tool_button(
+            layer_move_up_icon(size=icon_px),
+            "Move selected group up",
+            clicked=self.move_up_requested.emit,
+        )
+        self._down_button = make_panel_tool_button(
+            layer_move_down_icon(size=icon_px),
+            "Move selected group down",
+            clicked=self.move_down_requested.emit,
+        )
+
+        reorder_row = QHBoxLayout()
+        reorder_row.addStretch(1)
+        reorder_row.addWidget(self._up_button)
+        reorder_row.addWidget(self._down_button)
+
         layout.addLayout(name_row)
         layout.addWidget(self._list, stretch=1)
-        self.setMaximumHeight(180)
+        layout.addLayout(reorder_row)
+        self.setMaximumHeight(220)
+        self._update_reorder_buttons()
 
     def set_paste_enabled(self, enabled: bool) -> None:
         self._paste_button.setEnabled(enabled)
@@ -214,6 +236,7 @@ class GroupsPanel(QGroupBox):
 
         self._select_filter_row(selected_filter)
         self._update_action_buttons()
+        self._update_reorder_buttons()
         self._block_signals = False
 
     def _select_filter_row(self, group_filter: str | None) -> None:
@@ -250,6 +273,24 @@ class GroupsPanel(QGroupBox):
         self._delete_button.setEnabled(has_group)
         self._copy_button.setEnabled(has_group)
 
+    def _group_row_index(self) -> int:
+        """Selected row index among groups (0 = first group, excluding All)."""
+        row = self._list.currentRow()
+
+        if row <= 0:
+            return -1
+
+        return row - 1
+
+    def _group_count(self) -> int:
+        return max(0, self._list.count() - 1)
+
+    def _update_reorder_buttons(self) -> None:
+        group_index = self._group_row_index()
+        group_count = self._group_count()
+        self._up_button.setEnabled(group_index > 0)
+        self._down_button.setEnabled(0 <= group_index < group_count - 1)
+
     def _emit_group_renamed(self) -> None:
         if self._block_signals:
             return
@@ -273,6 +314,7 @@ class GroupsPanel(QGroupBox):
 
         self._selected_filter = group_key
         self._select_filter_row(group_key)
+        self._update_reorder_buttons()
         self.group_selected.emit(group_key)
 
     def _on_row_changed(self, row: int) -> None:
@@ -289,10 +331,12 @@ class GroupsPanel(QGroupBox):
         if stored == _ALL_ROW_KEY:
             self._selected_filter = _ALL_FILTER
             self._sync_name_edit()
+            self._update_reorder_buttons()
             self.group_selected.emit(_ALL_FILTER)
             return
 
         if stored is not None:
             self._selected_filter = str(stored)
             self._sync_name_edit()
+            self._update_reorder_buttons()
             self.group_selected.emit(str(stored))

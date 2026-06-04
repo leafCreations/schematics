@@ -49,7 +49,31 @@ def test_visible_layer_array_indices_with_hidden_group():
 def test_collect_layer_groups_includes_defined_empty_groups():
     layers = [{"group": "Floor 1", "cells": [["."]]}]
     grid = {"groups": ["Roof", "Floor 1"]}
-    assert layer_groups.collect_layer_groups(layers, grid) == ["Floor 1", "Roof"]
+    assert layer_groups.collect_layer_groups(layers, grid) == ["Roof", "Floor 1"]
+
+
+def test_move_group_reorders_layers_and_grid():
+    layers = [
+        {"group": "Floor 1", "cells": [["a"]]},
+        {"group": "Roof", "cells": [["b"]]},
+        {"group": "Floor 1", "cells": [["c"]]},
+    ]
+    grid: dict = {}
+    permutation = layer_groups.move_group(layers, grid, "Roof", -1)
+
+    assert permutation == [1, 0, 2]
+    reordered = [layers[old_index] for old_index in permutation]
+    assert [layer["cells"][0][0] for layer in reordered] == ["b", "a", "c"]
+    assert grid["groups"] == ["Roof", "Floor 1"]
+
+
+def test_move_group_empty_group_only_updates_grid():
+    layers = [{"group": "Floor 1", "cells": [["."]]}]
+    grid = {"groups": ["Floor 1", "Empty"]}
+    permutation = layer_groups.move_group(layers, grid, "Empty", -1)
+
+    assert permutation == [0]
+    assert grid["groups"] == ["Empty", "Floor 1"]
 
 
 def test_rename_group_updates_layers_and_grid():

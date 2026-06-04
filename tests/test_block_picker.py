@@ -3,6 +3,7 @@ from helpers.block_picker import (
     cell_token,
     enumerate_token_materials,
     format_entry_label,
+    homogeneous_picker_entry_for_positions,
     list_palettes,
     picker_entry_for_block_id,
     picker_entry_for_cell,
@@ -136,6 +137,27 @@ def test_picker_entry_for_cell_catalog_block():
 
 def test_picker_entry_for_cell_empty_returns_none():
     assert picker_entry_for_cell(".") is None
+
+
+def test_homogeneous_picker_entry_same_planks_materials():
+    cells = [
+        ["PLANKS:oak", "PLANKS:spruce"],
+        [".", "PLANKS:birch"],
+    ]
+    entry = homogeneous_picker_entry_for_positions(cells, [(0, 0), (0, 1), (1, 1)])
+
+    assert entry is not None
+    assert entry.token == "PLANKS"
+
+
+def test_homogeneous_picker_entry_rejects_mixed_types():
+    cells = [["PLANKS:oak", "STAIRS:oak@north"]]
+    assert homogeneous_picker_entry_for_positions(cells, [(0, 0), (0, 1)]) is None
+
+
+def test_homogeneous_picker_entry_rejects_empty_cells():
+    cells = [["PLANKS:oak", "."]]
+    assert homogeneous_picker_entry_for_positions(cells, [(0, 0), (0, 1)]) is None
 
 
 def test_cell_token_copper_lantern_variants():

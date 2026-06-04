@@ -43,3 +43,23 @@ def create_titled_panel_layout(
     layout.setContentsMargins(*margins)
     add_panel_title_row(layout, title, trailing_widgets)
     return layout
+
+
+def create_simple_titled_panel_layout(
+    panel: QGroupBox,
+    title: str,
+    *,
+    margins: tuple[int, int, int, int] = (8, 4, 8, 8),
+) -> QVBoxLayout:
+    """Bold title row for panels without header action buttons."""
+    return create_titled_panel_layout(panel, title, (), margins=margins)
+
+
+def create_nested_group_layout(
+    group: QGroupBox,
+    title: str,
+    *,
+    margins: tuple[int, int, int, int] = (8, 8, 8, 8),
+) -> QVBoxLayout:
+    """Bold title row for nested ``QGroupBox`` sections inside a panel."""
+    return create_simple_titled_panel_layout(group, title, margins=margins)

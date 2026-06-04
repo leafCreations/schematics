@@ -3,8 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
+from PySide6.QtCore import QEvent, Qt, QThread, QUrl
+from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QMouseEvent
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
+    QSpacerItem,
     QSplitter,
     QStatusBar,
     QTabWidget,
@@ -21,9 +23,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from helpers.block_picker import picker_entry_for_cell
+from helpers.block_picker import homogeneous_picker_entry_for_positions, picker_entry_for_cell
+from helpers.cell_clipboard import CellRegionClipboard, copy_region, paste_region
 from helpers.grid import resolve_site_dimensions
+from helpers.grid_brush import rect_cell_indices, region_cell_indices, square_cell_indices
 from helpers.grid_cells import count_cells_trimmed_by_resize, empty_cells, resize_structure_layers
+from helpers.grid_labels import grid_axis_position, grid_axis_selection_range
 from helpers.grid_placement import (
     clamp_grid_offsets_for_structure,
     nudge_structure_offset,
@@ -38,6 +43,7 @@ from helpers.layer_groups import (
     group_name_exists,
     layer_indices_in_group,
     layer_matches_group_filter,
+    move_group,
     remove_group,
     rename_group,
     set_group_hidden,
@@ -49,8 +55,10 @@ from helpers.layer_management import (
     layer_label,
     move_layer_in_document,
     next_worldgen_index,
+    remap_indices_after_permutation,
     remap_indices_after_swap,
     remove_layer_from_document,
+    reorder_layers_in_document,
 )
 from helpers.layer_visibility import is_layer_visible, set_layer_visible
 from helpers.path_strip import (
@@ -62,6 +70,7 @@ from helpers.path_strip import (
 )
 from helpers.paths import OUTPUT_SCHEMATICS_FOLDER
 from helpers.site_ground import resize_site_ground
+from ui.app_settings import sync_editor_settings_from_ui
 from ui.document import (
     StructureDocument,
     open_structure,
@@ -71,7 +80,18 @@ from ui.document import (
 )
 from ui.editor_history import apply_history_state, capture_history_state
 from ui.editor_materials import build_editor_materials_context, structure_material_inventory
-from ui.editor_prefs import block_tooltips_enabled, set_block_tooltips_enabled
+from ui.editor_prefs import (
+    block_tooltips_enabled,
+    grid_axis_labels_enabled,
+    panel_compass_visible,
+    panel_materials_visible,
+    panel_structure_settings_visible,
+    set_block_tooltips_enabled,
+    set_grid_axis_labels_enabled,
+    set_panel_compass_visible,
+    set_panel_materials_visible,
+    set_panel_structure_settings_visible,
+)
 from ui.icon_theme import configure_ui_icon_theme
 from ui.materials_icons import MaterialsIconCache
 from ui.menu_style import configure_ui_menus
@@ -82,9 +102,12 @@ from ui.site_cells import build_site_display_grid, site_preview_layer_index, str
 from ui.texture_cache import GridTextureCache
 from ui.tooltip_style import configure_ui_tooltips
 from ui.widgets.compass_panel import CompassPanel
-from ui.widgets.grid import LayerGridWidget
+from ui.widgets.grid import LayerGridViewport, LayerGridWidget
 from ui.widgets.groups_panel import GroupsPanel
+from ui.widgets.layer_eraser_panel import LayerEraserPanel
 from ui.widgets.layer_list_panel import LayerListPanel
+from ui.widgets.layer_paint_brush_panel import LayerPaintBrushPanel
+from ui.widgets.layer_selector_panel import LayerSelectorPanel
 from ui.widgets.layer_tools_panel import LayerToolsPanel
 from ui.widgets.materials_panel import MaterialsPanel
 from ui.widgets.palette_panel import PalettePanel
@@ -95,6 +118,10 @@ from ui.widgets.site_nudge_controls import SiteNudgeControls
 from ui.widgets.site_path_panel import SitePathPanel
 from ui.widgets.site_settings_panel import SiteSettingsPanel
 from ui.widgets.structure_settings_panel import StructureSettingsPanel
+
+_STRUCTURE_EDITOR_GUIDE_URL = (
+    "https://github.com/leafCreations/schematics/blob/main/docs/structure-editor-guide.md"
+)
 
 
 class MainWindow(QMainWindow):
@@ -113,6 +140,8 @@ class MainWindow(QMainWindow):
         self._current_layer_index = 0
         self._dirty_layers: set[int] = set()
         self._dirty_structure = False
+        self._paint_brush_active = True
+        self._selector_active = False
         self._eraser_active = False
         self._structure_name = document.metadata.get("name", document.structure_path.stem)
 
@@ -130,6 +159,9 @@ class MainWindow(QMainWindow):
         self._structure_grid = LayerGridWidget(self._grid_texture_cache)
         self._site_grid_view = SiteGridView(self._grid_texture_cache)
         self._palette_panel = PalettePanel()
+        self._layer_paint_brush_panel = LayerPaintBrushPanel()
+        self._layer_selector_panel = LayerSelectorPanel()
+        self._layer_eraser_panel = LayerEraserPanel()
         self._properties_panel = PropertiesPanel()
         self._properties_panel.set_texture_cache(self._grid_texture_cache)
         self._materials_context = build_editor_materials_context()
@@ -148,13 +180,20 @@ class MainWindow(QMainWindow):
         self._restoring_history = False
         self._layer_clipboard: dict | None = None
         self._group_clipboard: dict | None = None
+        self._cell_clipboard: CellRegionClipboard | None = None
 
         self.setStatusBar(self._status)
         self._init_menus()
 
+        self._layer_tools_panel.paint_brush_toggled.connect(self._on_paint_brush_toggled)
+        self._layer_tools_panel.selector_toggled.connect(self._on_selector_toggled)
         self._layer_tools_panel.eraser_toggled.connect(self._on_eraser_toggled)
+        self._layer_eraser_panel.eraser_size_changed.connect(self._on_eraser_size_changed)
         self._layer_tools_panel.clear_entire_layer_requested.connect(self._on_clear_entire_layer)
+        self._layer_tools_panel.copy_requested.connect(self._on_copy_cells)
+        self._layer_tools_panel.paste_requested.connect(self._on_paste_cells)
         self._layer_tools_panel.save_requested.connect(self._save_current_layer)
+        self._layer_paint_brush_panel.brush_mode_changed.connect(self._on_paint_brush_mode_changed)
         self._groups_panel.group_selected.connect(self._on_group_filter_selected)
         self._groups_panel.visibility_toggled.connect(self._on_group_visibility_toggled)
         self._groups_panel.add_requested.connect(self._on_add_group)
@@ -162,6 +201,8 @@ class MainWindow(QMainWindow):
         self._groups_panel.copy_requested.connect(self._on_copy_group)
         self._groups_panel.paste_requested.connect(self._on_paste_group)
         self._groups_panel.group_renamed.connect(self._on_group_renamed)
+        self._groups_panel.move_up_requested.connect(self._on_move_group_up)
+        self._groups_panel.move_down_requested.connect(self._on_move_group_down)
         self._layer_list_panel.layer_selected.connect(self._on_layer_list_selected)
         self._layer_list_panel.move_up_requested.connect(self._on_move_layer_up)
         self._layer_list_panel.move_down_requested.connect(self._on_move_layer_down)
@@ -180,6 +221,7 @@ class MainWindow(QMainWindow):
             self._on_block_tooltips_changed
         )
         self._apply_block_tooltips_pref(block_tooltips_enabled())
+        self._apply_grid_axis_labels_pref(grid_axis_labels_enabled())
         self._site_grid_view.offset_nudge_requested.connect(self._on_site_offset_nudge)
         self._site_nudge_controls.nudge_requested.connect(self._on_site_offset_nudge)
         self._site_grid_view.structure_selection_changed.connect(
@@ -197,40 +239,49 @@ class MainWindow(QMainWindow):
         self._properties_panel.brush_changed.connect(self._on_brush_changed)
         self._structure_grid.cell_selected.connect(self._on_grid_cell_selected)
         self._structure_grid.cell_pick_block_requested.connect(self._on_cell_pick_block)
-        self._structure_grid.cell_paint_requested.connect(self._on_cell_paint)
+        self._structure_grid.cell_erase_matching_requested.connect(self._on_erase_matching_cells)
+        self._structure_grid.paint_region_fill_requested.connect(self._on_paint_region_fill)
         self._structure_grid.cell_erase_requested.connect(self._on_cell_erase)
-        self._structure_grid.itemSelectionChanged.connect(self._structure_grid.highlight_selection)
+        self._structure_grid.eraser_region_erase_requested.connect(self._on_eraser_region_erase)
+        self._structure_grid.itemSelectionChanged.connect(self._on_grid_selection_changed)
         self._materials_panel.scope_changed.connect(self._refresh_materials_list)
         self._structure_settings_panel.resize_requested.connect(self._on_structure_resize_requested)
 
         palette_column = QWidget()
-        palette_column_layout = QVBoxLayout(palette_column)
-        palette_column_layout.setContentsMargins(0, 0, 0, 0)
-        palette_column_layout.addWidget(self._palette_panel, stretch=1)
-        palette_column_layout.addWidget(self._groups_panel)
-        palette_column_layout.addWidget(self._layer_list_panel)
-        palette_column_layout.addWidget(self._structure_settings_panel)
+        self._palette_column_layout = QVBoxLayout(palette_column)
+        self._palette_column_layout.setContentsMargins(0, 0, 0, 0)
+        self._palette_column_layout.setSpacing(0)
+        self._structure_settings_panel.close_requested.connect(self._hide_structure_settings_panel)
+        self._palette_column_layout.addWidget(self._palette_panel)
+        self._palette_column_layout.addWidget(self._groups_panel)
+        self._palette_column_layout.addWidget(self._layer_list_panel)
+        self._palette_column_layout.addWidget(self._structure_settings_panel)
+        self._update_palette_column_layout()
 
         structure_header = self._build_structure_header()
+        self._structure_grid_viewport = LayerGridViewport(self._structure_grid)
+
         structure_center = QWidget()
         structure_center_layout = QVBoxLayout(structure_center)
         structure_center_layout.setContentsMargins(0, 0, 0, 0)
         structure_center_layout.addWidget(structure_header)
-        structure_center_layout.addWidget(self._structure_grid, stretch=1)
+        structure_center_layout.addWidget(self._structure_grid_viewport, stretch=1)
 
-        self._structure_tools_splitter = QSplitter(Qt.Orientation.Vertical)
-        self._structure_tools_splitter.addWidget(self._properties_panel)
-        self._structure_tools_splitter.addWidget(self._materials_panel)
-        self._structure_tools_splitter.setStretchFactor(0, 0)
-        self._structure_tools_splitter.setStretchFactor(1, 1)
-        self._structure_tools_splitter.setChildrenCollapsible(False)
+        self._materials_panel.close_requested.connect(self._hide_materials_panel)
 
         structure_tools_column = QWidget()
-        structure_tools_layout = QVBoxLayout(structure_tools_column)
-        structure_tools_layout.setContentsMargins(0, 0, 0, 0)
+        self._structure_tools_layout = QVBoxLayout(structure_tools_column)
+        self._structure_tools_layout.setContentsMargins(0, 0, 0, 0)
+        self._structure_tools_layout.setSpacing(0)
+        self._structure_tools_bottom_spacer: QSpacerItem | None = None
         self._compass_panel.close_requested.connect(self._hide_compass_panels)
-        structure_tools_layout.addWidget(self._compass_panel)
-        structure_tools_layout.addWidget(self._structure_tools_splitter, stretch=1)
+        self._structure_tools_layout.addWidget(self._compass_panel)
+        self._structure_tools_layout.addWidget(self._layer_paint_brush_panel)
+        self._structure_tools_layout.addWidget(self._layer_selector_panel)
+        self._structure_tools_layout.addWidget(self._layer_eraser_panel)
+        self._structure_tools_layout.addWidget(self._properties_panel)
+        self._structure_tools_layout.addWidget(self._materials_panel)
+        self._sync_layer_tool_panels()
 
         structure_splitter = QSplitter(Qt.Orientation.Horizontal)
         structure_splitter.addWidget(palette_column)
@@ -272,6 +323,7 @@ class MainWindow(QMainWindow):
         self._render_panel.open_output_requested.connect(self._open_render_output_folder)
 
         self.setCentralWidget(self._tabs)
+        QApplication.instance().installEventFilter(self)
 
         self._structure_settings_panel.set_structure_path(document.structure_path)
         self._structure_settings_panel.load_from_metadata(document.metadata)
@@ -285,8 +337,10 @@ class MainWindow(QMainWindow):
         self._refresh_site_preview()
         self._update_window_title()
         self._update_save_site_button()
+        self._update_cell_clipboard_actions()
         self.resize(1280, 800)
-        self._balance_structure_tools_splitter()
+        self._update_structure_tools_column_layout()
+        self._apply_panel_visibility_prefs()
         self._status.showMessage(
             "Structure tab: paint cells (Undo supported). Site tab: footprint and placement.",
             6000,
@@ -297,6 +351,7 @@ class MainWindow(QMainWindow):
         self._init_file_menu()
         self._init_edit_menu()
         self._init_view_menu()
+        self._init_help_menu()
 
     def _init_file_menu(self) -> None:
         file_menu = self.menuBar().addMenu("&File")
@@ -338,6 +393,41 @@ class MainWindow(QMainWindow):
         self._compass_action.triggered.connect(self._on_compass_action_triggered)
         view_menu.addAction(self._compass_action)
 
+        self._materials_action = QAction("&Materials", self)
+        self._materials_action.setCheckable(True)
+        self._materials_action.setChecked(True)
+        self._materials_action.triggered.connect(self._on_materials_action_triggered)
+        view_menu.addAction(self._materials_action)
+
+        self._structure_settings_action = QAction("Structure &settings", self)
+        self._structure_settings_action.setCheckable(True)
+        self._structure_settings_action.setChecked(True)
+        self._structure_settings_action.triggered.connect(
+            self._on_structure_settings_action_triggered
+        )
+        view_menu.addAction(self._structure_settings_action)
+
+        self._grid_axis_labels_action = QAction("Grid &axis labels", self)
+        self._grid_axis_labels_action.setCheckable(True)
+        self._grid_axis_labels_action.setChecked(True)
+        self._grid_axis_labels_action.triggered.connect(self._on_grid_axis_labels_action_triggered)
+        view_menu.addAction(self._grid_axis_labels_action)
+
+    def _on_grid_axis_labels_action_triggered(self, checked: bool) -> None:
+        self._apply_grid_axis_labels_pref(checked)
+
+    def _apply_grid_axis_labels_pref(self, enabled: bool) -> None:
+        set_grid_axis_labels_enabled(enabled)
+        self._structure_grid.set_show_axis_labels(enabled)
+        self._grid_axis_labels_action.blockSignals(True)
+        self._grid_axis_labels_action.setChecked(enabled)
+        self._grid_axis_labels_action.blockSignals(False)
+
+    def _apply_panel_visibility_prefs(self) -> None:
+        self._set_compass_panels_visible(panel_compass_visible())
+        self._set_materials_panel_visible(panel_materials_visible())
+        self._set_structure_settings_panel_visible(panel_structure_settings_visible())
+
     def _on_compass_action_triggered(self, checked: bool) -> None:
         self._set_compass_panels_visible(checked)
 
@@ -350,6 +440,36 @@ class MainWindow(QMainWindow):
         self._compass_action.blockSignals(False)
         self._compass_panel.setVisible(visible)
         self._site_compass_panel.setVisible(visible)
+        set_panel_compass_visible(visible)
+        self._update_structure_tools_column_layout()
+
+    def _on_materials_action_triggered(self, checked: bool) -> None:
+        self._set_materials_panel_visible(checked)
+
+    def _hide_materials_panel(self) -> None:
+        self._set_materials_panel_visible(False)
+
+    def _on_structure_settings_action_triggered(self, checked: bool) -> None:
+        self._set_structure_settings_panel_visible(checked)
+
+    def _hide_structure_settings_panel(self) -> None:
+        self._set_structure_settings_panel_visible(False)
+
+    def _set_structure_settings_panel_visible(self, visible: bool) -> None:
+        self._structure_settings_action.blockSignals(True)
+        self._structure_settings_action.setChecked(visible)
+        self._structure_settings_action.blockSignals(False)
+        self._structure_settings_panel.setVisible(visible)
+        set_panel_structure_settings_visible(visible)
+        self._update_palette_column_layout()
+
+    def _set_materials_panel_visible(self, visible: bool) -> None:
+        self._materials_action.blockSignals(True)
+        self._materials_action.setChecked(visible)
+        self._materials_action.blockSignals(False)
+        self._materials_panel.setVisible(visible)
+        set_panel_materials_visible(visible)
+        self._update_structure_tools_column_layout()
 
     def _init_edit_menu(self) -> None:
         edit_menu = self.menuBar().addMenu("&Edit")
@@ -363,6 +483,30 @@ class MainWindow(QMainWindow):
         self._redo_action.setShortcut(QKeySequence("Ctrl+Y"))
         self._redo_action.triggered.connect(self._redo_edit)
         edit_menu.addAction(self._redo_action)
+
+        edit_menu.addSeparator()
+
+        self._copy_cells_action = QAction("&Copy", self)
+        self._copy_cells_action.setShortcut(QKeySequence.StandardKey.Copy)
+        self._copy_cells_action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+        self._copy_cells_action.triggered.connect(self._on_copy_cells)
+        edit_menu.addAction(self._copy_cells_action)
+
+        self._paste_cells_action = QAction("&Paste", self)
+        self._paste_cells_action.setShortcut(QKeySequence.StandardKey.Paste)
+        self._paste_cells_action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+        self._paste_cells_action.triggered.connect(self._on_paste_cells)
+        edit_menu.addAction(self._paste_cells_action)
+
+    def _init_help_menu(self) -> None:
+        help_menu = self.menuBar().addMenu("&Help")
+
+        documentation_action = QAction("&Documentation", self)
+        documentation_action.triggered.connect(self._open_structure_editor_guide)
+        help_menu.addAction(documentation_action)
+
+    def _open_structure_editor_guide(self) -> None:
+        QDesktopServices.openUrl(QUrl(_STRUCTURE_EDITOR_GUIDE_URL))
 
     def _on_new_structure_placeholder(self) -> None:
         QMessageBox.information(
@@ -448,6 +592,7 @@ class MainWindow(QMainWindow):
         self._status.showMessage("Redone.", 2000)
 
     def _restore_history_state(self, state) -> None:
+        self._ensure_eraser_drag_closed()
         self._restoring_history = True
 
         try:
@@ -462,8 +607,10 @@ class MainWindow(QMainWindow):
             self._grid_texture_cache.clear_cache()
             self._layer_clipboard = None
             self._group_clipboard = None
+            self._cell_clipboard = None
             self._layer_list_panel.set_paste_enabled(False)
             self._groups_panel.set_paste_enabled(False)
+            self._update_cell_clipboard_actions()
             self._refresh_layer_panels()
             self._show_layer(self._clamp_layer_index(self._current_layer_index))
             self._structure_settings_panel.load_from_metadata(self._document.metadata)
@@ -484,21 +631,90 @@ class MainWindow(QMainWindow):
             self._restoring_history = False
             self._update_undo_actions()
 
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802
+        if (
+            event.type() == QEvent.Type.MouseButtonRelease
+            and isinstance(event, QMouseEvent)
+            and event.button() == Qt.MouseButton.LeftButton
+            and watched is not self._structure_grid.viewport()
+        ):
+            if self._structure_grid.paint_drag_active():
+                self._structure_grid.commit_paint_drag()
+            elif self._structure_grid.eraser_drag_active():
+                self._structure_grid.commit_eraser_drag()
+
+        return super().eventFilter(watched, event)
+
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        self._balance_structure_tools_splitter()
+        self._update_palette_column_layout()
+        self._update_structure_tools_column_layout()
+        self._structure_grid.refit_viewport()
 
-    def _balance_structure_tools_splitter(self) -> None:
-        """Give Materials all spare height; Properties stays at content size."""
-        splitter = self._structure_tools_splitter
-        total = splitter.height()
+    def _update_palette_column_layout(self) -> None:
+        """Palettes grow at the top; lower panels pack with no gap when Structure is hidden."""
+        layout = self._palette_column_layout
 
-        if total <= 0:
-            return
+        for widget in (
+            self._groups_panel,
+            self._layer_list_panel,
+            self._structure_settings_panel,
+        ):
+            layout.setStretchFactor(widget, 0)
+            widget.setSizePolicy(
+                QSizePolicy.Policy.Preferred,
+                QSizePolicy.Policy.Maximum,
+            )
 
-        props_height = splitter.widget(0).sizeHint().height()
-        materials_height = max(total - props_height, 120)
-        splitter.setSizes([props_height, materials_height])
+        layout.setStretchFactor(self._palette_panel, 1)
+        self._palette_panel.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Expanding,
+        )
+
+    def _update_structure_tools_column_layout(self) -> None:
+        """Pack visible panels to the top; Materials grows when shown; no empty gaps."""
+        layout = self._structure_tools_layout
+
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            widget = item.widget() if item is not None else None
+
+            if widget is None:
+                continue
+
+            if widget in (
+                self._compass_panel,
+                self._layer_paint_brush_panel,
+                self._layer_selector_panel,
+                self._layer_eraser_panel,
+                self._properties_panel,
+            ):
+                layout.setStretchFactor(widget, 0)
+                widget.setSizePolicy(
+                    QSizePolicy.Policy.Preferred,
+                    QSizePolicy.Policy.Maximum,
+                )
+
+        if self._structure_tools_bottom_spacer is not None:
+            layout.removeItem(self._structure_tools_bottom_spacer)
+            self._structure_tools_bottom_spacer = None
+
+        if self._materials_panel.isVisible():
+            layout.setStretchFactor(self._materials_panel, 1)
+            self._materials_panel.setSizePolicy(
+                QSizePolicy.Policy.Preferred,
+                QSizePolicy.Policy.Expanding,
+            )
+        else:
+            layout.setStretchFactor(self._materials_panel, 0)
+            self._structure_tools_bottom_spacer = QSpacerItem(
+                0,
+                0,
+                QSizePolicy.Policy.Minimum,
+                QSizePolicy.Policy.Expanding,
+            )
+            layout.addItem(self._structure_tools_bottom_spacer)
 
     def _build_structure_header(self) -> QWidget:
         header = QWidget()
@@ -783,6 +999,51 @@ class MainWindow(QMainWindow):
     def _on_layer_list_selected(self, index: int) -> None:
         self._on_layer_changed(index)
 
+    def _on_move_group_up(self) -> None:
+        self._move_group_by_delta(-1)
+
+    def _on_move_group_down(self) -> None:
+        self._move_group_by_delta(1)
+
+    def _move_group_by_delta(self, delta: int) -> None:
+        group = self._groups_panel.selected_group_name()
+
+        if group is None:
+            return
+
+        if not self._confirm_discard_layer_changes(self._current_layer_index):
+            return
+
+        self._push_undo_snapshot()
+        grid = self._document.metadata.setdefault("grid", {})
+        permutation = move_group(self._document.layers, grid, group, delta)
+
+        if permutation is None:
+            return
+
+        old_current = self._current_layer_index
+        identity = list(range(len(permutation)))
+
+        if permutation != identity:
+            reorder_layers_in_document(self._document, permutation)
+            self._dirty_layers = remap_indices_after_permutation(
+                self._dirty_layers,
+                permutation,
+            )
+
+            if old_current in permutation:
+                self._current_layer_index = permutation.index(old_current)
+
+        self._dirty_structure = True
+        self._refresh_layer_panels()
+        self._show_layer(self._current_layer_index)
+        self._update_save_site_button()
+        direction = "up" if delta < 0 else "down"
+        self._status.showMessage(
+            f"Moved group {group!r} {direction} — save site settings to persist order.",
+            5000,
+        )
+
     def _on_move_layer_up(self) -> None:
         self._move_layer_by_delta(-1)
 
@@ -949,12 +1210,14 @@ class MainWindow(QMainWindow):
         return header
 
     def _on_tab_changed(self, index: int) -> None:
+        self._update_cell_clipboard_actions()
+
         if index == 0:
             self._status.showMessage(
                 "Paint structure cells — palette and brush on the right.",
                 4000,
             )
-            self._balance_structure_tools_splitter()
+            self._update_structure_tools_column_layout()
             self._sync_structure_size_controls()
         elif index == 1:
             self._status.showMessage(
@@ -977,19 +1240,285 @@ class MainWindow(QMainWindow):
     def _on_palette_entry_selected(self, entry) -> None:
         if self._eraser_active:
             self._layer_tools_panel.set_eraser_checked(False)
+            self._eraser_active = False
 
+        if self._selector_active:
+            self._layer_tools_panel.set_selector_checked(False)
+            self._selector_active = False
+
+        if not self._paint_brush_active:
+            self._layer_tools_panel.set_paint_brush_checked(True)
+            self._paint_brush_active = True
+
+        self._sync_layer_tool_panels()
         self._properties_panel.show_picker_entry(entry)
+
+    def _sync_layer_tool_panels(self) -> None:
+        paint_visible = (
+            self._paint_brush_active and not self._eraser_active and not self._selector_active
+        )
+        selector_picker_visible = (
+            self._selector_active and self._selector_homogeneous_entry() is not None
+        )
+        picker_visible = paint_visible or selector_picker_visible
+        inspector_visible = (
+            self._paint_brush_active or self._selector_active
+        ) and not self._eraser_active
+        self._layer_paint_brush_panel.setVisible(paint_visible)
+        self._properties_panel.setVisible(inspector_visible)
+        self._properties_panel.set_picker_group_visible(picker_visible)
+        self._layer_selector_panel.setVisible(self._selector_active)
+        if self._selector_active:
+            self._update_selector_selection_display()
+        self._layer_eraser_panel.setVisible(self._eraser_active)
+        self._structure_grid.set_selector_active(self._selector_active)
+        self._structure_grid.set_paint_brush_active(self._paint_brush_active)
+        self._structure_grid.set_paint_brush_mode(self._layer_paint_brush_panel.paint_brush_mode())
+        self._update_structure_eraser_preview()
+        self._update_structure_tools_column_layout()
+
+    def _update_structure_eraser_preview(self) -> None:
+        self._structure_grid.set_eraser_preview(
+            active=self._eraser_active,
+            size=self._layer_eraser_panel.eraser_size(),
+        )
+
+    def _on_eraser_size_changed(self, _size: int) -> None:
+        self._ensure_eraser_drag_closed()
+        self._update_structure_eraser_preview()
+
+    def _ensure_paint_drag_closed(self) -> None:
+        if self._structure_grid.paint_drag_active():
+            self._structure_grid.cancel_paint_drag()
+
+    def _ensure_eraser_drag_closed(self) -> None:
+        """Cancel an in-progress eraser marquee (e.g. mouse released outside the grid)."""
+        self._ensure_paint_drag_closed()
+        if self._structure_grid.eraser_drag_active():
+            self._structure_grid.cancel_eraser_drag()
+
+    def _sync_eraser_panel_bounds(self) -> None:
+        layer = self._document.layers[self._current_layer_index]
+        cells = layer.get("cells") or []
+
+        if not cells:
+            self._layer_eraser_panel.set_grid_bounds(width=1, depth=1)
+            return
+
+        depth = len(cells)
+        width = len(cells[0]) if cells else 1
+        self._layer_eraser_panel.set_grid_bounds(width=width, depth=depth)
+
+    def _on_paint_brush_mode_changed(self) -> None:
+        self._structure_grid.set_paint_brush_mode(self._layer_paint_brush_panel.paint_brush_mode())
+
+    def _on_paint_region_fill(
+        self,
+        row_a: int,
+        col_a: int,
+        row_b: int,
+        col_b: int,
+    ) -> None:
+        if not self._paint_brush_active:
+            return
+
+        token = self._properties_panel.build_placement_token()
+
+        if token is None:
+            self._status.showMessage(
+                "Choose a palette block before painting.",
+                4000,
+            )
+            return
+
+        layer = self._document.layers[self._current_layer_index]
+        cells = layer["cells"]
+        depth = len(cells)
+        width = len(cells[0]) if cells else 0
+
+        if depth == 0 or width == 0:
+            return
+
+        mode = self._layer_paint_brush_panel.paint_brush_mode()
+        indices = region_cell_indices(
+            row_a,
+            col_a,
+            row_b,
+            col_b,
+            rows=depth,
+            cols=width,
+            mode=mode,
+        )
+        to_place = [(r, c) for r, c in indices if cells[r][c] != token]
+
+        if not to_place:
+            self._status.showMessage("Selection already matches the brush.", 3000)
+            return
+
+        self._grid_texture_cache.invalidate_token(token)
+        self._push_undo_snapshot()
+
+        last_row, last_col = to_place[0]
+
+        for row, col in to_place:
+            cells[row][col] = token
+            self._structure_grid.update_cell(row, col, token)
+            last_row, last_col = row, col
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._mark_layer_dirty(self._current_layer_index)
+        self._properties_panel.show_grid_cell(last_row, last_col, token)
+        self._refresh_materials_list()
+
+        count = len(to_place)
+        mode_label = "outline" if mode == "outline" else "fill"
+
+        self._status.showMessage(
+            f"Placed {count} cell{'s' if count != 1 else ''} ({mode_label} brush).",
+            4000,
+        )
+
+    def _on_eraser_region_erase(
+        self,
+        row_a: int,
+        col_a: int,
+        row_b: int,
+        col_b: int,
+    ) -> None:
+        layer = self._document.layers[self._current_layer_index]
+        cells = layer["cells"]
+        depth = len(cells)
+        width = len(cells[0]) if cells else 0
+
+        if depth == 0 or width == 0:
+            return
+
+        indices = rect_cell_indices(row_a, col_a, row_b, col_b, rows=depth, cols=width)
+        to_clear = [(r, c) for r, c in indices if cells[r][c] != "."]
+
+        if not to_clear:
+            self._status.showMessage("No blocks to erase in that region.", 3000)
+            return
+
+        self._push_undo_snapshot()
+
+        last_row, last_col = to_clear[0]
+
+        for row, col in to_clear:
+            cells[row][col] = "."
+            self._structure_grid.update_cell(row, col, ".")
+            last_row, last_col = row, col
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._mark_layer_dirty(self._current_layer_index)
+        self._properties_panel.show_grid_cell(last_row, last_col, ".")
+        self._refresh_materials_list()
+
+        count = len(to_clear)
+
+        self._status.showMessage(
+            f"Erased {count} cell{'s' if count != 1 else ''} in selected region.",
+            4000,
+        )
+
+    def _erase_cells_at(self, row: int, col: int) -> None:
+        layer = self._document.layers[self._current_layer_index]
+        cells = layer["cells"]
+        depth = len(cells)
+        width = len(cells[0]) if cells else 0
+
+        if depth == 0 or width == 0:
+            return
+
+        size = self._layer_eraser_panel.eraser_size() if self._eraser_active else 1
+        indices = square_cell_indices(row, col, size, rows=depth, cols=width)
+        to_clear = [(r, c) for r, c in indices if cells[r][c] != "."]
+
+        if not to_clear:
+            return
+
+        self._push_undo_snapshot()
+
+        last_row, last_col = row, col
+
+        for r, c in to_clear:
+            cells[r][c] = "."
+            self._structure_grid.update_cell(r, c, ".")
+            last_row, last_col = r, c
+
+        self._mark_layer_dirty(self._current_layer_index)
+        self._properties_panel.show_grid_cell(last_row, last_col, ".")
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._refresh_materials_list()
+
+    def _on_paint_brush_toggled(self, active: bool) -> None:
+        self._paint_brush_active = active
+
+        if active:
+            self._layer_tools_panel.set_selector_checked(False)
+            self._selector_active = False
+            self._layer_tools_panel.set_eraser_checked(False)
+            self._eraser_active = False
+            self._ensure_eraser_drag_closed()
+            self._status.showMessage(
+                "Paint brush active — choose a palette block, then drag on the grid to paint.",
+                4000,
+            )
+        else:
+            self._status.showMessage("Paint brush off — use Selector to choose cells.", 3000)
+
+        self._sync_layer_tool_panels()
+        self._update_window_title()
+
+    def _on_selector_toggled(self, active: bool) -> None:
+        self._selector_active = active
+
+        if active:
+            self._ensure_paint_drag_closed()
+            self._layer_tools_panel.set_paint_brush_checked(False)
+            self._paint_brush_active = False
+            self._layer_tools_panel.set_eraser_checked(False)
+            self._eraser_active = False
+            self._ensure_eraser_drag_closed()
+            self._status.showMessage("Selector active — drag to select cells.", 4000)
+            self._sync_selector_brush_from_selection()
+        else:
+            self._layer_tools_panel.set_paint_brush_checked(True)
+            self._paint_brush_active = True
+            self._status.showMessage("Paint brush active — choose a palette block to paint.", 3000)
+            self._sync_layer_tool_panels()
+
+        self._update_window_title()
 
     def _on_eraser_toggled(self, active: bool) -> None:
         self._eraser_active = active
 
         if active:
+            self._ensure_paint_drag_closed()
+            self._layer_tools_panel.set_paint_brush_checked(False)
+            self._paint_brush_active = False
+            self._layer_tools_panel.set_selector_checked(False)
+            self._selector_active = False
             self._palette_panel.clear_selection()
             self._properties_panel.clear_picker_entry()
-            self._status.showMessage("Eraser active — left-click or right-click cells to clear.")
+            self._sync_eraser_panel_bounds()
+            self._status.showMessage(
+                "Eraser active — left-click or right-click cells to clear "
+                f"(size {self._layer_eraser_panel.eraser_size()}).",
+            )
         else:
-            self._status.showMessage("Select a palette block to paint.", 3000)
+            self._layer_tools_panel.set_paint_brush_checked(True)
+            self._paint_brush_active = True
+            self._status.showMessage("Paint brush active — choose a palette block to paint.", 3000)
 
+        self._sync_layer_tool_panels()
         self._update_window_title()
 
     def _on_clear_entire_layer(self) -> None:
@@ -1020,7 +1549,17 @@ class MainWindow(QMainWindow):
 
         if self._eraser_active:
             self._layer_tools_panel.set_eraser_checked(False)
+            self._eraser_active = False
 
+        if self._selector_active:
+            self._layer_tools_panel.set_selector_checked(False)
+            self._selector_active = False
+
+        if not self._paint_brush_active:
+            self._layer_tools_panel.set_paint_brush_checked(True)
+            self._paint_brush_active = True
+
+        self._sync_layer_tool_panels()
         self._push_undo_snapshot()
         layer["cells"] = empty_cells(width, depth)
         self._structure_grid.set_layer_cells(layer["cells"])
@@ -1084,6 +1623,7 @@ class MainWindow(QMainWindow):
         self._update_window_title()
         self._refresh_materials_list()
         self._sync_structure_size_controls()
+        self._sync_eraser_panel_bounds()
         self._status.showMessage(f"Editing {layer_path.name}")
 
     def _sync_structure_size_controls(self) -> None:
@@ -1207,8 +1747,191 @@ class MainWindow(QMainWindow):
         self._update_site_layer_label()
 
     def _on_grid_cell_selected(self, row: int, col: int, raw_token: str) -> None:
+        if self._selector_active:
+            return
+
         self._properties_panel.show_grid_cell(row, col, raw_token)
         self._properties_panel.sync_brush_from_cell(raw_token)
+
+    def _on_grid_selection_changed(self) -> None:
+        self._structure_grid.highlight_selection()
+        self._sync_selector_brush_from_selection()
+        self._update_selector_selection_display()
+        self._update_cell_clipboard_actions()
+
+    def _selector_homogeneous_entry(self):
+        if not self._selector_active:
+            return None
+
+        positions = self._structure_grid.selected_cell_positions()
+
+        if not positions:
+            return None
+
+        layer = self._document.layers[self._current_layer_index]
+        return homogeneous_picker_entry_for_positions(layer["cells"], positions)
+
+    def _sync_selector_brush_from_selection(self) -> None:
+        if not self._selector_active:
+            return
+
+        positions = self._structure_grid.selected_cell_positions()
+        layer = self._document.layers[self._current_layer_index]
+        entry = homogeneous_picker_entry_for_positions(layer["cells"], positions)
+
+        if entry is None:
+            if positions:
+                self._properties_panel.show_selection_summary(positions)
+            else:
+                self._properties_panel.clear_grid_cell()
+
+            self._properties_panel.clear_picker_entry(emit_brush=False)
+            self._sync_layer_tool_panels()
+            return
+
+        sample_row, sample_col = min(positions)
+        sample_token = layer["cells"][sample_row][sample_col]
+        self._properties_panel.show_picker_entry(entry, emit_brush=False)
+        self._properties_panel.sync_brush_from_cell(sample_token)
+
+        if len(positions) == 1:
+            self._properties_panel.show_grid_cell(sample_row, sample_col, sample_token)
+        else:
+            self._properties_panel.show_selection_summary(
+                positions,
+                entry_label=entry.label,
+                sample_token=sample_token,
+            )
+
+        self._sync_layer_tool_panels()
+
+    def _update_selector_selection_display(self) -> None:
+        positions = self._structure_grid.selected_cell_positions()
+        self._layer_selector_panel.set_selection_range(grid_axis_selection_range(positions))
+
+    def _structure_tab_active(self) -> bool:
+        return self._tabs.currentIndex() == 0
+
+    def _update_cell_clipboard_actions(self) -> None:
+        on_structure = self._structure_tab_active()
+        has_selection = bool(self._structure_grid.selected_cell_positions())
+        can_paste = self._cell_clipboard is not None
+
+        self._layer_tools_panel.set_copy_enabled(on_structure and has_selection)
+        self._layer_tools_panel.set_paste_enabled(on_structure and can_paste)
+        self._copy_cells_action.setEnabled(on_structure and has_selection)
+        self._paste_cells_action.setEnabled(on_structure and can_paste)
+
+    def _on_copy_cells(self) -> None:
+        if not self._structure_tab_active():
+            return
+
+        positions = self._structure_grid.selected_cell_positions()
+
+        if not positions:
+            self._status.showMessage("Select cells to copy (Ctrl+click or drag).", 3000)
+            return
+
+        layer = self._document.layers[self._current_layer_index]
+        clipboard = copy_region(layer["cells"], positions)
+
+        if clipboard is None:
+            return
+
+        self._cell_clipboard = clipboard
+        self._update_cell_clipboard_actions()
+
+        count = len(positions)
+
+        plural = "s" if count != 1 else ""
+        region = f"{clipboard.width}×{clipboard.height}"
+        self._status.showMessage(
+            f"Copied {count} cell{plural} ({region} region).",
+            3000,
+        )
+
+    def _on_paste_cells(self) -> None:
+        if not self._structure_tab_active() or self._cell_clipboard is None:
+            return
+
+        self._ensure_eraser_drag_closed()
+
+        anchor = self._structure_grid.selection_anchor() or (0, 0)
+        dest_row, dest_col = anchor
+        layer = self._document.layers[self._current_layer_index]
+        changes = paste_region(layer["cells"], self._cell_clipboard, dest_row, dest_col)
+
+        if not changes:
+            self._status.showMessage("Nothing to paste (out of bounds or unchanged).", 3000)
+            return
+
+        self._push_undo_snapshot()
+
+        last_row, last_col, last_token = changes[0]
+
+        for row, col, token in changes:
+            layer["cells"][row][col] = token
+            self._structure_grid.update_cell(row, col, token)
+            last_row, last_col, last_token = row, col, token
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._mark_layer_dirty(self._current_layer_index)
+        self._properties_panel.show_grid_cell(last_row, last_col, last_token)
+        self._refresh_materials_list()
+
+        pasted = len(changes)
+        plural = "s" if pasted != 1 else ""
+        at = grid_axis_position(dest_row, dest_col)
+        self._status.showMessage(f"Pasted {pasted} cell{plural} at {at}.", 4000)
+
+    def _on_erase_matching_cells(self, raw_token: str) -> None:
+        """Middle-click in eraser mode: clear every cell with the same token."""
+        self._ensure_eraser_drag_closed()
+
+        layer = self._document.layers[self._current_layer_index]
+        cells = layer["cells"]
+        depth = len(cells)
+        width = len(cells[0]) if cells else 0
+
+        if depth == 0 or width == 0:
+            return
+
+        to_clear = [
+            (row, col)
+            for row in range(depth)
+            for col in range(width)
+            if cells[row][col] == raw_token
+        ]
+
+        if not to_clear:
+            self._status.showMessage("No matching cells to erase.", 3000)
+            return
+
+        self._push_undo_snapshot()
+
+        last_row, last_col = to_clear[0]
+
+        for row, col in to_clear:
+            cells[row][col] = "."
+            self._structure_grid.update_cell(row, col, ".")
+            last_row, last_col = row, col
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._mark_layer_dirty(self._current_layer_index)
+        self._properties_panel.show_grid_cell(last_row, last_col, ".")
+        self._refresh_materials_list()
+
+        count = len(to_clear)
+        label = raw_token if len(raw_token) <= 40 else f"{raw_token[:38]}…"
+
+        self._status.showMessage(
+            f"Erased {count} cell{'s' if count != 1 else ''} matching {label}.",
+            4000,
+        )
 
     def _on_cell_pick_block(self, row: int, col: int, raw_token: str) -> None:
         """Middle-click: adopt the cell's block into the palette brush."""
@@ -1217,8 +1940,15 @@ class MainWindow(QMainWindow):
         if raw_token == ".":
             return
 
-        if self._eraser_active:
-            self._layer_tools_panel.set_eraser_checked(False)
+        if self._selector_active:
+            self._layer_tools_panel.set_selector_checked(False)
+            self._selector_active = False
+
+        if not self._paint_brush_active:
+            self._layer_tools_panel.set_paint_brush_checked(True)
+            self._paint_brush_active = True
+
+        self._sync_layer_tool_panels()
 
         entry = picker_entry_for_cell(raw_token)
 
@@ -1243,49 +1973,92 @@ class MainWindow(QMainWindow):
         if self._eraser_active:
             return
 
+        token = self._properties_panel.build_placement_token()
+
+        if token is None:
+            return
+
+        if self._selector_active:
+            positions = self._structure_grid.selected_cell_positions()
+
+            if (
+                not positions
+                or homogeneous_picker_entry_for_positions(
+                    self._document.layers[self._current_layer_index]["cells"],
+                    positions,
+                )
+                is None
+            ):
+                return
+
+            self._push_undo_snapshot()
+
+            for row, col in positions:
+                self._set_cell(
+                    row,
+                    col,
+                    token,
+                    record_undo=False,
+                    update_inspector=False,
+                    refresh_materials=False,
+                )
+
+            self._sync_selector_brush_from_selection()
+            self._refresh_materials_list()
+
+            count = len(positions)
+            self._status.showMessage(
+                f"Updated {count} cell{'s' if count != 1 else ''}.",
+                3000,
+            )
+            return
+
+        if not self._paint_brush_active:
+            return
+
         selected = self._properties_panel.selected_cell()
 
         if selected is None:
             return
 
-        token = self._properties_panel.build_placement_token()
-
-        if token is None:
-            return
-
         row, col = selected
         self._set_cell(row, col, token)
 
-    def _on_cell_paint(self, row: int, col: int) -> None:
-        if self._eraser_active:
-            self._set_cell(row, col, ".")
-            return
-
-        token = self._properties_panel.build_placement_token()
-
-        if token is None:
-            return
-
-        self._set_cell(row, col, token)
-
     def _on_cell_erase(self, row: int, col: int) -> None:
-        self._set_cell(row, col, ".")
+        self._erase_cells_at(row, col)
 
-    def _set_cell(self, row: int, col: int, raw_token: str) -> None:
+    def _set_cell(
+        self,
+        row: int,
+        col: int,
+        raw_token: str,
+        *,
+        record_undo: bool = True,
+        update_inspector: bool = True,
+        refresh_materials: bool = True,
+    ) -> None:
         layer = self._document.layers[self._current_layer_index]
         cells = layer["cells"]
 
         if cells[row][col] == raw_token:
             return
 
-        self._push_undo_snapshot()
+        if record_undo:
+            self._push_undo_snapshot()
+
         cells[row][col] = raw_token
         self._structure_grid.update_cell(row, col, raw_token)
+
         if self._current_layer_index == self._site_preview_layer_index():
             self._refresh_site_preview()
+
         self._mark_layer_dirty(self._current_layer_index)
-        self._properties_panel.show_grid_cell(row, col, raw_token)
-        self._refresh_materials_list()
+
+        if update_inspector:
+            self._properties_panel.show_grid_cell(row, col, raw_token)
+
+        if refresh_materials:
+            self._refresh_materials_list()
 
     def _refresh_materials_list(self) -> None:
         self._materials_icon_cache.clear()
@@ -1690,7 +2463,17 @@ class MainWindow(QMainWindow):
                         event.ignore()
                         return
 
+        self._persist_editor_settings()
         event.accept()
+
+    def _persist_editor_settings(self) -> None:
+        sync_editor_settings_from_ui(
+            block_tooltips=self._structure_grid.show_block_tooltips(),
+            grid_axis_labels=self._structure_grid.show_axis_labels(),
+            panel_compass=self._compass_panel.isVisible(),
+            panel_materials=self._materials_panel.isVisible(),
+            panel_structure_settings=self._structure_settings_panel.isVisible(),
+        )
 
     def _on_generate_renders_requested(self, renders: list[str]) -> None:
         if self._render_thread is not None:

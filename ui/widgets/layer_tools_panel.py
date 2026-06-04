@@ -15,8 +15,12 @@ from PySide6.QtWidgets import (
 )
 
 from ui.toolbar_icons import (
+    layer_copy_icon,
     layer_eraser_icon,
+    layer_paint_brush_icon,
+    layer_paste_icon,
     layer_save_icon,
+    layer_selector_icon,
     toolbar_icon_size,
 )
 
@@ -88,6 +92,8 @@ QToolButton#layerEraserMenu:pressed:!disabled {
 """
 
 
+_PAINT_BRUSH_TOOLTIP = "Toggle paint mode (drag to select region, release to place)"
+_SELECTOR_TOOLTIP = "Toggle selector (drag to select cells for copy/paste)"
 _ERASER_TOOLTIP = "Toggle erase mode (left-click clears cells)"
 
 
@@ -96,6 +102,28 @@ class _SuppressTooltips(QObject):
 
     def eventFilter(self, obj, event) -> bool:
         if event.type() == QEvent.Type.ToolTip:
+            return True
+
+        return super().eventFilter(obj, event)
+
+
+class _PaintBrushTooltipFilter(QObject):
+    """Show a readable tooltip for the paint brush toggle."""
+
+    def eventFilter(self, obj, event) -> bool:
+        if event.type() == QEvent.Type.ToolTip and isinstance(event, QHelpEvent):
+            QToolTip.showText(event.globalPos(), _PAINT_BRUSH_TOOLTIP, obj)
+            return True
+
+        return super().eventFilter(obj, event)
+
+
+class _SelectorTooltipFilter(QObject):
+    """Show a readable tooltip for the selector toggle."""
+
+    def eventFilter(self, obj, event) -> bool:
+        if event.type() == QEvent.Type.ToolTip and isinstance(event, QHelpEvent):
+            QToolTip.showText(event.globalPos(), _SELECTOR_TOOLTIP, obj)
             return True
 
         return super().eventFilter(obj, event)
@@ -113,10 +141,14 @@ class _EraserTooltipFilter(QObject):
 
 
 class LayerActionToolbar(QToolBar):
-    """Icon toolbar: Eraser | Save."""
+    """Icon toolbar: Selector | Paint brush | Eraser | Copy | Paste | Save."""
 
+    paint_brush_toggled = Signal(bool)
+    selector_toggled = Signal(bool)
     eraser_toggled = Signal(bool)
     clear_entire_layer_requested = Signal()
+    copy_requested = Signal()
+    paste_requested = Signal()
     save_requested = Signal()
 
     def __init__(self, parent=None) -> None:
@@ -127,9 +159,52 @@ class LayerActionToolbar(QToolBar):
         self.setIconSize(toolbar_icon_size())
         self.setStyleSheet(_FLAT_TOOLBAR_STYLE)
 
+        self._selector_tooltip_filter = _SelectorTooltipFilter(self)
+        self._selector_action = QAction(layer_selector_icon(), "Selector", self)
+        self._selector_action.setCheckable(True)
+        self._selector_action.toggled.connect(self.selector_toggled.emit)
+        selector_toggle = QToolButton(self)
+        selector_toggle.setDefaultAction(self._selector_action)
+        selector_toggle.setAutoRaise(True)
+        selector_toggle.installEventFilter(self._selector_tooltip_filter)
+        self.addWidget(selector_toggle)
+
+        self.addSeparator()
+
+        self._paint_brush_tooltip_filter = _PaintBrushTooltipFilter(self)
+        self._paint_brush_action = QAction(layer_paint_brush_icon(), "Paint brush", self)
+        self._paint_brush_action.setCheckable(True)
+        self._paint_brush_action.setChecked(True)
+        self._paint_brush_action.toggled.connect(self.paint_brush_toggled.emit)
+        paint_toggle = QToolButton(self)
+        paint_toggle.setDefaultAction(self._paint_brush_action)
+        paint_toggle.setAutoRaise(True)
+        paint_toggle.installEventFilter(self._paint_brush_tooltip_filter)
+        self.addWidget(paint_toggle)
+
+        self.addSeparator()
+
         self._no_tooltip_filter = _SuppressTooltips(self)
         self._eraser_tooltip_filter = _EraserTooltipFilter(self)
         self._make_eraser_control()
+
+        self.addSeparator()
+
+        self._copy_action = self._make_action(
+            layer_copy_icon(),
+            "Copy",
+            "Copy selected cells (use Selector tool or Ctrl+click)",
+            self.copy_requested.emit,
+        )
+        self._copy_action.setEnabled(False)
+
+        self._paste_action = self._make_action(
+            layer_paste_icon(),
+            "Paste",
+            "Paste copied cells starting at the selection anchor",
+            self.paste_requested.emit,
+        )
+        self._paste_action.setEnabled(False)
 
         self.addSeparator()
 
@@ -206,8 +281,24 @@ class LayerActionToolbar(QToolBar):
         row.addWidget(menu_button)
         self.addWidget(container)
 
+    def set_copy_enabled(self, enabled: bool) -> None:
+        self._copy_action.setEnabled(enabled)
+
+    def set_paste_enabled(self, enabled: bool) -> None:
+        self._paste_action.setEnabled(enabled)
+
     def set_save_enabled(self, enabled: bool) -> None:
         self._save_action.setEnabled(enabled)
+
+    def set_paint_brush_checked(self, checked: bool) -> None:
+        self._paint_brush_action.blockSignals(True)
+        self._paint_brush_action.setChecked(checked)
+        self._paint_brush_action.blockSignals(False)
+
+    def set_selector_checked(self, checked: bool) -> None:
+        self._selector_action.blockSignals(True)
+        self._selector_action.setChecked(checked)
+        self._selector_action.blockSignals(False)
 
     def set_eraser_checked(self, checked: bool) -> None:
         self._eraser_action.blockSignals(True)
@@ -216,24 +307,44 @@ class LayerActionToolbar(QToolBar):
 
 
 class LayerToolsPanel(QWidget):
+    paint_brush_toggled = Signal(bool)
+    selector_toggled = Signal(bool)
     eraser_toggled = Signal(bool)
     clear_entire_layer_requested = Signal()
+    copy_requested = Signal()
+    paste_requested = Signal()
     save_requested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
         self._toolbar = LayerActionToolbar()
+        self._toolbar.paint_brush_toggled.connect(self.paint_brush_toggled.emit)
+        self._toolbar.selector_toggled.connect(self.selector_toggled.emit)
         self._toolbar.eraser_toggled.connect(self.eraser_toggled.emit)
         self._toolbar.clear_entire_layer_requested.connect(self.clear_entire_layer_requested.emit)
+        self._toolbar.copy_requested.connect(self.copy_requested.emit)
+        self._toolbar.paste_requested.connect(self.paste_requested.emit)
         self._toolbar.save_requested.connect(self.save_requested.emit)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._toolbar)
 
+    def set_copy_enabled(self, enabled: bool) -> None:
+        self._toolbar.set_copy_enabled(enabled)
+
+    def set_paste_enabled(self, enabled: bool) -> None:
+        self._toolbar.set_paste_enabled(enabled)
+
     def set_save_enabled(self, enabled: bool) -> None:
         self._toolbar.set_save_enabled(enabled)
+
+    def set_paint_brush_checked(self, checked: bool) -> None:
+        self._toolbar.set_paint_brush_checked(checked)
+
+    def set_selector_checked(self, checked: bool) -> None:
+        self._toolbar.set_selector_checked(checked)
 
     def set_eraser_checked(self, checked: bool) -> None:
         self._toolbar.set_eraser_checked(checked)

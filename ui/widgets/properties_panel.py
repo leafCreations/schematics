@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -11,12 +11,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from helpers.block_picker import PickerEntry, cell_token, format_entry_label
+from helpers.block_picker import PickerEntry, cell_token
+from helpers.grid_labels import grid_axis_position, grid_axis_selection_range
 from helpers.lantern_placement import HANGING_STATE, explicit_hanging
 from helpers.structure_tokens import BlockStates, parse_structure_token
 from ui.texture_cache import DEFAULT_ICON_SIZE, GridTextureCache
+from ui.widgets.panel_header import create_nested_group_layout
 
 _DEFAULT_VARIANT_LABEL = "(default)"
+_BRUSH_PREVIEW_ICON_SIZE = DEFAULT_ICON_SIZE
 
 
 class PropertiesPanel(QWidget):
@@ -24,11 +27,12 @@ class PropertiesPanel(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self._mode_label = QLabel("Select a palette block to paint, or enable Eraser.")
         self._title = QLabel("")
-        self._cell_preview = QLabel("")
         self._brush_preview = QLabel()
-        self._brush_preview.setFixedSize(DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE)
+        self._brush_preview.setFixedSize(
+            _BRUSH_PREVIEW_ICON_SIZE,
+            _BRUSH_PREVIEW_ICON_SIZE,
+        )
         self._texture_cache: GridTextureCache | None = None
         self._material_combo = QComboBox()
         self._direction_combo = QComboBox()
@@ -45,8 +49,10 @@ class PropertiesPanel(QWidget):
         for direction in ("north", "south", "east", "west"):
             self._direction_combo.addItem(direction)
 
-        picker_group = QGroupBox("Paint brush")
-        picker_form = QFormLayout(picker_group)
+        picker_group = QGroupBox()
+        picker_layout = create_nested_group_layout(picker_group, "Selected Block")
+        picker_form = QFormLayout()
+        picker_layout.addLayout(picker_form)
         picker_form.addRow("Label", self._title)
         picker_form.addRow("Material", self._material_combo)
         picker_form.addRow("Direction", self._direction_combo)
@@ -55,15 +61,13 @@ class PropertiesPanel(QWidget):
         self._hanging_label = QLabel("Hanging")
         picker_form.addRow(self._hanging_label, self._hanging_combo)
         picker_form.addRow("Preview", self._brush_preview)
-        picker_form.addRow("Cell token", self._cell_preview)
 
-        cell_group = QGroupBox("Grid cell")
-        cell_layout = QVBoxLayout(cell_group)
+        cell_group = QGroupBox()
+        cell_layout = create_nested_group_layout(cell_group, "Grid cell")
         self._cell_info = QLabel("No cell selected.")
         cell_layout.addWidget(self._cell_info)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(self._mode_label)
         layout.addWidget(picker_group)
         layout.addWidget(cell_group)
 
@@ -72,6 +76,9 @@ class PropertiesPanel(QWidget):
         self._picker_group = picker_group
         self._cell_group = cell_group
         self._reset_picker_fields()
+
+    def set_picker_group_visible(self, visible: bool) -> None:
+        self._picker_group.setVisible(visible)
 
     def active_entry(self) -> PickerEntry | None:
         return self._active_entry
@@ -94,7 +101,6 @@ class PropertiesPanel(QWidget):
 
     def show_picker_entry(self, entry: PickerEntry, *, emit_brush: bool = True) -> None:
         self._active_entry = entry
-        self._mode_label.setText("Paint brush active — left-click grid cells to place.")
         self._picker_group.setEnabled(True)
         self._title.setText(entry.label)
 
@@ -163,14 +169,49 @@ class PropertiesPanel(QWidget):
         if emit_brush:
             self.brush_changed.emit()
 
-    def clear_picker_entry(self) -> None:
+    def clear_picker_entry(self, *, emit_brush: bool = True) -> None:
         self._reset_picker_fields()
-        self.brush_changed.emit()
+
+        if emit_brush:
+            self.brush_changed.emit()
+
+    def show_selection_summary(
+        self,
+        positions: list[tuple[int, int]],
+        *,
+        entry_label: str | None = None,
+        sample_token: str | None = None,
+    ) -> None:
+        """Read-only grid-cell panel text for a multi-cell selector selection."""
+        self._selected_cell = None
+        lines = [
+            f"Selected cells: {grid_axis_selection_range(positions)}",
+            f"Count: {len(positions)}",
+        ]
+
+        if entry_label:
+            lines.append(f"Block type: {entry_label}")
+
+        if sample_token and sample_token != ".":
+            parsed = parse_structure_token(sample_token)
+
+            if parsed is not None:
+                lines.extend(
+                    [
+                        f"Sample token: {parsed.token}",
+                        f"Material: {parsed.material or '—'}",
+                        f"Direction: {parsed.direction or '—'}",
+                        f"Variant: {parsed.variant or '—'}",
+                    ]
+                )
+
+        self._cell_info.setText("\n".join(lines))
+        self._cell_group.setEnabled(True)
 
     def show_grid_cell(self, row: int, col: int, raw_token: str) -> None:
         self._selected_cell = (row, col)
         parsed = parse_structure_token(raw_token)
-        lines = [f"Position: row {row}, col {col}", f"Raw: {raw_token or '.'}"]
+        lines = [f"Position: {grid_axis_position(row, col)}", f"Raw: {raw_token or '.'}"]
 
         if parsed is not None:
             lines.extend(
@@ -309,12 +350,9 @@ class PropertiesPanel(QWidget):
         token = self.build_placement_token()
 
         if token is None or self._active_entry is None:
-            self._cell_preview.setText("—")
             self._brush_preview.clear()
             return
 
-        label = format_entry_label(self._active_entry, self._selected_material())
-        self._cell_preview.setText(f"{token}\n({label})")
         self._refresh_brush_preview(token)
 
     def _refresh_brush_preview(self, token: str) -> None:
@@ -323,15 +361,22 @@ class PropertiesPanel(QWidget):
             return
 
         self._texture_cache.invalidate_token(token)
-        icon = self._texture_cache.icon_for_cell(token)
+        icon = self._texture_cache.icon_for_cell(
+            token,
+            size=_BRUSH_PREVIEW_ICON_SIZE,
+        )
 
         if icon is None:
             self._brush_preview.clear()
             return
 
-        self._brush_preview.setPixmap(
-            icon.pixmap(self._texture_cache.qt_icon_size()),
+        pixmap = icon.pixmap(QSize(_BRUSH_PREVIEW_ICON_SIZE, _BRUSH_PREVIEW_ICON_SIZE))
+        scaled = pixmap.scaled(
+            QSize(_BRUSH_PREVIEW_ICON_SIZE, _BRUSH_PREVIEW_ICON_SIZE),
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.FastTransformation,
         )
+        self._brush_preview.setPixmap(scaled)
 
     def _reset_picker_fields(self) -> None:
         self._active_entry = None
@@ -339,8 +384,6 @@ class PropertiesPanel(QWidget):
         self._cell_group.setEnabled(False)
         self._hanging_label.setVisible(False)
         self._hanging_combo.setVisible(False)
-        self._mode_label.setText("Select a palette block to paint, or enable Eraser.")
         self._title.setText("—")
-        self._cell_preview.setText("—")
         self._brush_preview.clear()
         self._cell_info.setText("No cell selected.")

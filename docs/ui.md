@@ -2,6 +2,10 @@
 
 **User guide:** [structure-editor-guide.md](structure-editor-guide.md) — how to use the editor (layers, groups, site, renders, shortcuts).
 
+**Property reference:** [editor-properties.md](editor-properties.md) — all editable fields grouped by panel, save target, and YAML key.
+
+**Application settings:** defaults in `config/editor_settings.yaml`; your overrides in `~/.config/structure_scripts/editor_settings.yaml` (panel visibility, tooltips, grid axis labels).
+
 PySide6 desktop editor for structure layer YAML. Browse and edit `structures/{structure}/stage{N}/layers/*.yaml` with registry-driven block palettes, Minecraft texture previews in the grid, and per-layer save.
 
 The editor shares the same token grammar, registry, and texture pipeline as the blueprint renderers. See [structure-tokens.md](structure-tokens.md) and [registry.md](registry.md) for token and palette details.
@@ -56,11 +60,12 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 | **Structure grid** (center) | Current layer `cells` — paint and erase; use **Structure size** to grow (pad with `.`) or shrink (trim east/south) |
 | **Structure** (left, bottom) | Combined identity (**Structure**, **Stage**, derived name/output folder) and grid size (width/depth, resize, block tooltips). Saved with **Save Site Settings** on the Site tab |
 | **Compass** (right, top) | North-up reference (+x east, +z south) |
-| **Paint brush** (right) | Brush options (material, direction, variant) and inspector for the selected cell |
+| **Inspector** (right) | **Grid cell** when paint or selector is active; **Selected Block** (material, direction, variant) only in paint mode; paint hint panel only in paint mode |
+| **Eraser** (right) | Shown when eraser mode is on: **Eraser size** (square brush centered on the click) |
 | **Materials** (right) | Live inventory; **Current layer** (default) or **All layers** from the scope dropdown — same grouping as the materials render; updates when you paint, erase, or switch layers |
-| **Groups** (left) | Top-right: add, delete, copy, paste (18px icons). **All** (default) plus each layer `group` name and any empty groups in `grid.groups`; click a row to filter the Layers list. **Name** edits the selected group (renames layers and saved metadata). **visibility** toggles hide the whole group from renders (`hidden_groups` in `structure.yaml`, saved with **Save Site Settings**). **Add** requires a name; empty groups persist in `grid.groups` until layers are assigned |
+| **Groups** (left) | Top-right: add, delete, copy, paste (18px icons). **All** (default) plus each layer `group` name and any empty groups in `grid.groups`; click a row to filter the Layers list. **↑** / **↓** reorder groups (moves all layers in the group; save site settings to persist). **Name** edits the selected group (renames layers and saved metadata). **visibility** toggles hide the whole group from renders (`hidden_groups` in `structure.yaml`, saved with **Save Site Settings**). **Add** requires a name; empty groups persist in `grid.groups` until layers are assigned |
 | **Layers** (left, below Groups) | Top-right: add, delete, copy, paste (18px icons). Select the active layer; **↑** / **↓** reorder `layer_files` (save site settings to persist). **Visibility** (per row): click to hide a layer from renders (`visible: false` in layer YAML); hidden layers show `layer-visible-off` — save the layer to persist |
-| **Layer toolbar** (grid header) | **Eraser** (split button — main click toggles cell erase mode; menu **Clear entire layer**), **Save** (enabled when the current layer has unsaved edits). Tooltips show the action name. |
+| **Layer toolbar** (grid header) | **Selector**, **Paint brush**, **Eraser**, **Copy**, **Paste**, **Save**. Only one of selector / paint / eraser is active at a time. **Selector**: drag (light blue overlay). **Paint brush**: drag (light green overlay), release to fill with the current brush. **Eraser**: drag (light red overlay), release to clear. **Copy**/**Paste** use the selection. |
 | **Save Site Settings** | Also updates `layer_files` in `structure.yaml` after add/delete |
 
 ### Site tab
@@ -107,10 +112,10 @@ Worldgen is only available when `amulet` is installed; see [worldgen.md](worldge
 1. Choose a **Category** in the dropdown (Terrain, Wood, Functional, Building, …).
 2. Pick a block in the list below.
 2. Set **Material**, **Direction**, or **Variant** in the properties panel when the token requires them.
-3. Confirm the **Cell token** preview (e.g. `STAIRS:oak@north#outer_left`).
+3. Confirm the token in **Grid cell** (e.g. `STAIRS:oak@north#outer_left`).
 4. **Left-click** a grid cell to place that token (or select a cell already placed with the same token type).
 
-**Middle-click** a non-empty cell to select that block in the palette and load its material, variant, direction, and hanging options into the paint brush (also selects the cell for the grid-cell panel).
+**Middle-click** a non-empty cell to select that block in the palette and load its material, variant, direction, and hanging options into the paint brush (also selects the cell for the grid-cell panel). In **Eraser** mode, middle-click instead clears every cell on the layer with the same token.
 
 Changing **Material**, **Direction**, **Part**, or **Variant** updates the selected cell immediately — you do not need to click the cell again.
 
@@ -161,7 +166,16 @@ Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not l
 | Item | Shortcut | Action |
 | ---- | -------- | ------ |
 | Reload Window | `Ctrl+Shift+Q` | Restart the editor process (same CLI args); use after code changes instead of quitting |
-| Compass | `Ctrl+Shift+C` | Show or hide the compass panel (Structure and Site tabs); use **×** on the panel to hide |
+| Compass | `Ctrl+Shift+C` | Show or hide the compass panel (Structure and Site tabs); use the title-row close button to hide |
+| Materials | — | Show or hide the materials inventory (Structure tab); close button on the panel title row |
+| Structure settings | — | Show or hide the Structure panel (identity, grid size, tooltips) on the Structure tab left column |
+| Grid axis labels | — | Column numbers along the top and row letters (A, B, …) along the left; on by default, saved locally |
+
+**Help**
+
+| Item | Action |
+| ---- | ------ |
+| Documentation | Opens [structure-editor-guide.md](structure-editor-guide.md) on GitHub in the default browser |
 
 ### Save
 

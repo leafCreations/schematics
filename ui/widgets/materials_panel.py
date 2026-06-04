@@ -11,11 +11,12 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
-    QVBoxLayout,
 )
 
 from helpers.types import MaterialsIconList, MaterialsIconTokens, MaterialsList
 from ui.materials_icons import MaterialsIconCache
+from ui.widgets.panel_header import create_titled_panel_layout
+from ui.widgets.panel_tool_button import make_panel_close_button
 
 SCOPE_CURRENT_LAYER = "current_layer"
 SCOPE_ALL_LAYERS = "all_layers"
@@ -23,10 +24,16 @@ SCOPE_ALL_LAYERS = "all_layers"
 
 class MaterialsPanel(QGroupBox):
     scope_changed = Signal()
+    close_requested = Signal()
 
     def __init__(self, icon_cache: MaterialsIconCache, parent=None) -> None:
-        super().__init__("Materials", parent)
+        super().__init__(parent)
         self._icon_cache = icon_cache
+        close_button = make_panel_close_button(
+            tooltip="Hide materials",
+            clicked=self.close_requested.emit,
+        )
+        layout = create_titled_panel_layout(self, "Materials", [close_button])
         self._scope_combo = QComboBox()
         self._scope_combo.addItem("Current layer", SCOPE_CURRENT_LAYER)
         self._scope_combo.addItem("All layers", SCOPE_ALL_LAYERS)
@@ -53,7 +60,6 @@ class MaterialsPanel(QGroupBox):
         )
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
-        layout = QVBoxLayout(self)
         layout.addWidget(self._scope_combo)
         layout.addWidget(self._summary)
         layout.addWidget(self._table, stretch=1)

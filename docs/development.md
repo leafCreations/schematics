@@ -84,16 +84,12 @@ scripts/ruff-fix
 **Commit without pytest** (Ruff and palette checks still run):
 
 ```bash
-scripts/commit-no-pytest -m "your message"
+gcn -m "your message"              # shell alias (see ~/.bashrc)
+scripts/gcn -m "your message"      # same, from repo scripts/
+scripts/commit-no-pytest -m "..."  # long name
 ```
 
 Same as `SKIP=pytest git commit …`. Run `pytest` yourself before pushing when you use this.
-
-Optional shell alias:
-
-```bash
-alias gcn='SKIP=pytest git commit'
-```
 
 ## Running checks
 

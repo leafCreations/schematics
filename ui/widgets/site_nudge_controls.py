@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ui.widgets.panel_header import create_nested_group_layout
+
 
 class SiteNudgeControls(QWidget):
     """Arrow buttons to move the selected structure on the site grid."""
@@ -17,9 +19,11 @@ class SiteNudgeControls(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        group = QGroupBox("Nudge placement")
-        layout = QGridLayout(group)
+        group = QGroupBox()
+        outer_layout = create_nested_group_layout(group, "Nudge placement")
+        layout = QGridLayout()
         layout.setSpacing(4)
+        outer_layout.addLayout(layout)
 
         north = QPushButton("↑ N")
         south = QPushButton("↓ S")

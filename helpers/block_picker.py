@@ -212,6 +212,42 @@ def _ensure_picker_entry_indexes(*, catalog: dict[str, Any] | None = None) -> No
     _picker_by_block_id = by_block
 
 
+def homogeneous_picker_entry_for_positions(
+    cells: list[list[str]],
+    positions: list[tuple[int, int]],
+) -> PickerEntry | None:
+    """Return a palette entry when every *positions* cell is the same block type.
+
+    Cells must be non-empty and resolve to the same registry token or catalog
+    block id (e.g. ``PLANKS:oak`` and ``PLANKS:spruce`` both match ``PLANKS``).
+    """
+    if not positions:
+        return None
+
+    entry: PickerEntry | None = None
+
+    for row, col in positions:
+        try:
+            raw = cells[row][col]
+        except IndexError:
+            return None
+
+        if raw == ".":
+            return None
+
+        cell_entry = picker_entry_for_cell(raw)
+
+        if cell_entry is None:
+            return None
+
+        if entry is None:
+            entry = cell_entry
+        elif cell_entry.token != entry.token:
+            return None
+
+    return entry
+
+
 def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
     """Return the palette entry that matches a structure-layer cell token."""
     parsed = parse_structure_token(raw_token)

@@ -2,7 +2,7 @@
 
 The **Structure Editor** is a desktop app for building and editing Minecraft structure blueprints. You paint blocks on layer grids, organize layers into groups, place the building on a site, paint paths, and generate schematic images — all from one window.
 
-This guide explains how to use the editor day to day. For install commands, module layout, and developer notes, see [ui.md](ui.md).
+This guide explains how to use the editor day to day. For install commands, module layout, and developer notes, see [ui.md](ui.md). For a complete list of editable fields (what saves where), see [editor-properties.md](editor-properties.md).
 
 ---
 
@@ -67,7 +67,7 @@ Work in **Structure** to design the building, **Site** to fit it on the ground a
 
 ```text
 ┌─────────────┬──────────────────────────────┬──────────────┐
-│  Palettes   │  Eraser · Save  (above grid) │  Compass     │
+│  Palettes   │  Brush · Eraser · Save (above grid) │  Compass │
 │  Groups     │                              │  Paint brush │
 │  Layers     │      Structure grid          │  Materials   │
 │  Structure  │                              │              │
@@ -89,7 +89,7 @@ Work in **Structure** to design the building, **Site** to fit it on the ground a
 **Right column**
 
 - **Compass** — north up; +x is east, +z is south (matches the grid).
-- **Paint brush** — material, direction, variant for the active block type.
+- **Selected Block** — material, direction, variant for the palette block you picked.
 - **Materials** — live block count for the current layer or all layers.
 
 ---
@@ -103,7 +103,7 @@ Work in **Structure** to design the building, **Site** to fit it on the ground a
 
 ### 2. Set brush options
 
-In **Paint brush** on the right, set fields that apply to that block:
+In **Selected Block** on the right, set fields that apply to that block:
 
 | Field | When you need it | Example |
 | ----- | ---------------- | ------- |
@@ -113,23 +113,36 @@ In **Paint brush** on the right, set fields that apply to that block:
 | **Part / Half** | Beds, doors | head/foot, lower/upper |
 | **Hanging** | Lanterns | hanging vs standing |
 
-The **Cell token** line shows exactly what will be placed (e.g. `STAIRS:oak@north#outer_left`). Token rules are documented in [structure-tokens.md](structure-tokens.md).
+The **Grid cell** panel shows the token that will be placed (e.g. `STAIRS:oak@north#outer_left`). Token rules are documented in [structure-tokens.md](structure-tokens.md).
 
 ### 3. Place on the grid
 
-- **Left-click** a cell to place the token.
+The structure grid shows **column numbers** across the top and **row letters** (A, B, …) down the left edge. Toggle them with **View → Grid axis labels** (on by default; preference is saved locally). The **Grid cell** panel uses the same addressing (e.g. **A8** = row A, column 8).
+
+- **Paint brush**: drag to select a region (light green overlay), then release to place blocks. **Brush type** — **Fill** (every cell) or **Outline** (border cells only).
+- **Selector** tool (toolbar, first button): drag to select cells — a light blue overlay shows the region (including on block textures). The **Selector** panel shows the selection bounds (e.g. **B1: E5**). **Copy** / **Paste** or Ctrl+C / Ctrl+V. **Ctrl+click** still adds or removes cells while the selector is active. The **Grid cell** panel stays visible so you can inspect the focused cell.
 - Click a cell that already has the same block type to select it without changing it.
 - **Middle-click** a non-empty cell to **pick** that block into the brush (loads material, direction, variant into the panels).
 
 Changing brush fields updates the **selected** cell immediately — you do not need to click again.
 
+### Paint brush toggle
+
+The **Paint brush** button above the grid (on by default) controls whether left-click **places** blocks. When it is off, left-click only selects cells. Turning on **Eraser** turns the paint brush off, and vice versa.
+
 ### Erase
+
+Enable **Eraser** on the grid toolbar to show the **Eraser** panel on the right. Set **Eraser size** to clear a square of cells centered on each click (1 = one cell, 3 = 3×3, etc., clamped to the layer size). Hover a cell to highlight the erase area in light red before you click.
 
 | Action | Result |
 | ------ | ------ |
-| **Right-click** a cell | Clear to empty (`.`) |
+| **Right-click** a cell | Clear using the current eraser size (or 1×1 when paint brush mode is on) |
 | **Eraser** (toolbar above grid) + left-click | Same as right-click |
+| **Eraser** + drag and release | Select a region (light red overlay), then clear all blocks in it on mouse up (one Undo) |
+| **Eraser** + middle-click a block | Clears every cell on the layer with the same token (one Undo) |
 | Eraser menu → **Clear entire layer** | All cells on this layer become empty |
+
+With **Paint brush** on, the **Paint brush** hint panel, **Selected Block**, and **Grid cell** appear on the right. With **Selector** on, **Selected Block** appears when every selected cell is the same block type. The eraser panel replaces these when **Eraser** is active.
 
 Hover tooltips on cells can be turned on/off under **Structure** settings (saved locally).
 
@@ -257,6 +270,12 @@ You can also render from the command line:
 ```bash
 python render_main.py --structure residence --stage 1
 ```
+
+---
+
+## Help menu
+
+**Help → Documentation** opens this guide in your browser (GitHub copy of `docs/structure-editor-guide.md`).
 
 ---
 

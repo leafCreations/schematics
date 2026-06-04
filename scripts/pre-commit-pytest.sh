@@ -38,7 +38,8 @@ add() {
 
 add_glob() {
   shopt -s nullglob
-  for path in "$ROOT/$1"; do
+  # Unquoted pattern so bash expands globs (quoted "$ROOT/$1" leaves '*' literal).
+  for path in "$ROOT"/$1; do
     TESTS["${path#"$ROOT/"}"]=1
   done
   shopt -u nullglob
@@ -157,7 +158,7 @@ for file in "${STAGED[@]}"; do
       add tests/test_render_panel.py
       ;;
 
-    ui/document.py | ui/editor_history.py | ui/editor_materials.py | ui/editor_prefs.py)
+    ui/document.py | ui/editor_history.py | ui/editor_materials.py | ui/app_settings.py | ui/editor_prefs.py)
       CODE_TOUCHED=1
       add tests/test_ui_document.py tests/test_editor_history.py
       ;;

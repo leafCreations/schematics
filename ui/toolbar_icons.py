@@ -8,7 +8,10 @@ from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPalette, QPen, QPixmap
 from PySide6.QtWidgets import QApplication, QStyle
 
+from helpers.paths import UI_ASSETS_FOLDER
 from ui.icon_theme import icon_from_assets
+
+_WINDOW_CLOSE_SVG = UI_ASSETS_FOLDER / "window-close.svg"
 
 
 def toolbar_icon_size() -> QSize:
@@ -178,6 +181,29 @@ def _draw_paste(painter: QPainter, size: int, color: QColor) -> None:
     painter.drawLine(size * 0.42, size * 0.54, size * 0.58, size * 0.54)
 
 
+def _draw_brush(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.drawLine(size * 0.22, size * 0.82, size * 0.58, size * 0.38)
+    painter.drawLine(size * 0.58, size * 0.38, size * 0.72, size * 0.52)
+    head_w = size * 0.34
+    head_h = size * 0.28
+    painter.drawRoundedRect(size * 0.48, size * 0.14, head_w, head_h, 3, 3)
+
+
+def _draw_selector(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.5, Qt.PenStyle.DashLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    margin = size * 0.2
+    side = size - 2 * margin
+    painter.drawRect(margin, margin, side, side)
+    painter.setPen(QPen(color, 1.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+    painter.drawLine(size * 0.72, size * 0.72, size * 0.86, size * 0.86)
+    painter.drawLine(size * 0.86, size * 0.72, size * 0.86, size * 0.86)
+
+
 def _draw_eraser(painter: QPainter, size: int, color: QColor) -> None:
     pen = QPen(color, 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
     painter.setPen(pen)
@@ -222,6 +248,24 @@ def layer_copy_icon(*, size: int | None = None) -> QIcon:
 
 def layer_paste_icon(*, size: int | None = None) -> QIcon:
     return _resolve_icon(theme_names=("edit-paste",), draw=_draw_paste, size=size)
+
+
+def layer_selector_icon(*, size: int | None = None) -> QIcon:
+    return _resolve_icon(
+        theme_names=("edit-select", "object-select", "tool-pointer"),
+        draw=_draw_selector,
+        size=size,
+    )
+
+
+def layer_paint_brush_icon(*, size: int | None = None) -> QIcon:
+    pixel_size = size or toolbar_icon_size().width()
+    icon = icon_from_assets("draw-brush", prefer_symbolic=False)
+
+    if not icon.isNull():
+        return _monochrome_icon(icon, size=pixel_size)
+
+    return _drawn_icon(_draw_brush, size=pixel_size)
 
 
 def layer_eraser_icon(*, size: int | None = None) -> QIcon:
@@ -287,3 +331,13 @@ def layer_move_down_icon(*, size: int | None = None) -> QIcon:
         draw=_draw_arrow_down,
         size=size,
     )
+
+
+def panel_close_icon() -> QIcon:
+    """Close control for panel title rows (``assets/ui/window-close.svg``)."""
+    if _WINDOW_CLOSE_SVG.is_file():
+        icon = QIcon(str(_WINDOW_CLOSE_SVG))
+    else:
+        icon = icon_from_assets("window-close")
+
+    return _monochrome_icon(icon, size=panel_icon_size().width())

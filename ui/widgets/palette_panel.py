@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QComboBox, QLabel, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QGroupBox,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QSizePolicy,
+)
 
 from helpers.block_picker import PickerEntry, PickerPalette, list_palettes
+from ui.widgets.panel_header import create_simple_titled_panel_layout
 
 _ENTRY_ROLE = 256
 
 
-class PalettePanel(QWidget):
+class PalettePanel(QGroupBox):
     entry_selected = Signal(object)
 
     def __init__(self, parent=None) -> None:
@@ -16,21 +24,28 @@ class PalettePanel(QWidget):
         self._palettes: list[PickerPalette] = list_palettes()
         self._palettes_by_name = {palette.name: palette for palette in self._palettes}
 
-        self._category_label = QLabel("Category")
+        layout = create_simple_titled_panel_layout(self, "Palettes")
+
         self._category_combo = QComboBox()
-        self._blocks_label = QLabel("Blocks")
         self._block_list = QListWidget()
         self._block_list.currentItemChanged.connect(self._on_item_changed)
 
         for palette in self._palettes:
             self._category_combo.addItem(palette.label, palette.name)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._category_label)
+        category_label = QLabel("Category")
+        blocks_label = QLabel("Blocks")
+
+        layout.addWidget(category_label)
         layout.addWidget(self._category_combo)
-        layout.addWidget(self._blocks_label)
+        layout.addWidget(blocks_label)
         layout.addWidget(self._block_list, stretch=1)
+
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self._block_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
 
         self._category_combo.currentIndexChanged.connect(self._on_category_changed)
 

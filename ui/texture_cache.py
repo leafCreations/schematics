@@ -45,13 +45,15 @@ class GridTextureCache:
         layer_cells: CellGrid | None = None,
         row: int | None = None,
         col: int | None = None,
+        size: int | None = None,
     ) -> QIcon | None:
         if raw_token == ".":
             return None
 
         cache_row = row if row is not None else -1
         cache_col = col if col is not None else -1
-        cache_key = (raw_token, cache_row, cache_col)
+        render_size = size if size is not None else self.icon_size
+        cache_key = (raw_token, cache_row, cache_col, render_size)
 
         if cache_key in self._icon_cache:
             return self._icon_cache[cache_key]
@@ -60,7 +62,7 @@ class GridTextureCache:
             raw_token,
             self._textures,
             view="top",
-            size=self.icon_size,
+            size=render_size,
             layer_cells=layer_cells,
             cell_x=col,
             cell_z=row,

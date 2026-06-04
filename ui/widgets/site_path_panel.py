@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSpinBox,
-    QVBoxLayout,
 )
 
 from helpers.path_strip import (
@@ -22,6 +21,10 @@ from helpers.path_strip import (
     TRIM_BLOCK,
     TRIM_BLOCK_OPTIONS,
     PathOrientation,
+)
+from ui.widgets.panel_header import (
+    create_nested_group_layout,
+    create_simple_titled_panel_layout,
 )
 
 
@@ -34,7 +37,8 @@ class SitePathPanel(QGroupBox):
     clear_all_paths_requested = Signal()
 
     def __init__(self, parent=None) -> None:
-        super().__init__("Path brush", parent)
+        super().__init__(parent)
+        layout = create_simple_titled_panel_layout(self, "Path brush")
         self._block_signals = False
         self._variety_checks: dict[str, QCheckBox] = {}
 
@@ -61,8 +65,8 @@ class SitePathPanel(QGroupBox):
         self._trim_block.setToolTip("Block used for path strip trim (outside the path band).")
         self._trim_block.currentIndexChanged.connect(self._on_path_blocks_changed)
 
-        variety_group = QGroupBox("Path variety")
-        variety_layout = QVBoxLayout(variety_group)
+        variety_group = QGroupBox()
+        variety_layout = create_nested_group_layout(variety_group, "Path variety")
         variety_layout.addWidget(QLabel(f"Center path is always {DIRT_PATH_BLOCK}. Optional mix:"))
 
         for block in PATH_VARIETY_OPTIONS:
@@ -95,7 +99,6 @@ class SitePathPanel(QGroupBox):
         form.addRow("Orientation", self._orientation)
         form.addRow("Trim block", self._trim_block)
 
-        layout = QVBoxLayout(self)
         layout.addLayout(form)
         layout.addWidget(variety_group)
         layout.addWidget(self._path_brush_button)

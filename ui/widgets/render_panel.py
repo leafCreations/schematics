@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 import helpers.constants as constants
 from renderers.registry import RENDER_REGISTRY
+from ui.widgets.panel_header import create_nested_group_layout
 
 
 def worldgen_dependencies_available() -> bool:
@@ -55,8 +56,8 @@ class RenderPanel(QWidget):
         )
         intro.setWordWrap(True)
 
-        types_group = QGroupBox("Render types")
-        types_layout = QVBoxLayout(types_group)
+        types_group = QGroupBox()
+        types_layout = create_nested_group_layout(types_group, "Render types")
 
         self._select_all = QCheckBox("All render types")
         self._select_all.setChecked(True)
