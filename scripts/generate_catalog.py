@@ -21,13 +21,13 @@ from helpers.paths import ASSET_FOLDER
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate block catalog from assets/blockstates and assets/lang/en_us.json",
+        description="Generate block catalog from assets/minecraft/blockstates and lang/en_us.json",
     )
     parser.add_argument(
         "--assets-dir",
         type=Path,
         default=ASSET_FOLDER,
-        help="Assets root containing blockstates/ and lang/ (default: assets/)",
+        help="Minecraft assets root with blockstates/ and lang/ (default: assets/minecraft/)",
     )
     parser.add_argument(
         "--output",

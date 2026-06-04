@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from helpers.context import SchematicContext
+from helpers.layer_groups import is_layer_render_visible
 from renderers.layer_panel import render_layer_blueprint
 
 
@@ -44,7 +45,10 @@ def render_layer_group_blueprints(ctx: SchematicContext, *, roofs: bool) -> None
 
     grouped_layers = defaultdict(list)
 
-    for layer in ctx.layers:
+    for layer_array_index, layer in enumerate(ctx.layers):
+        if not is_layer_render_visible(layer, layer_array_index, ctx.grid):
+            continue
+
         group_name = get_layer_group(layer)
         is_roof_group = "roof" in group_name.lower()
 

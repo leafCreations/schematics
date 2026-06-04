@@ -124,7 +124,7 @@ def test_compile_texture_set_prefers_generated_sprite(tmp_path: Path):
 @pytest.mark.requires_assets
 def test_bake_demo_planks_integration(tmp_path: Path):
     if not (BLOCK_TEXTURES_FOLDER / "oak_planks.png").exists():
-        pytest.skip("assets/textures/block/oak_planks.png not available")
+        pytest.skip("assets/minecraft/textures/block/oak_planks.png not available")
 
     from registries.loader import compile_texture_set
 

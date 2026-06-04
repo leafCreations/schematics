@@ -9,7 +9,7 @@ from helpers.paths import BLOCK_TEXTURES_FOLDER
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "requires_assets: test needs the local assets/ folder with Minecraft textures",
+        "requires_assets: test needs the local assets/minecraft/ folder with Minecraft textures",
     )
 
 

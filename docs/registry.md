@@ -64,9 +64,9 @@ FURNACE:
 
 ## Texture loading
 
-Textures are loaded from `assets/textures/block/` (and subfolders `block_assets/`, `item_assets/`, `custom/`).
+Textures are loaded from `assets/minecraft/textures/block/` (and subfolders `block_assets/`, `item_assets/`, `custom/`).
 
-For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture_set()` prefers baked sprites under `assets/generated/` when available. See [sprite-baker.md](sprite-baker.md).
+For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture_set()` prefers baked sprites under `assets/minecraft/generated/` when available. See [sprite-baker.md](sprite-baker.md).
 
 `minecraft:` cells load textures from the catalog when not present in the compiled registry texture set, including materials-list inventory icons.
 
@@ -77,7 +77,7 @@ For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture
 * `BLOCK_REGISTRY` — merged behavior entries from `behaviors/*.yaml`
 * `BLOCK_PALETTES` — palette definitions from `palettes/*.yaml`
 * `reload_registries()` — reload YAML into the module-level dicts (called when the editor starts; palette picker caches are cleared)
-* `validate_palettes()` — fail fast on palette refs, behavior shape (`behavior`, `minecraft`), UI placeholder consistency, and missing top textures when `assets/textures/block` is present (runs on pre-commit)
+* `validate_palettes()` — fail fast on palette refs, behavior shape (`behavior`, `minecraft`), UI placeholder consistency, and missing top textures when `assets/minecraft/textures/block` is present (runs on pre-commit)
 * `build_registry_texture_mapping(view)` — token → vanilla texture filename
 * `compile_texture_set(view, assets_dir, block_px)` — load textures for schematic rendering
 * `compile_inventory_texture_set(assets_dir, block_px)` — load inventory icon textures
@@ -110,8 +110,8 @@ Material inventory labels and future UI block pickers use `registries/generated/
 
 The script reads:
 
-* `assets/blockstates/*.json` → block ids (`minecraft:stone`)
-* `assets/lang/en_us.json` → display names (`block.minecraft.stone` → `"Stone"`)
-* `assets/textures/block/` → default texture filenames when present
+* `assets/minecraft/blockstates/*.json` → block ids (`minecraft:stone`)
+* `assets/minecraft/lang/en_us.json` → display names (`block.minecraft.stone` → `"Stone"`)
+* `assets/minecraft/textures/block/` → default texture filenames when present
 
 Semantic tokens resolve to Minecraft block ids via the behavior registry; `minecraft:` cells use the catalog directly for names and textures. Regenerate the catalog when assets are updated.

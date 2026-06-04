@@ -6,9 +6,11 @@ from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QTableWidget, QTableW
 
 from ui.texture_cache import DEFAULT_ICON_SIZE, GridTextureCache
 
-_EMPTY_FILL = QColor(235, 235, 235)
+_GRID_BACKGROUND = QColor(234, 234, 255)
+_GRID_LINE = QColor(160, 164, 170)
+_EMPTY_CELL_FILL = QColor(235, 235, 235)
+_CELL_FILL = QColor(242, 244, 248)
 _SELECTED_FILL = QColor(210, 230, 255)
-_GRID_LINE = QColor(214, 214, 214)
 _FALLBACK_TEXT = QColor(45, 45, 45)
 _CELL_PX = DEFAULT_ICON_SIZE
 _TOKEN_ROLE = 256
@@ -24,7 +26,13 @@ class LayerGridCellDelegate(QStyledItemDelegate):
         item = table.item(index.row(), index.column()) if table is not None else None
         raw_token = item.data(_TOKEN_ROLE) if item is not None else "."
 
-        fill = _SELECTED_FILL if option.state & QStyle.StateFlag.State_Selected else _EMPTY_FILL
+        if option.state & QStyle.StateFlag.State_Selected:
+            fill = _SELECTED_FILL
+        elif raw_token == ".":
+            fill = _EMPTY_CELL_FILL
+        else:
+            fill = _CELL_FILL
+
         painter.fillRect(option.rect, fill)
 
         if item is None or raw_token == ".":
@@ -71,6 +79,8 @@ class LayerGridWidget(QTableWidget):
         self.setShowGrid(True)
         self.setStyleSheet(
             "QTableWidget {"
+            f" background-color: rgb({_GRID_BACKGROUND.red()}, {_GRID_BACKGROUND.green()}, "
+            f"{_GRID_BACKGROUND.blue()});"
             f" gridline-color: rgb({_GRID_LINE.red()}, {_GRID_LINE.green()}, {_GRID_LINE.blue()});"
             " }"
             " QTableWidget::item { padding: 0px; margin: 0px; }"
@@ -196,7 +206,7 @@ class LayerGridWidget(QTableWidget):
 
         if raw_token == ".":
             item.setToolTip("")
-            item.setBackground(_EMPTY_FILL)
+            item.setBackground(_EMPTY_CELL_FILL)
             return
 
         icon = (
@@ -220,7 +230,7 @@ class LayerGridWidget(QTableWidget):
             item.setFont(font)
             item.setToolTip(self._cell_tooltip(raw_token))
 
-        item.setBackground(_EMPTY_FILL)
+        item.setBackground(_CELL_FILL)
 
     @staticmethod
     def _empty_icon():
@@ -278,8 +288,15 @@ class LayerGridWidget(QTableWidget):
                 if item is None:
                     continue
 
-                selected = item.isSelected()
-                fill = _SELECTED_FILL if selected else _EMPTY_FILL
+                raw_token = item.data(_TOKEN_ROLE) or "."
+
+                if item.isSelected():
+                    fill = _SELECTED_FILL
+                elif raw_token == ".":
+                    fill = _EMPTY_CELL_FILL
+                else:
+                    fill = _CELL_FILL
+
                 item.setBackground(fill)
 
         self.viewport().update()

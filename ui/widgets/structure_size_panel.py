@@ -6,20 +6,20 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QFormLayout,
-    QGroupBox,
     QLabel,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
 
-class StructureSizePanel(QGroupBox):
+class StructureSizePanel(QWidget):
     resize_requested = Signal(int, int)
     block_tooltips_changed = Signal(bool)
 
     def __init__(self, parent=None) -> None:
-        super().__init__("Structure size", parent)
+        super().__init__(parent)
         self._block_signals = False
 
         self._width = QSpinBox()
@@ -47,6 +47,7 @@ class StructureSizePanel(QGroupBox):
         form.addRow("Depth (z)", self._depth)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
         layout.addWidget(self._site_limit_label)
         layout.addWidget(self._block_tooltips)

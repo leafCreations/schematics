@@ -91,9 +91,9 @@ for file in "${STAGED[@]}"; do
       add tests/test_lantern_placement.py tests/test_sprite_baker_lantern.py
       ;;
 
-    helpers/layers.py)
+    helpers/paths.py | helpers/layers.py | helpers/layer_management.py)
       CODE_TOUCHED=1
-      add tests/test_layers.py
+      add tests/test_layers.py tests/test_layer_management.py
       ;;
 
     helpers/materials.py | helpers/collect_material_tokens.py)
@@ -126,12 +126,12 @@ for file in "${STAGED[@]}"; do
 
     helpers/pipeline.py | helpers/paths.py | helpers/render_image.py | helpers/fonts.py)
       CODE_TOUCHED=1
-      add tests/test_pipeline.py tests/test_fonts.py
+      add tests/test_paths.py tests/test_pipeline.py tests/test_fonts.py
       ;;
 
-    helpers/site_ground.py)
+    helpers/site_ground.py | helpers/structure_metadata.py)
       CODE_TOUCHED=1
-      add tests/test_ui_document.py tests/test_site_cells.py
+      add tests/test_ui_document.py tests/test_site_cells.py tests/test_structure_metadata.py
       ;;
 
     helpers/*)
@@ -167,10 +167,11 @@ for file in "${STAGED[@]}"; do
       add tests/test_texture_cache.py tests/test_site_cells.py
       ;;
 
-    ui/main_window.py | ui/widgets/* | ui/platform.py)
+    ui/toolbar_icons.py | ui/icon_theme.py | ui/main_window.py | ui/widgets/layer_list_panel.py | ui/widgets/layer_tools_panel.py | ui/widgets/structure_properties_panel.py | ui/widgets/* | ui/platform.py)
       CODE_TOUCHED=1
       add_glob "tests/test_ui_*.py"
       add tests/test_main_window.py tests/test_render_panel.py tests/test_texture_cache.py
+      add tests/test_structure_metadata.py
       ;;
 
     ui/*)

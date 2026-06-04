@@ -17,7 +17,7 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
-Bake block sprites (required before first render; `assets/` is not in the repo):
+Bake block sprites (required before first render; place Minecraft files under `assets/minecraft/` — `assets/` is not in the repo):
 
 ```bash
 .venv/bin/python scripts/generate_catalog.py   # if catalog missing/outdated
@@ -47,11 +47,12 @@ Outputs go to `output/schematics/{output_folder}/`.
 
 | Guide | Contents |
 | ----- | -------- |
+| [docs/structure-editor-guide.md](docs/structure-editor-guide.md) | **Structure Editor user guide** — how to use the desktop UI |
 | [docs/development.md](docs/development.md) | Venv, dependencies, Ruff, pre-commit, pytest |
 | [docs/project-structure.md](docs/project-structure.md) | Repository layout |
 | [docs/registry.md](docs/registry.md) | Behavior registry, palettes, and texture loading |
-| [docs/ui.md](docs/ui.md) | Desktop structure editor (PySide6) |
-| [docs/sprite-baker.md](docs/sprite-baker.md) | Baking `assets/generated/` sprites |
+| [docs/ui.md](docs/ui.md) | Structure editor technical reference (PySide6) |
+| [docs/sprite-baker.md](docs/sprite-baker.md) | Baking `assets/minecraft/generated/` sprites |
 | [docs/render-types.md](docs/render-types.md) | Renderers, examples, output paths |
 | [docs/worldgen.md](docs/worldgen.md) | Template world and Amulet export |
 | [docs/roadmap.md](docs/roadmap.md) | Design goals and future plans |
@@ -60,7 +61,7 @@ Outputs go to `output/schematics/{output_folder}/`.
 ## Features
 
 * Registry-driven block rendering (`registries/behaviors/`, `registries/palettes/`)
-* PySide6 structure editor for layer YAML ([docs/ui.md](docs/ui.md))
+* PySide6 structure editor for layer YAML ([user guide](docs/structure-editor-guide.md))
 * Procedural sprite baker with cached generated textures
 * Top and side schematic views with per-panel material inventory
 * Multi-render pipeline with selective execution

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Git commit with pre-commit pytest skipped (Ruff + palette validation still run).
+#
+# Usage (same flags as git commit):
+#   scripts/commit-no-pytest -m "wip: layer panel"
+#   scripts/commit-no-pytest
+#   scripts/commit-no-pytest --amend
+#
+# Equivalent to: SKIP=pytest git commit "$@"
+set -euo pipefail
+
+export SKIP=pytest
+exec git commit "$@"

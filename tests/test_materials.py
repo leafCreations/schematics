@@ -4,6 +4,7 @@ import pytest
 
 from helpers import materials as material_utils
 from helpers.block_catalog import save_block_catalog
+from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.structure_tokens import ParsedToken
 
 
@@ -337,7 +338,6 @@ def test_resolve_material_inventory_icon_uses_fence_inventory_view(tmp_path):
 
 @pytest.mark.requires_assets
 def test_draw_inventory_icon_uses_inventory_view_without_parsed():
-    from pathlib import Path
 
     from PIL import Image, ImageDraw
 
@@ -353,7 +353,7 @@ def test_draw_inventory_icon_uses_inventory_view_without_parsed():
             },
         }
     )
-    ctx.assets_dir = Path("assets/textures/block")
+    ctx.assets_dir = BLOCK_TEXTURES_FOLDER
 
     inv_ref = load_generated_sprite("inventory", "FENCE:oak", 25)
 
@@ -374,7 +374,6 @@ def test_draw_inventory_icon_uses_inventory_view_without_parsed():
 
 @pytest.mark.requires_assets
 def test_resolve_material_inventory_icon_defers_fence_bake_to_draw(tmp_path):
-    from pathlib import Path
 
     from helpers import materials as material_utils
     from helpers.sprite_baker import runtime_bake as runtime_bake_module
@@ -389,7 +388,7 @@ def test_resolve_material_inventory_icon_defers_fence_bake_to_draw(tmp_path):
             },
         }
     )
-    ctx.assets_dir = Path("assets/textures/block")
+    ctx.assets_dir = BLOCK_TEXTURES_FOLDER
 
     original_materials_root = material_utils.GENERATED_ASSETS_FOLDER
     original_runtime_root = runtime_bake_module.GENERATED_ASSETS_FOLDER
@@ -412,7 +411,6 @@ def test_resolve_material_inventory_icon_defers_fence_bake_to_draw(tmp_path):
 
 @pytest.mark.requires_assets
 def test_draw_inventory_icon_uses_side_view_for_stairs():
-    from pathlib import Path
 
     from PIL import Image, ImageDraw
 
@@ -430,7 +428,7 @@ def test_draw_inventory_icon_uses_side_view_for_stairs():
             },
         }
     )
-    ctx.assets_dir = Path("assets/textures/block")
+    ctx.assets_dir = BLOCK_TEXTURES_FOLDER
 
     side_ref = load_generated_sprite("side", "STAIRS:oak", 25)
     top_ref = load_generated_sprite("top", "STAIRS:oak", 25)
@@ -454,7 +452,6 @@ def test_draw_inventory_icon_uses_side_view_for_stairs():
 
 
 def test_resolve_material_inventory_icon_defers_stairs_bake_to_draw(tmp_path):
-    from pathlib import Path
 
     from helpers import materials as material_utils
     from helpers.sprite_baker import runtime_bake as runtime_bake_module
@@ -470,7 +467,7 @@ def test_resolve_material_inventory_icon_defers_stairs_bake_to_draw(tmp_path):
             },
         }
     )
-    ctx.assets_dir = Path("assets/textures/block")
+    ctx.assets_dir = BLOCK_TEXTURES_FOLDER
 
     original_materials_root = material_utils.GENERATED_ASSETS_FOLDER
     original_runtime_root = runtime_bake_module.GENERATED_ASSETS_FOLDER
@@ -643,7 +640,6 @@ def test_resolve_material_inventory_icon_uses_generated_door(tmp_path):
 
 
 def test_resolve_material_inventory_icon_defers_door_bake_to_draw(tmp_path):
-    from pathlib import Path
 
     from helpers import materials as material_utils
     from helpers.sprite_baker import runtime_bake as runtime_bake_module
@@ -663,7 +659,7 @@ def test_resolve_material_inventory_icon_defers_door_bake_to_draw(tmp_path):
             },
         }
     )
-    ctx.assets_dir = Path("assets/textures/block")
+    ctx.assets_dir = BLOCK_TEXTURES_FOLDER
 
     original_materials_root = material_utils.GENERATED_ASSETS_FOLDER
     original_runtime_root = runtime_bake_module.GENERATED_ASSETS_FOLDER

@@ -37,6 +37,9 @@ Legacy Python modules (`stage{N}_structure.py`) still load if no YAML exists but
 
 Each stage must define `structure`, `stage`, `name`, `output_folder`, `grid`, and layers via one of:
 
+* **`name`** — display title, derived as `{Structure title} Stage {N}` (e.g. `Residence Stage 1`). The editor sets this automatically.
+* **`output_folder`** — should be `stage{N}_{structure}` (e.g. `stage1_residence`). The editor sets this automatically from structure + stage.
+
 * **`layer_files`** — explicit list of `layers/layer_NN.yaml` paths (recommended)
 * **`layers/layer_*.yaml`** — auto-discovered when `layer_files` is omitted (CLI and editor)
 * **inline `layers`** — list of layer dicts in `structure.yaml` (CLI/render only; the editor requires split files)

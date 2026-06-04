@@ -4,6 +4,7 @@ import pytest
 from PIL import Image
 
 from helpers import constants
+from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_fence import compose_fence, list_fence_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
 from registries.loader import build_registry_texture_mapping
@@ -93,13 +94,13 @@ def test_compose_fence_post_uses_inventory_model():
         key="FENCE:oak#post",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     inventory = compose_fence(
         key="FENCE:oak",
         view="inventory",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
 
     assert post.size == (16, 16)
@@ -125,7 +126,7 @@ def test_bake_fence_integration(tmp_path: Path):
                 key=key,
                 view="top",
                 size=constants.BLOCK_PX,
-                textures_dir=Path("assets/textures/block"),
+                textures_dir=BLOCK_TEXTURES_FOLDER,
             ),
             generated_root=generated_root,
             force=True,
@@ -142,7 +143,7 @@ def test_bake_fence_integration(tmp_path: Path):
     try:
         textures = compile_texture_set(
             "top",
-            str(Path("assets/textures/block")),
+            str(BLOCK_TEXTURES_FOLDER),
             block_px=constants.BLOCK_PX,
         )
     finally:

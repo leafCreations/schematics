@@ -11,7 +11,7 @@ from helpers.materials import (
     collect_raw_tokens_from_layers,
 )
 from helpers.paths import (
-    ASSET_FOLDER,
+    BLOCK_TEXTURES_FOLDER,
     OUTPUT_SCHEMATICS_FOLDER,
     OUTPUT_WORLDS_FOLDER,
     TEMPLATE_FOLDER,
@@ -27,7 +27,7 @@ def build_editor_materials_context() -> SchematicContext:
         layers=[],
         grid={},
         block_registry=BLOCK_REGISTRY,
-        assets_dir=ASSET_FOLDER / "textures" / "block",
+        assets_dir=BLOCK_TEXTURES_FOLDER,
         worldgen_template_dir=TEMPLATE_FOLDER,
         output_schematics_dir=OUTPUT_SCHEMATICS_FOLDER / "_editor",
         output_worldgen_dir=OUTPUT_WORLDS_FOLDER / "_editor",

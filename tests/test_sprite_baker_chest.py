@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from helpers import constants
-from helpers.paths import ENTITY_CHEST_TEXTURES_FOLDER, GENERATED_ASSETS_FOLDER
+from helpers.paths import (
+    BLOCK_TEXTURES_FOLDER,
+    ENTITY_CHEST_TEXTURES_FOLDER,
+    GENERATED_ASSETS_FOLDER,
+)
 from helpers.sprite_baker.chest_schematic import CHEST_SINGLE_TEMPLATE_PATH
 from helpers.sprite_baker.compose_chest import compose_chest, list_chest_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
@@ -225,7 +229,7 @@ def test_compile_texture_set_loads_baked_chest_variants():
 
     textures = compile_texture_set(
         "top",
-        str(Path("assets/textures/block")),
+        str(BLOCK_TEXTURES_FOLDER),
         block_px=constants.BLOCK_PX,
     )
 

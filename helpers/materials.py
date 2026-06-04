@@ -7,6 +7,7 @@ import helpers.registry_blocks as registry_blocks
 import helpers.utils as utils
 from helpers.block_catalog import catalog_display_name
 from helpers.context import SchematicContext
+from helpers.layer_groups import is_layer_render_visible
 from helpers.paths import ASSET_FOLDER, GENERATED_ASSETS_FOLDER
 from helpers.registry_lookup import (
     get_block_entry,
@@ -288,7 +289,10 @@ def collect_raw_tokens_from_layers(layers: list[dict]) -> list[RawToken]:
 def collect_material_tokens(ctx: SchematicContext) -> ParsedTokenMaterialsList:
     parsed_tokens = []
 
-    for layer in ctx.layers:
+    for layer_array_index, layer in enumerate(ctx.layers):
+        if not is_layer_render_visible(layer, layer_array_index, ctx.grid):
+            continue
+
         for row in layer["cells"]:
             for raw_cell in row:
                 parsed = parse_structure_token(raw_cell)

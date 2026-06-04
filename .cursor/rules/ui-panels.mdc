@@ -1,0 +1,34 @@
+---
+description: QGroupBox panels with title and icon buttons on one row
+globs: ui/widgets/**/*.py,docs/ui.md
+alwaysApply: false
+---
+
+# UI panel layout (title + actions)
+
+When adding or changing a **QGroupBox** panel that has header icon buttons (add/delete/copy/paste, close, etc.), use the shared pattern — do **not** use `QGroupBox("Title")` plus a separate action row below the title.
+
+## Title row
+
+- `ui/widgets/panel_header.py` — `create_titled_panel_layout(panel, title, trailing_widgets)` returns the panel `QVBoxLayout` with **bold title left, buttons right** on one row (e.g. `Compass … ×`, `Layers … + − ⎘ ⎗`).
+- Call `super().__init__(parent)` with **no** `setTitle` argument; the helper calls `setTitle("")`.
+
+## Icon buttons
+
+- Size: `panel_icon_size()` from `ui/toolbar_icons.py` (currently 18×18).
+- Factory: `make_panel_tool_button(icon, tooltip, clicked=...)` from `ui/widgets/panel_tool_button.py`.
+- Icons: `layer_*_icon(size=panel_icon_size().width())` (or new helpers in `toolbar_icons.py` with optional `size=`).
+- Expose panel actions via **signals**; wire handlers in `ui/main_window.py`.
+
+## Examples
+
+- `ui/widgets/layer_list_panel.py` — Layers + four actions
+- `ui/widgets/groups_panel.py` — Groups + four actions; extra fields (e.g. Name) go on **rows below** the title row
+- `ui/widgets/compass_panel.py` — Compass + close `×`
+
+## Toolbar vs panel
+
+- **Panel** header icons: 18px, `panel_header` + `make_panel_tool_button`.
+- **Grid header** toolbar (eraser/save): 22px, `toolbar_icon_size()`, `LayerActionToolbar` / `QToolBar`.
+
+Document new panels in `docs/ui.md` under the Structure tab table.

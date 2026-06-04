@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QFont, QKeyEvent, QMouseEvent, QPainter
+from PySide6.QtCore import QEvent, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QHelpEvent, QKeyEvent, QMouseEvent, QPainter
 from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QTableWidget,
     QTableWidgetItem,
+    QToolTip,
     QVBoxLayout,
     QWidget,
 )
@@ -106,6 +107,13 @@ class SiteGridWidget(QTableWidget):
 
         if texture_cache is not None:
             self.setIconSize(texture_cache.qt_icon_size())
+
+    def _tooltip_for_item(self, item: QTableWidgetItem | None) -> str:
+        if item is None:
+            return ""
+
+        token = item.data(_TOKEN_ROLE) or "."
+        return self._cell_tooltip(str(token))
 
     def set_structure_selected(self, selected: bool) -> None:
         if selected == self._structure_selected:
@@ -240,11 +248,23 @@ class SiteGridWidget(QTableWidget):
 
     def _refresh_cell_tooltips(self) -> None:
         for row_idx, row in enumerate(self._display_cells):
-            for col_idx, token in enumerate(row):
+            for col_idx, _token in enumerate(row):
                 item = self.item(row_idx, col_idx)
 
                 if item is not None:
-                    item.setToolTip(self._cell_tooltip(token))
+                    item.setToolTip("")
+
+    def viewportEvent(self, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.ToolTip and isinstance(event, QHelpEvent):
+            item = self.itemAt(event.pos())
+            text = self._tooltip_for_item(item)
+
+            if text:
+                QToolTip.showText(event.globalPos(), text)
+
+            return True
+
+        return super().viewportEvent(event)
 
     def _refresh_structure_highlights(self) -> None:
         for row_idx, row in enumerate(self._display_cells):
@@ -321,6 +341,7 @@ class SiteGridWidget(QTableWidget):
         if on_structure:
             if token == ".":
                 item.setBackground(_EMPTY_FILL)
+                item.setToolTip("")
                 return
 
             local_x = site_col - self._offset_x
@@ -344,7 +365,7 @@ class SiteGridWidget(QTableWidget):
 
             if token == "GRASS":
                 item.setBackground(fill)
-                item.setToolTip(self._cell_tooltip(token))
+                item.setToolTip("")
                 return
 
             icon = (
@@ -355,7 +376,7 @@ class SiteGridWidget(QTableWidget):
 
         if icon is not None:
             item.setIcon(icon)
-            item.setToolTip(self._cell_tooltip(token))
+            item.setToolTip("")
             item.setBackground(fill)
             return
 
@@ -363,7 +384,7 @@ class SiteGridWidget(QTableWidget):
         font = QFont()
         font.setBold(True)
         item.setFont(font)
-        item.setToolTip(self._cell_tooltip(token))
+        item.setToolTip("")
         item.setForeground(_FALLBACK_TEXT)
         item.setBackground(fill)
 

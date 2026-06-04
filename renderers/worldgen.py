@@ -9,6 +9,7 @@ from helpers.context import SchematicContext
 from helpers.fence_adjacency import resolve_fence_adjacency
 from helpers.grid import get_worldgen_base_y
 from helpers.lantern_placement import resolve_lantern_worldgen
+from helpers.layer_groups import is_layer_render_visible
 from helpers.registry_blocks import (
     get_block_behavior,
     resolve_minecraft_block_id,
@@ -99,6 +100,9 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
     last_coords = None
 
     for layer_array_index, layer in enumerate(ctx.layers):
+        if not is_layer_render_visible(layer, layer_array_index, ctx.grid):
+            continue
+
         actual_y = base_y + layer["index"]
 
         for z_idx, row in enumerate(layer["cells"]):

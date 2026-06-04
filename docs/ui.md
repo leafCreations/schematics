@@ -1,5 +1,7 @@
 # Structure Editor (UI)
 
+**User guide:** [structure-editor-guide.md](structure-editor-guide.md) — how to use the editor (layers, groups, site, renders, shortcuts).
+
 PySide6 desktop editor for structure layer YAML. Browse and edit `structures/{structure}/stage{N}/layers/*.yaml` with registry-driven block palettes, Minecraft texture previews in the grid, and per-layer save.
 
 The editor shares the same token grammar, registry, and texture pipeline as the blueprint renderers. See [structure-tokens.md](structure-tokens.md) and [registry.md](registry.md) for token and palette details.
@@ -12,7 +14,7 @@ Requires **Python 3.11+** and the optional `[ui]` extra:
 pip install -e ".[dev,ui]"
 ```
 
-Block textures must exist under `assets/textures/block/` (same as rendering). Generated sprites under `assets/generated/` improve stairs, fences, doors, and similar blocks — see [sprite-baker.md](sprite-baker.md).
+Block textures must exist under `assets/minecraft/textures/block/` (same as rendering). Generated sprites under `assets/minecraft/generated/` improve stairs, fences, doors, and similar blocks — see [sprite-baker.md](sprite-baker.md). Toolbar icons load from `assets/icons/` when present.
 
 ## Launch
 
@@ -39,10 +41,12 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 
 ```text
 ┌─────────────┬──────────────────────────────┬──────────────┐
-│  Category ▼ │  Layer ▼  [Eraser] [Save *]  │  Properties  │
-│  Blocks     │  ┌────────────────────────┐  │  Paint brush │
-│  (list)     │  │  Structure grid        │  │  Grid cell   │
-│             │  └────────────────────────┘  │  Materials   │
+│  Category ▼ │  [Eraser|Save]  (grid header)            │  Compass     │
+│  Blocks     │  Groups / Layers (left)                  │
+│  Layers     │  [+ − ⎘ ⎗] list + ↑↓       │  Paint brush │
+│  Structure  │  ┌────────────────────────┐  │  Grid cell   │
+│  (identity  │  │  Structure grid        │  │  Materials   │
+│   + size)   │  └────────────────────────┘  │              │
 └─────────────┴──────────────────────────────┴──────────────┘
 ```
 
@@ -50,12 +54,14 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 | ---- | ---- |
 | **Palettes** (left) | Category dropdown plus block list from `registries/palettes/*.yaml` |
 | **Structure grid** (center) | Current layer `cells` — paint and erase; use **Structure size** to grow (pad with `.`) or shrink (trim east/south) |
-| **Properties** (right) | Brush options (material, direction, variant) and inspector for the selected cell |
+| **Structure** (left, bottom) | Combined identity (**Structure**, **Stage**, derived name/output folder) and grid size (width/depth, resize, block tooltips). Saved with **Save Site Settings** on the Site tab |
+| **Compass** (right, top) | North-up reference (+x east, +z south) |
+| **Paint brush** (right) | Brush options (material, direction, variant) and inspector for the selected cell |
 | **Materials** (right) | Live inventory; **Current layer** (default) or **All layers** from the scope dropdown — same grouping as the materials render; updates when you paint, erase, or switch layers |
-| **Structure size** (left) | Set width (x) and depth (z), then **Resize grid** — applies to every layer; cannot exceed site dimensions; **Show block tooltips on hover** (same editor preference as Site tab) |
-| **Layer** dropdown | Switch between `layer_files` listed in `structure.yaml` |
-| **Eraser** | Toggle erase mode (left-click clears cells) |
-| **Save Layer** | Write the current layer back to its YAML file |
+| **Groups** (left) | Top-right: add, delete, copy, paste (18px icons). **All** (default) plus each layer `group` name and any empty groups in `grid.groups`; click a row to filter the Layers list. **Name** edits the selected group (renames layers and saved metadata). **visibility** toggles hide the whole group from renders (`hidden_groups` in `structure.yaml`, saved with **Save Site Settings**). **Add** requires a name; empty groups persist in `grid.groups` until layers are assigned |
+| **Layers** (left, below Groups) | Top-right: add, delete, copy, paste (18px icons). Select the active layer; **↑** / **↓** reorder `layer_files` (save site settings to persist). **Visibility** (per row): click to hide a layer from renders (`visible: false` in layer YAML); hidden layers show `layer-visible-off` — save the layer to persist |
+| **Layer toolbar** (grid header) | **Eraser** (split button — main click toggles cell erase mode; menu **Clear entire layer**), **Save** (enabled when the current layer has unsaved edits). Tooltips show the action name. |
+| **Save Site Settings** | Also updates `layer_files` in `structure.yaml` after add/delete |
 
 ### Site tab
 
@@ -72,6 +78,7 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 | Area | Role |
 | ---- | ---- |
 | **Site grid** (center) | `site_width` × `site_depth` preview; structure layer shown at `offset_x` / `offset_z` (faded green = open site; white = structure blocks); path **fence/torch** on long **trim block** runs (≥8 contiguous trim cells; first post at +10 along the run, then every 7) |
+| **Compass** (right, top) | Same north-up rose as the Structure tab |
 | **Site settings** (right) | `site_width`, `site_depth`, nine placement anchors, derived offsets; **Show block tooltips on hover** (shared with Structure tab, persisted locally) |
 | **Nudge placement** (right) | Arrow buttons; same as keyboard arrows when structure is selected |
 | **Site preview** | First layer in `grid.site_structure_layers` (same layer path/site renders use for the ground floor) |
@@ -132,16 +139,41 @@ Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not l
 - **Placement** — nine anchors (top/middle/bottom × left/center/right). **Center** is the default; offsets are computed from structure and site dimensions and written as `offset_x` / `offset_z` (and `placement` when saved).
 - Read-only summary shows structure size (from layer cells) and the resulting offset.
 
+### Menus
+
+**File**
+
+| Item | Shortcut | Action |
+| ---- | -------- | ------ |
+| New Structure | `Ctrl+N` | Placeholder (not implemented) |
+| Save | `Ctrl+S` | Saves the active layer (same as toolbar **Save**) |
+| Exit | `Ctrl+Q` | Close the editor (unsaved-changes prompt) |
+
+**Edit**
+
+| Item | Shortcut |
+| ---- | -------- |
+| Undo | `Ctrl+Z` |
+| Redo | `Ctrl+Y` |
+
+**View**
+
+| Item | Shortcut | Action |
+| ---- | -------- | ------ |
+| Reload Window | `Ctrl+Shift+Q` | Restart the editor process (same CLI args); use after code changes instead of quitting |
+| Compass | `Ctrl+Shift+C` | Show or hide the compass panel (Structure and Site tabs); use **×** on the panel to hide |
+
 ### Save
 
-- **Save Layer** writes only the active layer file (e.g. `layers/layer_00.yaml`).
+- **Save Layer** writes only the active layer file (e.g. `layers/layer_00.yaml`), including optional `visible: false` when hidden from renders.
+- **File → Save** (`Ctrl+S`) is the same operation when the current layer is dirty.
 - **Save Site Settings** writes `structure.yaml` grid fields (`site_width`, `site_depth`, `placement`, `offset_x`, `offset_z`).
-- Unsaved layers or site settings show `*` in the window title and on the matching button.
+- Unsaved layers or site settings show `(unsaved)` in the window title and `*` on the matching save button.
 - Switching layers or quitting with unsaved changes prompts **Save / Discard / Cancel**.
 
 ### Undo and redo
 
-**Edit → Undo** (`Ctrl+Z`) and **Edit → Redo** (`Ctrl+Shift+Z` / `Ctrl+Y`) apply to:
+**Edit → Undo** (`Ctrl+Z`) and **Edit → Redo** (`Ctrl+Y`) apply to:
 
 * **Paint and erase** on the structure grid (one step per cell change, current layer and site preview stay in sync)
 * Structure grid **resize** (all layers)
@@ -225,7 +257,8 @@ ui/
   widgets/
     palette_panel.py    # Category dropdown + block list
     grid.py             # Structure layer grid (paint/erase)
-    structure_size_panel.py  # Footprint width/depth + resize
+    structure_settings_panel.py  # Structure identity + footprint size (combined)
+    structure_size_panel.py  # Grid size section (embedded in settings panel)
     site_grid.py        # Scaled read-only site footprint preview
     render_panel.py     # Render type checkboxes and generate action
   site_cells.py         # Site ↔ structure coordinate mapping
@@ -244,6 +277,30 @@ Shared helpers (not under `ui/`):
 | `helpers/registry_lookup.py` | `get_block_entry()`, catalog solid entries |
 | `helpers/structure_loader.py` | Same structure paths as `render_main.py` |
 | `registries/validate.py` | Palette integrity tests |
+
+## Editor chrome
+
+At startup (`ui.main_window` `main()`), three helpers configure shared Qt styling:
+
+| Module | Role |
+| ------ | ---- |
+| `ui/icon_theme.py` | Bundled icon theme from `assets/icons/` |
+| `ui/tooltip_style.py` | Global `QToolTip` colors |
+| `ui/menu_style.py` | Global `QMenu` row height, font, and gray selection highlight |
+
+Any new menu bar entry, context menu, or toolbar popup should use a plain `QMenu` — no per-menu stylesheet. Call `configure_ui_menus()` only if you add a second application entry point.
+
+### Panel boxes with header buttons
+
+Use this layout for new left/right column panels (Groups, Layers, Compass):
+
+| Piece | Module |
+| ----- | ------ |
+| Title + actions on one row | `ui/widgets/panel_header.py` — `create_titled_panel_layout(panel, "Title", [buttons…])` |
+| 18px icon buttons | `ui/widgets/panel_tool_button.py` — `make_panel_tool_button`; `ui/toolbar_icons.py` — `panel_icon_size()`, `layer_*_icon(size=…)` |
+| Signals | Panel emits `*_requested`; `main_window.py` connects handlers |
+
+Do not use the built-in `QGroupBox` title plus a second row only for buttons — the title and icons share the top row (`Compass … ×`). Secondary fields (e.g. Groups **Name**) sit below that row. Grid-header toolbars (eraser/save) stay at 22px via `toolbar_icon_size()`.
 
 ## Linux troubleshooting
 

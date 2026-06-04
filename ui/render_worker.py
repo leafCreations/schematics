@@ -28,12 +28,15 @@ class RenderWorker(QObject):
         structure: str,
         stage: int,
         renders: RenderList | str,
+        *,
+        structure_path: Path | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
         self._structure = structure
         self._stage = stage
         self._renders = renders
+        self._structure_path = structure_path
 
     def run(self) -> None:
         try:
@@ -41,6 +44,7 @@ class RenderWorker(QObject):
                 self._structure,
                 self._stage,
                 self._renders,
+                structure_path=self._structure_path,
                 progress=self._emit_progress,
             )
         except Exception as exc:  # noqa: BLE001 — surface pipeline errors in the UI

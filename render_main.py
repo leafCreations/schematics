@@ -2,6 +2,7 @@ import argparse
 import random
 import sys
 from collections.abc import Callable
+from pathlib import Path
 
 import helpers.constants as constants
 import helpers.pipeline as pipeline
@@ -21,6 +22,7 @@ def run_stage_renders(
     stage: int,
     renders: RenderList | str | None = None,
     *,
+    structure_path: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Load structure from disk and run the selected render handlers."""
@@ -30,7 +32,12 @@ def run_stage_renders(
     def should_render(name: str) -> bool:
         return constants.RENDER_ALL in renders or name in renders
 
-    ctx = utils.load_structure_config(structure, stage)
+    if structure_path is not None:
+        from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+        ctx = build_schematic_context(load_structure_yaml(structure_path.resolve()))
+    else:
+        ctx = utils.load_structure_config(structure, stage)
     ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
 
     if progress is None:

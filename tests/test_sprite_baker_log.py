@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from helpers import constants
+from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_log import compose_log, list_log_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
 from registries.loader import compile_texture_set
@@ -27,7 +28,7 @@ def test_compose_log_rejects_non_log():
             key="TORCH",
             view="top",
             size=constants.BLOCK_PX,
-            textures_dir=Path("assets/textures/block"),
+            textures_dir=BLOCK_TEXTURES_FOLDER,
         )
 
 
@@ -37,13 +38,13 @@ def test_compose_log_vertical_top_uses_log_top():
         key="LOG:oak",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     horizontal = compose_log(
         key="LOG:oak#east_west",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
 
     assert image.size == (16, 16)
@@ -57,7 +58,7 @@ def test_compose_log_side_uses_bark():
         key="LOG:oak",
         view="side",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
 
     assert image.getpixel((8, 8))[3] == 255
@@ -77,7 +78,7 @@ def test_bake_log_integration(tmp_path: Path):
                 key=key,
                 view="top",
                 size=constants.BLOCK_PX,
-                textures_dir=Path("assets/textures/block"),
+                textures_dir=BLOCK_TEXTURES_FOLDER,
             ),
             generated_root=generated_root,
             force=True,
@@ -94,7 +95,7 @@ def test_bake_log_integration(tmp_path: Path):
     try:
         textures = compile_texture_set(
             "top",
-            str(Path("assets/textures/block")),
+            str(BLOCK_TEXTURES_FOLDER),
             block_px=constants.BLOCK_PX,
         )
     finally:

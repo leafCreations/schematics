@@ -7,6 +7,7 @@ import helpers.landscape_utils as landscape_utils
 import helpers.paths as paths
 import helpers.render_image as render_image
 from helpers.context import SchematicContext
+from helpers.layer_visibility import site_facade_layer_keys
 from helpers.types import (
     FacadeElevations,
     LayerElevations,
@@ -16,12 +17,15 @@ from helpers.types import (
 )
 
 
-def _build_site_facades_layout(ctx: SchematicContext) -> SiteFacadeLayout:
+def _build_site_facades_layout(
+    ctx: SchematicContext,
+    *,
+    layer_keys: list[int],
+) -> SiteFacadeLayout:
     block_px = constants.BLOCK_PX
     padding = 60
     top_margin = constants.SITE_FACADES_TOP_MARGIN
     view_keys = ["N", "S", "W", "E"]
-    layer_keys = [-1, 0, 1]
 
     site_width = grid_utils.get_site_width(ctx)
     panel_w = site_width * block_px
@@ -55,10 +59,14 @@ def _draw_site_facades_title(draw, layout: SiteFacadeLayout):
     )
 
 
-def _collect_site_elevations(ctx: SchematicContext, siteMap: SiteMap) -> FacadeElevations:
+def _collect_site_elevations(
+    ctx: SchematicContext,
+    siteMap: SiteMap,
+    *,
+    layer_keys: list[int],
+) -> FacadeElevations:
     site_width = grid_utils.get_site_width(ctx)
     site_depth = grid_utils.get_site_depth(ctx)
-    layer_keys = [-1, 0, 1]
 
     def get_token(layer_y: int, x: int, z: int) -> Token:
         return siteMap[layer_y][z][x]
@@ -135,9 +143,12 @@ def _draw_site_facade_panel(
 
 
 def render_site_facades(ctx: SchematicContext):
-    layout = _build_site_facades_layout(ctx)
     siteMap = landscape_utils.generate_full_3d_landscape_sitemap(ctx)
-    elevations = _collect_site_elevations(ctx, siteMap)
+    site_width = grid_utils.get_site_width(ctx)
+    site_depth = grid_utils.get_site_depth(ctx)
+    layer_keys = site_facade_layer_keys(siteMap, site_width=site_width, site_depth=site_depth)
+    layout = _build_site_facades_layout(ctx, layer_keys=layer_keys)
+    elevations = _collect_site_elevations(ctx, siteMap, layer_keys=layer_keys)
 
     img, draw = render_image.create_canvas(layout["img_w"], layout["img_h"])
 

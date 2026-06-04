@@ -4,6 +4,7 @@ import helpers.path_lighting as path_lighting
 import helpers.path_strip as path_strip
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
+from helpers.layer_groups import is_layer_render_visible
 from helpers.types import Cell, SiteLayer, SiteMap
 
 TRIM_BLOCK = path_strip.TRIM_BLOCK
@@ -73,6 +74,10 @@ def apply_structure_overlays_to_site_map(site_map: SiteMap, ctx: SchematicContex
 
     for site_y, layer_list_idx in zip(SITE_STRUCTURE_Y_LEVELS, layer_indices, strict=False):
         layer = ctx.layers[layer_list_idx]
+
+        if not is_layer_render_visible(layer, layer_list_idx, ctx.grid):
+            continue
+
         cells = layer.get("cells", [])
 
         for local_z in range(min(structure_depth, len(cells))):

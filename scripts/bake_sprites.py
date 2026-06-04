@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bake schematic sprites into assets/generated/ for use by compile_texture_set."""
+"""Bake schematic sprites into assets/minecraft/generated/ for use by compile_texture_set."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from helpers.sprite_baker.setup import register_default_composers
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Bake schematic block sprites to assets/generated/",
+        description="Bake schematic block sprites to assets/minecraft/generated/",
     )
     parser.add_argument(
         "--type",
@@ -58,7 +58,7 @@ def _parse_args() -> argparse.Namespace:
         "--view",
         default=constants.TEXTURE_TOP,
         choices=[constants.TEXTURE_TOP, constants.TEXTURE_SIDE, "inventory"],
-        help="Sprite view folder under assets/generated/ (default: top)",
+        help="Sprite view folder under assets/minecraft/generated/ (default: top)",
     )
     parser.add_argument(
         "--key",

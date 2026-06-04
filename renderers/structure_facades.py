@@ -7,6 +7,7 @@ import helpers.grid as grid_utils
 import helpers.paths as paths
 import helpers.render_image as render_image
 from helpers.context import SchematicContext
+from helpers.layer_visibility import visible_layer_array_indices
 from helpers.types import (
     FacadeElevations,
     RawToken,
@@ -22,7 +23,8 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
 
     struct_w = grid_utils.get_structure_width(ctx)
     struct_h = grid_utils.get_structure_depth(ctx)
-    max_layers = grid_utils.get_structure_height(ctx)
+    visible_layers = visible_layer_array_indices(ctx.layers, ctx.grid)
+    max_layers = max(len(visible_layers), 1)
 
     panel_w = max(struct_w, struct_h) * block_px
     panel_h = max_layers * block_px
@@ -38,6 +40,7 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
         img_w=img_w,
         img_h=img_h,
         max_layers=max_layers,
+        visible_layer_indices=visible_layers,
         view_keys=["N", "S", "W", "E"],
         headings={
             "N": "NORTH FAÇADE (Rear)",
@@ -60,15 +63,15 @@ def _collect_structure_elevations(
     ctx: SchematicContext,
     layout: StructureFacadeLayout,
 ) -> FacadeElevations:
-    max_layers = layout["max_layers"]
     struct_w = grid_utils.get_structure_width(ctx)
     struct_h = grid_utils.get_structure_depth(ctx)
+    layer_keys = layout["visible_layer_indices"]
 
     def get_token(layer_array_index: int, x: int, z: int) -> RawToken:
         return cell_utils.get_structure_cell(ctx, layer_array_index, x, z)
 
     return facade_projection.collect_facade_elevations(
-        list(range(max_layers)),
+        layer_keys,
         struct_w,
         struct_h,
         get_token,
@@ -115,17 +118,17 @@ def _draw_structure_elevation_panel(
 ):
     block_px = layout["block_px"]
     panel_h = layout["panel_h"]
-    max_layers = layout["max_layers"]
+    visible_layers = layout["visible_layer_indices"]
 
     token_count = _get_view_token_count(ctx, view_key)
 
-    for layer_y in range(max_layers):
-        row_tokens = elevation.get(layer_y, [])
+    for row, layer_array_index in enumerate(visible_layers):
+        row_tokens = elevation.get(layer_array_index, [])
 
         for i in range(token_count):
             raw_token = row_tokens[i] if i < len(row_tokens) else "."
             bx = sx + (i * block_px)
-            by = sy + panel_h - ((layer_y + 1) * block_px)
+            by = sy + panel_h - ((row + 1) * block_px)
 
             facade_projection.draw_facade_cell(
                 img,

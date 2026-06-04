@@ -3,7 +3,7 @@ from PIL import Image
 
 import helpers.constants as constants
 import helpers.utils_schematics as schematics_utils
-from helpers.paths import ASSET_FOLDER
+from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.cache import load_cached, save_cached
 from helpers.structure_tokens import ParsedToken
 from registries.loader import BLOCK_REGISTRY, compile_texture_set
@@ -103,7 +103,7 @@ def test_straight_stairs_still_rotate_with_direction(tmp_path):
 
 
 def test_paste_corner_stair_matches_worldgen_facing():
-    textures = compile_texture_set("top", str(ASSET_FOLDER), constants.BLOCK_PX)
+    textures = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
 
     def cutout_corner(token: str) -> str:
         img = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (0, 0, 0, 0))
@@ -122,7 +122,7 @@ def test_paste_corner_stair_matches_worldgen_facing():
 
 @pytest.mark.requires_assets
 def test_resolve_cell_texture_returns_planks_image():
-    textures = compile_texture_set("top", str(ASSET_FOLDER), constants.BLOCK_PX)
+    textures = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
     image = schematics_utils.resolve_cell_texture("PLANKS:oak", textures, size=constants.BLOCK_PX)
 
     assert image is not None

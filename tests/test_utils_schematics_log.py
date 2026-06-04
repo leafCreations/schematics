@@ -1,9 +1,8 @@
-from pathlib import Path
-
 import pytest
 from PIL import Image
 
 from helpers import constants
+from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_log import compose_log
 from helpers.utils_schematics import paste_topdown_token
 
@@ -15,13 +14,13 @@ def test_paste_log_uses_material_and_orientation_keys():
             key="LOG:oak",
             view="top",
             size=constants.BLOCK_PX,
-            textures_dir=Path("assets/textures/block"),
+            textures_dir=BLOCK_TEXTURES_FOLDER,
         ),
         "LOG:oak#east_west": compose_log(
             key="LOG:oak#east_west",
             view="top",
             size=constants.BLOCK_PX,
-            textures_dir=Path("assets/textures/block"),
+            textures_dir=BLOCK_TEXTURES_FOLDER,
         ),
     }
 

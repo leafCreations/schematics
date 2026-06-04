@@ -59,8 +59,10 @@ structures/
       layers/
 
 assets/
-  textures/block/       # Vanilla block textures (not in repo; see .gitignore)
-  generated/            # Baked schematic sprites (not in repo; see sprite-baker.md)
+  minecraft/            # Vanilla resource pack (textures, models, blockstates, lang, …)
+    textures/block/     # Block textures for rendering (not in repo; see .gitignore)
+    generated/          # Baked schematic sprites (not in repo; see sprite-baker.md)
+  icons/                # Freedesktop icon theme for the structure editor toolbar
 
 scripts/
   bake_sprites.py       # CLI to bake generated sprites

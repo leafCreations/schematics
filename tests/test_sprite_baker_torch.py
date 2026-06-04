@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from helpers import constants
+from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_torch import compose_torch, list_torch_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
 from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping, compile_texture_set
@@ -32,7 +33,7 @@ def test_compose_torch_rejects_non_torch():
             key="FENCE",
             view="top",
             size=constants.BLOCK_PX,
-            textures_dir=Path("assets/textures/block"),
+            textures_dir=BLOCK_TEXTURES_FOLDER,
         )
 
 
@@ -42,31 +43,31 @@ def test_compose_torch_variants_differ():
         key="TORCH",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     soul_top = compose_torch(
         key="TORCH#soul",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     wall_top = compose_torch(
         key="TORCH#wall",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     wall_side = compose_torch(
         key="TORCH#wall",
         view="side",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     soul_side = compose_torch(
         key="TORCH#soul",
         view="side",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
 
     assert normal_top.getpixel((8, 8))[3] == 255
@@ -83,13 +84,13 @@ def test_compose_torch_wall_top_uses_side_profile():
         key="TORCH",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     wall_top = compose_torch(
         key="TORCH#wall",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
 
     assert sum(normal_top.getpixel((x, y))[3] for x in range(16) for y in range(16)) < sum(
@@ -111,7 +112,7 @@ def test_bake_torch_integration(tmp_path: Path):
                 key=key,
                 view="top",
                 size=constants.BLOCK_PX,
-                textures_dir=Path("assets/textures/block"),
+                textures_dir=BLOCK_TEXTURES_FOLDER,
             ),
             generated_root=generated_root,
             force=True,
@@ -128,7 +129,7 @@ def test_bake_torch_integration(tmp_path: Path):
     try:
         textures = compile_texture_set(
             "top",
-            str(Path("assets/textures/block")),
+            str(BLOCK_TEXTURES_FOLDER),
             block_px=constants.BLOCK_PX,
         )
     finally:

@@ -9,13 +9,14 @@ import helpers.constants as constants
 from helpers.context import SchematicContext
 from helpers.grid import resolve_site_dimensions
 from helpers.paths import (
-    ASSET_FOLDER,
+    BLOCK_TEXTURES_FOLDER,
     OUTPUT_SCHEMATICS_FOLDER,
     OUTPUT_WORLDS_FOLDER,
     STRUCTURES_FOLDER,
     TEMPLATE_FOLDER,
 )
 from helpers.site_ground import validate_site_ground
+from helpers.structure_metadata import validate_structure_slug
 from helpers.structure_tokens import parse_structure_token
 from helpers.types import GridConfig, LayerConfig, StructureConfig
 from registries.loader import BLOCK_REGISTRY, compile_inventory_texture_set, compile_texture_set
@@ -189,6 +190,22 @@ def validate_grid_config(grid: dict[str, Any], *, path: str = "grid") -> GridCon
     if site_structure_layers is not None and not isinstance(site_structure_layers, list):
         raise ValueError(f"{path}.site_structure_layers must be a list of layer list indices")
 
+    hidden_groups = grid.get("hidden_groups")
+
+    if hidden_groups is not None and (
+        not isinstance(hidden_groups, list)
+        or not all(isinstance(name, str) for name in hidden_groups)
+    ):
+        raise ValueError(f"{path}.hidden_groups must be a list of group name strings")
+
+    defined_groups = grid.get("groups")
+
+    if defined_groups is not None and (
+        not isinstance(defined_groups, list)
+        or not all(isinstance(name, str) for name in defined_groups)
+    ):
+        raise ValueError(f"{path}.groups must be a list of group name strings")
+
     return grid  # type: ignore[return-value]  # normalized site_width/site_depth
 
 
@@ -251,6 +268,8 @@ def validate_structure_config(config: dict[str, Any]) -> StructureConfig:
     if missing:
         raise ValueError(f"STRUCTURE_CONFIG missing required keys: {', '.join(missing)}")
 
+    validate_structure_slug(str(config.get("structure", "")))
+
     grid = validate_grid_config(config["grid"])
     layers = config["layers"]
 
@@ -308,7 +327,7 @@ def build_schematic_context(config: StructureConfig) -> SchematicContext:
         grid=validated["grid"],
         name=validated["name"],
         block_registry=BLOCK_REGISTRY,
-        assets_dir=ASSET_FOLDER / "textures/block",
+        assets_dir=BLOCK_TEXTURES_FOLDER,
         output_schematics_dir=OUTPUT_SCHEMATICS_FOLDER / validated["output_folder"],
         output_worldgen_dir=OUTPUT_WORLDS_FOLDER / validated["output_folder"],
         worldgen_template_dir=TEMPLATE_FOLDER,

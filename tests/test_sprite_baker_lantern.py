@@ -1,8 +1,7 @@
-from pathlib import Path
-
 import pytest
 
 from helpers import constants
+from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_lantern import compose_lantern, list_lantern_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
 from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping, compile_texture_set
@@ -43,7 +42,7 @@ def test_compose_lantern_rejects_non_lantern():
             key="TORCH",
             view="top",
             size=constants.BLOCK_PX,
-            textures_dir=Path("assets/textures/block"),
+            textures_dir=BLOCK_TEXTURES_FOLDER,
         )
 
 
@@ -53,25 +52,25 @@ def test_compose_lantern_variants_differ():
         key="LANTERN",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     soul_top = compose_lantern(
         key="LANTERN#soul",
         view="top",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     normal_side = compose_lantern(
         key="LANTERN",
         view="side",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
     soul_side = compose_lantern(
         key="LANTERN#soul",
         view="side",
         size=16,
-        textures_dir=Path("assets/textures/block"),
+        textures_dir=BLOCK_TEXTURES_FOLDER,
     )
 
     assert normal_top.getpixel((8, 8))[3] == 255
@@ -89,7 +88,6 @@ def test_compose_lantern_variants_differ():
 def test_compile_texture_set_loads_baked_lantern_variants(tmp_path):
     import helpers.paths as paths_module
     import registries.loader as loader_module
-    from helpers.paths import BLOCK_TEXTURES_FOLDER
 
     generated_root = tmp_path / "generated"
     previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
