@@ -18,12 +18,17 @@ from PySide6.QtWidgets import (
 )
 
 from helpers.layer_groups import layer_matches_group_filter
-from helpers.layer_management import layer_label
+from helpers.layer_management import (
+    layer_display_label,
+    layer_worldgen_index,
+    layers_by_worldgen_index,
+)
 from helpers.layer_visibility import is_layer_visible
 from ui.toolbar_icons import (
     layer_add_icon,
     layer_copy_icon,
     layer_delete_icon,
+    layer_edit_icon,
     layer_move_down_icon,
     layer_move_up_icon,
     layer_paste_icon,
@@ -92,6 +97,7 @@ class LayerListPanel(QGroupBox):
     move_down_requested = Signal()
     visibility_toggled = Signal(int)
     add_requested = Signal()
+    edit_requested = Signal()
     delete_requested = Signal()
     copy_requested = Signal()
     paste_requested = Signal()
@@ -99,12 +105,18 @@ class LayerListPanel(QGroupBox):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._block_signals = False
+        self._y_order: list[int] = []
         icon_px = panel_icon_size().width()
 
         self._add_button = make_panel_tool_button(
             layer_add_icon(size=icon_px),
-            "Add a new empty layer",
+            "Add a new empty layer (Y level and group)",
             clicked=self.add_requested.emit,
+        )
+        self._edit_button = make_panel_tool_button(
+            layer_edit_icon(size=icon_px),
+            "Edit the current layer Y level and group",
+            clicked=self.edit_requested.emit,
         )
         self._delete_button = make_panel_tool_button(
             layer_delete_icon(size=icon_px),
@@ -128,6 +140,7 @@ class LayerListPanel(QGroupBox):
             "Layers",
             [
                 self._add_button,
+                self._edit_button,
                 self._delete_button,
                 self._copy_button,
                 self._paste_button,
@@ -139,12 +152,12 @@ class LayerListPanel(QGroupBox):
 
         self._up_button = make_panel_tool_button(
             layer_move_up_icon(size=icon_px),
-            "Move selected layer up",
+            "Move selected layer up in Y order",
             clicked=self.move_up_requested.emit,
         )
         self._down_button = make_panel_tool_button(
             layer_move_down_icon(size=icon_px),
-            "Move selected layer down",
+            "Move selected layer down in Y order",
             clicked=self.move_down_requested.emit,
         )
 
@@ -164,6 +177,9 @@ class LayerListPanel(QGroupBox):
     def set_delete_enabled(self, enabled: bool) -> None:
         self._delete_button.setEnabled(enabled)
 
+    def set_edit_enabled(self, enabled: bool) -> None:
+        self._edit_button.setEnabled(enabled)
+
     def set_copy_enabled(self, enabled: bool) -> None:
         self._copy_button.setEnabled(enabled)
 
@@ -180,18 +196,28 @@ class LayerListPanel(QGroupBox):
         self._list.clear()
         dirty = dirty_layers or set()
         visible_indices: list[int] = []
+        self._y_order = layers_by_worldgen_index(layers)
 
-        for index, layer in enumerate(layers):
-            if not layer_matches_group_filter(layer, index, group_filter):
-                continue
+        visible_entries = [
+            (index, layer)
+            for index, layer in enumerate(layers)
+            if layer_matches_group_filter(layer, index, group_filter)
+        ]
+        visible_entries.sort(
+            key=lambda entry: (
+                layer_worldgen_index(entry[1], entry[0]),
+                entry[0],
+            )
+        )
 
+        for index, layer in visible_entries:
             visible_indices.append(index)
             item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, index)
 
             row = _LayerListRow(
                 list_index=index,
-                label_text=self._row_label(layer, index, layer_paths, dirty),
+                label_text=self._row_label(layer, index, dirty),
                 hidden=not is_layer_visible(layer),
             )
             row.row_clicked.connect(self._on_row_clicked)
@@ -211,28 +237,23 @@ class LayerListPanel(QGroupBox):
                     break
 
         active = current_index if current_index in visible_indices else -1
-        self._update_reorder_buttons(active, len(visible_indices))
+        self._update_reorder_buttons(active)
         self._block_signals = False
 
     @staticmethod
     def _row_label(
         layer: dict[str, Any],
         index: int,
-        layer_paths: list[Path],
         dirty: set[int],
     ) -> str:
-        label = layer_label(layer, index)
+        label = layer_display_label(layer, index)
+        y_level = layer_worldgen_index(layer, index)
         suffix = " *" if index in dirty else ""
-        text = f"{index}: {label}{suffix}"
-
-        if index < len(layer_paths):
-            text = f"{text}  ({layer_paths[index].name})"
-
-        return text
+        return f"Y {y_level}: {label}{suffix}"
 
     def set_current_index(self, index: int) -> None:
         if index < 0:
-            self._update_reorder_buttons(index, self._list.count())
+            self._update_reorder_buttons(index)
             return
 
         self._block_signals = True
@@ -242,11 +263,11 @@ class LayerListPanel(QGroupBox):
 
             if item is not None and item.data(Qt.ItemDataRole.UserRole) == index:
                 self._list.setCurrentRow(row)
-                self._update_reorder_buttons(index, self._list.count())
+                self._update_reorder_buttons(index)
                 self._block_signals = False
                 return
 
-        self._update_reorder_buttons(index, self._list.count())
+        self._update_reorder_buttons(index)
         self._block_signals = False
 
     def current_index(self) -> int:
@@ -275,7 +296,7 @@ class LayerListPanel(QGroupBox):
                 self._block_signals = True
                 self._list.setCurrentRow(row)
                 self._block_signals = False
-                self._update_reorder_buttons(index, self._list.count())
+                self._update_reorder_buttons(index)
                 self.layer_selected.emit(index)
                 return
 
@@ -291,9 +312,22 @@ class LayerListPanel(QGroupBox):
         index = item.data(Qt.ItemDataRole.UserRole)
 
         if index is not None:
-            self._update_reorder_buttons(int(index), self._list.count())
+            self._update_reorder_buttons(int(index))
             self.layer_selected.emit(int(index))
 
-    def _update_reorder_buttons(self, index: int, layer_count: int) -> None:
-        self._up_button.setEnabled(layer_count > 1 and index > 0)
-        self._down_button.setEnabled(layer_count > 1 and 0 <= index < layer_count - 1)
+    def _update_reorder_buttons(self, list_index: int) -> None:
+        if list_index < 0 or not self._y_order:
+            self._up_button.setEnabled(False)
+            self._down_button.setEnabled(False)
+            return
+
+        try:
+            rank = self._y_order.index(list_index)
+        except ValueError:
+            self._up_button.setEnabled(False)
+            self._down_button.setEnabled(False)
+            return
+
+        layer_count = len(self._y_order)
+        self._up_button.setEnabled(layer_count > 1 and rank > 0)
+        self._down_button.setEnabled(layer_count > 1 and rank < layer_count - 1)

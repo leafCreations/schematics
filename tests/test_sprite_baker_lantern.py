@@ -4,7 +4,7 @@ from helpers import constants
 from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_lantern import compose_lantern, list_lantern_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
-from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping, compile_texture_set
+from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping
 
 
 def test_registry_mapping_includes_lantern_variants():
@@ -86,29 +86,24 @@ def test_compose_lantern_variants_differ():
 
 @pytest.mark.requires_assets
 def test_compile_texture_set_loads_baked_lantern_variants(tmp_path):
-    import helpers.paths as paths_module
-    import registries.loader as loader_module
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
 
     generated_root = tmp_path / "generated"
-    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
-    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
-    paths_module.GENERATED_ASSETS_FOLDER = generated_root
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
+    lantern_tokens = ("LANTERN", "LANTERN#soul")
 
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            lantern_tokens,
         )
-        side_textures = compile_texture_set(
+        side_textures = compile_texture_tokens(
             "side",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            lantern_tokens,
         )
-    finally:
-        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
-        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
 
     assert "LANTERN" in textures
     assert "LANTERN#soul" in textures

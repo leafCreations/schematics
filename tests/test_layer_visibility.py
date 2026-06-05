@@ -54,14 +54,26 @@ def test_visible_layer_array_indices():
     assert layer_visibility.visible_layer_array_indices(layers) == [1, 2]
 
 
+def test_visible_layer_array_indices_sorted_by_worldgen_index():
+    layers = [
+        {"index": 0, "cells": [["A"]]},
+        {"index": -2, "cells": [["B"]]},
+        {"index": -1, "cells": [["C"]]},
+        {"index": 2, "cells": [["D"]]},
+    ]
+    assert layer_visibility.visible_layer_array_indices(layers) == [1, 2, 0, 3]
+
+
 def test_site_facade_layer_keys_skips_empty_overlay_row():
+    from helpers.landscape_utils import SITE_GROUND_Y
+
     site_map = {
-        -1: [["GRASS"]],
+        SITE_GROUND_Y: [["GRASS"]],
         0: [["."]],
         1: [["STONE"]],
     }
     keys = layer_visibility.site_facade_layer_keys(site_map, site_width=1, site_depth=1)
-    assert keys == [-1, 1]
+    assert keys == [SITE_GROUND_Y, 1]
 
 
 def test_structure_facade_layout_omits_hidden_layer_rows():
@@ -74,6 +86,19 @@ def test_structure_facade_layout_omits_hidden_layer_rows():
     layout = _build_structure_elevation_layout(ctx)
     assert layout["visible_layer_indices"] == [1]
     assert layout["max_layers"] == 1
+
+
+def test_structure_facade_layout_orders_layers_by_worldgen_index():
+    from renderers.structure_facades import _build_structure_elevation_layout
+
+    ctx = _minimal_ctx(
+        {"index": 5, "group": "Roof", "cells": [["R"]]},
+        {"index": -1, "group": "Basement", "cells": [["B"]]},
+        {"index": -2, "group": "Basement", "cells": [["F"]]},
+        {"index": 0, "group": "Floor", "cells": [["G"]]},
+    )
+    layout = _build_structure_elevation_layout(ctx)
+    assert layout["visible_layer_indices"] == [2, 1, 3, 0]
 
 
 def test_render_layer_group_skips_hidden_layers():

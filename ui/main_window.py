@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, Qt, QThread, QUrl
@@ -8,9 +9,7 @@ from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QMouseEvent
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
-    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -24,10 +23,15 @@ from PySide6.QtWidgets import (
 )
 
 from helpers.block_picker import homogeneous_picker_entry_for_positions, picker_entry_for_cell
-from helpers.cell_clipboard import CellRegionClipboard, copy_region, paste_region
+from helpers.cell_clipboard import CellRegionClipboard, copy_region, move_region, paste_region
 from helpers.grid import resolve_site_dimensions
 from helpers.grid_brush import rect_cell_indices, region_cell_indices, square_cell_indices
-from helpers.grid_cells import count_cells_trimmed_by_resize, empty_cells, resize_structure_layers
+from helpers.grid_cells import (
+    count_cells_trimmed_by_resize,
+    empty_cells,
+    occupied_cell_positions,
+    resize_structure_layers,
+)
 from helpers.grid_labels import grid_axis_position, grid_axis_selection_range
 from helpers.grid_placement import (
     clamp_grid_offsets_for_structure,
@@ -39,6 +43,7 @@ from helpers.grid_placement import (
 from helpers.layer_groups import (
     add_defined_group,
     collect_layer_groups,
+    get_defined_groups,
     get_hidden_groups,
     group_name_exists,
     layer_indices_in_group,
@@ -52,13 +57,18 @@ from helpers.layer_management import (
     append_layer_to_document,
     copy_layer_dict,
     create_layer,
+    layer_display_label,
     layer_label,
-    move_layer_in_document,
+    move_layer_by_worldgen_delta,
     next_worldgen_index,
     remap_indices_after_permutation,
-    remap_indices_after_swap,
     remove_layer_from_document,
     reorder_layers_in_document,
+    set_layer_description,
+    worldgen_index_in_use,
+)
+from helpers.layer_rotation import (
+    rotate_layer_cells,
 )
 from helpers.layer_visibility import is_layer_visible, set_layer_visible
 from helpers.path_strip import (
@@ -98,12 +108,16 @@ from ui.menu_style import configure_ui_menus
 from ui.platform import ensure_qt_platform
 from ui.reload import reload_editor_process
 from ui.render_worker import RenderJobResult, RenderWorker
+from ui.selector_mode import SelectorMode
 from ui.site_cells import build_site_display_grid, site_preview_layer_index, structure_offset
 from ui.texture_cache import GridTextureCache
 from ui.tooltip_style import configure_ui_tooltips
+from ui.widgets.add_layer_dialog import AddLayerDialog
 from ui.widgets.compass_panel import CompassPanel
+from ui.widgets.edit_group_dialog import EditGroupDialog
 from ui.widgets.grid import LayerGridViewport, LayerGridWidget
 from ui.widgets.groups_panel import GroupsPanel
+from ui.widgets.input_text_dialog import InputTextDialog
 from ui.widgets.layer_eraser_panel import LayerEraserPanel
 from ui.widgets.layer_list_panel import LayerListPanel
 from ui.widgets.layer_paint_brush_panel import LayerPaintBrushPanel
@@ -142,6 +156,7 @@ class MainWindow(QMainWindow):
         self._dirty_structure = False
         self._paint_brush_active = True
         self._selector_active = False
+        self._move_active = False
         self._eraser_active = False
         self._structure_name = document.metadata.get("name", document.structure_path.stem)
 
@@ -187,12 +202,20 @@ class MainWindow(QMainWindow):
 
         self._layer_tools_panel.paint_brush_toggled.connect(self._on_paint_brush_toggled)
         self._layer_tools_panel.selector_toggled.connect(self._on_selector_toggled)
+        self._layer_tools_panel.selector_mode_changed.connect(self._on_selector_mode_changed)
+        self._layer_tools_panel.move_toggled.connect(self._on_move_toggled)
         self._layer_tools_panel.eraser_toggled.connect(self._on_eraser_toggled)
         self._layer_eraser_panel.eraser_size_changed.connect(self._on_eraser_size_changed)
         self._layer_tools_panel.clear_entire_layer_requested.connect(self._on_clear_entire_layer)
         self._layer_tools_panel.copy_requested.connect(self._on_copy_cells)
         self._layer_tools_panel.paste_requested.connect(self._on_paste_cells)
-        self._layer_tools_panel.save_requested.connect(self._save_current_layer)
+        self._layer_tools_panel.rotate_left_requested.connect(
+            lambda: self._on_rotate_layer(clockwise=False)
+        )
+        self._layer_tools_panel.rotate_right_requested.connect(
+            lambda: self._on_rotate_layer(clockwise=True)
+        )
+        self._layer_tools_panel.painting_grid_toggled.connect(self._on_painting_grid_toggled)
         self._layer_paint_brush_panel.brush_mode_changed.connect(self._on_paint_brush_mode_changed)
         self._groups_panel.group_selected.connect(self._on_group_filter_selected)
         self._groups_panel.visibility_toggled.connect(self._on_group_visibility_toggled)
@@ -200,7 +223,7 @@ class MainWindow(QMainWindow):
         self._groups_panel.delete_requested.connect(self._on_delete_group)
         self._groups_panel.copy_requested.connect(self._on_copy_group)
         self._groups_panel.paste_requested.connect(self._on_paste_group)
-        self._groups_panel.group_renamed.connect(self._on_group_renamed)
+        self._groups_panel.edit_requested.connect(self._on_edit_group)
         self._groups_panel.move_up_requested.connect(self._on_move_group_up)
         self._groups_panel.move_down_requested.connect(self._on_move_group_down)
         self._layer_list_panel.layer_selected.connect(self._on_layer_list_selected)
@@ -208,6 +231,7 @@ class MainWindow(QMainWindow):
         self._layer_list_panel.move_down_requested.connect(self._on_move_layer_down)
         self._layer_list_panel.visibility_toggled.connect(self._on_layer_visibility_toggled)
         self._layer_list_panel.add_requested.connect(self._on_add_layer)
+        self._layer_list_panel.edit_requested.connect(self._on_edit_layer)
         self._layer_list_panel.delete_requested.connect(self._on_delete_layer)
         self._layer_list_panel.copy_requested.connect(self._on_copy_layer)
         self._layer_list_panel.paste_requested.connect(self._on_paste_layer)
@@ -216,10 +240,6 @@ class MainWindow(QMainWindow):
             self._on_structure_properties_changed
         )
         self._site_settings_panel.settings_changed.connect(self._on_site_settings_changed)
-        self._site_settings_panel.block_tooltips_changed.connect(self._on_block_tooltips_changed)
-        self._structure_settings_panel.block_tooltips_changed.connect(
-            self._on_block_tooltips_changed
-        )
         self._apply_block_tooltips_pref(block_tooltips_enabled())
         self._apply_grid_axis_labels_pref(grid_axis_labels_enabled())
         self._site_grid_view.offset_nudge_requested.connect(self._on_site_offset_nudge)
@@ -243,6 +263,8 @@ class MainWindow(QMainWindow):
         self._structure_grid.paint_region_fill_requested.connect(self._on_paint_region_fill)
         self._structure_grid.cell_erase_requested.connect(self._on_cell_erase)
         self._structure_grid.eraser_region_erase_requested.connect(self._on_eraser_region_erase)
+        self._structure_grid.move_region_requested.connect(self._on_move_region)
+        self._structure_grid.move_selection_empty.connect(self._on_move_selection_empty)
         self._structure_grid.itemSelectionChanged.connect(self._on_grid_selection_changed)
         self._materials_panel.scope_changed.connect(self._refresh_materials_list)
         self._structure_settings_panel.resize_requested.connect(self._on_structure_resize_requested)
@@ -365,9 +387,15 @@ class MainWindow(QMainWindow):
 
         self._save_action = QAction("&Save", self)
         self._save_action.setShortcut(QKeySequence("Ctrl+S"))
-        self._save_action.triggered.connect(self._save_current_layer)
+        self._save_action.triggered.connect(self._on_save)
         self._save_action.setEnabled(False)
         file_menu.addAction(self._save_action)
+
+        self._save_all_action = QAction("Save A&ll", self)
+        self._save_all_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        self._save_all_action.triggered.connect(self._save_all)
+        self._save_all_action.setEnabled(False)
+        file_menu.addAction(self._save_all_action)
 
         file_menu.addSeparator()
 
@@ -407,11 +435,23 @@ class MainWindow(QMainWindow):
         )
         view_menu.addAction(self._structure_settings_action)
 
+        self._block_tooltips_action = QAction("Block &tooltips", self)
+        self._block_tooltips_action.setCheckable(True)
+        self._block_tooltips_action.setChecked(True)
+        self._block_tooltips_action.setToolTip(
+            "Show block tokens when hovering cells on the structure and site grids"
+        )
+        self._block_tooltips_action.triggered.connect(self._on_block_tooltips_action_triggered)
+        view_menu.addAction(self._block_tooltips_action)
+
         self._grid_axis_labels_action = QAction("Grid &axis labels", self)
         self._grid_axis_labels_action.setCheckable(True)
         self._grid_axis_labels_action.setChecked(True)
         self._grid_axis_labels_action.triggered.connect(self._on_grid_axis_labels_action_triggered)
         view_menu.addAction(self._grid_axis_labels_action)
+
+    def _on_block_tooltips_action_triggered(self, checked: bool) -> None:
+        self._apply_block_tooltips_pref(checked)
 
     def _on_grid_axis_labels_action_triggered(self, checked: bool) -> None:
         self._apply_grid_axis_labels_pref(checked)
@@ -498,6 +538,24 @@ class MainWindow(QMainWindow):
         self._paste_cells_action.triggered.connect(self._on_paste_cells)
         edit_menu.addAction(self._paste_cells_action)
 
+        self._delete_cells_action = QAction("&Delete", self)
+        self._delete_cells_action.setShortcut(QKeySequence.StandardKey.Delete)
+        self._delete_cells_action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+        self._delete_cells_action.triggered.connect(self._on_delete_selected_cells)
+        edit_menu.addAction(self._delete_cells_action)
+
+        edit_menu.addSeparator()
+
+        self._select_all_cells_action = QAction("Select &All", self)
+        self._select_all_cells_action.setShortcut(QKeySequence.StandardKey.SelectAll)
+        self._select_all_cells_action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+        self._select_all_cells_action.triggered.connect(self._on_select_all_cells)
+        edit_menu.addAction(self._select_all_cells_action)
+
+        self._unselect_cells_action = QAction("Unselect &All", self)
+        self._unselect_cells_action.triggered.connect(self._on_unselect_cells)
+        edit_menu.addAction(self._unselect_cells_action)
+
     def _init_help_menu(self) -> None:
         help_menu = self.menuBar().addMenu("&Help")
 
@@ -547,6 +605,7 @@ class MainWindow(QMainWindow):
                 self._document,
                 dirty_layers=self._dirty_layers,
                 dirty_structure=self._dirty_structure,
+                group_filter=self._group_filter,
             )
         )
         self._redo_stack.clear()
@@ -570,6 +629,7 @@ class MainWindow(QMainWindow):
                 self._document,
                 dirty_layers=self._dirty_layers,
                 dirty_structure=self._dirty_structure,
+                group_filter=self._group_filter,
             )
         )
         state = self._undo_stack.pop()
@@ -585,6 +645,7 @@ class MainWindow(QMainWindow):
                 self._document,
                 dirty_layers=self._dirty_layers,
                 dirty_structure=self._dirty_structure,
+                group_filter=self._group_filter,
             )
         )
         state = self._redo_stack.pop()
@@ -597,13 +658,16 @@ class MainWindow(QMainWindow):
 
         try:
             dirty_flag = [self._dirty_structure]
+            group_filter_flag: list[str | None] = [self._group_filter]
             apply_history_state(
                 self._document,
                 state,
                 dirty_layers=self._dirty_layers,
                 dirty_structure_holder=dirty_flag,
+                group_filter_holder=group_filter_flag,
             )
             self._dirty_structure = dirty_flag[0]
+            self._group_filter = group_filter_flag[0]
             self._grid_texture_cache.clear_cache()
             self._layer_clipboard = None
             self._group_clipboard = None
@@ -798,20 +862,92 @@ class MainWindow(QMainWindow):
         else:
             self._status.showMessage(f"Group {group!r} included in renders.", 2000)
 
-    def _prompt_group_name(self, *, title: str, label: str, initial: str = "") -> str | None:
+    _WORLDGEN_INDEX_MIN = -128
+    _WORLDGEN_INDEX_MAX = 512
+
+    def _prompt_layer_settings(
+        self,
+        *,
+        layer_index: int | None = None,
+    ) -> tuple[int, str, str] | None:
+        editing = layer_index is not None
+        dialog_title = "Edit layer" if editing else "Add layer"
+        grid = self._grid_metadata()
+        groups = list(collect_layer_groups(self._document.layers, grid))
+
+        if editing:
+            layer = self._document.layers[layer_index]
+            y_default = int(layer.get("index", layer_index))
+            initial_group = layer.get("group")
+            initial_description = str(layer.get("description", ""))
+
+            if isinstance(initial_group, str) and initial_group and initial_group not in groups:
+                groups.append(initial_group)
+        else:
+            y_default = next_worldgen_index(self._document.layers)
+            initial_group = self._group_filter if self._group_filter in groups else None
+            initial_description = ""
+
         while True:
-            name, ok = QInputDialog.getText(
+            dialog = AddLayerDialog(
                 self,
-                title,
-                label,
-                QLineEdit.EchoMode.Normal,
-                initial,
+                y_default=y_default,
+                y_min=self._WORLDGEN_INDEX_MIN,
+                y_max=self._WORLDGEN_INDEX_MAX,
+                groups=groups,
+                initial_group=initial_group if isinstance(initial_group, str) else None,
+                initial_description=initial_description,
+                editing=editing,
             )
 
-            if not ok:
+            if dialog.exec() != AddLayerDialog.DialogCode.Accepted:
                 return None
 
-            normalized = name.strip()
+            y_level = dialog.y_level()
+            group = dialog.group_name()
+
+            if not group:
+                QMessageBox.warning(self, dialog_title, "Group name is required.")
+                continue
+
+            if worldgen_index_in_use(
+                self._document.layers,
+                y_level,
+                except_layer_index=layer_index,
+            ):
+                QMessageBox.warning(
+                    self,
+                    dialog_title,
+                    f"Y level {y_level} is already used by another layer.",
+                )
+                continue
+
+            if dialog.is_new_group() and group_name_exists(self._document.layers, grid, group):
+                QMessageBox.warning(
+                    self,
+                    dialog_title,
+                    f"A group named {group!r} already exists.",
+                )
+                continue
+
+            return y_level, group, dialog.description()
+
+    def _prompt_add_layer_settings(self) -> tuple[int, str, str] | None:
+        return self._prompt_layer_settings()
+
+    def _prompt_group_name(self, *, title: str, label: str, initial: str = "") -> str | None:
+        while True:
+            dialog = InputTextDialog(
+                self,
+                title=title,
+                field_label=label,
+                initial=initial,
+            )
+
+            if dialog.exec() != InputTextDialog.DialogCode.Accepted:
+                return None
+
+            normalized = dialog.text()
 
             if normalized:
                 return normalized
@@ -847,13 +983,11 @@ class MainWindow(QMainWindow):
 
         self._push_undo_snapshot()
         add_defined_group(grid, name)
-        self._dirty_structure = True
         self._group_filter = name
         self._refresh_layer_panels()
-        self._update_save_site_button()
-        self._status.showMessage(
-            f"Added group {name!r} — assign layers or save site settings",
-            5000,
+        self._persist_dialog_changes(
+            success_message=f"Added group {name!r}",
+            action_phrase=f"Added group {name!r}",
         )
 
     def _on_delete_group(self) -> None:
@@ -886,16 +1020,15 @@ class MainWindow(QMainWindow):
         grid = self._grid_metadata()
         remove_group(self._document.layers, grid, group)
 
-        for index in indices:
-            self._mark_layer_dirty(index)
-
         if self._group_filter == group:
             self._group_filter = None
 
-        self._dirty_structure = True
         self._refresh_layer_panels()
-        self._update_save_site_button()
-        self._status.showMessage(f"Removed group {group!r}.", 4000)
+        self._persist_dialog_changes(
+            layer_indices=indices,
+            success_message=f"Removed group {group!r}",
+            action_phrase=f"Removed group {group!r}",
+        )
 
     def _on_copy_group(self) -> None:
         group = self._groups_panel.selected_group_name()
@@ -928,6 +1061,7 @@ class MainWindow(QMainWindow):
 
         self._push_undo_snapshot()
         clipboard_layers = self._group_clipboard["layers"]
+        new_indices: list[int] = []
 
         if not clipboard_layers:
             add_defined_group(grid, new_name)
@@ -941,28 +1075,50 @@ class MainWindow(QMainWindow):
                     depth=len(cells) if cells else depth,
                     worldgen_index=next_worldgen_index(self._document.layers),
                     group=new_name,
+                    description=str(source.get("description", "")),
                     cells=cells,
                 )
-                new_index = append_layer_to_document(self._document, layer)
-                self._mark_layer_dirty(new_index)
+                new_indices.append(append_layer_to_document(self._document, layer))
 
-        self._dirty_structure = True
         self._group_filter = new_name
         self._refresh_layer_panels()
 
         if clipboard_layers:
             self._show_layer(len(self._document.layers) - 1)
 
-        self._update_save_site_button()
-        self._status.showMessage(
-            f"Pasted group as {new_name!r} — save layers and site settings",
-            5000,
+        self._persist_dialog_changes(
+            layer_indices=new_indices,
+            success_message=f"Pasted group as {new_name!r}",
+            action_phrase=f"Pasted group as {new_name!r}",
         )
+
+    def _on_edit_group(self) -> None:
+        old_name = self._groups_panel.selected_group_name()
+
+        if old_name is None:
+            return
+
+        dialog = EditGroupDialog(self, initial_name=old_name)
+
+        if dialog.exec() != EditGroupDialog.DialogCode.Accepted:
+            return
+
+        new_name = dialog.group_name()
+
+        if not new_name:
+            QMessageBox.warning(self, "Edit group", "Group name is required.")
+            return
+
+        self._on_group_renamed(old_name, new_name)
 
     def _on_group_renamed(self, old_name: str, new_name: str) -> None:
         normalized = new_name.strip()
 
         if not normalized:
+            self._refresh_layer_panels()
+            return
+
+        if normalized == old_name:
             self._refresh_layer_panels()
             return
 
@@ -982,19 +1138,28 @@ class MainWindow(QMainWindow):
             self._refresh_layer_panels()
             return
 
+        has_old_name = any(
+            layer_label(layer, index) == old_name
+            for index, layer in enumerate(self._document.layers)
+        ) or old_name in get_defined_groups(grid)
+
+        if not has_old_name:
+            self._refresh_layer_panels()
+            return
+
         self._push_undo_snapshot()
         rename_group(self._document.layers, grid, old_name, normalized)
-
-        for index in layer_indices_in_group(self._document.layers, normalized):
-            self._mark_layer_dirty(index)
+        affected_indices = layer_indices_in_group(self._document.layers, normalized)
 
         if self._group_filter == old_name:
             self._group_filter = normalized
 
-        self._dirty_structure = True
         self._refresh_layer_panels()
-        self._update_save_site_button()
-        self._status.showMessage(f"Group renamed to {normalized!r}", 3000)
+        self._persist_dialog_changes(
+            layer_indices=affected_indices,
+            success_message=f"Group renamed to {normalized!r}",
+            action_phrase=f"Group renamed to {normalized!r}",
+        )
 
     def _on_layer_list_selected(self, index: int) -> None:
         self._on_layer_changed(index)
@@ -1031,6 +1196,9 @@ class MainWindow(QMainWindow):
                 permutation,
             )
 
+            for layer_index in range(len(permutation)):
+                self._mark_layer_dirty(layer_index)
+
             if old_current in permutation:
                 self._current_layer_index = permutation.index(old_current)
 
@@ -1040,7 +1208,7 @@ class MainWindow(QMainWindow):
         self._update_save_site_button()
         direction = "up" if delta < 0 else "down"
         self._status.showMessage(
-            f"Moved group {group!r} {direction} — save site settings to persist order.",
+            f"Moved group {group!r} {direction} — save affected layers and site settings",
             5000,
         )
 
@@ -1079,19 +1247,19 @@ class MainWindow(QMainWindow):
             return
 
         self._push_undo_snapshot()
-        new_index = move_layer_in_document(self._document, index, delta)
+        swapped = move_layer_by_worldgen_delta(self._document, index, delta)
 
-        if new_index is None:
+        if swapped is None:
             return
 
-        self._dirty_structure = True
-        self._dirty_layers = remap_indices_after_swap(self._dirty_layers, index, new_index)
+        layer_index, other_index = swapped
+        self._mark_layer_dirty(layer_index)
+        self._mark_layer_dirty(other_index)
         self._refresh_layer_panels()
-        self._show_layer(new_index)
-        self._update_save_site_button()
+        self._show_layer(layer_index)
         direction = "up" if delta < 0 else "down"
         self._status.showMessage(
-            f"Moved layer {direction} — save site settings to update layer order in structure.yaml",
+            f"Moved layer {direction} in Y order — save affected layers",
             5000,
         )
 
@@ -1099,25 +1267,68 @@ class MainWindow(QMainWindow):
         if not self._confirm_discard_layer_changes(self._current_layer_index):
             return
 
+        settings = self._prompt_add_layer_settings()
+
+        if settings is None:
+            return
+
+        worldgen_index, group, description = settings
         width, depth = structure_dimensions_from_layers(self._document.layers)
-        worldgen_index = next_worldgen_index(self._document.layers)
         layer = create_layer(
             width=width,
             depth=depth,
             worldgen_index=worldgen_index,
-            group=f"Layer {worldgen_index}",
+            group=group,
+            description=description,
         )
 
         self._push_undo_snapshot()
+        grid = self._grid_metadata()
+        add_defined_group(grid, group)
         new_index = append_layer_to_document(self._document, layer)
-        self._dirty_structure = True
-        self._mark_layer_dirty(new_index)
+        label = layer_display_label(layer, new_index)
+
         self._refresh_layer_panels()
         self._show_layer(new_index)
-        self._update_save_site_button()
-        self._status.showMessage(
-            f"Added {self._document.layer_paths[new_index].name} (save layer and site settings)",
-            5000,
+        self._persist_dialog_changes(
+            layer_indices=[new_index],
+            success_message=f"Added {label!r} to {group!r} at Y={worldgen_index}",
+            action_phrase=f"Added {label!r}",
+        )
+
+    def _on_edit_layer(self) -> None:
+        layer_index = self._current_layer_index
+        layer = self._document.layers[layer_index]
+        settings = self._prompt_layer_settings(layer_index=layer_index)
+
+        if settings is None:
+            return
+
+        worldgen_index, group, description = settings
+        current_group = str(layer.get("group", ""))
+        current_description = str(layer.get("description", "")).strip()
+        current_y = int(layer.get("index", layer_index))
+
+        if (
+            worldgen_index == current_y
+            and group == current_group
+            and description == current_description
+        ):
+            return
+
+        self._push_undo_snapshot()
+        grid = self._grid_metadata()
+        layer["index"] = worldgen_index
+        layer["group"] = group
+        set_layer_description(layer, description)
+        add_defined_group(grid, group)
+        label = layer_display_label(layer, layer_index)
+
+        self._refresh_layer_panels()
+        self._persist_dialog_changes(
+            layer_indices=[layer_index],
+            success_message=f"Updated {label!r} — {group!r} at Y={worldgen_index}",
+            action_phrase=f"Updated {label!r}",
         )
 
     def _on_delete_layer(self) -> None:
@@ -1150,24 +1361,26 @@ class MainWindow(QMainWindow):
         if removed_path is not None:
             removed_path.unlink()
 
-        self._dirty_structure = True
         self._dirty_layers = {
             index for index in self._dirty_layers if index < len(self._document.layers)
         }
+
         new_index = self._clamp_layer_index(self._current_layer_index)
         self._refresh_layer_panels()
         self._show_layer(new_index)
-        self._update_save_site_button()
-        self._status.showMessage(
-            "Layer deleted — save site settings to update structure.yaml",
-            5000,
+        self._persist_dialog_changes(
+            success_message="Layer deleted",
+            action_phrase="Layer deleted",
         )
 
     def _on_copy_layer(self) -> None:
         layer = self._document.layers[self._current_layer_index]
         self._layer_clipboard = copy_layer_dict(layer)
         self._layer_list_panel.set_paste_enabled(True)
-        self._status.showMessage(f"Copied {layer_label(layer, self._current_layer_index)}", 3000)
+        self._status.showMessage(
+            f"Copied {layer_display_label(layer, self._current_layer_index)}",
+            3000,
+        )
 
     def _on_paste_layer(self) -> None:
         if self._layer_clipboard is None:
@@ -1186,19 +1399,19 @@ class MainWindow(QMainWindow):
             depth=depth,
             worldgen_index=next_worldgen_index(self._document.layers),
             group=f"{base_group} (copy)",
+            description=str(source.get("description", "")),
             cells=source["cells"],
         )
 
         self._push_undo_snapshot()
         new_index = append_layer_to_document(self._document, layer)
-        self._dirty_structure = True
-        self._mark_layer_dirty(new_index)
+        label = layer_display_label(layer, new_index)
         self._refresh_layer_panels()
         self._show_layer(new_index)
-        self._update_save_site_button()
-        self._status.showMessage(
-            f"Pasted as {self._document.layer_paths[new_index].name}",
-            4000,
+        self._persist_dialog_changes(
+            layer_indices=[new_index],
+            success_message=f"Pasted as {label!r}",
+            action_phrase=f"Pasted as {label!r}",
         )
 
     def _build_site_header(self) -> QWidget:
@@ -1237,6 +1450,8 @@ class MainWindow(QMainWindow):
                 6000,
             )
 
+        self._update_save_actions()
+
     def _on_palette_entry_selected(self, entry) -> None:
         if self._eraser_active:
             self._layer_tools_panel.set_eraser_checked(False)
@@ -1245,6 +1460,11 @@ class MainWindow(QMainWindow):
         if self._selector_active:
             self._layer_tools_panel.set_selector_checked(False)
             self._selector_active = False
+
+        if self._move_active:
+            self._layer_tools_panel.set_move_checked(False)
+            self._move_active = False
+            self._ensure_move_state_closed()
 
         if not self._paint_brush_active:
             self._layer_tools_panel.set_paint_brush_checked(True)
@@ -1255,23 +1475,34 @@ class MainWindow(QMainWindow):
 
     def _sync_layer_tool_panels(self) -> None:
         paint_visible = (
-            self._paint_brush_active and not self._eraser_active and not self._selector_active
+            self._paint_brush_active
+            and not self._eraser_active
+            and not self._selector_active
+            and not self._move_active
         )
         selector_picker_visible = (
             self._selector_active and self._selector_homogeneous_entry() is not None
         )
         picker_visible = paint_visible or selector_picker_visible
         inspector_visible = (
-            self._paint_brush_active or self._selector_active
-        ) and not self._eraser_active
+            (self._paint_brush_active or self._selector_active)
+            and not self._eraser_active
+            and not self._move_active
+        )
         self._layer_paint_brush_panel.setVisible(paint_visible)
         self._properties_panel.setVisible(inspector_visible)
         self._properties_panel.set_picker_group_visible(picker_visible)
         self._layer_selector_panel.setVisible(self._selector_active)
         if self._selector_active:
             self._update_selector_selection_display()
+        selector_mode = self._layer_tools_panel.selector_mode()
+        self._layer_selector_panel.set_hint_for_mode(
+            rectangle=selector_mode is SelectorMode.RECTANGLE,
+        )
         self._layer_eraser_panel.setVisible(self._eraser_active)
         self._structure_grid.set_selector_active(self._selector_active)
+        self._structure_grid.set_selector_mode(selector_mode)
+        self._structure_grid.set_move_active(self._move_active)
         self._structure_grid.set_paint_brush_active(self._paint_brush_active)
         self._structure_grid.set_paint_brush_mode(self._layer_paint_brush_panel.paint_brush_mode())
         self._update_structure_eraser_preview()
@@ -1296,6 +1527,9 @@ class MainWindow(QMainWindow):
         self._ensure_paint_drag_closed()
         if self._structure_grid.eraser_drag_active():
             self._structure_grid.cancel_eraser_drag()
+
+    def _ensure_move_state_closed(self) -> None:
+        self._structure_grid.cancel_move_state()
 
     def _sync_eraser_panel_bounds(self) -> None:
         layer = self._document.layers[self._current_layer_index]
@@ -1464,6 +1698,9 @@ class MainWindow(QMainWindow):
         if active:
             self._layer_tools_panel.set_selector_checked(False)
             self._selector_active = False
+            self._layer_tools_panel.set_move_checked(False)
+            self._move_active = False
+            self._ensure_move_state_closed()
             self._layer_tools_panel.set_eraser_checked(False)
             self._eraser_active = False
             self._ensure_eraser_drag_closed()
@@ -1477,6 +1714,38 @@ class MainWindow(QMainWindow):
         self._sync_layer_tool_panels()
         self._update_window_title()
 
+    def _on_move_toggled(self, active: bool) -> None:
+        self._move_active = active
+
+        if active:
+            self._ensure_paint_drag_closed()
+            self._layer_tools_panel.set_paint_brush_checked(False)
+            self._paint_brush_active = False
+            self._layer_tools_panel.set_selector_checked(False)
+            self._selector_active = False
+            self._layer_tools_panel.set_eraser_checked(False)
+            self._eraser_active = False
+            self._ensure_eraser_drag_closed()
+            self._palette_panel.clear_selection()
+            self._properties_panel.clear_picker_entry()
+            self._status.showMessage(
+                "Move active — drag to select blocks, then drag to the new location.",
+                6000,
+            )
+        else:
+            self._ensure_move_state_closed()
+            self._layer_tools_panel.set_paint_brush_checked(True)
+            self._paint_brush_active = True
+            self._status.showMessage("Paint brush active — choose a palette block to paint.", 3000)
+
+        self._sync_layer_tool_panels()
+        self._update_window_title()
+
+    def _selector_status_message(self) -> str:
+        if self._layer_tools_panel.selector_mode() is SelectorMode.SAME_BLOCK:
+            return "Same block selection — click a block to select matching cells."
+        return "Rectangle selection — drag to select cells."
+
     def _on_selector_toggled(self, active: bool) -> None:
         self._selector_active = active
 
@@ -1484,18 +1753,31 @@ class MainWindow(QMainWindow):
             self._ensure_paint_drag_closed()
             self._layer_tools_panel.set_paint_brush_checked(False)
             self._paint_brush_active = False
+            self._layer_tools_panel.set_move_checked(False)
+            self._move_active = False
+            self._ensure_move_state_closed()
             self._layer_tools_panel.set_eraser_checked(False)
             self._eraser_active = False
             self._ensure_eraser_drag_closed()
-            self._status.showMessage("Selector active — drag to select cells.", 4000)
+            self._status.showMessage(self._selector_status_message(), 4000)
             self._sync_selector_brush_from_selection()
         else:
             self._layer_tools_panel.set_paint_brush_checked(True)
             self._paint_brush_active = True
             self._status.showMessage("Paint brush active — choose a palette block to paint.", 3000)
-            self._sync_layer_tool_panels()
 
+        self._sync_layer_tool_panels()
         self._update_window_title()
+
+    def _on_selector_mode_changed(self, mode: SelectorMode) -> None:
+        self._structure_grid.set_selector_mode(mode)
+        self._structure_grid.clear_cell_selection()
+        self._layer_selector_panel.set_hint_for_mode(
+            rectangle=mode is SelectorMode.RECTANGLE,
+        )
+
+        if self._selector_active:
+            self._status.showMessage(self._selector_status_message(), 4000)
 
     def _on_eraser_toggled(self, active: bool) -> None:
         self._eraser_active = active
@@ -1506,6 +1788,9 @@ class MainWindow(QMainWindow):
             self._paint_brush_active = False
             self._layer_tools_panel.set_selector_checked(False)
             self._selector_active = False
+            self._layer_tools_panel.set_move_checked(False)
+            self._move_active = False
+            self._ensure_move_state_closed()
             self._palette_panel.clear_selection()
             self._properties_panel.clear_picker_entry()
             self._sync_eraser_panel_bounds()
@@ -1520,6 +1805,45 @@ class MainWindow(QMainWindow):
 
         self._sync_layer_tool_panels()
         self._update_window_title()
+
+    def _on_rotate_layer(self, *, clockwise: bool) -> None:
+        if not self._structure_tab_active():
+            return
+
+        if not any(layer.get("cells") for layer in self._document.layers):
+            self._status.showMessage("All layers are empty.", 3000)
+            return
+
+        self._push_undo_snapshot()
+
+        for index, entry in enumerate(self._document.layers):
+            entry_cells = entry.get("cells", [])
+
+            if not entry_cells:
+                continue
+
+            entry["cells"] = rotate_layer_cells(entry_cells, clockwise=clockwise)
+            self._mark_layer_dirty(index)
+
+        layer_index = self._current_layer_index
+        self._structure_grid.set_layer_cells(self._document.layers[layer_index]["cells"])
+        self._properties_panel.clear_grid_cell()
+        self._sync_selector_brush_from_selection()
+        self._sync_structure_size_controls()
+        self._sync_eraser_panel_bounds()
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._refresh_materials_list()
+        self._sync_layer_list_panel()
+
+        direction = "clockwise" if clockwise else "counter-clockwise"
+        layer_count = len(self._document.layers)
+        self._status.showMessage(
+            f"Rotated all {layer_count} layer{'s' if layer_count != 1 else ''} {direction}.",
+            4000,
+        )
 
     def _on_clear_entire_layer(self) -> None:
         layer = self._document.layers[self._current_layer_index]
@@ -1554,6 +1878,11 @@ class MainWindow(QMainWindow):
         if self._selector_active:
             self._layer_tools_panel.set_selector_checked(False)
             self._selector_active = False
+
+        if self._move_active:
+            self._layer_tools_panel.set_move_checked(False)
+            self._move_active = False
+            self._ensure_move_state_closed()
 
         if not self._paint_brush_active:
             self._layer_tools_panel.set_paint_brush_checked(True)
@@ -1614,6 +1943,7 @@ class MainWindow(QMainWindow):
         self._structure_grid.set_layer_cells(layer["cells"])
         layer_path = self._document.layer_paths[index]
         self._layer_list_panel.set_delete_enabled(len(self._document.layers) > 1)
+        self._layer_list_panel.set_edit_enabled(layer is not None)
         self._layer_list_panel.set_copy_enabled(layer is not None)
         self._layer_list_panel.set_current_index(index)
         self._update_site_layer_label()
@@ -1680,10 +2010,6 @@ class MainWindow(QMainWindow):
             structure_width=new_width,
             structure_depth=new_depth,
         )
-        self._dirty_structure = True
-
-        for layer_index in range(len(self._document.layers)):
-            self._mark_layer_dirty(layer_index)
 
         self._grid_texture_cache.clear_cache()
         self._show_layer(self._current_layer_index)
@@ -1694,10 +2020,10 @@ class MainWindow(QMainWindow):
         self._site_settings_panel.sync_offsets_from_grid(self._document.metadata)
         self._sync_structure_size_controls()
         self._sync_path_panel_from_metadata()
-        self._update_save_site_button()
-        self._status.showMessage(
-            f"Structure grid resized to {new_width}×{new_depth} on all layers.",
-            4000,
+        self._persist_dialog_changes(
+            layer_indices=range(len(self._document.layers)),
+            success_message=f"Structure grid resized to {new_width}×{new_depth} on all layers.",
+            action_phrase=f"Resized structure grid to {new_width}×{new_depth}",
         )
 
     def _materials_scope_layers(self) -> list[dict]:
@@ -1747,7 +2073,7 @@ class MainWindow(QMainWindow):
         self._update_site_layer_label()
 
     def _on_grid_cell_selected(self, row: int, col: int, raw_token: str) -> None:
-        if self._selector_active:
+        if self._selector_active or self._move_active:
             return
 
         self._properties_panel.show_grid_cell(row, col, raw_token)
@@ -1812,6 +2138,9 @@ class MainWindow(QMainWindow):
     def _structure_tab_active(self) -> bool:
         return self._tabs.currentIndex() == 0
 
+    def _site_tab_active(self) -> bool:
+        return self._tabs.currentIndex() == 1
+
     def _update_cell_clipboard_actions(self) -> None:
         on_structure = self._structure_tab_active()
         has_selection = bool(self._structure_grid.selected_cell_positions())
@@ -1821,6 +2150,133 @@ class MainWindow(QMainWindow):
         self._layer_tools_panel.set_paste_enabled(on_structure and can_paste)
         self._copy_cells_action.setEnabled(on_structure and has_selection)
         self._paste_cells_action.setEnabled(on_structure and can_paste)
+        self._delete_cells_action.setEnabled(on_structure and has_selection)
+        self._select_all_cells_action.setEnabled(on_structure)
+        self._unselect_cells_action.setEnabled(on_structure and has_selection)
+
+    def _on_unselect_cells(self) -> None:
+        if not self._structure_tab_active():
+            return
+
+        if not self._structure_grid.selected_cell_positions():
+            self._status.showMessage("No cells selected.", 2000)
+            return
+
+        self._structure_grid.clear_cell_selection()
+        self._status.showMessage("Selection cleared.", 3000)
+
+    def _on_select_all_cells(self) -> None:
+        if not self._structure_tab_active():
+            return
+
+        if self._move_active:
+            self._layer_tools_panel.set_move_checked(False)
+            self._move_active = False
+            self._ensure_move_state_closed()
+            self._structure_grid.set_move_active(False)
+            self._sync_layer_tool_panels()
+
+        self._ensure_paint_drag_closed()
+        self._ensure_eraser_drag_closed()
+
+        layer = self._document.layers[self._current_layer_index]
+        positions = occupied_cell_positions(layer.get("cells") or [])
+
+        if not positions:
+            self._structure_grid.clearSelection()
+            self._on_grid_selection_changed()
+            self._status.showMessage("No blocks on this layer.", 3000)
+            return
+
+        if not self._selector_active:
+            self._layer_tools_panel.set_selector_checked(True)
+            self._on_selector_toggled(True)
+
+        self._structure_grid.select_cell_positions(positions)
+
+        count = len(positions)
+        plural = "s" if count != 1 else ""
+        self._status.showMessage(f"Selected {count} cell{plural} with blocks.", 4000)
+
+    def _on_move_selection_empty(self) -> None:
+        self._status.showMessage("Selection has no blocks to move.", 3000)
+
+    def _on_move_region(self, dest_row: int, dest_col: int) -> None:
+        if not self._structure_tab_active():
+            self._structure_grid.clear_move_pending()
+            return
+
+        positions = self._structure_grid.pending_move_positions()
+
+        if not positions:
+            self._structure_grid.clear_move_pending()
+            return
+
+        layer = self._document.layers[self._current_layer_index]
+        changes = move_region(layer["cells"], positions, dest_row, dest_col)
+        self._structure_grid.clear_move_pending()
+
+        if not changes:
+            self._status.showMessage("Nothing to move (same place or out of bounds).", 3000)
+            return
+
+        self._push_undo_snapshot()
+
+        last_row, last_col, last_token = changes[0]
+
+        for row, col, token in changes:
+            layer["cells"][row][col] = token
+            self._structure_grid.update_cell(row, col, token)
+            last_row, last_col, last_token = row, col, token
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._mark_layer_dirty(self._current_layer_index)
+        self._properties_panel.show_grid_cell(last_row, last_col, last_token)
+        self._refresh_materials_list()
+
+        at = grid_axis_position(dest_row, dest_col)
+        self._status.showMessage(f"Moved selection to {at}.", 4000)
+
+    def _on_delete_selected_cells(self) -> None:
+        if not self._structure_tab_active():
+            return
+
+        positions = self._structure_grid.selected_cell_positions()
+
+        if not positions:
+            self._status.showMessage("Select cells to delete.", 3000)
+            return
+
+        layer = self._document.layers[self._current_layer_index]
+        cells = layer["cells"]
+        to_clear = [(row, col) for row, col in positions if cells[row][col] != "."]
+
+        if not to_clear:
+            self._status.showMessage("Selected cells are already empty.", 3000)
+            return
+
+        self._push_undo_snapshot()
+
+        last_row, last_col = to_clear[0]
+
+        for row, col in to_clear:
+            cells[row][col] = "."
+            self._structure_grid.update_cell(row, col, ".")
+            last_row, last_col = row, col
+
+        if self._current_layer_index == self._site_preview_layer_index():
+            self._refresh_site_preview()
+
+        self._mark_layer_dirty(self._current_layer_index)
+        self._properties_panel.show_grid_cell(last_row, last_col, ".")
+        self._refresh_materials_list()
+        self._sync_selector_brush_from_selection()
+
+        count = len(to_clear)
+        plural = "s" if count != 1 else ""
+        self._status.showMessage(f"Deleted {count} cell{plural}.", 4000)
 
     def _on_copy_cells(self) -> None:
         if not self._structure_tab_active():
@@ -1944,6 +2400,11 @@ class MainWindow(QMainWindow):
             self._layer_tools_panel.set_selector_checked(False)
             self._selector_active = False
 
+        if self._move_active:
+            self._layer_tools_panel.set_move_checked(False)
+            self._move_active = False
+            self._ensure_move_state_closed()
+
         if not self._paint_brush_active:
             self._layer_tools_panel.set_paint_brush_checked(True)
             self._paint_brush_active = True
@@ -1958,7 +2419,6 @@ class MainWindow(QMainWindow):
         self._palette_panel.select_entry(entry)
         self._properties_panel.show_picker_entry(entry, emit_brush=False)
         self._properties_panel.sync_brush_from_cell(raw_token)
-        self._properties_panel.brush_changed.emit()
 
     def _on_brush_changed(self) -> None:
         self._update_window_title()
@@ -2075,18 +2535,38 @@ class MainWindow(QMainWindow):
 
     def _mark_layer_dirty(self, layer_index: int) -> None:
         self._dirty_layers.add(layer_index)
+        self._sync_layer_list_panel()
         self._update_save_layer_button()
         self._update_window_title()
 
     def _mark_layer_clean(self, layer_index: int) -> None:
         self._dirty_layers.discard(layer_index)
         self._update_save_layer_button()
+        self._sync_layer_list_panel()
         self._update_window_title()
 
+    def _on_painting_grid_toggled(self, visible: bool) -> None:
+        self._structure_grid.set_cell_grid_visible(visible)
+
+        if visible:
+            self._status.showMessage("Cell grid borders shown.", 2500)
+        else:
+            self._status.showMessage("Cell grid borders hidden.", 2500)
+
+    def _update_save_actions(self) -> None:
+        dirty_current_layer = self._current_layer_index in self._dirty_layers
+
+        if self._structure_tab_active():
+            self._save_action.setEnabled(dirty_current_layer)
+        elif self._site_tab_active():
+            self._save_action.setEnabled(self._dirty_structure)
+        else:
+            self._save_action.setEnabled(False)
+
+        self._save_all_action.setEnabled(bool(self._dirty_layers or self._dirty_structure))
+
     def _update_save_layer_button(self) -> None:
-        dirty = self._current_layer_index in self._dirty_layers
-        self._layer_tools_panel.set_save_enabled(dirty)
-        self._save_action.setEnabled(dirty)
+        self._update_save_actions()
 
     def _sync_path_panel_from_metadata(self) -> None:
         grid = self._document.metadata.get("grid", {})
@@ -2322,11 +2802,9 @@ class MainWindow(QMainWindow):
         set_block_tooltips_enabled(enabled)
         self._structure_grid.set_show_block_tooltips(enabled)
         self._site_grid_view.set_show_block_tooltips(enabled)
-        self._site_settings_panel.set_block_tooltips_enabled(enabled)
-        self._structure_settings_panel.set_block_tooltips_enabled(enabled)
-
-    def _on_block_tooltips_changed(self, enabled: bool) -> None:
-        self._apply_block_tooltips_pref(enabled)
+        self._block_tooltips_action.blockSignals(True)
+        self._block_tooltips_action.setChecked(enabled)
+        self._block_tooltips_action.blockSignals(False)
 
     def _sync_render_output_hint(self) -> None:
         output_folder = self._structure_settings_panel.current_output_folder()
@@ -2368,19 +2846,45 @@ class MainWindow(QMainWindow):
     def _update_save_site_button(self) -> None:
         suffix = " *" if self._dirty_structure else ""
         self._save_site_button.setText(f"Save Site Settings{suffix}")
+        self._update_save_layer_button()
 
-    def _save_site_settings(self) -> bool:
-        self._structure_settings_panel.apply_to_metadata(self._document.metadata)
-        self._sync_render_output_hint()
+    def _persist_dialog_changes(
+        self,
+        *,
+        layer_indices: Iterable[int] = (),
+        save_structure: bool = True,
+        success_message: str,
+        action_phrase: str,
+    ) -> None:
+        """Save layer YAML and/or structure.yaml after a dialog action."""
+        layers_saved = True
+        for layer_index in layer_indices:
+            if not self._save_layer(layer_index):
+                layers_saved = False
+                self._mark_layer_dirty(layer_index)
 
-        if not self._site_settings_panel.apply_to_metadata(self._document.metadata):
-            QMessageBox.warning(
-                self,
-                "Site settings",
-                "The structure footprint does not fit in the selected site size.",
+        structure_saved = True
+        if save_structure:
+            structure_saved = self._write_structure_yaml_to_disk()
+            self._dirty_structure = not structure_saved
+
+        self._update_save_site_button()
+        self._update_window_title()
+
+        if layers_saved and structure_saved:
+            self._status.showMessage(success_message, 4000)
+        elif layers_saved:
+            self._status.showMessage(
+                f"{action_phrase} — save site settings to update structure.yaml",
+                5000,
             )
-            return False
+        else:
+            self._status.showMessage(
+                f"{action_phrase} in editor — save layer and site settings",
+                5000,
+            )
 
+    def _write_structure_yaml_to_disk(self) -> bool:
         try:
             validate_structure_document(self._document)
             save_structure_metadata(
@@ -2397,8 +2901,26 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Save failed", str(exc))
             return False
 
+        return True
+
+    def _save_site_settings(self) -> bool:
+        self._structure_settings_panel.apply_to_metadata(self._document.metadata)
+        self._sync_render_output_hint()
+
+        if not self._site_settings_panel.apply_to_metadata(self._document.metadata):
+            QMessageBox.warning(
+                self,
+                "Site settings",
+                "The structure footprint does not fit in the selected site size.",
+            )
+            return False
+
+        if not self._write_structure_yaml_to_disk():
+            return False
+
         self._dirty_structure = False
         self._update_save_site_button()
+        self._update_save_layer_button()
         self._update_window_title()
         return True
 
@@ -2407,10 +2929,66 @@ class MainWindow(QMainWindow):
         title_name = self._document.metadata.get("name", self._structure_name)
         self.setWindowTitle(f"Structure Editor — {title_name}{dirty_marker}")
 
+    def _on_save(self) -> None:
+        if self._structure_tab_active():
+            self._save_current_layer()
+            return
+
+        if self._site_tab_active():
+            if not self._dirty_structure:
+                self._status.showMessage("Site settings are already saved.", 2000)
+                return
+
+            if self._save_site_settings():
+                self._status.showMessage("Saved site settings.", 3000)
+            return
+
+        self._status.showMessage("Nothing to save on the Render tab.", 2000)
+
     def _save_current_layer(self) -> None:
+        if self._current_layer_index not in self._dirty_layers:
+            self._status.showMessage("No unsaved changes on this layer.", 2000)
+            return
+
         if self._save_layer(self._current_layer_index):
             path = self._document.layer_paths[self._current_layer_index]
             self._status.showMessage(f"Saved {path.name}", 3000)
+
+    def _save_all(self) -> None:
+        if not self._dirty_layers and not self._dirty_structure:
+            self._status.showMessage("All files are already saved.", 2000)
+            return
+
+        save_site = self._dirty_structure
+        layer_indices = sorted(self._dirty_layers)
+
+        if save_site and not self._save_site_settings():
+            return
+
+        failed: list[str] = []
+
+        for layer_index in layer_indices:
+            if not self._save_layer(layer_index):
+                failed.append(self._document.layer_paths[layer_index].name)
+
+        if failed:
+            self._status.showMessage(
+                f"Save All incomplete — could not save: {', '.join(failed)}",
+                5000,
+            )
+            return
+
+        parts: list[str] = []
+
+        if save_site:
+            parts.append("structure.yaml")
+
+        if layer_indices:
+            count = len(layer_indices)
+            label = "layer" if count == 1 else "layers"
+            parts.append(f"{count} {label}")
+
+        self._status.showMessage(f"Saved {' and '.join(parts)}.", 4000)
 
     def _save_layer(self, layer_index: int) -> bool:
         layer = self._document.layers[layer_index]

@@ -3,6 +3,7 @@ import pytest
 from helpers.grid_cells import (
     count_cells_trimmed_by_resize,
     empty_cells,
+    occupied_cell_positions,
     resize_cells,
     resize_structure_layers,
 )
@@ -43,6 +44,15 @@ def test_resize_structure_layers_updates_every_layer():
 
     assert layers[0]["cells"] == [["A", ".", "."]]
     assert layers[1]["cells"] == [[".", "B", "."]]
+
+
+def test_occupied_cell_positions():
+    cells = [["A", "."], [".", "B"]]
+    assert occupied_cell_positions(cells) == [(0, 0), (1, 1)]
+
+
+def test_occupied_cell_positions_empty_layer():
+    assert occupied_cell_positions([[".", "."]]) == []
 
 
 def test_empty_cells_minimum_size():

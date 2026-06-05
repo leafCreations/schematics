@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QCheckBox,
     QFormLayout,
     QGridLayout,
     QGroupBox,
@@ -42,7 +41,6 @@ _PLACEMENT_GRID = (
 
 class SiteSettingsPanel(QWidget):
     settings_changed = Signal()
-    block_tooltips_changed = Signal(bool)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -60,12 +58,6 @@ class SiteSettingsPanel(QWidget):
 
         self._offset_label = QLabel("—")
         self._footprint_label = QLabel("—")
-
-        self._block_tooltips = QCheckBox("Show block tooltips on hover")
-        self._block_tooltips.setToolTip(
-            "When enabled, hovering a site cell shows its block token (e.g. GRASS, DIRT_PATH)."
-        )
-        self._block_tooltips.toggled.connect(self.block_tooltips_changed.emit)
 
         placement_group = QGroupBox()
         placement_layout = create_nested_group_layout(placement_group, "Placement on site")
@@ -91,7 +83,6 @@ class SiteSettingsPanel(QWidget):
         site_form.addRow("Site depth (z)", self._site_depth)
         site_form.addRow("Structure", self._footprint_label)
         site_form.addRow("Offset (x, z)", self._offset_label)
-        site_form.addRow(self._block_tooltips)
 
         layout = QVBoxLayout(self)
         layout.addWidget(site_group)
@@ -257,11 +248,3 @@ class SiteSettingsPanel(QWidget):
         self._footprint_label.setText(
             f"{structure_width} × {structure_depth} on {site_width} × {site_depth}",
         )
-
-    def set_block_tooltips_enabled(self, enabled: bool) -> None:
-        self._block_tooltips.blockSignals(True)
-        self._block_tooltips.setChecked(enabled)
-        self._block_tooltips.blockSignals(False)
-
-    def block_tooltips_enabled(self) -> bool:
-        return self._block_tooltips.isChecked()

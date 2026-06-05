@@ -20,6 +20,7 @@ class EditorHistoryState:
     site_ground: list[list[str]]
     dirty_layers: frozenset[int]
     dirty_structure: bool
+    group_filter: str | None = None
 
 
 def capture_history_state(
@@ -27,6 +28,7 @@ def capture_history_state(
     *,
     dirty_layers: set[int],
     dirty_structure: bool,
+    group_filter: str | None = None,
 ) -> EditorHistoryState:
     return EditorHistoryState(
         metadata=copy.deepcopy(document.metadata),
@@ -36,6 +38,7 @@ def capture_history_state(
         site_ground=copy.deepcopy(document.site_ground),
         dirty_layers=frozenset(dirty_layers),
         dirty_structure=dirty_structure,
+        group_filter=group_filter,
     )
 
 
@@ -45,6 +48,7 @@ def apply_history_state(
     *,
     dirty_layers: set[int],
     dirty_structure_holder: list[bool],
+    group_filter_holder: list[str | None] | None = None,
 ) -> None:
     """Restore document layout; ``dirty_structure_holder`` is a one-element list for out-param."""
     document.metadata.clear()
@@ -58,3 +62,6 @@ def apply_history_state(
     dirty_layers.clear()
     dirty_layers.update(state.dirty_layers)
     dirty_structure_holder[0] = state.dirty_structure
+
+    if group_filter_holder is not None:
+        group_filter_holder[0] = state.group_filter

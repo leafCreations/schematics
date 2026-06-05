@@ -210,8 +210,9 @@ def test_bake_bed_integration(tmp_path: Path):
     if not (ENTITY_BED_TEXTURES_FOLDER / "red.png").exists():
         pytest.skip("red bed entity texture not available")
 
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
+
     from helpers.sprite_baker.cache import load_or_bake
-    from registries.loader import compile_texture_set
 
     generated_root = tmp_path / "generated"
 
@@ -230,23 +231,13 @@ def test_bake_bed_integration(tmp_path: Path):
             force=True,
         )
 
-    import helpers.paths as paths_module
-    import registries.loader as loader_module
-
-    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
-    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
-    paths_module.GENERATED_ASSETS_FOLDER = generated_root
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(Path(".")),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            ("BED#head", "BED#foot"),
         )
-    finally:
-        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
-        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
 
     mid = constants.BLOCK_PX // 2
 
@@ -261,12 +252,13 @@ def test_compile_texture_set_loads_bed_color_variants():
     if not (GENERATED_ASSETS_FOLDER / "top" / "BED_black_head.png").exists():
         pytest.skip("baked black bed sprite not available")
 
-    from registries.loader import compile_texture_set
+    from sprite_baker_test_utils import compile_texture_tokens
 
-    textures = compile_texture_set(
+    textures = compile_texture_tokens(
         "top",
         str(BLOCK_TEXTURES_FOLDER),
-        block_px=constants.BLOCK_PX,
+        constants.BLOCK_PX,
+        ("BED:black#head", "BED:black#foot", "BED#head"),
     )
 
     assert "BED:black#head" in textures

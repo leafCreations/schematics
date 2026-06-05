@@ -4,14 +4,47 @@ from helpers.layer_management import (
     adjust_site_structure_layers_after_remove,
     append_layer_to_document,
     create_layer,
+    layer_display_label,
+    layers_by_worldgen_index,
+    move_layer_by_worldgen_delta,
     move_layer_in_document,
     next_layer_relative_path,
     next_worldgen_index,
     remap_indices_after_swap,
     remap_site_structure_layers_after_swap,
     remove_layer_from_document,
+    set_layer_description,
+    worldgen_index_in_use,
 )
 from ui.document import StructureDocument
+
+
+def test_layer_display_label_uses_description_or_group():
+    assert (
+        layer_display_label({"group": "Floor 1", "description": "Ground floor"}, 0)
+        == "Ground floor"
+    )
+    assert layer_display_label({"group": "Floor 1", "index": 0}, 0) == "Floor 1"
+    assert layer_display_label({"index": 2}, 1) == "Layer 2"
+
+
+def test_set_layer_description_omits_empty_key():
+    layer = {"group": "A"}
+    set_layer_description(layer, "Label")
+    assert layer["description"] == "Label"
+    set_layer_description(layer, "   ")
+    assert "description" not in layer
+
+
+def test_create_layer_includes_description_when_set():
+    layer = create_layer(
+        width=2,
+        depth=2,
+        worldgen_index=0,
+        group="Floor 1",
+        description="Entry level",
+    )
+    assert layer["description"] == "Entry level"
 
 
 def test_next_worldgen_index_avoids_duplicates():
@@ -19,10 +52,79 @@ def test_next_worldgen_index_avoids_duplicates():
     assert next_worldgen_index(layers) == 3
 
 
+def test_next_worldgen_index_after_negative_layers():
+    layers = [{"index": -2}, {"index": 0}]
+    assert next_worldgen_index(layers) == 1
+
+
+def test_worldgen_index_in_use():
+    layers = [{"index": -1}, {"index": 0}]
+    assert worldgen_index_in_use(layers, -1)
+    assert worldgen_index_in_use(layers, 0)
+    assert not worldgen_index_in_use(layers, -2)
+
+
+def test_worldgen_index_in_use_except_current_layer():
+    layers = [{"index": -1}, {"index": 0}]
+    assert not worldgen_index_in_use(layers, -1, except_layer_index=0)
+    assert not worldgen_index_in_use(layers, 0, except_layer_index=1)
+    assert worldgen_index_in_use(layers, 0, except_layer_index=0)
+
+
 def test_remap_site_structure_layers_after_swap():
     grid = {"site_structure_layers": [0, 2, 3]}
     remap_site_structure_layers_after_swap(grid, 1, 3)
     assert grid["site_structure_layers"] == [0, 2, 1]
+
+
+def test_layers_by_worldgen_index_sorts_ascending():
+    layers = [
+        {"index": 2},
+        {"index": -1},
+        {"index": 0},
+    ]
+    assert layers_by_worldgen_index(layers) == [1, 2, 0]
+
+
+def test_move_layer_by_worldgen_delta_swaps_index_values():
+    from types import SimpleNamespace
+
+    doc = SimpleNamespace(
+        layers=[
+            {"index": 0, "group": "Ground"},
+            {"index": 5, "group": "Roof"},
+            {"index": -1, "group": "Basement"},
+        ],
+    )
+
+    assert move_layer_by_worldgen_delta(doc, 0, -1) == (0, 2)
+    assert [layer["index"] for layer in doc.layers] == [-1, 5, 0]
+    assert doc.layers[0]["group"] == "Ground"
+    assert doc.layers[2]["group"] == "Basement"
+
+
+def test_swap_layers_keeps_worldgen_index_at_list_slot():
+    from types import SimpleNamespace
+
+    doc = SimpleNamespace(
+        layers=[
+            {"index": 0, "group": "A"},
+            {"index": 1, "group": "B"},
+            {"index": 5, "group": "C"},
+        ],
+        layer_files=["a.yaml", "b.yaml", "c.yaml"],
+        layer_paths=[Path("a.yaml"), Path("b.yaml"), Path("c.yaml")],
+        metadata={"grid": {"site_structure_layers": [0, 2]}},
+    )
+
+    from helpers.layer_management import swap_layers_in_document
+
+    swap_layers_in_document(doc, 1, 2)
+
+    assert doc.layers[1]["group"] == "C"
+    assert doc.layers[1]["index"] == 1
+    assert doc.layers[2]["group"] == "B"
+    assert doc.layers[2]["index"] == 5
 
 
 def test_move_layer_and_remap_dirty_indices():
@@ -35,7 +137,7 @@ def test_move_layer_and_remap_dirty_indices():
         metadata={"grid": {"site_structure_layers": [0, 2]}},
     )
     assert move_layer_in_document(doc, 2, -1) == 1
-    assert [layer["index"] for layer in doc.layers] == [0, 2, 1]
+    assert [layer["index"] for layer in doc.layers] == [0, 1, 2]
     assert doc.layer_files == ["a.yaml", "c.yaml", "b.yaml"]
     assert doc.metadata["grid"]["site_structure_layers"] == [0, 1]
     assert remap_indices_after_swap({0, 2}, 2, 1) == {0, 1}

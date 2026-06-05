@@ -21,7 +21,7 @@ def _build_path_layout(ctx: SchematicContext) -> PathLayout:
     block_px = constants.BLOCK_PX
     padding = constants.RENDER_PADDING
     top_margin = constants.PATH_VIEW_TOP_MARGIN
-    layers = [-1, 0, 1]
+    layers = landscape_utils.path_view_y_keys(ctx)
 
     site_width = grid_utils.get_site_width(ctx)
     site_depth = grid_utils.get_site_depth(ctx)

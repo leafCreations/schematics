@@ -6,7 +6,6 @@ from helpers import constants
 from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_log import compose_log, list_log_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
-from registries.loader import compile_texture_set
 
 
 def test_list_log_bake_keys(tmp_path: Path):
@@ -84,23 +83,15 @@ def test_bake_log_integration(tmp_path: Path):
             force=True,
         )
 
-    import helpers.paths as paths_module
-    import registries.loader as loader_module
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
 
-    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
-    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
-    paths_module.GENERATED_ASSETS_FOLDER = generated_root
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            ("LOG:oak", "LOG:oak#east_west"),
         )
-    finally:
-        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
-        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
 
     assert "LOG:oak" in textures
     assert "LOG:oak#east_west" in textures

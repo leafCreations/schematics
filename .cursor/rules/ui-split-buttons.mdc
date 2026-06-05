@@ -1,0 +1,77 @@
+---
+description: Toolbar split buttons — layout, styles, flush menu popup, mode icons
+globs: ui/widgets/layer_tools_panel.py,ui/toolbar_icons.py,docs/ui.md
+alwaysApply: false
+---
+
+# UI toolbar split buttons
+
+Use this pattern for grid-header tools that toggle a mode **and** expose a dropdown (see **Selector**, **Eraser** in `ui/widgets/layer_tools_panel.py`). Do **not** use a single `QToolButton` with `MenuButtonPopup` — match the two-part control below.
+
+## Layout
+
+1. `QWidget` **container** (`background: transparent`) added to the toolbar via `addWidget(container)`.
+2. `QHBoxLayout(container)` — `setContentsMargins(0,0,0,0)`, `setSpacing(0)`.
+3. **Main toggle** — `QToolButton` + checkable `QAction` via `setDefaultAction`.
+4. **Menu arrow** — separate `QToolButton`, `setArrowType(DownArrow)`, `setFixedWidth(11)`.
+
+## Object names and styles
+
+| Part | `objectName` | Corners | Notes |
+| ---- | ------------ | ------- | ----- |
+| Main toggle | `layer{Name}Toggle` | top-left + bottom-left radius 4px | Own stylesheet block (hover/pressed/checked like flat toolbar) |
+| Menu arrow | `layer{Name}Menu` | top-right + bottom-right radius 4px | `border-left: 1px solid palette(mid)`; padding `4px 2px` |
+
+Copy toggle/menu stylesheet blocks from `_SELECTOR_*` / `_ERASER_*` in `layer_tools_panel.py`; only change the `objectName` prefix.
+
+## Icons and tooltips
+
+- Icon size: `toolbar_icon_size()` (22×22).
+- Icons: `ui/toolbar_icons.py` — prefer bundled SVG via `icon_from_assets(..., prefer_symbolic=False)`.
+- **Main button** tooltip: custom `QEvent.Type.ToolTip` filter (broken theme defaults on toolbar).
+- **Container** and **menu arrow**: `_SuppressTooltips` event filter — no tooltip on the split chrome.
+
+## Menu popup (flush under control)
+
+Popup from the **container** bottom-left, not the arrow button:
+
+```python
+menu.popup(container.mapToGlobal(QPoint(0, container.height())))
+```
+
+Left edge of the menu aligns with the left edge of the main icon; no gap below the split button.
+
+## Mode split button (Selector)
+
+When the dropdown picks a **variant** of the same tool:
+
+- Menu items: checkable `QAction`s in an exclusive `QActionGroup`, each with icon + label.
+- **Main toggle icon** updates to match the selected mode (`_selector_action.setIcon(...)`).
+- Track mode in an `Enum`; expose `selector_mode()` / `set_selector_mode()` and a `*_mode_changed` signal.
+- Main toggle still only enables/disables the tool (`toggled` → existing handler).
+
+## Action split button (Eraser)
+
+When the dropdown lists **one-off actions** (not modes):
+
+- Menu items are normal `QAction`s; main icon stays fixed.
+- Emit a dedicated signal per action (e.g. `clear_entire_layer_requested`).
+
+## Checklist for a new split button
+
+1. Add `_make_{name}_control()` on `LayerActionToolbar` mirroring selector or eraser.
+2. Wire toggle `toggled` and menu action/mode signals; connect in `LayerToolsPanel` and `ui/main_window.py`.
+3. Add icons in `ui/toolbar_icons.py` if new assets are needed.
+4. Document in `docs/ui.md` when user-facing.
+
+## Do not
+
+- `menu.popup(menu_button.mapToGlobal(...))` — menu drifts right under the arrow only
+- Per-control margin/spacing between toggle and arrow
+- Tooltips on the menu arrow or container
+- `QInputDialog` / undecorated popup menus detached from the button width
+
+## Examples
+
+- `layer_tools_panel.py` — `_make_selector_control`, `_make_eraser_control`
+- `toolbar_icons.py` — `layer_selector_rectangle_icon`, `layer_selector_same_block_icon`, `layer_eraser_icon`

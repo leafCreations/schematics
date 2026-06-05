@@ -8,11 +8,23 @@ import helpers.paths as paths
 import helpers.render_image as render_image
 from helpers.context import SchematicContext
 from helpers.layer_visibility import visible_layer_array_indices
+from helpers.layers import get_layer_display_name
 from helpers.types import (
     FacadeElevations,
     RawToken,
     StructureFacadeLayout,
 )
+
+Y_LABEL_WIDTH = 140
+
+
+def structure_facade_row_labels(
+    ctx: SchematicContext,
+    visible_layer_indices: list[int],
+) -> list[str]:
+    return [
+        get_layer_display_name(ctx.layers[layer_index]) for layer_index in visible_layer_indices
+    ]
 
 
 def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeLayout:
@@ -28,13 +40,15 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
 
     panel_w = max(struct_w, struct_h) * block_px
     panel_h = max_layers * block_px
-    img_w = (panel_w * side_count) + (panel_gap * (side_count + 1))
+    y_label_width = Y_LABEL_WIDTH
+    img_w = y_label_width + (panel_w * side_count) + (panel_gap * (side_count + 1))
     img_h = top_margin + panel_h + 60
 
     return StructureFacadeLayout(
         block_px=block_px,
         top_margin=top_margin,
         panel_gap=panel_gap,
+        y_label_width=y_label_width,
         panel_w=panel_w,
         panel_h=panel_h,
         img_w=img_w,
@@ -79,6 +93,22 @@ def _collect_structure_elevations(
     )
 
 
+def _draw_structure_y_row_labels(
+    draw: ImageDraw.ImageDraw,
+    ctx: SchematicContext,
+    layout: StructureFacadeLayout,
+    sy: int,
+) -> None:
+    block_px = layout["block_px"]
+    panel_h = layout["panel_h"]
+    label_x = layout["panel_gap"]
+
+    for row, layer_array_index in enumerate(layout["visible_layer_indices"]):
+        row_top = sy + panel_h - ((row + 1) * block_px)
+        label = get_layer_display_name(ctx.layers[layer_array_index])
+        draw.text((label_x, row_top + 6), label, fill=(80, 80, 80))
+
+
 def _draw_structure_elevation_panels(
     img: Image.Image,
     draw: ImageDraw.ImageDraw,
@@ -86,8 +116,10 @@ def _draw_structure_elevation_panels(
     struct_elevations: FacadeElevations,
     layout: StructureFacadeLayout,
 ):
-    current_x = layout["panel_gap"]
     current_y = layout["top_margin"] + 20
+    _draw_structure_y_row_labels(draw, ctx, layout, current_y)
+
+    current_x = layout["panel_gap"] + layout["y_label_width"]
 
     for view_key in layout["view_keys"]:
         _draw_structure_elevation_heading(draw, view_key, current_x, current_y, layout)

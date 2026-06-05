@@ -1,5 +1,6 @@
 from helpers.block_picker import (
     PickerEntry,
+    cell_positions_with_same_block_type,
     cell_token,
     enumerate_token_materials,
     format_entry_label,
@@ -158,6 +159,27 @@ def test_homogeneous_picker_entry_rejects_mixed_types():
 def test_homogeneous_picker_entry_rejects_empty_cells():
     cells = [["PLANKS:oak", "."]]
     assert homogeneous_picker_entry_for_positions(cells, [(0, 0), (0, 1)]) is None
+
+
+def test_cell_positions_with_same_block_type_registry_materials():
+    cells = [
+        ["PLANKS:oak", "PLANKS:spruce"],
+        [".", "PLANKS:birch"],
+    ]
+    positions = cell_positions_with_same_block_type(cells, "PLANKS:oak")
+
+    assert set(positions) == {(0, 0), (0, 1), (1, 1)}
+
+
+def test_cell_positions_with_same_block_type_empty_reference():
+    assert cell_positions_with_same_block_type([["PLANKS:oak"]], ".") == []
+
+
+def test_cell_positions_with_same_block_type_exact_token_fallback():
+    cells = [["CUSTOM:1", "CUSTOM:2"], ["CUSTOM:1", "."]]
+    positions = cell_positions_with_same_block_type(cells, "CUSTOM:1")
+
+    assert set(positions) == {(0, 0), (1, 0)}
 
 
 def test_cell_token_copper_lantern_variants():

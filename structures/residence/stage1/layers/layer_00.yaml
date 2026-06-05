@@ -1,15 +1,15 @@
 index: 0
 group: Floor 1
 cells:
-- - COBBLESTONE#mossy
+- - COBBLESTONE
+  - COBBLESTONE
+  - COBBLESTONE#mossy
+  - COBBLESTONE#mossy
+  - COBBLESTONE
   - COBBLESTONE
   - COBBLESTONE#mossy
   - COBBLESTONE
-  - COBBLESTONE#mossy
   - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
 - - COBBLESTONE
   - PLANKS:oak
   - PLANKS:oak

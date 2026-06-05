@@ -6,7 +6,7 @@ from helpers import constants
 from helpers.paths import BLOCK_TEXTURES_FOLDER
 from helpers.sprite_baker.compose_torch import compose_torch, list_torch_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
-from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping, compile_texture_set
+from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping
 
 
 def test_registry_mapping_includes_torch_variants():
@@ -118,23 +118,15 @@ def test_bake_torch_integration(tmp_path: Path):
             force=True,
         )
 
-    import helpers.paths as paths_module
-    import registries.loader as loader_module
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
 
-    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
-    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
-    paths_module.GENERATED_ASSETS_FOLDER = generated_root
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            ("TORCH", "TORCH#wall"),
         )
-    finally:
-        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
-        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
 
     assert "TORCH" in textures
     assert "TORCH#wall" in textures

@@ -71,3 +71,4 @@ Do not put `stretch=1` on the bottom panel or a wrapper that stays tall when Str
 
 - **Panel** header icons: 18px, `panel_header` + `make_panel_tool_button`.
 - **Grid header** toolbar (eraser/save): 22px, `toolbar_icon_size()`, `LayerActionToolbar` / `QToolBar`.
+- **Split toolbar buttons** (Selector, Eraser): see `.cursor/rules/ui-split-buttons.mdc`.

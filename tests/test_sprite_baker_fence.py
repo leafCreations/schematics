@@ -113,8 +113,9 @@ def test_compose_fence_post_uses_inventory_model():
 
 @pytest.mark.requires_assets
 def test_bake_fence_integration(tmp_path: Path):
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
+
     from helpers.sprite_baker.cache import load_or_bake
-    from registries.loader import compile_texture_set
 
     generated_root = tmp_path / "generated"
 
@@ -132,23 +133,13 @@ def test_bake_fence_integration(tmp_path: Path):
             force=True,
         )
 
-    import helpers.paths as paths_module
-    import registries.loader as loader_module
-
-    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
-    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
-    paths_module.GENERATED_ASSETS_FOLDER = generated_root
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            ("FENCE:oak#post", "FENCE:oak#cross"),
         )
-    finally:
-        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
-        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
 
     assert "FENCE:oak#post" in textures
     assert "FENCE:oak#cross" in textures

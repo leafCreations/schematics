@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QToolButton,
@@ -19,6 +18,7 @@ from ui.toolbar_icons import (
     layer_add_icon,
     layer_copy_icon,
     layer_delete_icon,
+    layer_edit_icon,
     layer_move_down_icon,
     layer_move_up_icon,
     layer_paste_icon,
@@ -47,7 +47,6 @@ class _GroupListRow(QWidget):
     ) -> None:
         super().__init__(parent)
         self._group_key = group_key
-        panel_icon_size().width()
 
         self._label = QLabel(label_text)
 
@@ -101,10 +100,10 @@ class GroupsPanel(QGroupBox):
     group_selected = Signal(object)
     visibility_toggled = Signal(str)
     add_requested = Signal()
+    edit_requested = Signal()
     delete_requested = Signal()
     copy_requested = Signal()
     paste_requested = Signal()
-    group_renamed = Signal(str, str)
     move_up_requested = Signal()
     move_down_requested = Signal()
 
@@ -118,6 +117,11 @@ class GroupsPanel(QGroupBox):
             layer_add_icon(size=icon_px),
             "Add a new empty group",
             clicked=self.add_requested.emit,
+        )
+        self._edit_button = make_panel_tool_button(
+            layer_edit_icon(size=icon_px),
+            "Edit the selected group name",
+            clicked=self.edit_requested.emit,
         )
         self._delete_button = make_panel_tool_button(
             layer_delete_icon(size=icon_px),
@@ -135,6 +139,7 @@ class GroupsPanel(QGroupBox):
             clicked=self.paste_requested.emit,
         )
         self._paste_button.setEnabled(False)
+        self._edit_button.setEnabled(False)
         self._delete_button.setEnabled(False)
         self._copy_button.setEnabled(False)
 
@@ -143,20 +148,12 @@ class GroupsPanel(QGroupBox):
             "Groups",
             [
                 self._add_button,
+                self._edit_button,
                 self._delete_button,
                 self._copy_button,
                 self._paste_button,
             ],
         )
-
-        self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Group name")
-        self._name_edit.setEnabled(False)
-        self._name_edit.editingFinished.connect(self._emit_group_renamed)
-
-        name_row = QHBoxLayout()
-        name_row.addWidget(QLabel("Name"))
-        name_row.addWidget(self._name_edit, stretch=1)
 
         self._list = QListWidget()
         self._list.currentRowChanged.connect(self._on_row_changed)
@@ -177,7 +174,6 @@ class GroupsPanel(QGroupBox):
         reorder_row.addWidget(self._up_button)
         reorder_row.addWidget(self._down_button)
 
-        layout.addLayout(name_row)
         layout.addWidget(self._list, stretch=1)
         layout.addLayout(reorder_row)
         self.setMaximumHeight(220)
@@ -247,29 +243,16 @@ class GroupsPanel(QGroupBox):
 
             if item is not None and item.data(Qt.ItemDataRole.UserRole) == target_key:
                 self._list.setCurrentRow(row)
-                self._sync_name_edit()
+                self._update_action_buttons()
                 return
 
         self._list.setCurrentRow(0)
         self._selected_filter = _ALL_FILTER
-        self._sync_name_edit()
-
-    def _sync_name_edit(self) -> None:
-        self._block_signals = True
-        name = self.selected_group_name()
-
-        if name is None:
-            self._name_edit.clear()
-            self._name_edit.setEnabled(False)
-        else:
-            self._name_edit.setText(name)
-            self._name_edit.setEnabled(True)
-
         self._update_action_buttons()
-        self._block_signals = False
 
     def _update_action_buttons(self) -> None:
         has_group = self.selected_group_name() is not None
+        self._edit_button.setEnabled(has_group)
         self._delete_button.setEnabled(has_group)
         self._copy_button.setEnabled(has_group)
 
@@ -290,23 +273,6 @@ class GroupsPanel(QGroupBox):
         group_count = self._group_count()
         self._up_button.setEnabled(group_index > 0)
         self._down_button.setEnabled(0 <= group_index < group_count - 1)
-
-    def _emit_group_renamed(self) -> None:
-        if self._block_signals:
-            return
-
-        old_name = self.selected_group_name()
-
-        if old_name is None:
-            return
-
-        new_name = self._name_edit.text().strip()
-
-        if not new_name or new_name == old_name:
-            self._name_edit.setText(old_name)
-            return
-
-        self.group_renamed.emit(old_name, new_name)
 
     def _on_row_clicked(self, group_key: str | None) -> None:
         if self._block_signals:
@@ -330,13 +296,13 @@ class GroupsPanel(QGroupBox):
 
         if stored == _ALL_ROW_KEY:
             self._selected_filter = _ALL_FILTER
-            self._sync_name_edit()
+            self._update_action_buttons()
             self._update_reorder_buttons()
             self.group_selected.emit(_ALL_FILTER)
             return
 
         if stored is not None:
             self._selected_filter = str(stored)
-            self._sync_name_edit()
+            self._update_action_buttons()
             self._update_reorder_buttons()
             self.group_selected.emit(str(stored))

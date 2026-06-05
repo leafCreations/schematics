@@ -17,7 +17,6 @@ from ui.widgets.structure_size_panel import StructureSizePanel
 class StructureSettingsPanel(QGroupBox):
     properties_changed = Signal()
     resize_requested = Signal(int, int)
-    block_tooltips_changed = Signal(bool)
     close_requested = Signal()
 
     def __init__(self, parent=None) -> None:
@@ -32,7 +31,6 @@ class StructureSettingsPanel(QGroupBox):
 
         self._properties.properties_changed.connect(self.properties_changed.emit)
         self._size.resize_requested.connect(self.resize_requested.emit)
-        self._size.block_tooltips_changed.connect(self.block_tooltips_changed.emit)
 
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
@@ -59,6 +57,3 @@ class StructureSettingsPanel(QGroupBox):
 
     def set_site_limits(self, site_width: int, site_depth: int) -> None:
         self._size.set_site_limits(site_width, site_depth)
-
-    def set_block_tooltips_enabled(self, enabled: bool) -> None:
-        self._size.set_block_tooltips_enabled(enabled)

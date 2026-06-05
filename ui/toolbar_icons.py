@@ -137,6 +137,20 @@ def _resolve_icon(
     return QIcon()
 
 
+def _draw_edit(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    body_left = size * 0.28
+    body_top = size * 0.18
+    body_w = size * 0.44
+    body_h = size * 0.44
+    painter.drawRect(body_left, body_top, body_w, body_h)
+    painter.drawLine(size * 0.62, size * 0.34, size * 0.82, size * 0.14)
+    painter.drawLine(size * 0.72, size * 0.24, size * 0.82, size * 0.14)
+    painter.drawLine(size * 0.72, size * 0.24, size * 0.62, size * 0.34)
+
+
 def _draw_plus(painter: QPainter, size: int, color: QColor) -> None:
     pen = QPen(color, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
     painter.setPen(pen)
@@ -192,6 +206,23 @@ def _draw_brush(painter: QPainter, size: int, color: QColor) -> None:
     painter.drawRoundedRect(size * 0.48, size * 0.14, head_w, head_h, 3, 3)
 
 
+def _draw_move_selection(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    margin = size * 0.22
+    side = size - 2 * margin
+    painter.drawRect(margin, margin, side, side)
+    arrow = size * 0.14
+    mid = size * 0.5
+    painter.drawLine(mid, margin - arrow * 0.2, mid, margin + arrow)
+    painter.drawLine(mid - arrow * 0.5, margin + arrow * 0.35, mid, margin + arrow)
+    painter.drawLine(mid + arrow * 0.5, margin + arrow * 0.35, mid, margin + arrow)
+    painter.drawLine(mid, size - margin + arrow * 0.2, mid, size - margin - arrow)
+    painter.drawLine(mid - arrow * 0.5, size - margin - arrow * 0.35, mid, size - margin - arrow)
+    painter.drawLine(mid + arrow * 0.5, size - margin - arrow * 0.35, mid, size - margin - arrow)
+
+
 def _draw_selector(painter: QPainter, size: int, color: QColor) -> None:
     pen = QPen(color, 1.5, Qt.PenStyle.DashLine, Qt.PenCapStyle.RoundCap)
     painter.setPen(pen)
@@ -202,6 +233,16 @@ def _draw_selector(painter: QPainter, size: int, color: QColor) -> None:
     painter.setPen(QPen(color, 1.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
     painter.drawLine(size * 0.72, size * 0.72, size * 0.86, size * 0.86)
     painter.drawLine(size * 0.86, size * 0.72, size * 0.86, size * 0.86)
+
+
+def _draw_color_picker(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.drawLine(size * 0.18, size * 0.82, size * 0.72, size * 0.28)
+    painter.drawLine(size * 0.72, size * 0.28, size * 0.82, size * 0.18)
+    painter.drawLine(size * 0.82, size * 0.18, size * 0.72, size * 0.28)
+    painter.drawEllipse(size * 0.58, size * 0.12, size * 0.24, size * 0.24)
 
 
 def _draw_eraser(painter: QPainter, size: int, color: QColor) -> None:
@@ -233,6 +274,14 @@ def layer_add_icon(*, size: int | None = None) -> QIcon:
     )
 
 
+def layer_edit_icon(*, size: int | None = None) -> QIcon:
+    return _resolve_icon(
+        theme_names=("document-edit", "accessories-text-editor", "gtk-edit"),
+        draw=_draw_edit,
+        size=size,
+    )
+
+
 def layer_delete_icon(*, size: int | None = None) -> QIcon:
     return _resolve_icon(
         theme_names=("edit-delete", "edit-delete-remove", "list-remove"),
@@ -250,10 +299,34 @@ def layer_paste_icon(*, size: int | None = None) -> QIcon:
     return _resolve_icon(theme_names=("edit-paste",), draw=_draw_paste, size=size)
 
 
+def layer_selector_rectangle_icon(*, size: int | None = None) -> QIcon:
+    pixel_size = size or toolbar_icon_size().width()
+    icon = icon_from_assets("select-rectangular", prefer_symbolic=False)
+
+    if not icon.isNull():
+        return _monochrome_icon(icon, size=pixel_size)
+
+    return _drawn_icon(_draw_selector, size=pixel_size)
+
+
+def layer_selector_same_block_icon(*, size: int | None = None) -> QIcon:
+    pixel_size = size or toolbar_icon_size().width()
+    icon = icon_from_assets("color-picker", prefer_symbolic=False)
+
+    if not icon.isNull():
+        return _monochrome_icon(icon, size=pixel_size)
+
+    return _drawn_icon(_draw_color_picker, size=pixel_size)
+
+
 def layer_selector_icon(*, size: int | None = None) -> QIcon:
+    return layer_selector_rectangle_icon(size=size)
+
+
+def layer_move_selection_icon(*, size: int | None = None) -> QIcon:
     return _resolve_icon(
-        theme_names=("edit-select", "object-select", "tool-pointer"),
-        draw=_draw_selector,
+        theme_names=("transform-move", "gtk-go-forward-ltr", "go-jump"),
+        draw=_draw_move_selection,
         size=size,
     )
 
@@ -268,6 +341,30 @@ def layer_paint_brush_icon(*, size: int | None = None) -> QIcon:
     return _drawn_icon(_draw_brush, size=pixel_size)
 
 
+def _draw_painting_grid(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    margin = size * 0.18
+    side = size - 2 * margin
+    painter.drawRect(margin, margin, side, side)
+    third = side / 3
+    painter.drawLine(margin + third, margin, margin + third, margin + side)
+    painter.drawLine(margin + 2 * third, margin, margin + 2 * third, margin + side)
+    painter.drawLine(margin, margin + third, margin + side, margin + third)
+    painter.drawLine(margin, margin + 2 * third, margin + side, margin + 2 * third)
+
+
+def layer_painting_grid_icon(*, size: int | None = None) -> QIcon:
+    pixel_size = size or toolbar_icon_size().width()
+    icon = icon_from_assets("grid-rectangular", prefer_symbolic=False)
+
+    if not icon.isNull():
+        return _monochrome_icon(icon, size=pixel_size)
+
+    return _drawn_icon(_draw_painting_grid, size=pixel_size)
+
+
 def layer_eraser_icon(*, size: int | None = None) -> QIcon:
     pixel_size = size or toolbar_icon_size().width()
     icon = icon_from_assets("draw-eraser", prefer_symbolic=False)
@@ -276,6 +373,56 @@ def layer_eraser_icon(*, size: int | None = None) -> QIcon:
         return _monochrome_icon(icon, size=pixel_size)
 
     return _drawn_icon(_draw_eraser, size=pixel_size)
+
+
+def _draw_rotate_left(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    margin = size * 0.18
+    painter.drawArc(
+        int(margin),
+        int(margin),
+        int(size - 2 * margin),
+        int(size - 2 * margin),
+        45 * 16,
+        270 * 16,
+    )
+    painter.drawLine(size * 0.24, size * 0.34, size * 0.16, size * 0.26)
+    painter.drawLine(size * 0.24, size * 0.34, size * 0.34, size * 0.42)
+
+
+def _draw_rotate_right(painter: QPainter, size: int, color: QColor) -> None:
+    pen = QPen(color, 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    margin = size * 0.18
+    painter.drawArc(
+        int(margin),
+        int(margin),
+        int(size - 2 * margin),
+        int(size - 2 * margin),
+        -45 * 16,
+        -270 * 16,
+    )
+    painter.drawLine(size * 0.76, size * 0.34, size * 0.84, size * 0.26)
+    painter.drawLine(size * 0.76, size * 0.34, size * 0.66, size * 0.42)
+
+
+def layer_rotate_left_icon(*, size: int | None = None) -> QIcon:
+    return _resolve_icon(
+        theme_names=("object-rotate-left",),
+        draw=_draw_rotate_left,
+        size=size,
+    )
+
+
+def layer_rotate_right_icon(*, size: int | None = None) -> QIcon:
+    return _resolve_icon(
+        theme_names=("object-rotate-right",),
+        draw=_draw_rotate_right,
+        size=size,
+    )
 
 
 def layer_save_icon(*, size: int | None = None) -> QIcon:

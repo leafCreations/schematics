@@ -7,7 +7,6 @@ from renderers import (
     materials,
     path_view,
     roof,
-    site_facades,
     structure_facades,
     top_view,
 )
@@ -52,10 +51,6 @@ RENDER_REGISTRY: dict[str, tuple[str, RenderFn]] = {
     constants.RENDER_PATH: (
         "Path-Focused Blueprints",
         path_view.render_path_focused_blueprint,
-    ),
-    constants.RENDER_SITE_FACADES: (
-        "Site Facades",
-        site_facades.render_site_facades,
     ),
     constants.RENDER_MATERIALS: (
         "Materials Inventory Blueprint",

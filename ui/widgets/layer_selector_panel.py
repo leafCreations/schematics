@@ -13,10 +13,10 @@ class LayerSelectorPanel(QGroupBox):
         super().__init__(parent)
         layout = create_simple_titled_panel_layout(self, "Selector")
 
-        hint = QLabel(
-            "Drag to select. Ctrl+click toggles cells. Same block type: edit in Selected Block."
+        self._hint = QLabel(
+            "Drag to select a region. Ctrl+click toggles cells.",
         )
-        hint.setWordWrap(True)
+        self._hint.setWordWrap(True)
 
         self._selection_range = QLabel("—")
         self._selection_range.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -24,10 +24,18 @@ class LayerSelectorPanel(QGroupBox):
         form = QFormLayout()
         form.addRow("Selected cells", self._selection_range)
 
-        layout.addWidget(hint)
+        layout.addWidget(self._hint)
         layout.addLayout(form)
 
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
     def set_selection_range(self, text: str) -> None:
         self._selection_range.setText(text or "—")
+
+    def set_hint_for_mode(self, *, rectangle: bool) -> None:
+        if rectangle:
+            self._hint.setText("Drag to select a region. Ctrl+click toggles cells.")
+        else:
+            self._hint.setText(
+                "Click a block to select all cells of the same type. Ctrl+click toggles cells.",
+            )

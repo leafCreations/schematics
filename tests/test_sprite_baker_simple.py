@@ -164,8 +164,9 @@ def test_bake_simple_grass_integration(tmp_path: Path):
     if not (BLOCK_TEXTURES_FOLDER / "grass_block_top.png").exists():
         pytest.skip("grass_block_top.png not available")
 
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
+
     from helpers.sprite_baker.cache import load_or_bake
-    from registries.loader import compile_texture_set
 
     generated_root = tmp_path / "generated"
 
@@ -182,19 +183,13 @@ def test_bake_simple_grass_integration(tmp_path: Path):
         force=True,
     )
 
-    import registries.loader as loader_module
-
-    previous_root = loader_module.GENERATED_ASSETS_FOLDER
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            ("GRASS", "PLANKS"),
         )
-    finally:
-        loader_module.GENERATED_ASSETS_FOLDER = previous_root
 
     grass = textures["GRASS"]
     planks = textures["PLANKS"]

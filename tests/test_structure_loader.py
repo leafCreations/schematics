@@ -103,8 +103,10 @@ def test_load_structure_yaml_residence_stage1():
 
     assert config["structure"] == "residence"
     assert config["stage"] == 1
-    assert len(config["layers"]) == 6
-    assert config["layers"][0]["cells"][0][0] == "COBBLESTONE#mossy"
+    assert len(config["layers"]) == 7
+    assert config["grid"]["trim_block"] == "COBBLESTONE#mossy"
+    floor_layer = next(layer for layer in config["layers"] if layer.get("index") == 0)
+    assert floor_layer["cells"][0][2] == "COBBLESTONE#mossy"
 
 
 def test_load_structure_yaml_residence_stage2():
@@ -132,7 +134,7 @@ def test_load_structure_yaml_discovers_layer_files(tmp_path: Path):
 
     config = load_structure_yaml(structure_path)
 
-    assert len(config["layers"]) == 6
+    assert len(config["layers"]) == 7
 
 
 def test_validate_structure_config_rejects_unknown_cell_token():
@@ -155,7 +157,7 @@ def test_load_structure_config_builds_context_from_yaml():
 
     assert ctx.structure == "residence"
     assert ctx.stage == 1
-    assert len(ctx.layers) == 6
+    assert len(ctx.layers) == 7
     assert ctx.topdown_textures
 
 

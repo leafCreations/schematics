@@ -98,6 +98,7 @@ class StructureFacadeLayout(TypedDict):
     block_px: int
     top_margin: int
     panel_gap: int
+    y_label_width: int
     panel_w: int
     panel_h: int
     img_w: int

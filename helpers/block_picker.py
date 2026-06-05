@@ -248,6 +248,38 @@ def homogeneous_picker_entry_for_positions(
     return entry
 
 
+def cell_positions_with_same_block_type(
+    cells: list[list[str]],
+    reference_token: str,
+) -> list[tuple[int, int]]:
+    """Return every non-empty cell matching *reference_token*'s palette block type.
+
+    Registry entries match on entry token (e.g. ``PLANKS:oak`` and ``PLANKS:spruce``).
+    When the reference does not resolve to a palette entry, falls back to exact token
+    string equality.
+    """
+    if reference_token == ".":
+        return []
+
+    entry = picker_entry_for_cell(reference_token)
+    positions: list[tuple[int, int]] = []
+
+    for row, line in enumerate(cells):
+        for col, token in enumerate(line):
+            if token == ".":
+                continue
+
+            if entry is not None:
+                cell_entry = picker_entry_for_cell(token)
+
+                if cell_entry is not None and cell_entry.token == entry.token:
+                    positions.append((row, col))
+            elif token == reference_token:
+                positions.append((row, col))
+
+    return positions
+
+
 def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
     """Return the palette entry that matches a structure-layer cell token."""
     parsed = parse_structure_token(raw_token)

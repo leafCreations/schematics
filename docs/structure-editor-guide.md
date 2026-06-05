@@ -144,7 +144,7 @@ Enable **Eraser** on the grid toolbar to show the **Eraser** panel on the right.
 
 With **Paint brush** on, the **Paint brush** hint panel, **Selected Block**, and **Grid cell** appear on the right. With **Selector** on, **Selected Block** appears when every selected cell is the same block type. The eraser panel replaces these when **Eraser** is active.
 
-Hover tooltips on cells can be turned on/off under **Structure** settings (saved locally).
+Hover tooltips on cells can be turned on/off with **View → Block tooltips** (saved in application settings).
 
 ---
 
@@ -155,13 +155,14 @@ The **Layers** panel lists every layer file. The highlighted row is the layer sh
 | Control | What it does |
 | ------- | ------------- |
 | Click a row | Switch to that layer (prompts if the current layer is unsaved) |
-| **+** | Add a new empty layer |
+| **+** | Add a new empty layer (Y level and existing or new group) |
+| **Edit** | Change the current layer Y level and group |
 | **−** | Delete the selected layer (at least one layer must remain) |
 | Copy / Paste | Duplicate a layer (paste creates a new layer file) |
 | **↑** / **↓** | Change order in `structure.yaml` (save site settings to persist order) |
 | Eye icon on a row | Hide that layer from **renders** (save the layer to persist `visible: false`) |
 
-**Save** the active layer with the toolbar **Save** button or **File → Save** (`Ctrl+S`). Unsaved layers show `*` in the list.
+**Save** the active layer with the toolbar **Save** button or **File → Save** (`Ctrl+S`) on the Structure tab. On the Site tab, **Save** / `Ctrl+S` writes site settings (same as **Save Site Settings**). Unsaved layers show `*` in the list.
 
 ---
 
@@ -200,7 +201,9 @@ Structure identity (name, stage, output folder) is edited here too. Save with **
 
 | Button / menu | Saves |
 | ------------- | ----- |
-| **Save** (grid toolbar) or **File → Save** (`Ctrl+S`) | Active layer file only (`layers/layer_XX.yaml`) |
+| **Save** (Structure toolbar) or **File → Save** (`Ctrl+S`) on Structure tab | Active layer file only (`layers/layer_XX.yaml`) |
+| **File → Save** (`Ctrl+S`) on Site tab | `structure.yaml` and site settings (same as **Save Site Settings**) |
+| **Save All** (**File → Save All**, `Ctrl+Shift+S`) | Every unsaved layer plus `structure.yaml` / site settings when dirty |
 | **Save Site Settings** (Site tab) | `structure.yaml` — site size, placement, offsets, layer order, paths, group visibility |
 
 The window title shows `(unsaved)` when layers or site settings need saving. Switching layers with unsaved edits asks **Save / Discard / Cancel**.
@@ -284,6 +287,7 @@ python render_main.py --structure residence --stage 1
 | Shortcut | Action |
 | -------- | ------ |
 | `Ctrl+S` | Save current layer |
+| `Ctrl+Shift+S` | Save All (unsaved layers and site settings) |
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` | Redo |
 | `Ctrl+Q` | Quit (prompts if unsaved) |

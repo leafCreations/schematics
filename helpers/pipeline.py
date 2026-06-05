@@ -5,7 +5,6 @@ VALID_RENDERERS = {
     constants.RENDER_ROOF,
     constants.RENDER_STRUCTURE_FACADES,
     constants.RENDER_PATH,
-    constants.RENDER_SITE_FACADES,
     constants.RENDER_MATERIALS,
     constants.RENDER_WORLDGEN,
 }

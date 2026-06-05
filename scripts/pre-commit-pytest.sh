@@ -81,6 +81,11 @@ for file in "${STAGED[@]}"; do
       add tests/test_grid_cells.py tests/test_grid_placement.py
       ;;
 
+    helpers/layer_rotation.py)
+      CODE_TOUCHED=1
+      add tests/test_layer_rotation.py
+      ;;
+
     helpers/fence_adjacency.py)
       CODE_TOUCHED=1
       add tests/test_fence_adjacency.py tests/test_utils_schematics_fence.py

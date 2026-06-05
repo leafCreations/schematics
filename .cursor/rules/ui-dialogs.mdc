@@ -1,0 +1,74 @@
+---
+description: Editor modal dialogs — shared layout, auto-save on OK, persist helper
+globs: ui/**/*.py,docs/ui.md
+alwaysApply: false
+---
+
+# UI dialogs — shared field height and layout
+
+**Every editor modal dialog** (`QDialog` subclass or new prompt UI) must use the shared helpers in `ui/dialog_layout.py`. Do **not** use `QInputDialog` for new prompts — it cannot match editor control sizing.
+
+## Shared metrics (`ui/dialog_layout.py`)
+
+| Constant | Default | Role |
+| -------- | ------- | ---- |
+| `DIALOG_FIELD_HEIGHT` | 32 | Fixed height for spinbox, combo, line edit |
+| `DIALOG_FIELD_MIN_WIDTH` | 260 | Default minimum width for text fields / combos |
+| `DIALOG_MIN_WIDTH` | 420 | Minimum dialog width |
+| `DIALOG_MARGINS` | 16 | Outer content margins |
+| `DIALOG_SPACING` | 14 | Vertical spacing between sections |
+| `DIALOG_FORM_H_SPACING` | 12 | Form label ↔ field gap |
+| `DIALOG_FORM_V_SPACING` | 14 | Form row gap |
+
+## Required helpers
+
+| Helper | Use for |
+| ------ | ------- |
+| `apply_dialog_field_style(widget, min_width=…)` | Every `QSpinBox`, `QComboBox`, `QLineEdit` in a dialog |
+| `create_dialog_form_layout()` | `QFormLayout` with standard alignment and spacing |
+| `create_dialog_shell(dialog)` | Root `QVBoxLayout` + `setMinimumWidth` + margins |
+| `create_dialog_button_box(dialog)` | OK / Cancel wired to `accept` / `reject` |
+
+## Auto-save on OK / Yes
+
+When the user confirms a dialog (`QDialog` accepted, or `QMessageBox` Yes), **persist changes immediately** — do not only mark layers/structure dirty and tell the user to save manually.
+
+In `ui/main_window.py`, call `_persist_dialog_changes()` after applying the in-memory edit:
+
+- `layer_indices` — layer array indices whose YAML changed (omit or `()` if none)
+- `save_structure=True` — write `structure.yaml` when metadata/group list/layer files changed
+- `success_message` / `action_phrase` — status bar text (helper handles partial save failures)
+
+Dialog hint copy should say **"Changes are saved when you click OK."** (not "save to persist").
+
+`QMessageBox` confirmation flows (delete layer/group, shrink structure grid) follow the same rule on **Yes**.
+
+Live panel edits (structure properties, site settings) are **not** dialogs — they still use Save Site Settings / Save Layer.
+
+## Checklist for a new dialog
+
+1. Subclass `QDialog` under `ui/widgets/` (e.g. `my_feature_dialog.py`).
+2. `create_dialog_shell(self)` for the root layout.
+3. `apply_dialog_field_style` on **each** interactive control (same **32px** height).
+4. `create_dialog_form_layout()` when using label/field rows.
+5. `create_dialog_button_box(self)` at the bottom (optional `layout.addSpacing(4)` above).
+6. Hint label: changes saved on OK (see **Auto-save** above).
+7. Wire caller in `ui/main_window.py` → `_persist_dialog_changes(...)` after accept; document in `docs/ui.md` if user-facing.
+
+## Single-line text prompts
+
+Use `InputTextDialog` (`ui/widgets/input_text_dialog.py`) instead of `QInputDialog.getText`.
+
+## Do not
+
+- Per-dialog `_FIELD_HEIGHT` / margin constants — import from `ui/dialog_layout.py`
+- `QInputDialog` for new editor prompts
+- `setFixedHeight` on dialog fields without going through `apply_dialog_field_style`
+- After dialog OK: only `_mark_layer_dirty` / `_dirty_structure = True` without `_persist_dialog_changes`
+
+## Examples
+
+- `ui/widgets/add_layer_dialog.py` — multi-field form + auto-save hint
+- `ui/widgets/edit_group_dialog.py` — rename + auto-save hint
+- `ui/widgets/input_text_dialog.py` — one line edit (group name, …)
+- `ui/main_window.py` — `_persist_dialog_changes`, `_on_add_layer`, `_on_delete_group`

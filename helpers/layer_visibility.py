@@ -31,20 +31,13 @@ def visible_layer_array_indices(
 
 
 def site_facade_layer_keys(site_map: SiteMap, *, site_width: int, site_depth: int) -> list[int]:
-    """Site cross-section Y rows to draw: ground (-1) plus non-empty overlay levels."""
-    layer_keys = [-1]
+    """Site cross-section Y rows to draw: site ground plus non-empty overlay levels."""
+    from helpers.landscape_utils import SITE_GROUND_Y, _site_layer_has_content
 
-    for site_y in (0, 1):
-        for z in range(site_depth):
-            row = site_map[site_y][z]
+    layer_keys = [SITE_GROUND_Y]
 
-            for x in range(min(site_width, len(row))):
-                if row[x] != ".":
-                    layer_keys.append(site_y)
-                    break
-            else:
-                continue
-
-            break
+    for site_y in sorted(key for key in site_map if key != SITE_GROUND_Y):
+        if _site_layer_has_content(site_map[site_y], site_width, site_depth):
+            layer_keys.append(site_y)
 
     return layer_keys

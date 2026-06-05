@@ -12,11 +12,49 @@ from helpers.grid_cells import empty_cells
 _LAYER_FILE_RE = re.compile(r"layer_(\d+)\.yaml$")
 
 
+def layer_worldgen_index(layer: dict[str, Any], list_index: int) -> int:
+    return int(layer.get("index", list_index))
+
+
+def layers_by_worldgen_index(layers: list[dict[str, Any]]) -> list[int]:
+    """List indices sorted by ascending worldgen ``index`` (lowest Y first)."""
+    return sorted(
+        range(len(layers)),
+        key=lambda list_index: (layer_worldgen_index(layers[list_index], list_index), list_index),
+    )
+
+
+def swap_worldgen_indices_between_layers(layer_a: dict[str, Any], layer_b: dict[str, Any]) -> None:
+    index_a = int(layer_a["index"])
+    index_b = int(layer_b["index"])
+    layer_a["index"] = index_b
+    layer_b["index"] = index_a
+
+
 def layer_label(layer: dict[str, Any], list_index: int) -> str:
     group = layer.get("group")
     if group:
         return str(group)
-    return f"Layer {layer.get('index', list_index)}"
+    return f"Layer {layer_worldgen_index(layer, list_index)}"
+
+
+def layer_display_label(layer: dict[str, Any], list_index: int) -> str:
+    """User-facing layer title: ``description`` when set, otherwise ``group``."""
+    description = layer.get("description")
+
+    if isinstance(description, str) and description.strip():
+        return description.strip()
+
+    return layer_label(layer, list_index)
+
+
+def set_layer_description(layer: dict[str, Any], description: str) -> None:
+    normalized = description.strip()
+
+    if normalized:
+        layer["description"] = normalized
+    else:
+        layer.pop("description", None)
 
 
 def next_layer_relative_path(existing_paths: list[Path]) -> str:
@@ -32,9 +70,31 @@ def next_layer_relative_path(existing_paths: list[Path]) -> str:
     return f"layers/layer_{max_num + 1:02d}.yaml"
 
 
+def used_worldgen_indices(layers: list[dict[str, Any]]) -> set[int]:
+    return {int(layer["index"]) for layer in layers if "index" in layer}
+
+
+def worldgen_index_in_use(
+    layers: list[dict[str, Any]],
+    index: int,
+    *,
+    except_layer_index: int | None = None,
+) -> bool:
+    target = int(index)
+
+    for layer_index, layer in enumerate(layers):
+        if except_layer_index is not None and layer_index == except_layer_index:
+            continue
+
+        if "index" in layer and int(layer["index"]) == target:
+            return True
+
+    return False
+
+
 def next_worldgen_index(layers: list[dict[str, Any]]) -> int:
     """Return an unused worldgen ``index`` for a new layer."""
-    used = {int(layer["index"]) for layer in layers if "index" in layer}
+    used = used_worldgen_indices(layers)
     candidate = max(used, default=-1) + 1
 
     while candidate in used:
@@ -49,13 +109,16 @@ def create_layer(
     depth: int,
     worldgen_index: int,
     group: str,
+    description: str = "",
     cells: list[list[str]] | None = None,
 ) -> dict[str, Any]:
-    return {
+    layer: dict[str, Any] = {
         "index": int(worldgen_index),
         "group": group,
         "cells": copy.deepcopy(cells) if cells is not None else empty_cells(width, depth),
     }
+    set_layer_description(layer, description)
+    return layer
 
 
 def copy_layer_dict(layer: dict[str, Any]) -> dict[str, Any]:
@@ -140,9 +203,13 @@ def reorder_layers_in_document(document: Any, permutation: list[int]) -> None:
     if len(permutation) != layer_count:
         raise ValueError("permutation length must match layer count")
 
+    slot_indices = slot_worldgen_indices(document.layers)
+
     document.layers = [document.layers[old_index] for old_index in permutation]
     document.layer_files = [document.layer_files[old_index] for old_index in permutation]
     document.layer_paths = [document.layer_paths[old_index] for old_index in permutation]
+
+    apply_slot_worldgen_indices(document.layers, slot_indices)
 
     grid = document.metadata.setdefault("grid", {})
     remap_site_structure_layers_after_permutation(grid, permutation)
@@ -162,6 +229,16 @@ def remap_indices_after_swap(indices: set[int], index_a: int, index_b: int) -> s
     return remapped
 
 
+def slot_worldgen_indices(layers: list[dict[str, Any]]) -> list[int]:
+    """Worldgen ``index`` at each list position (used to keep Y levels when reordering)."""
+    return [int(layer.get("index", position)) for position, layer in enumerate(layers)]
+
+
+def apply_slot_worldgen_indices(layers: list[dict[str, Any]], slot_indices: list[int]) -> None:
+    for position, layer in enumerate(layers):
+        layer["index"] = slot_indices[position]
+
+
 def swap_layers_in_document(document: Any, index_a: int, index_b: int) -> None:
     """Swap two layers and keep ``layer_files`` / ``site_structure_layers`` in sync."""
     layer_count = len(document.layers)
@@ -171,6 +248,8 @@ def swap_layers_in_document(document: Any, index_a: int, index_b: int) -> None:
 
     if index_a == index_b:
         return
+
+    slot_indices = slot_worldgen_indices(document.layers)
 
     document.layers[index_a], document.layers[index_b] = (
         document.layers[index_b],
@@ -185,6 +264,8 @@ def swap_layers_in_document(document: Any, index_a: int, index_b: int) -> None:
         document.layer_paths[index_a],
     )
 
+    apply_slot_worldgen_indices(document.layers, slot_indices)
+
     grid = document.metadata.setdefault("grid", {})
     remap_site_structure_layers_after_swap(grid, index_a, index_b)
 
@@ -198,6 +279,32 @@ def move_layer_in_document(document: Any, list_index: int, delta: int) -> int | 
 
     swap_layers_in_document(document, list_index, new_index)
     return new_index
+
+
+def move_layer_by_worldgen_delta(
+    document: Any,
+    list_index: int,
+    delta: int,
+) -> tuple[int, int] | None:
+    """Swap worldgen ``index`` with the Y-adjacent layer (``delta=-1`` = lower Y)."""
+    order = layers_by_worldgen_index(document.layers)
+
+    try:
+        rank = order.index(list_index)
+    except ValueError:
+        return None
+
+    new_rank = rank + delta
+
+    if new_rank < 0 or new_rank >= len(order):
+        return None
+
+    other_index = order[new_rank]
+    swap_worldgen_indices_between_layers(
+        document.layers[list_index],
+        document.layers[other_index],
+    )
+    return list_index, other_index
 
 
 def clamp_site_structure_layers(grid: dict[str, Any], layer_count: int) -> None:

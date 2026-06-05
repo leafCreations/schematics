@@ -33,7 +33,7 @@ On first run, legacy **QSettings** values (`block_tooltips`, `grid_axis_labels`)
 
 | YAML path | UI control | Default | Applies to |
 | --------- | ---------- | ------- | ---------- |
-| `display.block_tooltips` | **Show block tooltips on hover** (Structure settings or Site grid) | `true` | Structure + site grid hover |
+| `display.block_tooltips` | **View → Block tooltips** | `true` | Structure + site grid hover |
 | `display.grid_axis_labels` | **View → Grid axis labels** | `true` | Structure grid column/row headers |
 | `panels.compass` | **View → Compass** (and panel close) | `true` | Structure + Site compass |
 | `panels.materials` | **View → Materials** | `true` | Materials panel |
@@ -53,7 +53,8 @@ Checkable actions in **View** (`ui/main_window.py`). Panel visibility persists i
 | Compass | `Ctrl+Shift+C` | Structure + Site compass roses |
 | Materials | — | Materials inventory (right column) |
 | Structure settings | — | Structure identity + size (left column, bottom) |
-| Grid axis labels | — | Structure grid headers (see prefs above) |
+| Block tooltips | — | Structure + site grid hover tokens (`display.block_tooltips`) |
+| Grid axis labels | — | Structure grid headers (`display.grid_axis_labels`) |
 
 Dismissible panels also expose a **close** control (window-close icon); that hides the panel and unchecks the matching View action.
 
@@ -73,10 +74,10 @@ Dismissible panels also expose a **close** control (window-close icon); that hid
 | Property | Control | Persisted | YAML / behavior |
 | -------- | ------- | --------- | --------------- |
 | Filter | **All** or group row | No | Filters Layers list only |
-| Name | Text field | **Save Site Settings** | Renames `group:` on all layers in that group; updates `grid.groups`, `grid.hidden_groups` |
+| Edit | Toolbar | Mixed | Opens **Edit group** dialog; renames `group:` on all layers in that group; updates `grid.groups`, `grid.hidden_groups` — save affected layers and site settings |
 | Visibility | Eye per group | **Save Site Settings** | `grid.hidden_groups` — group omitted from renders |
 | Order | ↑ / ↓ | **Save Site Settings** | `grid.groups` order; moves all layers in adjacent groups |
-| Add / Delete / Copy / Paste | Toolbar | Mixed | Add/delete/copy/paste layers and empty groups in memory; copy/paste creates layers; save site for `layer_files` / groups |
+| Add / Edit / Delete / Copy / Paste | Toolbar | Mixed | Add/delete/copy/paste layers and empty groups in memory; copy/paste creates layers; save site for `layer_files` / groups |
 
 ### Layers (`ui/widgets/layer_list_panel.py`)
 
@@ -85,9 +86,9 @@ Dismissible panels also expose a **close** control (window-close icon); that hid
 | Active layer | Row click | No | Which `cells` grid is edited |
 | Order | ↑ / ↓ | **Save Site Settings** | `layer_files` order (list position, not worldgen `index`) |
 | Visibility | Eye per layer | **Save Layer** | `visible: false` on layer file when hidden |
-| Add / Delete / Copy / Paste | Toolbar | Mixed | New layers get a new worldgen `index`; delete/reorder need **Save Site Settings** for `layer_files` |
+| Add / Edit / Delete / Copy / Paste | Toolbar | Mixed | **Add** / **Edit** prompt for Y level, description, and group; **Save Layer** for `index` / `description` / `group`; delete/reorder need **Save Site Settings** for `layer_files` |
 
-**Worldgen `index`** in each layer file is assigned when a layer is created (`helpers/layer_management.py`); there is no spinbox to edit it in the UI. Edit `index` in YAML if you need a specific Minecraft Y offset.
+**Worldgen `index`** in each layer file is the Minecraft Y offset (`actual_y = worldgen_base_y + index`). **Add** and **Edit** open the same dialog for Y level and group (existing group or **— New group —**). Paste still auto-assigns the next free index and copies the source group.
 
 ### Structure settings (`ui/widgets/structure_settings_panel.py`)
 
@@ -101,7 +102,6 @@ Combines identity (`structure_properties_panel.py`) and footprint (`structure_si
 | Output folder | Read-only label | **Save Site Settings** | `output_folder` (derived: `stage{N}_{structure}`) |
 | Width (x) | Spin 1–512 | **Resize grid** → all layers | `cells` width (padded with `.` or trimmed east) |
 | Depth (z) | Spin 1–512 | **Resize grid** | `cells` depth (trim south) |
-| Show block tooltips | Checkbox | `display.block_tooltips` | — |
 | Resize grid | Button | Per-layer **Save** or bulk save | Applies size to every layer’s `cells` |
 
 Width/depth cannot exceed current site dimensions (shown in the site-limit hint).
@@ -112,7 +112,7 @@ Width/depth cannot exceed current site dimensions (shown in the site-limit hint)
 | -------- | ------- | --------- | ----- |
 | Cell token | Paint / erase / paste | **Save Layer** | Each `cells[z][x]` string; see [structure-tokens.md](structure-tokens.md) |
 | Axis labels | View → Grid axis labels | `display.grid_axis_labels` | `column_axis_label` / `row_axis_label` |
-| Block tooltips | Checkbox (settings) | `display.block_tooltips` | Hover shows raw token |
+| Block tooltips | View → Block tooltips | `display.block_tooltips` | Hover shows raw token |
 | Icon size | *(automatic)* | No | Scales with viewport; brush preview uses fixed 48×48 |
 
 ### Layer toolbar (tools)
@@ -191,7 +191,6 @@ Reference only — no editable properties.
 | -------- | ------- | --------- | ----- |
 | Ground cells | Path brush / eraser / clear | **Save Site Settings** | `site_ground` 2D token grid |
 | Structure placement | Click footprint + arrows / nudge | **Save Site Settings** | `grid.offset_x`, `grid.offset_z`, `grid.placement` |
-| Block tooltips | Checkbox (Site settings) | `display.block_tooltips` | Same key as Structure tab |
 
 Site preview uses the first entry in `grid.site_structure_layers` (not editable in UI — see YAML-only below).
 
@@ -204,7 +203,6 @@ Site preview uses the first entry in `grid.site_structure_layers` (not editable 
 | Placement | 3×3 anchor buttons | **Save Site Settings** | `grid.placement` → derives offsets |
 | Offset (x, z) | Read-only | **Save Site Settings** | `grid.offset_x`, `grid.offset_z` |
 | Structure footprint | Read-only | — | From layer `cells` dimensions |
-| Show block tooltips | Checkbox | `display.block_tooltips` | — |
 
 ### Path brush (`ui/widgets/site_path_panel.py`)
 

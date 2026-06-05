@@ -58,14 +58,14 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 | ---- | ---- |
 | **Palettes** (left) | Category dropdown plus block list from `registries/palettes/*.yaml` |
 | **Structure grid** (center) | Current layer `cells` — paint and erase; use **Structure size** to grow (pad with `.`) or shrink (trim east/south) |
-| **Structure** (left, bottom) | Combined identity (**Structure**, **Stage**, derived name/output folder) and grid size (width/depth, resize, block tooltips). Saved with **Save Site Settings** on the Site tab |
+| **Structure** (left, bottom) | Combined identity (**Structure**, **Stage**, derived name/output folder) and grid size (width/depth, resize). Saved with **Save Site Settings** on the Site tab |
 | **Compass** (right, top) | North-up reference (+x east, +z south) |
 | **Inspector** (right) | **Grid cell** when paint or selector is active; **Selected Block** (material, direction, variant) only in paint mode; paint hint panel only in paint mode |
 | **Eraser** (right) | Shown when eraser mode is on: **Eraser size** (square brush centered on the click) |
 | **Materials** (right) | Live inventory; **Current layer** (default) or **All layers** from the scope dropdown — same grouping as the materials render; updates when you paint, erase, or switch layers |
-| **Groups** (left) | Top-right: add, delete, copy, paste (18px icons). **All** (default) plus each layer `group` name and any empty groups in `grid.groups`; click a row to filter the Layers list. **↑** / **↓** reorder groups (moves all layers in the group; save site settings to persist). **Name** edits the selected group (renames layers and saved metadata). **visibility** toggles hide the whole group from renders (`hidden_groups` in `structure.yaml`, saved with **Save Site Settings**). **Add** requires a name; empty groups persist in `grid.groups` until layers are assigned |
-| **Layers** (left, below Groups) | Top-right: add, delete, copy, paste (18px icons). Select the active layer; **↑** / **↓** reorder `layer_files` (save site settings to persist). **Visibility** (per row): click to hide a layer from renders (`visible: false` in layer YAML); hidden layers show `layer-visible-off` — save the layer to persist |
-| **Layer toolbar** (grid header) | **Selector**, **Paint brush**, **Eraser**, **Copy**, **Paste**, **Save**. Only one of selector / paint / eraser is active at a time. **Selector**: drag (light blue overlay). **Paint brush**: drag (light green overlay), release to fill with the current brush. **Eraser**: drag (light red overlay), release to clear. **Copy**/**Paste** use the selection. |
+| **Groups** (left) | Top-right: add, edit, delete, copy, paste (18px icons). **All** (default) plus each layer `group` name and any empty groups in `grid.groups`; click a row to filter the Layers list. **↑** / **↓** reorder groups (moves all layers in the group; save site settings to persist). **Edit** opens the group dialog to rename the selected group (layers and saved metadata). **visibility** toggles hide the whole group from renders (`hidden_groups` in `structure.yaml`, saved with **Save Site Settings**). **Add** requires a name; empty groups persist in `grid.groups` until layers are assigned |
+| **Layers** (left, below Groups) | Top-right: add, edit, delete, copy, paste (18px icons). **Edit** opens the layer dialog (Y level and group). Select the active layer; **↑** / **↓** reorder `layer_files` (save site settings to persist). **Visibility** (per row): click to hide a layer from renders (`visible: false` in layer YAML); hidden layers show `layer-visible-off` — save the layer to persist |
+| **Layer toolbar** (grid header) | **Selector**, **Move**, **Paint brush**, **Eraser**, **Copy**, **Paste**, **Rotate left** / **Rotate right**, **Save**. Only one of selector / move / paint / eraser is active at a time. **Move**: drag a rectangle to select, then drag to place (clears the source and writes at the new top-left). **Rotate** turns **all** layers 90° (swaps width/depth; updates `@direction` and `!rotation`). **Copy**/**Paste** use the selection. |
 | **Save Site Settings** | Also updates `layer_files` in `structure.yaml` after add/delete |
 
 ### Site tab
@@ -84,7 +84,7 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 | ---- | ---- |
 | **Site grid** (center) | `site_width` × `site_depth` preview; structure layer shown at `offset_x` / `offset_z` (faded green = open site; white = structure blocks); path **fence/torch** on long **trim block** runs (≥8 contiguous trim cells; first post at +10 along the run, then every 7) |
 | **Compass** (right, top) | Same north-up rose as the Structure tab |
-| **Site settings** (right) | `site_width`, `site_depth`, nine placement anchors, derived offsets; **Show block tooltips on hover** (shared with Structure tab, persisted locally) |
+| **Site settings** (right) | `site_width`, `site_depth`, nine placement anchors, derived offsets |
 | **Nudge placement** (right) | Arrow buttons; same as keyboard arrows when structure is selected |
 | **Site preview** | First layer in `grid.site_structure_layers` (same layer path/site renders use for the ground floor) |
 | **Save Site Settings** | Write `structure.yaml` grid fields and `site_ground` |
@@ -151,7 +151,8 @@ Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not l
 | Item | Shortcut | Action |
 | ---- | -------- | ------ |
 | New Structure | `Ctrl+N` | Placeholder (not implemented) |
-| Save | `Ctrl+S` | Saves the active layer (same as toolbar **Save**) |
+| Save | `Ctrl+S` | Structure tab: active layer. Site tab: site settings (`structure.yaml`). |
+| Save All | `Ctrl+Shift+S` | Saves every unsaved layer and site settings (`structure.yaml`) |
 | Exit | `Ctrl+Q` | Close the editor (unsaved-changes prompt) |
 
 **Edit**
@@ -168,8 +169,9 @@ Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not l
 | Reload Window | `Ctrl+Shift+Q` | Restart the editor process (same CLI args); use after code changes instead of quitting |
 | Compass | `Ctrl+Shift+C` | Show or hide the compass panel (Structure and Site tabs); use the title-row close button to hide |
 | Materials | — | Show or hide the materials inventory (Structure tab); close button on the panel title row |
-| Structure settings | — | Show or hide the Structure panel (identity, grid size, tooltips) on the Structure tab left column |
-| Grid axis labels | — | Column numbers along the top and row letters (A, B, …) along the left; on by default, saved locally |
+| Structure settings | — | Show or hide the Structure panel (identity, grid size) on the Structure tab left column |
+| Block tooltips | — | Show block tokens when hovering structure and site grid cells; saved in application settings |
+| Grid axis labels | — | Column numbers along the top and row letters (A, B, …) along the left; on by default, saved in application settings |
 
 **Help**
 
@@ -181,6 +183,7 @@ Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not l
 
 - **Save Layer** writes only the active layer file (e.g. `layers/layer_00.yaml`), including optional `visible: false` when hidden from renders.
 - **File → Save** (`Ctrl+S`) is the same operation when the current layer is dirty.
+- **File → Save All** (`Ctrl+Shift+S`) writes all dirty layer files, then `structure.yaml` / site settings if those are unsaved (same order as quitting with save).
 - **Save Site Settings** writes `structure.yaml` grid fields (`site_width`, `site_depth`, `placement`, `offset_x`, `offset_z`).
 - Unsaved layers or site settings show `(unsaved)` in the window title and `*` on the matching save button.
 - Switching layers or quitting with unsaved changes prompts **Save / Discard / Cancel**.
@@ -303,6 +306,10 @@ At startup (`ui.main_window` `main()`), three helpers configure shared Qt stylin
 | `ui/menu_style.py` | Global `QMenu` row height, font, and gray selection highlight |
 
 Any new menu bar entry, context menu, or toolbar popup should use a plain `QMenu` — no per-menu stylesheet. Call `configure_ui_menus()` only if you add a second application entry point.
+
+### Modal dialogs
+
+Custom editor dialogs (`QDialog` subclasses) share layout from `ui/dialog_layout.py`: **32px** field height (`DIALOG_FIELD_HEIGHT`), **420px** minimum width, and standard margins/spacing. Use `apply_dialog_field_style` on every spinbox, combo, and line edit. Single-line prompts use `InputTextDialog` — not `QInputDialog`.
 
 ### Panel boxes with header buttons
 

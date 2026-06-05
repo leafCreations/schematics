@@ -5,10 +5,33 @@ import helpers.path_strip as path_strip
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
 from helpers.layer_groups import is_layer_render_visible
+from helpers.layer_management import layer_worldgen_index
 from helpers.types import Cell, SiteLayer, SiteMap
 
 TRIM_BLOCK = path_strip.TRIM_BLOCK
-SITE_STRUCTURE_Y_LEVELS = (0, 1)
+SITE_GROUND_Y = -1000
+PATH_VIEW_Y_LEVELS = (-1, 0, 1)
+PATH_LIGHTING_Y_LEVELS = (0, 1)
+
+
+def path_view_y_keys(_ctx: SchematicContext) -> list[int]:
+    """Path top-down columns: structure worldgen Y levels -1, 0, and 1."""
+    return list(PATH_VIEW_Y_LEVELS)
+
+
+def _site_map_y_keys(_ctx: SchematicContext) -> list[int]:
+    return [SITE_GROUND_Y, *PATH_VIEW_Y_LEVELS]
+
+
+def _site_layer_has_content(layer: SiteLayer, site_width: int, site_depth: int) -> bool:
+    for z in range(min(site_depth, len(layer))):
+        row = layer[z]
+
+        for x in range(min(site_width, len(row))):
+            if row[x] != ".":
+                return True
+
+    return False
 
 
 def generate_landscape_y_minus_1_sitelayer(ctx: SchematicContext) -> SiteLayer:
@@ -70,12 +93,14 @@ def apply_structure_overlays_to_site_map(site_map: SiteMap, ctx: SchematicContex
     offset_z = grid_utils.get_offset_z(ctx)
     structure_width = grid_utils.get_structure_width(ctx)
     structure_depth = grid_utils.get_structure_depth(ctx)
-    layer_indices = grid_utils.get_site_structure_layer_indices(ctx)
 
-    for site_y, layer_list_idx in zip(SITE_STRUCTURE_Y_LEVELS, layer_indices, strict=False):
-        layer = ctx.layers[layer_list_idx]
+    for layer_array_index, layer in enumerate(ctx.layers):
+        if not is_layer_render_visible(layer, layer_array_index, ctx.grid):
+            continue
 
-        if not is_layer_render_visible(layer, layer_list_idx, ctx.grid):
+        site_y = layer_worldgen_index(layer, layer_array_index)
+
+        if site_y not in site_map:
             continue
 
         cells = layer.get("cells", [])
@@ -106,7 +131,8 @@ def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
     geom = path_geometry.get_path_geometry(ctx)
 
     site_map: SiteMap = {
-        y: [["." for _ in range(site_width)] for _ in range(site_depth)] for y in [-1, 0, 1]
+        y: [["." for _ in range(site_width)] for _ in range(site_depth)]
+        for y in _site_map_y_keys(ctx)
     }
 
     if ctx.site_ground is not None:
@@ -116,7 +142,7 @@ def generate_full_3d_landscape_sitemap(ctx: SchematicContext) -> SiteMap:
 
     for z in range(site_depth):
         for x in range(site_width):
-            site_map[-1][z][x] = y_minus_1[z][x]
+            site_map[SITE_GROUND_Y][z][x] = y_minus_1[z][x]
 
     apply_lighting_overlays_to_site_map(site_map, ctx, geom)
     apply_structure_overlays_to_site_map(site_map, ctx)
@@ -134,13 +160,16 @@ def resolve_open_site_display_token(
     Fence posts (y=0) take precedence over torches (y=1) so the site grid shows
     trim-line placement; path renders still draw both layers separately.
     """
-    for layer_y in (0, 1):
+    for layer_y in PATH_LIGHTING_Y_LEVELS:
+        if layer_y not in site_map:
+            continue
+
         token = site_map[layer_y][site_z][site_x]
 
         if token != ".":
             return token
 
-    return site_map[-1][site_z][site_x]
+    return site_map[SITE_GROUND_Y][site_z][site_x]
 
 
 def resolve_path_view_cell(
@@ -149,10 +178,10 @@ def resolve_path_view_cell(
     z: int,
     site_map: SiteMap,
 ) -> Cell:
-    base_token = site_map[-1][z][x]
+    base_token = site_map[SITE_GROUND_Y][z][x]
     overlay_token = site_map[layer_y][z][x]
 
-    if layer_y == -1:
+    if layer_y == SITE_GROUND_Y:
         return Cell(
             base_token=base_token,
             active_token=base_token,
@@ -166,6 +195,15 @@ def resolve_path_view_cell(
             active_token=overlay_token,
             is_ghost=False,
             is_ground_layer=False,
+        )
+
+    # Y=-1 is the site ground column: show paths at full strength when no structure.
+    if layer_y == PATH_VIEW_Y_LEVELS[0]:
+        return Cell(
+            base_token=base_token,
+            active_token=base_token,
+            is_ghost=False,
+            is_ground_layer=True,
         )
 
     return Cell(

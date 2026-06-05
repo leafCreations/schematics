@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from helpers.block_picker import cell_positions_with_same_block_type
+from helpers.cell_clipboard import copy_region
 from helpers.grid_brush import (
     PaintBrushMode,
     rect_cell_indices,
@@ -19,6 +21,7 @@ from helpers.grid_brush import (
     square_cell_indices,
 )
 from helpers.grid_labels import column_axis_label, row_axis_label
+from ui.selector_mode import SelectorMode
 from ui.texture_cache import DEFAULT_ICON_SIZE, GridTextureCache
 
 _GRID_BACKGROUND = QColor(234, 234, 255)
@@ -28,6 +31,8 @@ _CELL_FILL = QColor(242, 244, 248)
 _SELECTED_FILL = QColor(210, 230, 255)
 _ERASER_PREVIEW_OVERLAY = QColor(255, 120, 120, 140)
 _SELECTOR_OVERLAY = QColor(120, 180, 255, 140)
+_MOVE_SELECT_OVERLAY = QColor(100, 160, 255, 150)
+_MOVE_PREVIEW_OVERLAY = QColor(255, 200, 80, 160)
 _PAINT_PREVIEW_OVERLAY = QColor(200, 240, 160, 150)
 _FALLBACK_TEXT = QColor(45, 45, 45)
 _HEADER_TEXT = QColor(55, 55, 60)
@@ -60,11 +65,22 @@ class LayerGridCellDelegate(QStyledItemDelegate):
         is_selector_overlay = isinstance(table, LayerGridWidget) and table.is_selector_overlay_cell(
             index.row(), index.column()
         )
+        is_move_select_overlay = False
+        is_move_preview_overlay = False
+        is_move_source_overlay = False
+
+        if isinstance(table, LayerGridWidget):
+            row_idx, col_idx = index.row(), index.column()
+            is_move_select_overlay = table.is_move_select_overlay_cell(row_idx, col_idx)
+            is_move_preview_overlay = table.is_move_preview_overlay_cell(row_idx, col_idx)
+            is_move_source_overlay = table.is_move_source_overlay_cell(row_idx, col_idx)
         is_paint_preview = isinstance(table, LayerGridWidget) and table.is_paint_preview_cell(
             index.row(), index.column()
         )
 
-        if is_selector_overlay or is_paint_preview:
+        move_overlay = is_move_select_overlay or is_move_preview_overlay or is_move_source_overlay
+
+        if is_selector_overlay or move_overlay or is_paint_preview:
             fill = _EMPTY_CELL_FILL if raw_token == "." else _CELL_FILL
         elif option.state & QStyle.StateFlag.State_Selected:
             fill = _SELECTED_FILL
@@ -80,6 +96,10 @@ class LayerGridCellDelegate(QStyledItemDelegate):
                 self._paint_cell_overlay(painter, option.rect, _ERASER_PREVIEW_OVERLAY)
             elif is_selector_overlay:
                 self._paint_cell_overlay(painter, option.rect, _SELECTOR_OVERLAY)
+            elif is_move_preview_overlay:
+                self._paint_cell_overlay(painter, option.rect, _MOVE_PREVIEW_OVERLAY)
+            elif is_move_select_overlay or is_move_source_overlay:
+                self._paint_cell_overlay(painter, option.rect, _MOVE_SELECT_OVERLAY)
             elif is_paint_preview:
                 self._paint_cell_overlay(painter, option.rect, _PAINT_PREVIEW_OVERLAY)
             return
@@ -106,6 +126,10 @@ class LayerGridCellDelegate(QStyledItemDelegate):
             self._paint_cell_overlay(painter, option.rect, _ERASER_PREVIEW_OVERLAY)
         elif is_selector_overlay:
             self._paint_cell_overlay(painter, option.rect, _SELECTOR_OVERLAY)
+        elif is_move_preview_overlay:
+            self._paint_cell_overlay(painter, option.rect, _MOVE_PREVIEW_OVERLAY)
+        elif is_move_select_overlay or is_move_source_overlay:
+            self._paint_cell_overlay(painter, option.rect, _MOVE_SELECT_OVERLAY)
         elif is_paint_preview:
             self._paint_cell_overlay(painter, option.rect, _PAINT_PREVIEW_OVERLAY)
 
@@ -117,6 +141,8 @@ class LayerGridWidget(QTableWidget):
     cell_erase_matching_requested = Signal(str)
     eraser_region_erase_requested = Signal(int, int, int, int)
     paint_region_fill_requested = Signal(int, int, int, int)
+    move_region_requested = Signal(int, int)
+    move_selection_empty = Signal()
 
     def __init__(self, texture_cache: GridTextureCache | None = None, parent=None) -> None:
         super().__init__(parent)
@@ -132,9 +158,20 @@ class LayerGridWidget(QTableWidget):
         self._eraser_drag_active = False
         self._eraser_drag_anchor: tuple[int, int] | None = None
         self._selector_active = False
-        self._selector_drag_active = False
-        self._selector_drag_anchor: tuple[int, int] | None = None
+        self._selector_mode = SelectorMode.RECTANGLE
+        self._rectangle_selector_drag_active = False
+        self._rectangle_selector_drag_anchor: tuple[int, int] | None = None
         self._selector_overlay_cells: frozenset[tuple[int, int]] = frozenset()
+        self._move_active = False
+        self._move_select_drag_active = False
+        self._move_select_anchor: tuple[int, int] | None = None
+        self._move_select_overlay_cells: frozenset[tuple[int, int]] = frozenset()
+        self._move_relocate_ready = False
+        self._move_relocate_drag_active = False
+        self._move_source_positions: frozenset[tuple[int, int]] = frozenset()
+        self._move_origin: tuple[int, int] | None = None
+        self._move_preview_cells: frozenset[tuple[int, int]] = frozenset()
+        self._selection_mode_before_move = QTableWidget.SelectionMode.ExtendedSelection
         self._paint_preview_active = False
         self._paint_drag_active = False
         self._paint_drag_anchor: tuple[int, int] | None = None
@@ -147,6 +184,7 @@ class LayerGridWidget(QTableWidget):
         self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
         self.setCornerButtonEnabled(False)
+        self._cell_grid_visible = True
         self.setShowGrid(True)
         self._configure_axis_headers()
         self.setStyleSheet(
@@ -174,6 +212,17 @@ class LayerGridWidget(QTableWidget):
 
         if texture_cache is not None:
             self.setIconSize(texture_cache.qt_icon_size())
+
+    def set_cell_grid_visible(self, visible: bool) -> None:
+        if visible == self._cell_grid_visible:
+            return
+
+        self._cell_grid_visible = visible
+        self.setShowGrid(visible)
+        self.viewport().update()
+
+    def cell_grid_visible(self) -> bool:
+        return self._cell_grid_visible
 
     def set_texture_cache(self, texture_cache: GridTextureCache) -> None:
         self._texture_cache = texture_cache
@@ -256,13 +305,79 @@ class LayerGridWidget(QTableWidget):
         return (row, col) in self._paint_preview_cells
 
     def set_selector_active(self, active: bool) -> None:
+        if active == self._selector_active:
+            return
+
         self._selector_active = active
 
         if not active:
-            self._end_selector_drag()
+            self._end_rectangle_selector_drag()
+            self.viewport().unsetCursor()
+        else:
+            self.viewport().setCursor(Qt.CursorShape.CrossCursor)
 
         self.highlight_selection()
         self.viewport().update()
+
+    def set_selector_mode(self, mode: SelectorMode) -> None:
+        if mode == self._selector_mode:
+            return
+
+        self._selector_mode = mode
+        self._end_rectangle_selector_drag()
+
+    def set_move_active(self, active: bool) -> None:
+        if active == self._move_active:
+            return
+
+        self._move_active = active
+
+        if active:
+            self._selection_mode_before_move = self.selectionMode()
+            self.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        else:
+            self.cancel_move_state()
+            self.setSelectionMode(self._selection_mode_before_move)
+
+        self.highlight_selection()
+        self.viewport().update()
+
+    def cancel_move_state(self) -> None:
+        self._end_move_select_drag()
+        self._end_move_relocate_drag()
+        self._move_relocate_ready = False
+        self._move_source_positions = frozenset()
+        self._move_origin = None
+        self.clearSelection()
+        self.viewport().update()
+
+    def move_relocate_pending(self) -> bool:
+        return self._move_relocate_ready
+
+    def pending_move_positions(self) -> list[tuple[int, int]]:
+        return sorted(self._move_source_positions)
+
+    def clear_move_pending(self) -> None:
+        self._move_relocate_ready = False
+        self._move_source_positions = frozenset()
+        self._move_origin = None
+        self._move_preview_cells = frozenset()
+        self.clearSelection()
+        self.viewport().update()
+
+    def is_move_select_overlay_cell(self, row: int, col: int) -> bool:
+        return self._move_active and (row, col) in self._move_select_overlay_cells
+
+    def is_move_preview_overlay_cell(self, row: int, col: int) -> bool:
+        return self._move_active and (row, col) in self._move_preview_cells
+
+    def is_move_source_overlay_cell(self, row: int, col: int) -> bool:
+        return (
+            self._move_active
+            and self._move_relocate_ready
+            and not self._move_relocate_drag_active
+            and (row, col) in self._move_source_positions
+        )
 
     def is_selector_overlay_cell(self, row: int, col: int) -> bool:
         if not self._selector_active:
@@ -271,7 +386,7 @@ class LayerGridWidget(QTableWidget):
         if (row, col) in self._selector_overlay_cells:
             return True
 
-        if self._selector_drag_active:
+        if self._rectangle_selector_drag_active:
             return False
 
         item = self.item(row, col)
@@ -693,14 +808,200 @@ class LayerGridWidget(QTableWidget):
         self._eraser_hover = hover
         self._refresh_eraser_preview()
 
-    def _end_selector_drag(self) -> None:
-        self._selector_drag_active = False
-        self._selector_drag_anchor = None
+    def _end_rectangle_selector_drag(self) -> None:
+        self._rectangle_selector_drag_active = False
+        self._rectangle_selector_drag_anchor = None
         self._selector_overlay_cells = frozenset()
         self.viewport().update()
 
-    def _update_selector_drag_overlay(self, pos) -> None:
-        if not self._selector_drag_active or self._selector_drag_anchor is None:
+    def select_cell_positions(self, positions: list[tuple[int, int]]) -> None:
+        self._apply_rect_selection(positions)
+
+    def clear_cell_selection(self) -> None:
+        self._end_rectangle_selector_drag()
+        self.clearSelection()
+
+    def _apply_rect_selection(self, positions: list[tuple[int, int]]) -> None:
+        self.blockSignals(True)
+        self.clearSelection()
+
+        for row, col in positions:
+            item = self.item(row, col)
+
+            if item is not None:
+                item.setSelected(True)
+
+        self.blockSignals(False)
+        self.itemSelectionChanged.emit()
+
+    def _handle_selector_left_press(self, row: int, col: int, viewport_pos) -> None:
+        if self._selector_mode is SelectorMode.SAME_BLOCK:
+            self._select_same_block_type_at(row, col)
+            return
+
+        self._begin_rectangle_selector_drag(row, col, viewport_pos)
+
+    def _select_same_block_type_at(self, row: int, col: int) -> None:
+        if row >= len(self._layer_cells):
+            return
+
+        line = self._layer_cells[row]
+
+        if col >= len(line):
+            return
+
+        token = line[col]
+        positions = cell_positions_with_same_block_type(self._layer_cells, token)
+
+        if not positions:
+            self.clear_cell_selection()
+            self.itemSelectionChanged.emit()
+            return
+
+        self.select_cell_positions(positions)
+
+    def _begin_rectangle_selector_drag(self, row: int, col: int, viewport_pos) -> None:
+        self._rectangle_selector_drag_anchor = (row, col)
+        self._rectangle_selector_drag_active = True
+        self._update_rectangle_selector_overlay(viewport_pos)
+
+    def _finish_rectangle_selector_drag(self, pos) -> None:
+        if not self._rectangle_selector_drag_active or self._rectangle_selector_drag_anchor is None:
+            self._end_rectangle_selector_drag()
+            return
+
+        self._update_rectangle_selector_overlay(pos)
+        positions = sorted(self._selector_overlay_cells)
+        self._end_rectangle_selector_drag()
+
+        if positions:
+            self._apply_rect_selection(positions)
+        else:
+            self.clearSelection()
+            self.itemSelectionChanged.emit()
+
+    def _end_move_select_drag(self) -> None:
+        self._move_select_drag_active = False
+        self._move_select_anchor = None
+        self._move_select_overlay_cells = frozenset()
+        self.viewport().update()
+
+    def _end_move_relocate_drag(self) -> None:
+        self._move_relocate_drag_active = False
+        self._move_preview_cells = frozenset()
+        self.viewport().update()
+
+    def _update_move_select_overlay(self, pos) -> None:
+        if not self._move_select_drag_active or self._move_select_anchor is None:
+            return
+
+        index = self.indexAt(pos)
+        rows = self.rowCount()
+        cols = self.columnCount()
+
+        if not index.isValid() or rows == 0 or cols == 0:
+            self._move_select_overlay_cells = frozenset()
+        else:
+            anchor_row, anchor_col = self._move_select_anchor
+            self._move_select_overlay_cells = frozenset(
+                rect_cell_indices(
+                    anchor_row,
+                    anchor_col,
+                    index.row(),
+                    index.column(),
+                    rows=rows,
+                    cols=cols,
+                )
+            )
+
+        self.viewport().update()
+
+    def _finish_move_select_drag(self, pos) -> None:
+        if not self._move_select_drag_active or self._move_select_anchor is None:
+            self._end_move_select_drag()
+            return
+
+        self._update_move_select_overlay(pos)
+        positions = sorted(self._move_select_overlay_cells)
+        self._end_move_select_drag()
+
+        if not positions:
+            return
+
+        clipboard = copy_region(self._layer_cells, positions)
+
+        if clipboard is None or not any(token != "." for row in clipboard.cells for token in row):
+            self.move_selection_empty.emit()
+            return
+
+        self._move_source_positions = frozenset(positions)
+        self._move_origin = min(positions)
+        self._move_relocate_ready = True
+        self.clearSelection()
+        self.viewport().update()
+
+    def _begin_move_left_press(self, row: int, col: int, viewport_pos) -> bool:
+        """Start a move select or relocate drag; return True if handled."""
+        if self._move_relocate_ready:
+            self._move_relocate_drag_active = True
+            self._update_move_relocate_preview(viewport_pos)
+            return True
+
+        self._move_select_anchor = (row, col)
+        self._move_select_drag_active = True
+        self._update_move_select_overlay(viewport_pos)
+        return True
+
+    def _update_move_relocate_preview(self, pos) -> None:
+        if (
+            not self._move_relocate_drag_active
+            or self._move_origin is None
+            or not self._move_source_positions
+        ):
+            return
+
+        index = self.indexAt(pos)
+        rows = self.rowCount()
+        cols = self.columnCount()
+
+        if not index.isValid() or rows == 0 or cols == 0:
+            self._move_preview_cells = frozenset()
+        else:
+            origin_row, origin_col = self._move_origin
+            delta_row = index.row() - origin_row
+            delta_col = index.column() - origin_col
+            preview: set[tuple[int, int]] = set()
+
+            for row, col in self._move_source_positions:
+                target_row = row + delta_row
+                target_col = col + delta_col
+
+                if 0 <= target_row < rows and 0 <= target_col < cols:
+                    preview.add((target_row, target_col))
+
+            self._move_preview_cells = frozenset(preview)
+
+        self.viewport().update()
+
+    def _finish_move_relocate_drag(self, pos) -> None:
+        if not self._move_relocate_drag_active or self._move_origin is None:
+            self._end_move_relocate_drag()
+            return
+
+        self._update_move_relocate_preview(pos)
+        index = self.indexAt(pos)
+
+        if index.isValid():
+            origin_row, origin_col = self._move_origin
+            delta_row = index.row() - origin_row
+            delta_col = index.column() - origin_col
+            dest_row, dest_col = origin_row + delta_row, origin_col + delta_col
+            self.move_region_requested.emit(dest_row, dest_col)
+
+        self._end_move_relocate_drag()
+
+    def _update_rectangle_selector_overlay(self, pos) -> None:
+        if not self._rectangle_selector_drag_active or self._rectangle_selector_drag_anchor is None:
             return
 
         index = self.indexAt(pos)
@@ -710,7 +1011,7 @@ class LayerGridWidget(QTableWidget):
         if not index.isValid() or rows == 0 or cols == 0:
             self._selector_overlay_cells = frozenset()
         else:
-            anchor_row, anchor_col = self._selector_drag_anchor
+            anchor_row, anchor_col = self._rectangle_selector_drag_anchor
             self._selector_overlay_cells = frozenset(
                 rect_cell_indices(
                     anchor_row,
@@ -728,12 +1029,42 @@ class LayerGridWidget(QTableWidget):
         if watched is not self.viewport():
             return super().eventFilter(watched, event)
 
+        if (
+            event.type() == QEvent.Type.MouseButtonPress
+            and isinstance(event, QMouseEvent)
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            pos = self._viewport_pos(event)
+            index = self.indexAt(pos)
+
+            if index.isValid():
+                row, col = index.row(), index.column()
+
+                if self._move_active:
+                    self._begin_move_left_press(row, col, pos)
+                    return True
+
+                if self._selector_active:
+                    if event.modifiers() & (
+                        Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+                    ):
+                        return False
+
+                    self._handle_selector_left_press(row, col, pos)
+                    return True
+
         if event.type() == QEvent.Type.MouseMove and isinstance(event, QMouseEvent):
             pos = self._viewport_pos(event)
             self._update_eraser_hover_from_viewport_pos(pos)
 
-            if self._selector_drag_active and event.buttons() & Qt.MouseButton.LeftButton:
-                self._update_selector_drag_overlay(pos)
+            if self._move_select_drag_active and event.buttons() & Qt.MouseButton.LeftButton:
+                self._update_move_select_overlay(pos)
+            elif self._move_relocate_drag_active and event.buttons() & Qt.MouseButton.LeftButton:
+                self._update_move_relocate_preview(pos)
+            elif (
+                self._rectangle_selector_drag_active and event.buttons() & Qt.MouseButton.LeftButton
+            ):
+                self._update_rectangle_selector_overlay(pos)
             elif self._paint_drag_active and event.buttons() & Qt.MouseButton.LeftButton:
                 self._update_paint_drag_overlay(pos)
             elif self._eraser_drag_active and event.buttons() & Qt.MouseButton.LeftButton:
@@ -746,12 +1077,27 @@ class LayerGridWidget(QTableWidget):
             and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
+            pos = self._viewport_pos(event)
+
             if self._paint_drag_active:
                 self._finish_paint_drag(pos)
-            elif self._eraser_drag_active:
+                return True
+
+            if self._eraser_drag_active:
                 self._finish_eraser_drag(pos)
-            elif self._selector_drag_active:
-                self._end_selector_drag()
+                return True
+
+            if self._move_select_drag_active:
+                self._finish_move_select_drag(pos)
+                return True
+
+            if self._move_relocate_drag_active:
+                self._finish_move_relocate_drag(pos)
+                return True
+
+            if self._rectangle_selector_drag_active:
+                self._finish_rectangle_selector_drag(pos)
+                return True
 
         return super().eventFilter(watched, event)
 
@@ -792,13 +1138,23 @@ class LayerGridWidget(QTableWidget):
                 return
 
             if event.button() == Qt.MouseButton.LeftButton:
+                if self._move_active:
+                    viewport_pos = self._viewport_pos_from_widget_event(event)
+                    self._begin_move_left_press(row, col, viewport_pos)
+                    event.accept()
+                    return
+
                 if self._selector_active:
-                    self._selector_drag_anchor = (row, col)
-                    self._selector_drag_active = True
-                    self._update_selector_drag_overlay(
+                    if self._selection_modifier_held(event):
+                        super().mousePressEvent(event)
+                        return
+
+                    self._handle_selector_left_press(
+                        row,
+                        col,
                         self._viewport_pos_from_widget_event(event),
                     )
-                    super().mousePressEvent(event)
+                    event.accept()
                     return
 
                 if self._selection_modifier_held(event):
@@ -865,7 +1221,7 @@ class LayerGridWidget(QTableWidget):
 
                 raw_token = item.data(_TOKEN_ROLE) or "."
 
-                if self._selector_active or self._paint_preview_active:
+                if self._selector_active or self._move_active or self._paint_preview_active:
                     fill = _EMPTY_CELL_FILL if raw_token == "." else _CELL_FILL
                 elif item.isSelected():
                     fill = _SELECTED_FILL

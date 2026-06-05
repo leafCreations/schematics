@@ -3,6 +3,16 @@
 from __future__ import annotations
 
 
+def occupied_cell_positions(cells: list[list[str]]) -> list[tuple[int, int]]:
+    """Return ``(row, col)`` for every cell whose token is not empty (``.``)."""
+    return [
+        (row, col)
+        for row, line in enumerate(cells)
+        for col, token in enumerate(line)
+        if token != "."
+    ]
+
+
 def empty_cells(width: int, depth: int) -> list[list[str]]:
     if width < 1 or depth < 1:
         raise ValueError("Structure width and depth must be at least 1")

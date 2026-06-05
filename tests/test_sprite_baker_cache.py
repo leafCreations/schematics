@@ -91,7 +91,7 @@ def test_registry_composer_lookup():
 
 @pytest.mark.requires_assets
 def test_compile_texture_set_prefers_generated_sprite(tmp_path: Path):
-    from registries.loader import compile_texture_set
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
 
     generated_root = tmp_path / "generated"
     assets_dir = tmp_path / "textures" / "block"
@@ -103,19 +103,13 @@ def test_compile_texture_set_prefers_generated_sprite(tmp_path: Path):
     generated = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (255, 0, 0, 255))
     save_cached("top", "PLANKS", generated, generated_root=generated_root)
 
-    import helpers.paths as paths_module
-    import registries.loader as loader_module
-
-    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
-    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
-    paths_module.GENERATED_ASSETS_FOLDER = generated_root
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set("top", str(assets_dir), block_px=constants.BLOCK_PX)
-    finally:
-        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
-        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
+            "top",
+            str(assets_dir),
+            constants.BLOCK_PX,
+            ("PLANKS",),
+        )
 
     assert "PLANKS" in textures
     assert textures["PLANKS"].getpixel((0, 0)) == (255, 0, 0, 255)
@@ -126,7 +120,7 @@ def test_bake_demo_planks_integration(tmp_path: Path):
     if not (BLOCK_TEXTURES_FOLDER / "oak_planks.png").exists():
         pytest.skip("assets/minecraft/textures/block/oak_planks.png not available")
 
-    from registries.loader import compile_texture_set
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
 
     generated_root = tmp_path / "generated"
     image = load_or_bake(
@@ -138,19 +132,13 @@ def test_bake_demo_planks_integration(tmp_path: Path):
 
     assert image.size == (constants.BLOCK_PX, constants.BLOCK_PX)
 
-    import registries.loader as loader_module
-
-    previous_root = loader_module.GENERATED_ASSETS_FOLDER
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            ("PLANKS",),
         )
-    finally:
-        loader_module.GENERATED_ASSETS_FOLDER = previous_root
 
     assert textures["PLANKS"].getpixel((0, 0)) == image.getpixel((0, 0))
 
@@ -168,28 +156,18 @@ def test_compile_texture_set_runtime_bakes_missing_sprite(tmp_path: Path):
     if not (BLOCK_TEXTURES_FOLDER / "oak_planks.png").exists():
         pytest.skip("oak_planks.png not available")
 
-    from registries.loader import compile_texture_set
+    from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
 
     generated_root = tmp_path / "generated"
     assert not generated_root.exists()
 
-    import helpers.paths as paths_module
-    import registries.loader as loader_module
-
-    previous_paths_root = paths_module.GENERATED_ASSETS_FOLDER
-    previous_loader_root = loader_module.GENERATED_ASSETS_FOLDER
-    paths_module.GENERATED_ASSETS_FOLDER = generated_root
-    loader_module.GENERATED_ASSETS_FOLDER = generated_root
-
-    try:
-        textures = compile_texture_set(
+    with generated_assets_root(generated_root):
+        textures = compile_texture_tokens(
             "top",
             str(BLOCK_TEXTURES_FOLDER),
-            block_px=constants.BLOCK_PX,
+            constants.BLOCK_PX,
+            ("STAIRS",),
         )
-    finally:
-        paths_module.GENERATED_ASSETS_FOLDER = previous_paths_root
-        loader_module.GENERATED_ASSETS_FOLDER = previous_loader_root
 
     assert "STAIRS" in textures
     assert textures["STAIRS"].getpixel((5, 20))[3] == 255

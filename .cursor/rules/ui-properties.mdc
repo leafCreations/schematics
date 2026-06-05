@@ -12,7 +12,7 @@ When you add or change **tunable properties** (styling constants, widget flags, 
 
 - Module constants used for look-and-feel (e.g. `_HEADER_TEXT`, `_AXIS_HEADER_PX`)
 - Widget state (`_show_axis_labels`, `set_show_axis_labels`, `show_axis_labels()`)
-- Persisted prefs (`display.grid_axis_labels` in `config/editor_settings.yaml` / user YAML, `grid_axis_labels_enabled()`)
+- Persisted prefs (`display.block_tooltips`, `display.grid_axis_labels` in `config/editor_settings.yaml` / user YAML)
 - View/menu wiring (`_grid_axis_labels_action`, `_apply_*_pref`)
 
 ## End-of-task summary format

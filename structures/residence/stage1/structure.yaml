@@ -7,8 +7,8 @@ grid:
   offset_z: 0
   path_center_local_x: 4
   site_structure_layers:
-  - 0
   - 1
+  - 2
   worldgen_base_y: -60
   site_width: 30
   site_depth: 30
@@ -21,7 +21,12 @@ grid:
   - DIRT
   - COBBLESTONE
   - COBBLESTONE#mossy
+  groups:
+  - Roof
+  - Basement
+  - Floor 1
 layer_files:
+- layers/layer_06.yaml
 - layers/layer_00.yaml
 - layers/layer_01.yaml
 - layers/layer_02.yaml

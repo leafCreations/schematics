@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from helpers.layer_management import layer_label
+from helpers.layer_management import layer_label, layer_worldgen_index
 from helpers.layer_visibility import is_layer_visible
 
 
@@ -227,12 +227,16 @@ def visible_layer_array_indices(
     layers: list[dict[str, Any]],
     grid: dict[str, Any] | None = None,
 ) -> list[int]:
+    """Visible layers in ascending worldgen ``index`` order (lowest Y drawn first)."""
     grid_data = grid or {}
-    return [
-        index
-        for index, layer in enumerate(layers)
-        if is_layer_render_visible(layer, index, grid_data)
-    ]
+    return sorted(
+        (
+            index
+            for index, layer in enumerate(layers)
+            if is_layer_render_visible(layer, index, grid_data)
+        ),
+        key=lambda list_index: (layer_worldgen_index(layers[list_index], list_index), list_index),
+    )
 
 
 def layer_matches_group_filter(
