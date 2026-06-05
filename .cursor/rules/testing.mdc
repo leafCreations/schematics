@@ -14,7 +14,7 @@ When verifying changes in this repo:
 
 2. **Do not** run the full `pytest` suite after every small edit unless the user asks or the change is broad (core loader, `conftest.py`, many packages).
 
-3. **Pre-commit** uses `scripts/pre-commit-pytest.sh` (staged paths → related tests; full suite on unmapped/core changes).
+3. **Pre-commit** uses `scripts/pre-commit-pytest.sh` (staged paths → related tests; full suite on unmapped/core changes). After a green manual run on the same staged files, `scripts/record-pytest-pass.sh` lets the hook skip pytest for 30 minutes (ruff and palette checks still run).
 
 4. **Suggest full suite** (`pytest` or `pre-commit run pytest --all-files`) before PRs or after large refactors.
 

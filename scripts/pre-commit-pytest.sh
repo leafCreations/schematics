@@ -1,10 +1,36 @@
 #!/usr/bin/env bash
 # Pre-commit hook: run pytest only for tests related to staged changes.
 # Falls back to the full suite when core wiring changes or coverage is too broad.
+#
+# Skip re-running pytest when tests already passed for the same staged files:
+#   scripts/record-pytest-pass.sh   # after a green pytest run
+#   SKIP_PRECOMMIT_PYTEST=1 git commit ...   # explicit override (agent use)
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
+
+STAGED_HASH="$(
+  git diff --cached --name-only --diff-filter=ACM | LC_ALL=C sort | sha256sum | cut -d' ' -f1
+)"
+
+if [[ "${SKIP_PRECOMMIT_PYTEST:-}" == "1" ]]; then
+  echo "pre-commit pytest: skipped (SKIP_PRECOMMIT_PYTEST=1)"
+  exit 0
+fi
+
+STAMP="$ROOT/.pytest-precommit-pass"
+if [[ -f "$STAMP" && -n "$STAGED_HASH" ]]; then
+  read -r STAMP_HASH STAMP_TIME <"$STAMP" || true
+  NOW=$(date +%s)
+  MAX_AGE=1800
+  if [[ -n "${STAMP_HASH:-}" && -n "${STAMP_TIME:-}" && "$STAMP_HASH" == "$STAGED_HASH" ]]; then
+    if ((NOW - STAMP_TIME < MAX_AGE)); then
+      echo "pre-commit pytest: skipped (recent pass for same staged files)"
+      exit 0
+    fi
+  fi
+fi
 
 if [[ -x "$ROOT/.venv/bin/pytest" ]]; then
   PYTEST="$ROOT/.venv/bin/pytest"
