@@ -7,7 +7,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QGroupBox, QLabel, QWidget
 
 from helpers.paths import UI_ASSETS_FOLDER
-from ui.widgets.panel_header import create_titled_panel_layout
+from ui.widgets.panel_header import PANEL_COMPASS_MAX_HEIGHT, create_titled_panel_layout
 from ui.widgets.panel_tool_button import make_panel_close_button
 
 _COMPASS_SVG = UI_ASSETS_FOLDER / "compass.svg"
@@ -150,4 +150,4 @@ class CompassPanel(QGroupBox):
         layout.addWidget(rose, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(hint)
 
-        self.setMaximumHeight(150)
+        self.setMaximumHeight(PANEL_COMPASS_MAX_HEIGHT)

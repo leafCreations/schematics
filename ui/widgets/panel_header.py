@@ -6,6 +6,11 @@ from collections.abc import Iterable
 
 from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+PANEL_MARGINS = (8, 4, 8, 8)
+PANEL_NESTED_MARGINS = (8, 8, 8, 8)
+PANEL_LIST_MAX_HEIGHT = 220
+PANEL_COMPASS_MAX_HEIGHT = 150
+
 
 def add_panel_title_row(
     layout: QVBoxLayout,
@@ -35,7 +40,7 @@ def create_titled_panel_layout(
     title: str,
     trailing_widgets: Iterable[QWidget],
     *,
-    margins: tuple[int, int, int, int] = (8, 4, 8, 8),
+    margins: tuple[int, int, int, int] = PANEL_MARGINS,
 ) -> QVBoxLayout:
     """Use a custom title row instead of ``QGroupBox``'s built-in title."""
     panel.setTitle("")
@@ -49,7 +54,7 @@ def create_simple_titled_panel_layout(
     panel: QGroupBox,
     title: str,
     *,
-    margins: tuple[int, int, int, int] = (8, 4, 8, 8),
+    margins: tuple[int, int, int, int] = PANEL_MARGINS,
 ) -> QVBoxLayout:
     """Bold title row for panels without header action buttons."""
     return create_titled_panel_layout(panel, title, (), margins=margins)
@@ -59,7 +64,7 @@ def create_nested_group_layout(
     group: QGroupBox,
     title: str,
     *,
-    margins: tuple[int, int, int, int] = (8, 8, 8, 8),
+    margins: tuple[int, int, int, int] = PANEL_NESTED_MARGINS,
 ) -> QVBoxLayout:
     """Bold title row for nested ``QGroupBox`` sections inside a panel."""
     return create_simple_titled_panel_layout(group, title, margins=margins)

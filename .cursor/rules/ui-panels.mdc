@@ -1,12 +1,14 @@
 ---
 description: All editor panels use a bold title row via panel_header helpers
-globs: ui/widgets/**/*.py,docs/ui.md
+globs: ui/widgets/**/*.py,docs/ui.md,docs/ui-panel-refactor.md
 alwaysApply: false
 ---
 
 # ui-panels.mdc
 
 # UI panels — bold title required
+
+**Panel refactors:** follow step-by-step priorities in [`docs/ui-panel-refactor.md`](../../docs/ui-panel-refactor.md). When the user names a priority (P1–P10), read that section, check off migration steps, and update the progress log.
 
 **Every new or refactored editor panel** (left column, right column, nested sections) must use a **bold title row** from `ui/widgets/panel_header.py`. Do not use `QGroupBox("Title")`, plain `QLabel` panel titles, or the native `QGroupBox` title for the panel name.
 
