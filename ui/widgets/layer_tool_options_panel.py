@@ -4,7 +4,7 @@ This panel uses a QStackedWidget to switch between the options for different lay
 It should be integrated into main_window.py's toolbar layout.
 """
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QStackedWidget,
