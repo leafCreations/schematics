@@ -4,6 +4,8 @@ globs: ui/widgets/layer_tools_panel.py,ui/toolbar_icons.py,docs/ui.md
 alwaysApply: false
 ---
 
+# ui-split-buttons.mdc
+
 # UI toolbar split buttons
 
 Use this pattern for grid-header tools that toggle a mode **and** expose a dropdown (see **Selector**, **Eraser** in `ui/widgets/layer_tools_panel.py`). Do **not** use a single `QToolButton` with `MenuButtonPopup` — match the two-part control below.
@@ -75,3 +77,13 @@ When the dropdown lists **one-off actions** (not modes):
 
 - `layer_tools_panel.py` — `_make_selector_control`, `_make_eraser_control`
 - `toolbar_icons.py` — `layer_selector_rectangle_icon`, `layer_selector_same_block_icon`, `layer_eraser_icon`
+
+## Validation
+
+After creating a split button:
+
+- Verify popup aligns with left edge
+- Verify main toggle remains functional
+- Verify menu arrow has no tooltip
+- Verify icon updates correctly (if mode button)
+- Verify toolbar sizing matches existing controls

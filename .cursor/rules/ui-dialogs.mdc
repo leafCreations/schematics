@@ -4,6 +4,13 @@ globs: ui/**/*.py,docs/ui.md
 alwaysApply: false
 ---
 
+# ui-dialogs.mdc
+
+## Model preference
+
+Do not redesign dialog architecture unless explicitly requested.
+Preserve behavior unless explicitly told to change it.
+
 # UI dialogs — shared field height and layout
 
 **Every editor modal dialog** (`QDialog` subclass or new prompt UI) must use the shared helpers in `ui/dialog_layout.py`. Do **not** use `QInputDialog` for new prompts — it cannot match editor control sizing.
@@ -58,6 +65,15 @@ Live panel edits (structure properties, site settings) are **not** dialogs — t
 ## Single-line text prompts
 
 Use `InputTextDialog` (`ui/widgets/input_text_dialog.py`) instead of `QInputDialog.getText`.
+
+## Validation
+
+When modifying dialogs:
+
+- Verify all fields use `apply_dialog_field_style`
+- Verify button rows use `create_dialog_button_box`
+- Verify accepted dialogs persist changes via `_persist_dialog_changes`
+- Verify hint text reflects auto-save behavior
 
 ## Do not
 

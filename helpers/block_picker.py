@@ -254,14 +254,18 @@ def cell_positions_with_same_block_type(
 ) -> list[tuple[int, int]]:
     """Return every non-empty cell matching *reference_token*'s palette block type.
 
-    Registry entries match on entry token (e.g. ``PLANKS:oak`` and ``PLANKS:spruce``).
-    When the reference does not resolve to a palette entry, falls back to exact token
-    string equality.
+    Registry entries match on entry token and variant (e.g. ``PLANKS:oak`` and
+    ``PLANKS:spruce`` match each other, but ``COBBLESTONE`` and
+    ``COBBLESTONE#mossy`` do not).
+    When the reference does not resolve to a palette entry, falls back to exact
+    token string equality.
     """
     if reference_token == ".":
         return []
 
     entry = picker_entry_for_cell(reference_token)
+    ref_parsed = parse_structure_token(reference_token)
+    ref_variant = ref_parsed.variant if ref_parsed else None
     positions: list[tuple[int, int]] = []
 
     for row, line in enumerate(cells):
@@ -271,8 +275,14 @@ def cell_positions_with_same_block_type(
 
             if entry is not None:
                 cell_entry = picker_entry_for_cell(token)
+                cell_parsed = parse_structure_token(token)
+                cell_variant = cell_parsed.variant if cell_parsed else None
 
-                if cell_entry is not None and cell_entry.token == entry.token:
+                if (
+                    cell_entry is not None
+                    and cell_entry.token == entry.token
+                    and cell_variant == ref_variant
+                ):
                     positions.append((row, col))
             elif token == reference_token:
                 positions.append((row, col))

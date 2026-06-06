@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
     QGroupBox,
-    QLabel,
     QSizePolicy,
 )
 
@@ -22,15 +21,6 @@ class LayerPaintBrushPanel(QGroupBox):
         super().__init__(parent)
         layout = create_simple_titled_panel_layout(self, "Paint brush")
 
-        hint = QLabel(
-            "Pick a block from the palette (left column). "
-            "Use the brush options and grid cell panels below to set material, "
-            "direction, and variant, then drag on the grid to paint (light green overlay). "
-            "Release to place blocks. "
-            "Fill paints every cell in the region; Outline paints only the border."
-        )
-        hint.setWordWrap(True)
-
         self._brush_type = QComboBox()
         self._brush_type.addItem("Fill", "fill")
         self._brush_type.addItem("Outline", "outline")
@@ -43,7 +33,6 @@ class LayerPaintBrushPanel(QGroupBox):
         form = QFormLayout()
         form.addRow("Brush type", self._brush_type)
 
-        layout.addWidget(hint)
         layout.addLayout(form)
 
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)

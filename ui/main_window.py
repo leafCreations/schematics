@@ -992,18 +992,24 @@ class MainWindow(QMainWindow):
 
     def _on_delete_group(self) -> None:
         group = self._groups_panel.selected_group_name()
-
         if group is None:
             return
 
         indices = layer_indices_in_group(self._document.layers, group)
-        message = f"Remove group {group!r}?"
+
+        # Guard: cannot delete if it would remove all layers
+        if indices and len(self._document.layers) <= len(indices):
+            QMessageBox.information(
+                self,
+                "Delete group",
+                "Cannot delete this group: it contains all layers. At least one layer is required.",
+            )
+            return
 
         if indices:
-            message = (
-                f"Remove group {group!r} from {len(indices)} layer(s)? "
-                "Those layers will use default layer names."
-            )
+            message = f"Delete group {group!r} and its {len(indices)} layer(s)?"
+        else:
+            message = f"Remove group {group!r}?"
 
         answer = QMessageBox.question(
             self,
@@ -1012,22 +1018,32 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-
         if answer != QMessageBox.StandardButton.Yes:
             return
 
         self._push_undo_snapshot()
+
+        # Delete layers in reverse order to avoid index shifting
+        for idx in sorted(indices, reverse=True):
+            removed_path = remove_layer_from_document(self._document, idx)
+            if removed_path is not None:
+                removed_path.unlink()
+
+        # Clean up group metadata (grid.groups, hidden_groups) — no layers remain in group now
         grid = self._grid_metadata()
         remove_group(self._document.layers, grid, group)
+
+        self._dirty_layers = {idx for idx in self._dirty_layers if idx < len(self._document.layers)}
 
         if self._group_filter == group:
             self._group_filter = None
 
+        new_index = self._clamp_layer_index(self._current_layer_index)
         self._refresh_layer_panels()
+        self._show_layer(new_index)
         self._persist_dialog_changes(
-            layer_indices=indices,
-            success_message=f"Removed group {group!r}",
-            action_phrase=f"Removed group {group!r}",
+            success_message=f"Deleted group {group!r}",
+            action_phrase=f"Deleted group {group!r}",
         )
 
     def _on_copy_group(self) -> None:

@@ -1,0 +1,87 @@
+---
+description: On-demand architecture and system design guidance for this project
+alwaysApply: false
+---
+
+# Architecture Skill
+
+Use this rule when the user asks for architecture review, system design, major refactor planning, or long-term design direction.
+
+## Project-specific architecture goals
+
+This project should prefer:
+
+- small focused helpers
+- registry-driven block/item definitions
+- builder helpers for repeated structures
+- clear separation between data, rendering, and world writing
+- predictable flat-world placement logic
+- explicit configuration objects
+- dataclasses for structured configuration/data
+- testable modules with minimal side effects
+
+## Current world-generation constraint
+
+The project currently targets flat-world generation.
+
+Do not introduce terrain-aware systems unless explicitly requested.
+
+Avoid adding:
+
+- `TerrainScanner`
+- `HeightMap`
+- `BuildSiteScorer`
+- `FoundationTerraformer`
+- slope detection
+- terrain leveling
+- biome-aware placement
+
+Future terrain-aware placement may be planned conceptually, but implementation should preserve the current flat-world workflow.
+
+## Areas to consider
+
+When reviewing architecture, inspect relevant patterns in:
+
+- `helpers/` for reusable logic
+- `registries/` for block, palette, or asset definitions
+- `renderers/` for output/rendering concerns
+- `structures/` for structure definitions and repeated raw constants
+- `ui/` for presentation and event wiring
+- `scripts/` for generation and maintenance utilities
+- `tests/` for expected behavior and coverage patterns
+
+## Design principles
+
+When designing architecture:
+
+- separate responsibilities clearly
+- avoid giant manager classes
+- prefer composition over inheritance
+- keep data definitions separate from rendering/writing logic
+- keep UI logic separate from business logic
+- preserve existing public APIs when possible
+- make systems testable in isolation
+- propose incremental migration steps
+
+## Do not
+
+- Do not propose large rewrites when helper extraction would solve the issue.
+- Do not introduce terrain generation unless the user explicitly asks.
+- Do not add new dependencies unless there is a clear benefit.
+- Do not replace working registries/builders with unrelated patterns.
+- Do not mix UI, rendering, and world-writing concerns.
+- Do not invent files or systems that are not present without marking them as proposed.
+
+## Output format
+
+For architecture reviews, provide:
+
+1. Current issue
+2. Relevant existing files/patterns
+3. Proposed design
+4. Files likely affected
+5. Migration plan
+6. Risks
+7. Targeted testing strategy
+
+For large changes, prefer phased plans over one-shot rewrites.

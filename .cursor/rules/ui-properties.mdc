@@ -1,8 +1,25 @@
 ---
 description: Summarize new UI/config properties at the end of a task
 globs: ui/**/*.py,helpers/**/*.py,docs/ui.md
-alwaysApply: true
+alwaysApply: false
 ---
+
+# ui-properties.mdc
+
+## Property design
+
+Prefer:
+
+- module-level constants
+- typed getters/setters
+- centralized configuration
+- documented defaults
+
+Avoid:
+
+- magic numbers
+- duplicated preference keys
+- hard-coded strings repeated in multiple files
 
 # New properties — report at end of task
 

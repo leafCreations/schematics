@@ -1,0 +1,64 @@
+---
+description: On-demand documentation generation and update guidance
+alwaysApply: false
+---
+
+# Documentation Skill
+
+Use this rule when the user asks to create or update README files, CONTINUE.md, Cursor rules, architecture docs, UI docs, or developer guides.
+
+## When to update docs
+
+Update documentation when changes affect:
+
+- UI behavior
+- user-facing workflows
+- project setup
+- test workflow
+- build workflow
+- command usage
+- configuration properties
+- generated outputs
+- structure formats
+- public helper APIs
+- rule/skill behavior
+
+## Known documentation targets
+
+Use or update these when applicable:
+
+- `docs/ui.md` — UI behavior, toolbar behavior, panels, dialogs, split buttons, and UI properties
+- `.cursor/rules/*.mdc` — Cursor project rules and task-specific skills
+- `CONTINUE.md` — project guide for Continue/local model usage, if present
+- `README.md` — high-level project overview and setup, if present
+
+If the correct documentation file is unclear, mention the likely target and ask before creating a new top-level doc.
+
+## Documentation standards
+
+Documentation should be:
+
+- concise
+- practical
+- developer-focused
+- based on actual code
+- organized by task or concept
+- marked as "needs verification" when inferred
+
+## Do not
+
+- Do not invent API behavior.
+- Do not describe features that are not implemented.
+- Do not document speculative future work as current behavior.
+- Do not create a new documentation pattern when an existing doc file fits.
+- Do not duplicate the same guidance across multiple docs unless necessary.
+- Do not claim tests pass unless they were actually run.
+
+## Output format
+
+When documenting a change, include:
+
+1. What changed
+2. Where it is documented
+3. Any assumptions or areas needing verification
+4. Recommended follow-up docs if applicable

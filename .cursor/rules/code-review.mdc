@@ -1,0 +1,35 @@
+---
+description: On-demand code review guidance for Python files
+alwaysApply: false
+---
+
+# Code Review Skill
+
+Use this rule when the user explicitly asks for a code review, refactor review, duplicate-code scan, or helper extraction.
+
+When reviewing code, identify:
+- duplicate logic
+- large functions/classes
+- helper extraction opportunities
+- dataclass opportunities
+- missing type hints
+- unclear naming
+- repeated constants
+- registry opportunities
+- builder opportunities
+- performance concerns
+- risky side effects
+
+Prefer:
+- small focused helpers
+- dataclasses for configuration/data objects
+- explicit type hints
+- clear separation of concerns
+- reusable builders over repeated raw constants
+
+Output:
+1. Summary
+2. Findings by priority
+3. Suggested refactors
+4. Example code when useful
+5. Recommended targeted tests

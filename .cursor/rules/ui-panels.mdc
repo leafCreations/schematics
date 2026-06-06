@@ -4,6 +4,8 @@ globs: ui/widgets/**/*.py,docs/ui.md
 alwaysApply: false
 ---
 
+# ui-panels.mdc
+
 # UI panels — bold title required
 
 **Every new or refactored editor panel** (left column, right column, nested sections) must use a **bold title row** from `ui/widgets/panel_header.py`. Do not use `QGroupBox("Title")`, plain `QLabel` panel titles, or the native `QGroupBox` title for the panel name.
@@ -72,3 +74,13 @@ Do not put `stretch=1` on the bottom panel or a wrapper that stays tall when Str
 - **Panel** header icons: 18px, `panel_header` + `make_panel_tool_button`.
 - **Grid header** toolbar (eraser/save): 22px, `toolbar_icon_size()`, `LayerActionToolbar` / `QToolBar`.
 - **Split toolbar buttons** (Selector, Eraser): see `.cursor/rules/ui-split-buttons.mdc`.
+
+## Panel consistency
+
+When creating a new panel:
+
+- Match existing panel spacing
+- Match existing title styling
+- Match existing icon sizes
+- Match existing visibility behavior
+- Reuse existing helpers before creating new UI helpers

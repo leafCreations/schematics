@@ -3,19 +3,130 @@ description: Run targeted pytest during development; full suite only when approp
 alwaysApply: true
 ---
 
-# Testing workflow
+# Testing Workflow
 
-When verifying changes in this repo:
+When verifying changes in this repo, prefer fast, targeted validation over repeatedly running the full suite.
 
-1. **While iterating** — run **targeted** tests mapped to what you changed, e.g.:
-   - `pytest tests/test_cells.py -q` after `helpers/cells.py`
-   - `pytest tests/test_ui_document.py tests/test_main_window.py -q` after `ui/`
-   - `pytest tests/test_palette_integrity.py -q` after `registries/`
+## During Development
 
-2. **Do not** run the full `pytest` suite after every small edit unless the user asks or the change is broad (core loader, `conftest.py`, many packages).
+Run targeted tests mapped to what changed.
 
-3. **Pre-commit** uses `scripts/pre-commit-pytest.sh` (staged paths → related tests; full suite on unmapped/core changes). After a green manual run on the same staged files, `scripts/record-pytest-pass.sh` lets the hook skip pytest for 30 minutes (ruff and palette checks still run).
+Examples:
 
-4. **Suggest full suite** (`pytest` or `pre-commit run pytest --all-files`) before PRs or after large refactors.
+* `pytest tests/test_cells.py -q` after changes to `helpers/cells.py`
+* `pytest tests/test_ui_document.py tests/test_main_window.py -q` after changes under `ui/`
+* `pytest tests/test_palette_integrity.py -q` after changes under `registries/`
 
-Use the path mappings in `scripts/pre-commit-pytest.sh` as a guide for which tests to run manually.
+## Common Test Mappings
+
+Use these mappings as the default starting point:
+
+| Changed Area       | Recommended Tests                                               |
+| ------------------ | --------------------------------------------------------------- |
+| `helpers/cells.py` | `pytest tests/test_cells.py -q`                                 |
+| `ui/`              | `pytest tests/test_ui_document.py tests/test_main_window.py -q` |
+| `registries/`      | `pytest tests/test_palette_integrity.py -q`                     |
+| `renderers/`       | Run renderer-specific tests if present                          |
+| `structures/`      | Run tests covering the affected structures or builders          |
+| `scripts/`         | Run tests covering the affected workflow or utility             |
+
+For uncommon cases, consult:
+
+```bash
+scripts/pre-commit-pytest.sh
+```
+
+which remains the source of truth for path-to-test mappings.
+
+## Test Selection Guidance
+
+Prefer the smallest meaningful test set.
+
+Examples:
+
+* Single helper change → corresponding helper test
+* Single UI widget change → corresponding UI tests
+* Registry change → registry integrity tests
+* Builder change → builder or structure tests
+* Shared utility change → all tests that depend on that utility
+* Cross-cutting change → broaden test scope as needed
+
+Escalate to the full suite only when:
+
+* core infrastructure changes
+* test infrastructure changes
+* many packages are affected
+* dependency relationships are unclear
+* targeted tests pass but risk remains high
+
+## Avoid Unnecessary Full Test Runs
+
+Do **not** run the full `pytest` suite after every small edit unless:
+
+* the user asks for it
+* the change touches broad/core behavior
+* the change affects many packages
+* the change modifies test infrastructure
+* the change modifies `conftest.py`
+* targeted tests pass but risk remains unclear
+
+## Pre-Commit Behavior
+
+Pre-commit uses:
+
+```bash
+scripts/pre-commit-pytest.sh
+```
+
+This maps staged paths to related tests and runs the full suite on unmapped or core changes.
+
+After a green manual run on the same staged files, use:
+
+```bash
+scripts/record-pytest-pass.sh
+```
+
+to allow the hook to skip pytest for 30 minutes.
+
+Ruff and palette checks still run.
+
+## Before PRs or Large Changes
+
+Suggest running:
+
+```bash
+pytest
+```
+
+or:
+
+```bash
+pre-commit run pytest --all-files
+```
+
+before PRs, after large refactors, or after changes that affect shared foundations.
+
+## Agent Behavior
+
+Before running tests:
+
+1. State which tests are being run.
+2. Explain why those tests were selected.
+
+If a test fails:
+
+1. Summarize the failure.
+2. Identify the likely changed code involved.
+3. Suggest the smallest fix first.
+4. Re-run only the failing or related targeted tests.
+5. Escalate to broader tests only after targeted tests pass.
+
+Do not repeatedly run the same failing test without changing code or explaining the next diagnostic step.
+
+## Do Not
+
+* Do not default to running the entire test suite.
+* Do not run unrelated tests without justification.
+* Do not claim tests passed if they were not executed.
+* Do not repeatedly execute the same failing test without making changes or providing new analysis.
+* Do not replace targeted testing with broad testing unless risk justifies it.

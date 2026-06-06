@@ -6,7 +6,6 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
-    QLabel,
     QSizePolicy,
     QSpinBox,
 )
@@ -21,13 +20,6 @@ class LayerEraserPanel(QGroupBox):
         super().__init__(parent)
         layout = create_simple_titled_panel_layout(self, "Eraser")
 
-        hint = QLabel(
-            "Drag to select a region (light red overlay), then release to erase. "
-            "Hover shows eraser size for right-click. "
-            "Middle-click a block to erase all matching cells on this layer."
-        )
-        hint.setWordWrap(True)
-
         self._size = QSpinBox()
         self._size.setRange(1, 1)
         self._size.setValue(1)
@@ -40,7 +32,6 @@ class LayerEraserPanel(QGroupBox):
         form = QFormLayout()
         form.addRow("Eraser size", self._size)
 
-        layout.addWidget(hint)
         layout.addLayout(form)
 
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)

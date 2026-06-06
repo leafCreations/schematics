@@ -1,0 +1,53 @@
+---
+description: On-demand guidance for small safe code edits
+alwaysApply: false
+---
+
+# Fast Edit Skill
+
+Use this rule for small, low-risk edits.
+
+## Good use cases
+
+Use for:
+
+- removing text
+- renaming variables
+- adding type hints
+- updating docstrings
+- simplifying small functions
+- adjusting labels
+- changing tooltips
+- generating small tests
+- converting simple config classes to dataclasses
+
+## Rules
+
+- Keep changes minimal.
+- Preserve existing behavior.
+- Touch the fewest files possible.
+- Prefer existing helpers and patterns.
+- Do not redesign architecture.
+- Do not perform broad refactors.
+- Do not modify unrelated code.
+- Explain only what changed.
+
+## Do not
+
+- Do not add new dependencies.
+- Do not create new helper systems unless requested.
+- Do not rename public APIs unless requested.
+- Do not change formatting across unrelated files.
+- Do not run the full test suite for a tiny edit unless requested.
+- Do not combine cleanup with behavior changes.
+
+## Checklist
+
+Before finishing:
+
+- Confirm the requested edit was made.
+- Confirm unrelated files were not changed.
+- Mention the targeted test that should be run.
+- Run or suggest the smallest relevant test.
+- Mention if no test was run.
+- Check linting only when the touched area normally requires it.

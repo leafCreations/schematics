@@ -1,0 +1,121 @@
+---
+description: General UI development standards and patterns
+globs: ui/**/*.py,docs/ui.md
+alwaysApply: false
+---
+
+# ui-general.mdc
+
+# UI Development Standards
+
+## Purpose
+
+This rule defines the general UI architecture and development standards for the application.
+
+Specific implementation details for dialogs, panels, properties, and split buttons are defined in their respective rule files.
+
+Escalate to:
+
+* Sonnet 4.6 for multi-file UI changes
+* Opus 4.8 only for major UI architecture reviews
+
+## Reuse Existing Patterns
+
+Before creating:
+
+* widgets
+* dialogs
+* panels
+* layouts
+* helper functions
+* property systems
+
+search the existing UI codebase for similar implementations.
+
+Prefer extending existing helpers and patterns over introducing new ones.
+
+Avoid creating duplicate UI frameworks when an existing solution already exists.
+
+## Consistency
+
+New UI should match existing UI conventions for:
+
+* spacing
+* margins
+* padding
+* sizing
+* typography
+* button placement
+* icon sizing
+* tooltip behavior
+* panel organization
+
+Maintain a consistent user experience throughout the application.
+
+## Architecture
+
+Keep responsibilities separated whenever practical:
+
+* widget creation
+* layout construction
+* event wiring
+* property persistence
+* business logic
+* rendering logic
+
+Avoid placing business logic directly inside UI widgets.
+
+UI components should primarily coordinate user interaction and delegate work to underlying systems.
+
+## Property Management
+
+When introducing new settings:
+
+* define clear defaults
+* avoid magic values
+* avoid duplicated property keys
+* centralize property definitions when possible
+* document behavior in docs/ui.md
+
+## Validation
+
+Before completing UI changes:
+
+* verify the UI remains visually consistent
+* verify persistence behavior still functions
+* verify tooltips remain accurate
+* verify existing shortcuts still work
+* verify helper methods are reused where appropriate
+
+## Refactoring Guidance
+
+When reviewing UI code:
+
+Identify:
+
+* duplicated widgets
+* duplicated layouts
+* duplicated event handlers
+* reusable helper opportunities
+* property centralization opportunities
+
+Prefer small reusable helpers over copy/pasted UI construction code.
+
+## Documentation
+
+When introducing new UI behavior:
+
+* update docs/ui.md when appropriate
+* update related rule files if a new pattern is introduced
+* document new properties and settings
+
+## Performance
+
+Avoid:
+
+* unnecessary widget recreation
+* repeated expensive refresh operations
+* duplicated signal connections
+* excessive UI updates
+
+Prefer updating existing widgets rather than rebuilding large sections of the interface.

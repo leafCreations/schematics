@@ -1,0 +1,54 @@
+---
+description: Minecraft world generation project rules
+globs:
+  - "**/*.py"
+alwaysApply: true
+---
+
+## World Generation Model
+
+The project uses flat-world structure generation.
+
+- Structures are placed on a flat world.
+- Base Y is fixed or configuration-driven.
+- Placement logic does not scan terrain.
+- Heightmap generation is not used.
+- Slope detection is not used.
+- Terrain leveling and terraforming are not used.
+
+Prefer architecture that still keeps future expansion possible by separating:
+- structure placement
+- structure builders
+- block registries
+- path generation
+- rendering/output
+- world writing
+
+## Placement Priorities
+
+- clean grid/layout placement
+- spacing between structures
+- path alignment
+- consistent base coordinates
+- predictable structure orientation
+- avoiding overlap
+- clear structure dimensions
+
+## Preferred Patterns
+
+- builder helpers for repeated walls/floors/roofs
+- registries for block definitions
+- dataclasses for placement/config objects
+- clear layer-by-layer structure definitions
+- fixed-Y placement unless the user requests terrain-aware placement
+
+## Future Terrain Support
+
+If terrain-aware placement is introduced in the future:
+
+- preserve compatibility with existing flat-world workflows
+- keep terrain analysis separate from structure generation
+- avoid coupling builders to terrain systems
+- maintain support for fixed-Y placement where practical
+
+Do not implement terrain-aware systems unless explicitly requested.

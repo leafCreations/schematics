@@ -1,0 +1,57 @@
+---
+description: Model routing guidance for Cursor and Continue
+alwaysApply: true
+---
+
+# Model Routing
+
+Use the cheapest capable model for the task.
+
+## Continue / Local Models
+
+Use Continue + Qwen Coder 7B for:
+- selected-code explanations
+- code review
+- small refactors
+- helper extraction
+- type hints
+- pytest generation
+- duplicate code analysis
+
+Use Continue + Qwen 3 8B for:
+- local architecture discussion
+- design tradeoffs
+- second opinions
+- planning terrain-aware systems
+
+Use Continue + Gemma 4 for:
+- alternative local second opinions
+- comparing design suggestions
+
+## Cursor Cloud Models
+
+Use Composer 2.5 for:
+- fast edits
+- simple file changes
+- small cleanups
+- quick test generation
+
+Use Haiku 4.5 for:
+- cheap explanations
+- docstrings
+- simple questions
+- lightweight summaries
+
+Use Sonnet 4.6 for:
+- normal Cursor agent work
+- multi-file edits
+- implementation plans
+- reliable coding
+- moderate architecture work
+
+Use Opus 4.8 only for:
+- whole-codebase architecture reviews
+- major redesigns
+- difficult debugging
+- long-term roadmap planning
+- high-impact decisions

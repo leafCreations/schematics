@@ -175,6 +175,20 @@ def test_cell_positions_with_same_block_type_empty_reference():
     assert cell_positions_with_same_block_type([["PLANKS:oak"]], ".") == []
 
 
+def test_cell_positions_with_same_block_type_variant_not_matched():
+    cells = [["COBBLESTONE", "COBBLESTONE#mossy"], ["COBBLESTONE", "."]]
+    positions = cell_positions_with_same_block_type(cells, "COBBLESTONE")
+
+    assert set(positions) == {(0, 0), (1, 0)}
+
+
+def test_cell_positions_with_same_block_type_variant_matches_own_variant():
+    cells = [["COBBLESTONE", "COBBLESTONE#mossy"], ["COBBLESTONE#mossy", "."]]
+    positions = cell_positions_with_same_block_type(cells, "COBBLESTONE#mossy")
+
+    assert set(positions) == {(0, 1), (1, 0)}
+
+
 def test_cell_positions_with_same_block_type_exact_token_fallback():
     cells = [["CUSTOM:1", "CUSTOM:2"], ["CUSTOM:1", "."]]
     positions = cell_positions_with_same_block_type(cells, "CUSTOM:1")
