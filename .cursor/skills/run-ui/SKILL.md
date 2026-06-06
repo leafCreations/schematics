@@ -3,12 +3,16 @@ name: run-ui
 description: Launch the project UI with configurable structure and stage arguments.
 ---
 
-When the user asks to open, launch, run, or start the UI, use the `run-ui` command.
-
-Default command:
+When the user asks to open, launch, run, or start the UI, run from the **repo root**:
 
 ```bash
-run-ui
+bash scripts/run-ui
+```
+
+Or with structure/stage:
+
+```bash
+bash scripts/run-ui <structure> <stage>
 ```
 
 Default values:
@@ -16,19 +20,13 @@ Default values:
 - structure: `residence`
 - stage: `1`
 
-If the user specifies a structure and/or stage, pass them as arguments:
-
-```bash
-run-ui <structure> <stage>
-```
-
 Examples:
 
 ```bash
-run-ui
-run-ui residence 2
-run-ui blacksmith 1
-run-ui farm 3
+bash scripts/run-ui
+bash scripts/run-ui residence 2
+bash scripts/run-ui blacksmith 1
+bash scripts/run-ui farm 3
 ```
 
 Argument rules:
@@ -37,7 +35,15 @@ Argument rules:
 - If no arguments are specified, use `residence` and stage `1`.
 - Always use the exact structure name provided by the user.
 
-After running the command:
+The script uses `.venv/bin/python` when present, otherwise `python3`. It does **not** rely on a bare `python` command or a global `run-ui` on PATH.
+
+Optional shell alias (add to `~/.zshrc` if you want the short command back):
+
+```bash
+alias run-ui='bash /path/to/structure_scripts/scripts/run-ui'
+```
+
+After running:
 
 1. Verify that the UI started successfully.
 2. Report any startup errors.
