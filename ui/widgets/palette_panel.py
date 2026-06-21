@@ -98,13 +98,17 @@ class PalettePanel(QGroupBox):
         else:
             self._populate_block_list(entry.palette)
 
-        for row in range(self._block_list.count()):
-            item = self._block_list.item(row)
-            candidate = item.data(_ENTRY_ROLE)
+        self._block_list.blockSignals(True)
+        try:
+            for row in range(self._block_list.count()):
+                item = self._block_list.item(row)
+                candidate = item.data(_ENTRY_ROLE)
 
-            if candidate == entry:
-                self._block_list.setCurrentItem(item)
-                return
+                if candidate == entry:
+                    self._block_list.setCurrentItem(item)
+                    return
+        finally:
+            self._block_list.blockSignals(False)
 
     def clear_selection(self) -> None:
         self._block_list.clearSelection()

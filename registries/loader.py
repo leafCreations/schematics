@@ -406,6 +406,7 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     from helpers.sprite_baker.compose_slab import list_slab_bake_keys
     from helpers.sprite_baker.compose_stairs import list_stairs_bake_keys
     from helpers.sprite_baker.compose_torch import list_torch_bake_keys
+    from helpers.sprite_baker.compose_trapdoor import list_trapdoor_bake_keys
 
     keys.update(list_bed_bake_keys(texture_type))
     keys.update(list_chest_bake_keys(texture_type))
@@ -415,6 +416,7 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     keys.update(list_planks_bake_keys(textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_slab_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_stairs_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
+    keys.update(list_trapdoor_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_torch_bake_keys(texture_type))
     keys.update(list_lantern_bake_keys(texture_type))
 

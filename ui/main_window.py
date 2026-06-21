@@ -85,6 +85,7 @@ from helpers.path_strip import (
 from helpers.paths import OUTPUT_SCHEMATICS_FOLDER, STRUCTURES_FOLDER
 from helpers.site_ground import resize_site_ground
 from helpers.structure_metadata import identity_from_structure_path
+from helpers.trapdoor_state import with_trapdoor_open
 from ui.app_settings import (
     add_recent_structure,
     clear_recent_structures,
@@ -595,6 +596,11 @@ class MainWindow(QMainWindow):
         self._site_path_panel.clear_all_paths_requested.connect(self._on_clear_all_paths)
         self._palette_panel.entry_selected.connect(self._on_palette_entry_selected)
         self._properties_panel.brush_changed.connect(self._on_brush_changed)
+        self._properties_panel.brush_blockstate_changed.connect(
+            self._apply_blockstate_to_selected_cell
+        )
+        self._properties_panel.active_cell_changed.connect(self._structure_grid.set_active_cell)
+        self._properties_panel.active_cell_cleared.connect(self._structure_grid.clear_active_cell)
         self._structure_grid.cell_selected.connect(self._on_grid_cell_selected)
         self._structure_grid.cell_pick_block_requested.connect(self._on_cell_pick_block)
         self._structure_grid.cell_erase_matching_requested.connect(self._on_erase_matching_cells)
@@ -2241,7 +2247,7 @@ class MainWindow(QMainWindow):
             self._paint_brush_active = True
 
         self._sync_layer_tool_panels()
-        self._properties_panel.show_picker_entry(entry)
+        self._properties_panel.show_picker_entry(entry, emit_brush=False)
 
     def _sync_layer_tool_panels(self) -> None:
         paint_visible = (
@@ -2885,8 +2891,7 @@ class MainWindow(QMainWindow):
 
         sample_row, sample_col = min(positions)
         sample_token = layer["cells"][sample_row][sample_col]
-        self._properties_panel.show_picker_entry(entry, emit_brush=False)
-        self._properties_panel.sync_brush_from_cell(sample_token)
+        self._properties_panel.show_picker_entry(entry, emit_brush=False, brush_token=sample_token)
 
         if len(positions) == 1:
             self._properties_panel.show_grid_cell(sample_row, sample_col, sample_token)
@@ -3185,8 +3190,7 @@ class MainWindow(QMainWindow):
             return
 
         self._palette_panel.select_entry(entry)
-        self._properties_panel.show_picker_entry(entry, emit_brush=False)
-        self._properties_panel.sync_brush_from_cell(raw_token)
+        self._properties_panel.show_picker_entry(entry, emit_brush=True, brush_token=raw_token)
 
     def _on_brush_changed(self) -> None:
         self._update_window_title()
@@ -3195,53 +3199,13 @@ class MainWindow(QMainWindow):
         if token is not None:
             self._grid_texture_cache.invalidate_token(token)
 
-        self._apply_brush_to_selected_cell()
-
-    def _apply_brush_to_selected_cell(self) -> None:
-        if self._eraser_active:
+    def _apply_blockstate_to_selected_cell(self) -> None:
+        if self._eraser_active or not self._structure_tab_active():
             return
 
-        token = self._properties_panel.build_placement_token()
+        entry = self._properties_panel.active_entry()
 
-        if token is None:
-            return
-
-        if self._selector_active:
-            positions = self._structure_grid.selected_cell_positions()
-
-            if (
-                not positions
-                or homogeneous_picker_entry_for_positions(
-                    self._document.layers[self._current_layer_index]["cells"],
-                    positions,
-                )
-                is None
-            ):
-                return
-
-            self._push_undo_snapshot()
-
-            for row, col in positions:
-                self._set_cell(
-                    row,
-                    col,
-                    token,
-                    record_undo=False,
-                    update_inspector=False,
-                    refresh_materials=False,
-                )
-
-            self._sync_selector_brush_from_selection()
-            self._refresh_materials_list()
-
-            count = len(positions)
-            self._status.showMessage(
-                f"Updated {count} cell{'s' if count != 1 else ''}.",
-                3000,
-            )
-            return
-
-        if not self._paint_brush_active:
+        if entry is None:
             return
 
         selected = self._properties_panel.selected_cell()
@@ -3250,7 +3214,21 @@ class MainWindow(QMainWindow):
             return
 
         row, col = selected
-        self._set_cell(row, col, token)
+        layer = self._document.layers[self._current_layer_index]
+        raw_token = layer["cells"][row][col]
+
+        if entry.behavior == "trapdoor":
+            new_token = with_trapdoor_open(
+                raw_token,
+                self._properties_panel.selected_trapdoor_open(),
+            )
+        else:
+            return
+
+        if new_token == raw_token:
+            return
+
+        self._set_cell(row, col, new_token)
 
     def _on_cell_erase(self, row: int, col: int) -> None:
         self._erase_cells_at(row, col)

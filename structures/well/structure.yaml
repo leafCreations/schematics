@@ -10,9 +10,17 @@ grid:
   worldgen_base_y: -60
   site_width: 11
   site_depth: 11
-  placement: top_left
-  offset_x: 0
-  offset_z: 0
+  placement: center
+  offset_x: 2
+  offset_z: 2
+  path_orientation: horizontal
+  path_width: 3
+  trim_block: GRAVEL
+  path_variety_blocks:
+  - GRAVEL
+  - DIRT
+  - COBBLESTONE
+  - COBBLESTONE#mossy
 site_ground:
 - - GRASS
   - GRASS
@@ -28,22 +36,11 @@ site_ground:
 - - GRASS
   - GRASS
   - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-- - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
+  - GRAVEL
+  - DIRT
+  - GRAVEL
+  - DIRT_PATH
+  - GRAVEL
   - GRASS
   - GRASS
   - GRASS
@@ -59,6 +56,7 @@ site_ground:
   - GRASS
   - GRASS
 - - GRASS
+  - GRAVEL
   - GRASS
   - GRASS
   - GRASS
@@ -66,8 +64,51 @@ site_ground:
   - GRASS
   - GRASS
   - GRASS
+  - GRAVEL
+  - GRASS
+- - GRASS
+  - GRAVEL
   - GRASS
   - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - DIRT_PATH
+  - GRASS
+- - GRASS
+  - DIRT_PATH
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - DIRT_PATH
+  - GRASS
+- - GRASS
+  - DIRT_PATH
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - DIRT_PATH
+  - GRASS
+- - GRASS
+  - GRAVEL
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRAVEL
   - GRASS
 - - GRASS
   - GRASS
@@ -83,44 +124,11 @@ site_ground:
 - - GRASS
   - GRASS
   - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-- - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-- - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-- - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
-  - GRASS
+  - GRAVEL
+  - DIRT_PATH
+  - DIRT
+  - DIRT_PATH
+  - GRAVEL
   - GRASS
   - GRASS
   - GRASS

@@ -13,7 +13,8 @@ else
   exit 1
 fi
 
-STRUCTURE="${1:-residence}"
-STAGE="${2:-1}"
-
-exec "$PYTHON" -m ui --structure "$STRUCTURE" --stage "$STAGE"
+if [[ "${STRUCTURE:-}" == "" && "${STAGE:-}" == "" ]]; then
+  exec "$PYTHON" -m ui
+else
+  exec "$PYTHON" -m ui --structure "$STRUCTURE" --stage "$STAGE"
+fi

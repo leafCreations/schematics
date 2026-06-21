@@ -127,23 +127,23 @@ def _build_texture_key_candidates(
         if parsed.variant:
             texture_keys.append(f"{color_prefix}#{parsed.variant}")
         texture_keys.append(color_prefix)
+    else:
+        if parsed.variant:
+            texture_keys.append(f"{parsed.token}#{parsed.variant}")
+
+        for default_key in (
+            defaults.get("shape"),
+            defaults.get("type"),
+            defaults.get("part"),
+            *_VIEW_DEFAULT_TEXTURE_KEYS[view],
+        ):
+            if default_key and default_key in render_textures:
+                texture_keys.append(f"{parsed.token}#{default_key}")
+
+        texture_keys.append(base_token)
 
     if raw_token in textures:
         texture_keys.append(raw_token)
-
-    if parsed.variant:
-        texture_keys.append(f"{parsed.token}#{parsed.variant}")
-
-    for default_key in (
-        defaults.get("shape"),
-        defaults.get("type"),
-        defaults.get("part"),
-        *_VIEW_DEFAULT_TEXTURE_KEYS[view],
-    ):
-        if default_key and default_key in render_textures:
-            texture_keys.append(f"{parsed.token}#{default_key}")
-
-    texture_keys.append(base_token)
 
     return texture_keys
 

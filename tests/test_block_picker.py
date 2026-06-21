@@ -110,6 +110,17 @@ def test_cell_token_includes_block_states():
     assert lantern is not None
     assert cell_token(lantern, states=(("hanging", True),)) == "LANTERN;hanging=true"
 
+    trapdoor = picker_entry_for_token("TRAPDOOR")
+    assert trapdoor is not None
+    assert (
+        cell_token(trapdoor, "oak", direction="north", states=(("open", True),))
+        == "TRAPDOOR:oak@north;open=true"
+    )
+    assert (
+        cell_token(trapdoor, "oak", direction="north", states=(("open", False),))
+        == "TRAPDOOR:oak@north;open=false"
+    )
+
 
 def test_cell_token_includes_optional_variant_without_requires_variant():
     lantern = picker_entry_for_token("LANTERN")

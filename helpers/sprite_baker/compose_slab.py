@@ -6,7 +6,7 @@ from PIL import Image
 
 from helpers.sprite_baker.compose_simple import parse_bake_key
 from helpers.sprite_baker.demo import SpriteBakeError, bake_texture_file
-from helpers.sprite_baker.plank_materials import expand_material_bake_keys, list_plank_materials
+from helpers.sprite_baker.plank_materials import expand_material_bake_keys, list_slab_materials
 from helpers.types import BlockRegistryEntry, TextureType
 from registries.loader import (
     BLOCK_REGISTRY,
@@ -43,7 +43,7 @@ def list_slab_bake_keys(
     return expand_material_bake_keys(
         base_keys,
         token="SLAB",
-        materials=list_plank_materials(textures_dir=textures_dir),
+        materials=list_slab_materials(textures_dir=textures_dir),
     )
 
 

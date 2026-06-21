@@ -22,6 +22,7 @@ FENCE_CONNECTABLE_BEHAVIORS = frozenset(
         "slab",
         "stairs",
         "door",
+        "trapdoor",
         "bed",
         "chest",
     }

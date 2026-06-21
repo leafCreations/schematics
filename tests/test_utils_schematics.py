@@ -29,6 +29,27 @@ def test_corner_stair_facing_rotation_offsets():
     assert schematics_utils._corner_stair_facing_rotation("W") == 90
 
 
+def test_build_texture_key_candidates_skips_default_when_material_set():
+    parsed = ParsedToken(token="STAIRS", material="cobblestone", direction="north")
+    entry = BLOCK_REGISTRY["STAIRS"]
+    defaults = entry.get("defaults", {})
+    render_textures = entry.get("render", {}).get("textures", {}).get("top", {})
+
+    keys = schematics_utils._build_texture_key_candidates(
+        "STAIRS:cobblestone@north",
+        parsed,
+        "STAIRS",
+        defaults,
+        render_textures,
+        {},
+        "top",
+    )
+
+    assert keys == ["STAIRS:cobblestone"]
+    assert "STAIRS" not in keys
+    assert "STAIRS#straight" not in keys
+
+
 def test_corner_stairs_rotate_by_facing(tmp_path):
     tex = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (0, 255, 0, 255))
     tex.putpixel((0, 0), (255, 0, 0, 255))

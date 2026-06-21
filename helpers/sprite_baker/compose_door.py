@@ -6,7 +6,11 @@ from PIL import Image
 
 from helpers.sprite_baker.compose_simple import parse_bake_key
 from helpers.sprite_baker.demo import SpriteBakeError, bake_texture_file
-from helpers.sprite_baker.plank_materials import expand_material_bake_keys, list_door_materials
+from helpers.sprite_baker.plank_materials import (
+    copper_family_texture_material,
+    expand_material_bake_keys,
+    list_door_materials,
+)
 from helpers.types import BlockRegistryEntry, TextureType
 from registries.loader import (
     BLOCK_REGISTRY,
@@ -17,6 +21,10 @@ from registries.loader import (
 
 DOOR_TOP_STRIP_ROWS = 4
 DOOR_TOP_INSET = 1
+
+
+def door_texture_material(material: str) -> str:
+    return copper_family_texture_material(material)
 
 
 def is_door_bakeable(entry: BlockRegistryEntry) -> bool:
@@ -117,22 +125,23 @@ def _resolve_door_side_filename(
     material: str,
     half: str,
 ) -> str:
+    texture_material = door_texture_material(material)
     render_textures = get_render_textures(entry)
     filename = render_textures.get(half)
 
     if isinstance(filename, str):
-        return filename.format(material=material)
+        return filename.format(material=texture_material)
 
     resolved = resolve_registry_texture_filename(
         entry,
         "side",
-        material=material,
+        material=texture_material,
         variant=half,
     )
 
     if resolved is None:
         suffix = "bottom" if half == "lower" else "top"
-        return f"{material}_door_{suffix}.png"
+        return f"{texture_material}_door_{suffix}.png"
 
     return resolved
 

@@ -6,7 +6,7 @@ from PIL import Image
 
 from helpers.sprite_baker.compose_simple import parse_bake_key
 from helpers.sprite_baker.demo import SpriteBakeError, bake_texture_file
-from helpers.sprite_baker.plank_materials import expand_material_bake_keys, list_plank_materials
+from helpers.sprite_baker.plank_materials import expand_material_bake_keys, list_stairs_materials
 from helpers.sprite_baker.stair_shapes import (
     STAIR_SHAPES,
     apply_texture_mask,
@@ -50,7 +50,7 @@ def list_stairs_bake_keys(
     return expand_material_bake_keys(
         base_keys,
         token="STAIRS",
-        materials=list_plank_materials(textures_dir=textures_dir),
+        materials=list_stairs_materials(textures_dir=textures_dir),
     )
 
 

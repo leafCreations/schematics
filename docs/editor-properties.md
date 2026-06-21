@@ -138,7 +138,7 @@ Shown in **paint** mode only. Fields depend on registry `ui:` metadata (`require
 | Hanging | Combo | `;hanging=` | `LANTERN` only: Auto (omit), Hanging (`true`), Standing (`false`) |
 | Preview | Icon | — | Top-view texture for current brush |
 
-Changing brush fields updates the painted token immediately when a cell is selected.
+Changing brush fields updates the paint brush token only; grid cells change when you paint or use another grid action.
 
 ### Inspector — Grid cell (read-only + brush sync)
 
@@ -168,7 +168,7 @@ Middle-click a cell in paint mode loads brush combos from that cell.
 | -------- | ------- | --------- | ----- |
 | Selected cells | Read-only range | No | e.g. `B1: E5` via `grid_axis_selection_range` |
 
-When every selected cell is the same block type (e.g. all `PLANKS` with different woods), **Selected Block** appears and brush edits apply to the whole selection.
+When every selected cell is the same block type (e.g. all `PLANKS` with different woods), **Selected Block** appears so you can inspect or adjust the brush for repainting.
 
 ### Materials (`ui/widgets/materials_panel.py`)
 

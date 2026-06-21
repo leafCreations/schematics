@@ -86,3 +86,28 @@ STAIRS:
         south: '{material}_planks.png'
         east: '{material}_planks.png'
         west: '{material}_planks.png'
+TRAPDOOR:
+  behavior: trapdoor
+  material_default: oak
+  ui:
+    label: '{material} Trapdoor'
+    palette: building
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+    variants:
+    - top
+  defaults:
+    direction: north
+    half: bottom
+    open: false
+  minecraft:
+    block: minecraft:{material}_trapdoor
+    blockstates:
+      facing: '{direction}'
+      half: '{half}'
+      open: '{open}'
+  render:
+    top: '{material}_trapdoor.png'
+    side: '{material}_trapdoor.png'
+    inventory_image: '{material}_trapdoor.png'

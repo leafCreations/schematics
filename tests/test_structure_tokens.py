@@ -63,3 +63,15 @@ def test_format_structure_token_round_trip():
     parsed = parse_structure_token("LANTERN#soul;hanging=true!90")
 
     assert format_structure_token(parsed) == "LANTERN#soul;hanging=true!90"
+
+
+def test_trapdoor_open_state_suffix():
+    assert parse_structure_token("TRAPDOOR:oak@north;open=true") == ParsedToken(
+        token="TRAPDOOR",
+        material="oak",
+        direction="north",
+        states=(("open", True),),
+    )
+
+    parsed = parse_structure_token("TRAPDOOR:oak@north#top;open=true!90")
+    assert format_structure_token(parsed) == "TRAPDOOR:oak@north#top;open=true!90"

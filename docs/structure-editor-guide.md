@@ -124,7 +124,7 @@ The structure grid shows **column numbers** across the top and **row letters** (
 - Click a cell that already has the same block type to select it without changing it.
 - **Middle-click** a non-empty cell to **pick** that block into the brush (loads material, direction, variant into the panels).
 
-Changing brush fields updates the **selected** cell immediately — you do not need to click again.
+Changing brush fields updates the paint brush only — existing grid cells change only when you paint, erase, paste, or use another grid action.
 
 ### Paint brush toggle
 

@@ -3,4 +3,5 @@ tokens:
 - SLAB
 - FENCE
 - STAIRS
+- TRAPDOOR
 blocks: []

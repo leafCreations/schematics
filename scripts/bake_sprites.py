@@ -25,6 +25,7 @@ from helpers.sprite_baker.compose_simple import compose_simple, list_simple_bake
 from helpers.sprite_baker.compose_slab import compose_slab, list_slab_bake_keys
 from helpers.sprite_baker.compose_stairs import compose_stairs, list_stairs_bake_keys
 from helpers.sprite_baker.compose_torch import compose_torch, list_torch_bake_keys
+from helpers.sprite_baker.compose_trapdoor import compose_trapdoor, list_trapdoor_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError, bake_demo_planks
 from helpers.sprite_baker.setup import register_default_composers
 
@@ -46,11 +47,12 @@ def _parse_args() -> argparse.Namespace:
             "torch",
             "lantern",
             "log",
+            "trapdoor",
             "demo",
         ],
         default="simple",
         help=(
-            "Bake mode: simple solids, slabs, stairs, doors, beds, chests, "
+            "Bake mode: simple solids, slabs, stairs, doors, trapdoors, beds, chests, "
             "fences, torches, lanterns, logs, or Phase 0 demo"
         ),
     )
@@ -117,10 +119,12 @@ def _resolve_keys(args: argparse.Namespace) -> list[str]:
             return list_lantern_bake_keys(args.view)
         if args.type == "log":
             return list_log_bake_keys(args.view, textures_dir=args.textures_dir)
+        if args.type == "trapdoor":
+            return list_trapdoor_bake_keys(args.view, textures_dir=args.textures_dir)
 
         raise SpriteBakeError(
-            "--all is only supported with --type simple, slab, stairs, door, bed, "
-            "chest, fence, torch, lantern, or log"
+            "--all is only supported with --type simple, slab, stairs, door, trapdoor, "
+            "bed, chest, fence, torch, lantern, or log"
         )
 
     if args.key:
@@ -222,6 +226,16 @@ def _bake_key(args: argparse.Namespace, key: str) -> Path:
 
         def bake_fn():
             return compose_log(
+                key=key,
+                view=args.view,
+                size=args.size,
+                textures_dir=args.textures_dir,
+            )
+
+    elif args.type == "trapdoor":
+
+        def bake_fn():
+            return compose_trapdoor(
                 key=key,
                 view=args.view,
                 size=args.size,

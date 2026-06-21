@@ -16,6 +16,7 @@ from helpers.registry_lookup import (
 )
 from helpers.sprite_baker.cache import load_cached
 from helpers.sprite_baker.compose_slab import resolve_slab_placement
+from helpers.sprite_baker.compose_trapdoor import resolve_trapdoor_half
 from helpers.sprite_baker.runtime_bake import load_or_bake_generated_sprite
 from helpers.sprite_baker.stair_shapes import STAIR_SHAPES
 from helpers.structure_tokens import ParsedToken, parse_structure_token
@@ -35,9 +36,11 @@ from registries.loader import resolve_registry_texture_filename
 
 GENERATED_ICON_PREFIX = "generated:"
 BAKEABLE_INVENTORY_BEHAVIORS = frozenset(
-    {"slab", "stairs", "bed", "chest", "fence", "torch", "lantern", "log", "door"}
+    {"slab", "stairs", "bed", "chest", "fence", "torch", "lantern", "log", "door", "trapdoor"}
 )
-INVENTORY_VIEW_BEHAVIORS = frozenset({"bed", "fence", "torch", "lantern", "stairs", "door"})
+INVENTORY_VIEW_BEHAVIORS = frozenset(
+    {"bed", "fence", "torch", "lantern", "stairs", "door", "trapdoor"}
+)
 
 
 def resolve_texture_path(ctx: SchematicContext, texture_name: str) -> Path:
@@ -118,6 +121,15 @@ def resolve_material_sprite_key(parsed: ParsedToken, ctx: SchematicContext) -> s
         placement = resolve_slab_placement(parsed.variant, entry)
 
         if placement == "top":
+            key = f"{key}#top"
+    elif behavior == "trapdoor":
+        material = parsed.material or entry.get("material_default")
+        if material:
+            key = f"{key}:{material}"
+
+        half = resolve_trapdoor_half(parsed.variant, entry)
+
+        if half == "top":
             key = f"{key}#top"
     elif behavior == "bed":
         color = registry_blocks.resolve_token_color(entry, parsed)

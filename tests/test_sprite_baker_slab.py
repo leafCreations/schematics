@@ -34,6 +34,11 @@ def test_list_slab_bake_keys_expands_materials(tmp_path: Path):
     assert "SLAB:birch" in keys
 
 
+def test_list_slab_bake_keys_includes_cobblestone():
+    keys = list_slab_bake_keys("top", textures_dir=BLOCK_TEXTURES_FOLDER)
+    assert "SLAB:cobblestone" in keys
+
+
 def test_compose_slab_rejects_non_slab(tmp_path: Path):
     textures_dir = tmp_path / "textures"
     textures_dir.mkdir()

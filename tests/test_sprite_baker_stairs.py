@@ -38,6 +38,11 @@ def test_list_stairs_bake_keys_expands_materials(tmp_path: Path):
     assert "STAIRS:spruce" in keys
 
 
+def test_list_stairs_bake_keys_includes_cobblestone():
+    keys = list_stairs_bake_keys("top", textures_dir=BLOCK_TEXTURES_FOLDER)
+    assert "STAIRS:cobblestone" in keys
+
+
 def test_stair_top_masks_differ_by_shape():
     size = 16
     straight = build_stair_top_mask(size, "straight")

@@ -44,7 +44,8 @@ def test_list_door_bake_keys_inventory(tmp_path: Path):
     Image.new("RGBA", (16, 16), (20, 20, 20, 255)).save(textures_dir / "oak_door_top.png")
 
     keys = list_door_bake_keys("inventory", textures_dir=textures_dir)
-    assert keys == ["DOOR", "DOOR:oak"]
+    assert "DOOR" in keys
+    assert "DOOR:oak" in keys
     assert "DOOR:oak#lower" not in keys
 
 
@@ -70,6 +71,31 @@ def test_compose_door_inventory_stacks_halves(tmp_path: Path):
     assert icon.getpixel((8, 12)) == (200, 100, 50, 255)
     assert icon.getpixel((8, 4)) == upper.getpixel((8, 4))
     assert icon.getpixel((8, 12)) == lower.getpixel((8, 12))
+
+
+def test_compose_door_waxed_copper_uses_unwaxed_textures(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+
+    exposed_bottom = Image.new("RGBA", (16, 16), (180, 120, 90, 255))
+    exposed_top = Image.new("RGBA", (16, 16), (160, 100, 70, 255))
+    exposed_bottom.save(textures_dir / "exposed_copper_door_bottom.png")
+    exposed_top.save(textures_dir / "exposed_copper_door_top.png")
+
+    side = compose_door(
+        key="DOOR:waxed_exposed_copper#lower",
+        view="side",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert side.getpixel((8, 8)) == (180, 120, 90, 255)
+
+
+def test_list_door_bake_keys_includes_waxed_copper_materials():
+    keys = list_door_bake_keys("top", textures_dir=Path("/nonexistent"))
+    assert "DOOR:waxed_exposed_copper#lower" in keys
+    assert "DOOR:waxed_oxidized_copper#upper" in keys
 
 
 def test_compose_door_rejects_non_door(tmp_path: Path):
@@ -139,6 +165,29 @@ def test_compose_door_side_halves_differ(tmp_path: Path):
 
     assert lower.getpixel((8, 8)) == (200, 100, 50, 255)
     assert upper.getpixel((8, 8)) == (20, 20, 20, 255)
+
+
+@pytest.mark.requires_assets
+def test_compose_door_waxed_copper_uses_vanilla_copper_textures():
+    if not (BLOCK_TEXTURES_FOLDER / "exposed_copper_door_bottom.png").exists():
+        pytest.skip("exposed_copper_door_bottom.png not available")
+
+    waxed = compose_door(
+        key="DOOR:waxed_exposed_copper#lower",
+        view="side",
+        size=constants.BLOCK_PX,
+        textures_dir=BLOCK_TEXTURES_FOLDER,
+    )
+    exposed = compose_door(
+        key="DOOR:exposed_copper#lower",
+        view="side",
+        size=constants.BLOCK_PX,
+        textures_dir=BLOCK_TEXTURES_FOLDER,
+    )
+
+    assert waxed.getpixel((constants.BLOCK_PX // 2, constants.BLOCK_PX // 2)) == exposed.getpixel(
+        (constants.BLOCK_PX // 2, constants.BLOCK_PX // 2)
+    )
 
 
 @pytest.mark.requires_assets

@@ -2,123 +2,51 @@ index: 0
 group: Main
 cells:
 - - .
+  - TRAPDOOR:oak@north;open=true
   - .
   - .
   - .
+  - TRAPDOOR:oak@north;open=true
   - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-- - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-- - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-- - .
-  - .
-  - .
+- - TRAPDOOR:oak@west;open=true
   - COBBLESTONE
-  - STAIRS:oak@south
-  - STAIRS:oak@south
-  - STAIRS:oak@south
+  - STAIRS:cobblestone@south
+  - STAIRS:cobblestone@south
+  - STAIRS:cobblestone@south
   - COBBLESTONE
-  - .
-  - .
-  - .
+  - TRAPDOOR:oak@east;open=true
 - - .
-  - .
-  - .
   - STAIRS:cobblestone@east
   - .
   - .
   - .
   - STAIRS:cobblestone@west
   - .
-  - .
-  - .
 - - .
-  - .
-  - .
   - STAIRS:cobblestone@east
   - .
   - .
   - .
   - STAIRS:cobblestone@west
   - .
-  - .
-  - .
 - - .
-  - .
-  - .
   - STAIRS:cobblestone@east
   - .
   - .
   - .
   - STAIRS:cobblestone@west
   - .
-  - .
-  - .
-- - .
-  - .
-  - .
+- - TRAPDOOR:oak@west;open=true
   - COBBLESTONE
   - STAIRS:cobblestone@north
   - STAIRS:cobblestone@north
   - STAIRS:cobblestone@north
   - COBBLESTONE
-  - .
-  - .
-  - .
+  - TRAPDOOR:oak@east;open=true
 - - .
+  - TRAPDOOR:oak@south;open=true
   - .
   - .
   - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-- - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-- - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
-  - .
+  - TRAPDOOR:oak@south;open=true
   - .

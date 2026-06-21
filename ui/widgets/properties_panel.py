@@ -15,6 +15,7 @@ from helpers.block_picker import PickerEntry, cell_token
 from helpers.grid_labels import grid_axis_position, grid_axis_selection_range
 from helpers.lantern_placement import HANGING_STATE, explicit_hanging
 from helpers.structure_tokens import BlockStates, parse_structure_token
+from helpers.trapdoor_state import OPEN_STATE, explicit_open
 from ui.texture_cache import DEFAULT_ICON_SIZE, GridTextureCache
 from ui.widgets.panel_header import create_nested_group_layout
 
@@ -24,6 +25,9 @@ _BRUSH_PREVIEW_ICON_SIZE = DEFAULT_ICON_SIZE
 
 class PropertiesPanel(QWidget):
     brush_changed = Signal()
+    brush_blockstate_changed = Signal()
+    active_cell_changed = Signal(int, int)
+    active_cell_cleared = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -38,13 +42,15 @@ class PropertiesPanel(QWidget):
         self._direction_combo = QComboBox()
         self._variant_combo = QComboBox()
         self._hanging_combo = QComboBox()
+        self._open_combo = QComboBox()
         self._active_entry: PickerEntry | None = None
         self._selected_cell: tuple[int, int] | None = None
 
         self._material_combo.currentTextChanged.connect(self._on_brush_option_changed)
         self._direction_combo.currentTextChanged.connect(self._on_brush_option_changed)
         self._variant_combo.currentTextChanged.connect(self._on_brush_option_changed)
-        self._hanging_combo.currentTextChanged.connect(self._on_brush_option_changed)
+        self._hanging_combo.currentTextChanged.connect(self._on_blockstate_option_changed)
+        self._open_combo.currentTextChanged.connect(self._on_blockstate_option_changed)
 
         for direction in ("north", "south", "east", "west"):
             self._direction_combo.addItem(direction)
@@ -60,6 +66,8 @@ class PropertiesPanel(QWidget):
         picker_form.addRow(self._variant_label, self._variant_combo)
         self._hanging_label = QLabel("Hanging")
         picker_form.addRow(self._hanging_label, self._hanging_combo)
+        self._open_label = QLabel("Open")
+        picker_form.addRow(self._open_label, self._open_combo)
         picker_form.addRow("Preview", self._brush_preview)
 
         cell_group = QGroupBox()
@@ -83,6 +91,9 @@ class PropertiesPanel(QWidget):
     def active_entry(self) -> PickerEntry | None:
         return self._active_entry
 
+    def selected_trapdoor_open(self) -> bool:
+        return self._open_combo.currentText().lower() == "true"
+
     def set_texture_cache(self, texture_cache: GridTextureCache | None) -> None:
         self._texture_cache = texture_cache
 
@@ -99,72 +110,103 @@ class PropertiesPanel(QWidget):
 
         return cell_token(entry, material, direction=direction, variant=variant, states=states)
 
-    def show_picker_entry(self, entry: PickerEntry, *, emit_brush: bool = True) -> None:
+    def show_picker_entry(
+        self,
+        entry: PickerEntry,
+        *,
+        emit_brush: bool = True,
+        brush_token: str | None = None,
+    ) -> None:
         self._active_entry = entry
         self._picker_group.setEnabled(True)
         self._title.setText(entry.label)
 
         self._material_combo.blockSignals(True)
-        self._material_combo.clear()
-
-        if entry.requires_material:
-            self._material_combo.setEnabled(True)
-            self._material_combo.addItems(entry.materials)
-
-            if entry.material_default and entry.material_default in entry.materials:
-                self._material_combo.setCurrentText(entry.material_default)
-            elif entry.materials:
-                self._material_combo.setCurrentIndex(0)
-        else:
-            self._material_combo.setEnabled(False)
-            self._material_combo.addItem("—")
-
-        self._material_combo.blockSignals(False)
-
-        self._direction_combo.setEnabled(entry.requires_direction)
-
-        if entry.requires_direction:
-            self._direction_combo.setCurrentText("north")
-
+        self._direction_combo.blockSignals(True)
         self._variant_combo.blockSignals(True)
-        self._variant_combo.clear()
-        self._variant_combo.setEnabled(bool(entry.variants))
-
-        if entry.behavior == "bed" and set(entry.variants) == {"head", "foot"}:
-            self._variant_label.setText("Part")
-            self._variant_combo.addItems(["head", "foot"])
-            self._variant_combo.setCurrentText("head")
-        elif entry.behavior == "door" and set(entry.variants) == {"lower", "upper"}:
-            self._variant_label.setText("Half")
-            self._variant_combo.addItems(["lower", "upper"])
-            self._variant_combo.setCurrentText("lower")
-        elif entry.variants:
-            self._variant_label.setText("Variant")
-            self._variant_combo.addItem(_DEFAULT_VARIANT_LABEL)
-            self._variant_combo.addItems(entry.variants)
-        else:
-            self._variant_label.setText("Variant")
-            self._variant_combo.addItem("—")
-
-        self._variant_combo.blockSignals(False)
-
         self._hanging_combo.blockSignals(True)
-        self._hanging_combo.clear()
+        self._open_combo.blockSignals(True)
+        try:
+            self._material_combo.clear()
 
-        if entry.behavior == "lantern":
-            self._hanging_label.setVisible(True)
-            self._hanging_combo.setVisible(True)
-            self._hanging_combo.setEnabled(True)
-            self._hanging_combo.addItems(["Auto", "Hanging", "Standing"])
-            self._hanging_combo.setCurrentText("Auto")
+            if entry.requires_material:
+                self._material_combo.setEnabled(True)
+                self._material_combo.addItems(entry.materials)
+
+                if entry.material_default and entry.material_default in entry.materials:
+                    self._material_combo.setCurrentText(entry.material_default)
+                elif entry.materials:
+                    self._material_combo.setCurrentIndex(0)
+            else:
+                self._material_combo.setEnabled(False)
+                self._material_combo.addItem("—")
+
+            self._direction_combo.setEnabled(entry.requires_direction)
+
+            if entry.requires_direction:
+                self._direction_combo.setCurrentText("north")
+
+            self._variant_combo.clear()
+            self._variant_combo.setEnabled(bool(entry.variants))
+
+            if entry.behavior == "bed" and set(entry.variants) == {"head", "foot"}:
+                self._variant_label.setText("Part")
+                self._variant_combo.addItems(["head", "foot"])
+                self._variant_combo.setCurrentText("head")
+            elif entry.behavior == "door" and set(entry.variants) == {"lower", "upper"}:
+                self._variant_label.setText("Half")
+                self._variant_combo.addItems(["lower", "upper"])
+                self._variant_combo.setCurrentText("lower")
+            elif entry.behavior == "trapdoor" and set(entry.variants) == {"top"}:
+                self._variant_label.setText("Half")
+                self._variant_combo.addItem(_DEFAULT_VARIANT_LABEL)
+                self._variant_combo.addItem("top")
+            elif entry.variants:
+                self._variant_label.setText("Variant")
+                self._variant_combo.addItem(_DEFAULT_VARIANT_LABEL)
+                self._variant_combo.addItems(entry.variants)
+            else:
+                self._variant_label.setText("Variant")
+                self._variant_combo.addItem("—")
+
+            self._hanging_combo.clear()
+
+            if entry.behavior == "lantern":
+                self._hanging_label.setVisible(True)
+                self._hanging_combo.setVisible(True)
+                self._hanging_combo.setEnabled(True)
+                self._hanging_combo.addItems(["Auto", "Hanging", "Standing"])
+                self._hanging_combo.setCurrentText("Auto")
+            else:
+                self._hanging_label.setVisible(False)
+                self._hanging_combo.setVisible(False)
+                self._hanging_combo.setEnabled(False)
+                self._hanging_combo.addItem("—")
+
+            self._open_combo.clear()
+
+            if entry.behavior == "trapdoor":
+                self._open_label.setVisible(True)
+                self._open_combo.setVisible(True)
+                self._open_combo.setEnabled(True)
+                self._open_combo.addItems(["false", "true"])
+                self._open_combo.setCurrentText("false")
+            else:
+                self._open_label.setVisible(False)
+                self._open_combo.setVisible(False)
+                self._open_combo.setEnabled(False)
+                self._open_combo.addItem("—")
+        finally:
+            self._material_combo.blockSignals(False)
+            self._direction_combo.blockSignals(False)
+            self._variant_combo.blockSignals(False)
+            self._hanging_combo.blockSignals(False)
+            self._open_combo.blockSignals(False)
+
+        if brush_token:
+            self.sync_brush_from_cell(brush_token)
         else:
-            self._hanging_label.setVisible(False)
-            self._hanging_combo.setVisible(False)
-            self._hanging_combo.setEnabled(False)
-            self._hanging_combo.addItem("—")
-
-        self._hanging_combo.blockSignals(False)
-        self._refresh_entry_preview()
+            self._refresh_entry_preview()
 
         if emit_brush:
             self.brush_changed.emit()
@@ -207,6 +249,7 @@ class PropertiesPanel(QWidget):
 
         self._cell_info.setText("\n".join(lines))
         self._cell_group.setEnabled(True)
+        self.active_cell_cleared.emit()
 
     def show_grid_cell(self, row: int, col: int, raw_token: str) -> None:
         self._selected_cell = (row, col)
@@ -221,16 +264,19 @@ class PropertiesPanel(QWidget):
                     f"Direction: {parsed.direction or '—'}",
                     f"Variant: {parsed.variant or '—'}",
                     f"Hanging: {self._format_hanging_display(parsed)}",
+                    f"Open: {self._format_open_display(parsed)}",
                 ]
             )
 
         self._cell_info.setText("\n".join(lines))
         self._cell_group.setEnabled(True)
+        self.active_cell_changed.emit(row, col)
 
     def clear_grid_cell(self) -> None:
         self._selected_cell = None
         self._cell_info.setText("No cell selected.")
         self._cell_group.setEnabled(False)
+        self.active_cell_cleared.emit()
 
     def selected_cell(self) -> tuple[int, int] | None:
         return self._selected_cell
@@ -288,12 +334,28 @@ class PropertiesPanel(QWidget):
 
             self._hanging_combo.blockSignals(False)
 
+        if self._active_entry is not None and self._active_entry.behavior == "trapdoor":
+            self._open_combo.blockSignals(True)
+            open_state = explicit_open(parsed)
+
+            if open_state:
+                self._open_combo.setCurrentText("true")
+            else:
+                self._open_combo.setCurrentText("false")
+
+            self._open_combo.blockSignals(False)
+
         self._variant_combo.blockSignals(False)
         self._refresh_entry_preview()
 
     def _on_brush_option_changed(self, _value: str) -> None:
         self._refresh_entry_preview()
         self.brush_changed.emit()
+
+    def _on_blockstate_option_changed(self, _value: str) -> None:
+        self._refresh_entry_preview()
+        self.brush_changed.emit()
+        self.brush_blockstate_changed.emit()
 
     def _selected_material(self) -> str | None:
         if self._active_entry is None or not self._active_entry.requires_material:
@@ -324,16 +386,30 @@ class PropertiesPanel(QWidget):
         return variant
 
     def _selected_block_states(self) -> BlockStates:
-        if self._active_entry is None or self._active_entry.behavior != "lantern":
+        if self._active_entry is None:
             return ()
 
-        mode = self._hanging_combo.currentText()
+        if self._active_entry.behavior == "lantern":
+            mode = self._hanging_combo.currentText()
 
-        if mode == "Hanging":
-            return ((HANGING_STATE, True),)
+            if mode == "Hanging":
+                return ((HANGING_STATE, True),)
 
-        if mode == "Standing":
-            return ((HANGING_STATE, False),)
+            if mode == "Standing":
+                return ((HANGING_STATE, False),)
+
+            return ()
+
+        if self._active_entry.behavior == "trapdoor":
+            open_value = self._open_combo.currentText().lower()
+
+            if open_value == "true":
+                return ((OPEN_STATE, True),)
+
+            if open_value == "false":
+                return ((OPEN_STATE, False),)
+
+            return ()
 
         return ()
 
@@ -345,6 +421,15 @@ class PropertiesPanel(QWidget):
             return "auto"
 
         return "true" if hanging else "false"
+
+    @staticmethod
+    def _format_open_display(parsed) -> str:
+        open_state = explicit_open(parsed)
+
+        if open_state is None:
+            return "false"
+
+        return "true" if open_state else "false"
 
     def _refresh_entry_preview(self) -> None:
         token = self.build_placement_token()
@@ -384,6 +469,8 @@ class PropertiesPanel(QWidget):
         self._cell_group.setEnabled(False)
         self._hanging_label.setVisible(False)
         self._hanging_combo.setVisible(False)
+        self._open_label.setVisible(False)
+        self._open_combo.setVisible(False)
         self._title.setText("—")
         self._brush_preview.clear()
         self._cell_info.setText("No cell selected.")

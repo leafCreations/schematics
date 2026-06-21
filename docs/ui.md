@@ -117,7 +117,7 @@ Worldgen is only available when `amulet` is installed; see [worldgen.md](worldge
 
 **Middle-click** a non-empty cell to select that block in the palette and load its material, variant, direction, and hanging options into the paint brush (also selects the cell for the grid-cell panel). In **Eraser** mode, middle-click instead clears every cell on the layer with the same token.
 
-Changing **Material**, **Direction**, **Part**, or **Variant** updates the selected cell immediately — you do not need to click the cell again.
+Changing **Material**, **Direction**, **Part**, or **Variant** updates the paint brush only — existing grid cells change only when you paint, erase, paste, or use another grid action.
 
 Placement strings are built by `helpers/block_picker.py` → `cell_token()`, matching the grammar in [structure-tokens.md](structure-tokens.md).
 

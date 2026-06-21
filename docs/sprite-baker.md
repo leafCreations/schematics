@@ -18,6 +18,7 @@ Many block sprites are composed procedurally from vanilla textures and cached un
 | `slab`     | Half-block slabs                                 |
 | `stairs`   | Stair shapes (straight, corner variants)         |
 | `door`     | Door top/side strips and inventory icons         |
+| `trapdoor` | Trapdoor half-cell top/side and inventory icons |
 | `bed`      | Bed top/side/inventory from entity atlases       |
 | `chest`    | Chest variants                                   |
 | `fence`    | Fence post/straight/corner and inventory models    |

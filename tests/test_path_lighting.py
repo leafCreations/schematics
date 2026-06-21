@@ -26,20 +26,9 @@ def test_trim_run_lighting_vertical_and_horizontal():
 
 
 def test_residence_stage1_fence_posts_only_on_configured_trim():
-    from pathlib import Path
+    from helpers.structure_loader import load_structure_config
 
-    import yaml
-
-    from helpers.structure_loader import build_schematic_context
-
-    base = Path("structures/residence/stage1")
-    with open(base / "structure.yaml") as f:
-        cfg = yaml.safe_load(f)
-    cfg["layers"] = []
-    for lf in cfg["layer_files"]:
-        with open(base / lf) as f:
-            cfg["layers"].append(yaml.safe_load(f))
-    ctx = build_schematic_context(cfg)
+    ctx = load_structure_config("residence", 1)
     trim_block = resolve_trim_block(ctx.grid)
     posts = set(
         iter_lighting_fence_cells_from_ground(ctx.site_ground, trim_block=trim_block),

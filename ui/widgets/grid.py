@@ -28,6 +28,7 @@ _GRID_BACKGROUND = QColor(234, 234, 255)
 _GRID_LINE = QColor(160, 164, 170)
 _EMPTY_CELL_FILL = QColor(235, 235, 235)
 _CELL_FILL = QColor(242, 244, 248)
+_ACTIVE_CELL_FILL = QColor(220, 220, 220)
 _SELECTED_FILL = QColor(210, 230, 255)
 _ERASER_PREVIEW_OVERLAY = QColor(255, 120, 120, 140)
 _SELECTOR_OVERLAY = QColor(120, 180, 255, 140)
@@ -77,11 +78,16 @@ class LayerGridCellDelegate(QStyledItemDelegate):
         is_paint_preview = isinstance(table, LayerGridWidget) and table.is_paint_preview_cell(
             index.row(), index.column()
         )
+        is_active_cell = isinstance(table, LayerGridWidget) and table.is_active_cell(
+            index.row(), index.column()
+        )
 
         move_overlay = is_move_select_overlay or is_move_preview_overlay or is_move_source_overlay
 
         if is_selector_overlay or move_overlay or is_paint_preview:
             fill = _EMPTY_CELL_FILL if raw_token == "." else _CELL_FILL
+        elif is_active_cell:
+            fill = _ACTIVE_CELL_FILL
         elif option.state & QStyle.StateFlag.State_Selected:
             fill = _SELECTED_FILL
         elif raw_token == ".":
@@ -157,6 +163,7 @@ class LayerGridWidget(QTableWidget):
         self._eraser_preview_cells: frozenset[tuple[int, int]] = frozenset()
         self._eraser_drag_active = False
         self._eraser_drag_anchor: tuple[int, int] | None = None
+        self._eraser_drag_moved = False
         self._selector_active = False
         self._selector_mode = SelectorMode.RECTANGLE
         self._rectangle_selector_drag_active = False
@@ -178,6 +185,8 @@ class LayerGridWidget(QTableWidget):
         self._paint_preview_cells: frozenset[tuple[int, int]] = frozenset()
         self._paint_brush_mode: PaintBrushMode = "fill"
         self._paint_drag_last_pos = None
+        self._paint_drag_moved = False
+        self._active_cell: tuple[int, int] | None = None
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -650,39 +659,84 @@ class LayerGridWidget(QTableWidget):
     def _viewport_pos_from_widget_event(self, event: QMouseEvent):
         return self.viewport().mapFrom(self, event.pos())
 
+    def _index_at_viewport_pos(self, pos):
+        return self.indexAt(pos)
+
     def _end_paint_drag(self) -> None:
         self._paint_drag_active = False
         self._paint_drag_anchor = None
         self._paint_drag_last_pos = None
+        self._paint_drag_moved = False
         self._paint_preview_cells = frozenset()
         self.viewport().update()
 
-    def _update_paint_drag_overlay(self, pos) -> None:
+    def _update_paint_drag_overlay(
+        self,
+        pos,
+        *,
+        end_cell: tuple[int, int] | None = None,
+    ) -> None:
         if not self._paint_drag_active or self._paint_drag_anchor is None:
             return
 
         self._paint_drag_last_pos = pos
-        index = self.indexAt(pos)
         rows = self.rowCount()
         cols = self.columnCount()
+        anchor_row, anchor_col = self._paint_drag_anchor
 
-        if not index.isValid() or rows == 0 or cols == 0:
+        if rows == 0 or cols == 0:
             self._paint_preview_cells = frozenset()
-        else:
-            anchor_row, anchor_col = self._paint_drag_anchor
+        elif end_cell is not None:
+            end_row, end_col = end_cell
             self._paint_preview_cells = frozenset(
                 region_cell_indices(
                     anchor_row,
                     anchor_col,
-                    index.row(),
-                    index.column(),
+                    end_row,
+                    end_col,
                     rows=rows,
                     cols=cols,
                     mode=self._paint_brush_mode,
                 )
             )
+        else:
+            index = self._index_at_viewport_pos(pos)
+
+            if not index.isValid():
+                self._paint_preview_cells = frozenset()
+            else:
+                end_row, end_col = index.row(), index.column()
+
+                if (end_row, end_col) != (anchor_row, anchor_col):
+                    self._paint_drag_moved = True
+
+                self._paint_preview_cells = frozenset(
+                    region_cell_indices(
+                        anchor_row,
+                        anchor_col,
+                        end_row,
+                        end_col,
+                        rows=rows,
+                        cols=cols,
+                        mode=self._paint_brush_mode,
+                    )
+                )
 
         self.viewport().update()
+
+    def _paint_drag_end_cell(self, pos) -> tuple[int, int]:
+        assert self._paint_drag_anchor is not None
+        anchor_row, anchor_col = self._paint_drag_anchor
+
+        if not self._paint_drag_moved:
+            return anchor_row, anchor_col
+
+        index = self._index_at_viewport_pos(pos)
+
+        if index.isValid():
+            return index.row(), index.column()
+
+        return anchor_row, anchor_col
 
     def _emit_paint_region_fill(self, row_a: int, col_a: int, row_b: int, col_b: int) -> None:
         self.paint_region_fill_requested.emit(row_a, col_a, row_b, col_b)
@@ -693,12 +747,7 @@ class LayerGridWidget(QTableWidget):
             return
 
         anchor_row, anchor_col = self._paint_drag_anchor
-        index = self.indexAt(pos)
-
-        if index.isValid():
-            end_row, end_col = index.row(), index.column()
-        else:
-            end_row, end_col = anchor_row, anchor_col
+        end_row, end_col = self._paint_drag_end_cell(pos)
 
         self._emit_paint_region_fill(anchor_row, anchor_col, end_row, end_col)
         self._end_paint_drag()
@@ -731,34 +780,75 @@ class LayerGridWidget(QTableWidget):
     def _end_eraser_drag(self) -> None:
         self._eraser_drag_active = False
         self._eraser_drag_anchor = None
+        self._eraser_drag_moved = False
         self._eraser_preview_cells = frozenset()
         self._refresh_eraser_preview()
         self.viewport().update()
 
-    def _update_eraser_drag_overlay(self, pos) -> None:
+    def _update_eraser_drag_overlay(
+        self,
+        pos,
+        *,
+        end_cell: tuple[int, int] | None = None,
+    ) -> None:
         if not self._eraser_drag_active or self._eraser_drag_anchor is None:
             return
 
-        index = self.indexAt(pos)
         rows = self.rowCount()
         cols = self.columnCount()
+        anchor_row, anchor_col = self._eraser_drag_anchor
 
-        if not index.isValid() or rows == 0 or cols == 0:
+        if rows == 0 or cols == 0:
             self._eraser_preview_cells = frozenset()
-        else:
-            anchor_row, anchor_col = self._eraser_drag_anchor
+        elif end_cell is not None:
+            end_row, end_col = end_cell
             self._eraser_preview_cells = frozenset(
                 rect_cell_indices(
                     anchor_row,
                     anchor_col,
-                    index.row(),
-                    index.column(),
+                    end_row,
+                    end_col,
                     rows=rows,
                     cols=cols,
                 )
             )
+        else:
+            index = self._index_at_viewport_pos(pos)
+
+            if not index.isValid():
+                self._eraser_preview_cells = frozenset()
+            else:
+                end_row, end_col = index.row(), index.column()
+
+                if (end_row, end_col) != (anchor_row, anchor_col):
+                    self._eraser_drag_moved = True
+
+                self._eraser_preview_cells = frozenset(
+                    rect_cell_indices(
+                        anchor_row,
+                        anchor_col,
+                        end_row,
+                        end_col,
+                        rows=rows,
+                        cols=cols,
+                    )
+                )
 
         self.viewport().update()
+
+    def _eraser_drag_end_cell(self, pos) -> tuple[int, int]:
+        assert self._eraser_drag_anchor is not None
+        anchor_row, anchor_col = self._eraser_drag_anchor
+
+        if not self._eraser_drag_moved:
+            return anchor_row, anchor_col
+
+        index = self._index_at_viewport_pos(pos)
+
+        if index.isValid():
+            return index.row(), index.column()
+
+        return anchor_row, anchor_col
 
     def _emit_eraser_region_erase(self, row_a: int, col_a: int, row_b: int, col_b: int) -> None:
         self.eraser_region_erase_requested.emit(row_a, col_a, row_b, col_b)
@@ -769,12 +859,7 @@ class LayerGridWidget(QTableWidget):
             return
 
         anchor_row, anchor_col = self._eraser_drag_anchor
-        index = self.indexAt(pos)
-
-        if index.isValid():
-            end_row, end_col = index.row(), index.column()
-        else:
-            end_row, end_col = anchor_row, anchor_col
+        end_row, end_col = self._eraser_drag_end_cell(pos)
 
         self._emit_eraser_region_erase(anchor_row, anchor_col, end_row, end_col)
         self._end_eraser_drag()
@@ -1164,8 +1249,10 @@ class LayerGridWidget(QTableWidget):
                 if self._eraser_preview_active:
                     self._eraser_drag_anchor = (row, col)
                     self._eraser_drag_active = True
+                    self._eraser_drag_moved = False
                     self._update_eraser_drag_overlay(
                         self._viewport_pos_from_widget_event(event),
+                        end_cell=(row, col),
                     )
                     event.accept()
                     return
@@ -1173,13 +1260,39 @@ class LayerGridWidget(QTableWidget):
                 if self._paint_preview_active:
                     self._paint_drag_anchor = (row, col)
                     self._paint_drag_active = True
+                    self._paint_drag_moved = False
                     self._update_paint_drag_overlay(
                         self._viewport_pos_from_widget_event(event),
+                        end_cell=(row, col),
                     )
                     event.accept()
                     return
 
         super().mousePressEvent(event)
+
+    def is_active_cell(self, row: int, col: int) -> bool:
+        return self._active_cell == (row, col)
+
+    def set_active_cell(self, row: int, col: int) -> None:
+        if self._active_cell == (row, col):
+            return
+
+        self._active_cell = (row, col)
+        self._refresh_active_cell_display()
+
+    def clear_active_cell(self) -> None:
+        if self._active_cell is None:
+            return
+
+        self._active_cell = None
+        self._refresh_active_cell_display()
+
+    def active_cell(self) -> tuple[int, int] | None:
+        return self._active_cell
+
+    def _refresh_active_cell_display(self) -> None:
+        self.highlight_selection()
+        self.viewport().update()
 
     def selected_cell_positions(self) -> list[tuple[int, int]]:
         return sorted({(item.row(), item.column()) for item in self.selectedItems()})
@@ -1223,6 +1336,8 @@ class LayerGridWidget(QTableWidget):
 
                 if self._selector_active or self._move_active or self._paint_preview_active:
                     fill = _EMPTY_CELL_FILL if raw_token == "." else _CELL_FILL
+                elif (row, col) == self._active_cell:
+                    fill = _ACTIVE_CELL_FILL
                 elif item.isSelected():
                     fill = _SELECTED_FILL
                 elif raw_token == ".":
