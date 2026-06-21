@@ -28,7 +28,7 @@ def derive_structure_name(structure: str, stage: int) -> str:
 
 
 def identity_from_structure_path(path: Path) -> tuple[str, int] | None:
-    """Read ``(structure, stage)`` from ``structures/{name}/stage{N}/structure.yaml``."""
+    """Read ``(structure, stage)`` from ``structures/{name}/stage{N}/stage.yaml``."""
     try:
         stage_dir = path.parent.name
         structure_dir = path.parent.parent.name

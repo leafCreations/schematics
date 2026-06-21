@@ -298,15 +298,39 @@ def resolve_cell_texture(
 
     texture_key = _resolve_texture_key(texture_keys, textures)
 
-    if texture_key is None and is_minecraft_block_token(parsed):
+    if texture_key is None:
         block_px = size if size is not None else 30
-        tex = load_catalog_texture_image(parsed, view, block_px)
+        catalog_parsed: ParsedToken | None = parsed if is_minecraft_block_token(parsed) else None
 
-        if tex is not None:
-            if view == "top" and parsed.rotation:
-                tex = utils.rotate_texture_by_degrees(tex, parsed.rotation)
+        if catalog_parsed is None and entry:
+            try:
+                resolved_block_id = registry_blocks.resolve_minecraft_block_id(entry, parsed)
+            except Exception:
+                resolved_block_id = None
 
-            return _resize_texture(tex, size)
+            if isinstance(resolved_block_id, str):
+                parsed_catalog_token = parse_structure_token(resolved_block_id)
+                if parsed_catalog_token is not None and is_minecraft_block_token(
+                    parsed_catalog_token
+                ):
+                    catalog_parsed = parsed_catalog_token
+
+        if catalog_parsed is not None:
+            tex = load_catalog_texture_image(catalog_parsed, view, block_px)
+
+            if tex is not None:
+                if view == "top":
+                    tex = _prepare_topdown_texture(
+                        tex.copy(),
+                        base_token,
+                        direction,
+                        parsed.rotation,
+                        corner_stair_shape=_is_corner_stair_shape(parsed, entry),
+                    )
+                elif parsed.rotation:
+                    tex = utils.rotate_texture_by_degrees(tex, parsed.rotation)
+
+                return _resize_texture(tex, size)
 
     if texture_key is None:
         return None

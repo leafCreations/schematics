@@ -98,19 +98,21 @@ def test_validate_structure_config_rejects_invalid_site_structure_layers():
 
 
 def test_load_structure_yaml_residence_stage1():
-    path = STRUCTURES_FOLDER / "residence" / "stage1" / "structure.yaml"
+    path = STRUCTURES_FOLDER / "residence" / "stage1" / "stage.yaml"
     config = load_structure_yaml(path)
 
     assert config["structure"] == "residence"
     assert config["stage"] == 1
-    assert len(config["layers"]) == 7
+    assert len(config["layers"]) == 6
     assert config["grid"]["trim_block"] == "COBBLESTONE#mossy"
+    assert config["output_folder"] == "stage1_residence"
+    assert config["site_ground"]
     floor_layer = next(layer for layer in config["layers"] if layer.get("index") == 0)
     assert floor_layer["cells"][0][2] == "COBBLESTONE#mossy"
 
 
 def test_load_structure_yaml_residence_stage2():
-    path = STRUCTURES_FOLDER / "residence" / "stage2" / "structure.yaml"
+    path = STRUCTURES_FOLDER / "residence" / "stage2" / "stage.yaml"
     config = load_structure_yaml(path)
 
     assert config["structure"] == "residence"
@@ -124,9 +126,18 @@ def test_load_structure_yaml_discovers_layer_files(tmp_path: Path):
     src = STRUCTURES_FOLDER / "residence" / "stage1"
     dest = tmp_path / "stage"
     shutil.copytree(src / "layers", dest / "layers")
-    structure_path = dest / "structure.yaml"
-    data = yaml.safe_load((src / "structure.yaml").read_text(encoding="utf-8"))
+    structure_path = dest / "stage.yaml"
+    data = yaml.safe_load((src / "stage.yaml").read_text(encoding="utf-8"))
     del data["layer_files"]
+    data["output_folder"] = "stage1_residence"
+    data["grid"] = {
+        "offset_x": 0,
+        "offset_z": 0,
+        "site_width": 30,
+        "site_depth": 30,
+        "site_structure_layers": [0, 1],
+        "worldgen_base_y": -60,
+    }
     structure_path.write_text(
         yaml.safe_dump(data, default_flow_style=False, sort_keys=False),
         encoding="utf-8",
@@ -134,7 +145,7 @@ def test_load_structure_yaml_discovers_layer_files(tmp_path: Path):
 
     config = load_structure_yaml(structure_path)
 
-    assert len(config["layers"]) == 7
+    assert len(config["layers"]) == 6
 
 
 def test_validate_structure_config_rejects_unknown_cell_token():
@@ -149,7 +160,7 @@ def test_validate_structure_config_rejects_unknown_cell_token():
 def test_resolve_structure_source_prefers_yaml():
     path = resolve_structure_source("residence", 1)
 
-    assert path.name == "structure.yaml"
+    assert path.name == "stage.yaml"
 
 
 def test_load_structure_config_builds_context_from_yaml():
@@ -157,7 +168,7 @@ def test_load_structure_config_builds_context_from_yaml():
 
     assert ctx.structure == "residence"
     assert ctx.stage == 1
-    assert len(ctx.layers) == 7
+    assert len(ctx.layers) == 6
     assert ctx.topdown_textures
 
 

@@ -33,6 +33,32 @@ def _reload_command() -> tuple[str, list[str]]:
     return executable, args
 
 
+def _reload_command_for_structure_stage(structure: str, stage: int) -> tuple[str, list[str]]:
+    executable = sys.executable
+    module = _reload_module_name()
+    args = [
+        executable,
+        "-m",
+        module,
+        "--structure",
+        str(structure),
+        "--stage",
+        str(int(stage)),
+    ]
+    return executable, args
+
+
+def _reload_command_no_target() -> tuple[str, list[str]]:
+    executable = sys.executable
+    module = _reload_module_name()
+    args = [
+        executable,
+        "-m",
+        module,
+    ]
+    return executable, args
+
+
 def _reload_environ() -> dict[str, str]:
     env = dict(os.environ)
     root = str(_project_root())
@@ -48,6 +74,32 @@ def reload_editor_process() -> None:
     """Replace the running process with a fresh ``python -m ui`` (or ``ui.main_window``)."""
     os.chdir(_project_root())
     executable, args = _reload_command()
+    env = _reload_environ()
+
+    if sys.platform == "win32":
+        os.spawnve(os.P_WAIT, executable, args, env)
+        raise SystemExit(0)
+
+    os.execve(executable, args, env)
+
+
+def open_structure_in_editor_process(structure: str, stage: int) -> None:
+    """Replace the running editor process and open a specific structure/stage."""
+    os.chdir(_project_root())
+    executable, args = _reload_command_for_structure_stage(structure, stage)
+    env = _reload_environ()
+
+    if sys.platform == "win32":
+        os.spawnve(os.P_WAIT, executable, args, env)
+        raise SystemExit(0)
+
+    os.execve(executable, args, env)
+
+
+def open_editor_in_empty_state_process() -> None:
+    """Replace the running editor process and start with no explicit structure/stage target."""
+    os.chdir(_project_root())
+    executable, args = _reload_command_no_target()
     env = _reload_environ()
 
     if sys.platform == "win32":

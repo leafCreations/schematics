@@ -29,13 +29,11 @@ _GROUND_OVERLAY_TOKENS = frozenset({"FENCE", "TORCH"})
 
 
 class SiteGridCellDelegate(QStyledItemDelegate):
-    """Paint site cells edge-to-edge; open grass uses faded fill without block texture."""
+    """Paint site cells edge-to-edge with token textures when available."""
 
     def paint(self, painter: QPainter, option, index) -> None:
         table = self.parent()
         item = table.item(index.row(), index.column()) if table is not None else None
-        token = item.data(_TOKEN_ROLE) if item is not None else "."
-        on_structure = bool(item.data(_STRUCTURE_ROLE)) if item is not None else False
 
         if item is not None:
             brush = item.background()
@@ -45,7 +43,7 @@ class SiteGridCellDelegate(QStyledItemDelegate):
 
         painter.fillRect(option.rect, fill)
 
-        if item is None or (token == "GRASS" and not on_structure):
+        if item is None:
             return
 
         icon = item.icon()
@@ -362,11 +360,6 @@ class SiteGridWidget(QTableWidget):
                 fill = _SITE_GRASS_FILL
             else:
                 fill = _STRUCTURE_FILL
-
-            if token == "GRASS":
-                item.setBackground(fill)
-                item.setToolTip("")
-                return
 
             icon = (
                 self._texture_cache.icon_for_cell(token)

@@ -84,11 +84,8 @@ class MaterialsPanel(QGroupBox):
             return
 
         total = sum(count for _, count in materials)
-        kinds = len(materials)
-        kind_label = "kind" if kinds == 1 else "kinds"
-        self._summary.setText(
-            f"{scope_caption} — {total} block{'s' if total != 1 else ''} ({kinds} {kind_label})"
-        )
+
+        self._summary.setText(f"{scope_caption} — {total} block{'s' if total != 1 else ''}")
 
         self._table.setRowCount(len(materials))
 

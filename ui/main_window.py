@@ -8,6 +8,9 @@ from PySide6.QtCore import QEvent, Qt, QThread, QUrl
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QMouseEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -78,11 +81,19 @@ from helpers.path_strip import (
     resolve_path_orientation,
     resolve_path_width,
 )
-from helpers.paths import OUTPUT_SCHEMATICS_FOLDER
+from helpers.paths import OUTPUT_SCHEMATICS_FOLDER, STRUCTURES_FOLDER
 from helpers.site_ground import resize_site_ground
-from ui.app_settings import sync_editor_settings_from_ui
+from helpers.structure_metadata import identity_from_structure_path
+from ui.app_settings import (
+    add_recent_structure,
+    clear_recent_structures,
+    load_recent_structures,
+    sync_editor_settings_from_ui,
+)
 from ui.document import (
     StructureDocument,
+    create_structure_stage_document,
+    delete_structure_stage_document,
     open_structure,
     save_layer,
     save_structure_metadata,
@@ -95,18 +106,20 @@ from ui.editor_prefs import (
     grid_axis_labels_enabled,
     panel_compass_visible,
     panel_materials_visible,
-    panel_structure_settings_visible,
     set_block_tooltips_enabled,
     set_grid_axis_labels_enabled,
     set_panel_compass_visible,
     set_panel_materials_visible,
-    set_panel_structure_settings_visible,
 )
 from ui.icon_theme import configure_ui_icon_theme
 from ui.materials_icons import MaterialsIconCache
 from ui.menu_style import configure_ui_menus
 from ui.platform import ensure_qt_platform
-from ui.reload import reload_editor_process
+from ui.reload import (
+    open_editor_in_empty_state_process,
+    open_structure_in_editor_process,
+    reload_editor_process,
+)
 from ui.render_worker import RenderJobResult, RenderWorker
 from ui.selector_mode import SelectorMode
 from ui.site_cells import build_site_display_grid, site_preview_layer_index, structure_offset
@@ -124,6 +137,7 @@ from ui.widgets.layer_paint_brush_panel import LayerPaintBrushPanel
 from ui.widgets.layer_selector_panel import LayerSelectorPanel
 from ui.widgets.layer_tools_panel import LayerToolsPanel
 from ui.widgets.materials_panel import MaterialsPanel
+from ui.widgets.new_structure_dialog import NewStructureDialog
 from ui.widgets.palette_panel import PalettePanel
 from ui.widgets.properties_panel import PropertiesPanel
 from ui.widgets.render_panel import RenderPanel
@@ -136,6 +150,310 @@ from ui.widgets.structure_settings_panel import StructureSettingsPanel
 _STRUCTURE_EDITOR_GUIDE_URL = (
     "https://github.com/leafCreations/schematics/blob/main/docs/structure-editor-guide.md"
 )
+
+
+def _resolve_structure_stage_from_selected_dir(selected_dir: Path) -> tuple[str, int] | None:
+    structure_path = selected_dir / "stage.yaml"
+
+    if not structure_path.is_file():
+        structure_path = selected_dir / "structure.yaml"
+
+    if not structure_path.is_file():
+        return None
+
+    return identity_from_structure_path(structure_path)
+
+
+def _structure_stage_choices(structure_dir: Path) -> list[tuple[str, int]]:
+    if not structure_dir.is_dir():
+        return []
+
+    choices: list[tuple[str, int]] = []
+
+    for child in sorted(structure_dir.iterdir()):
+        if not child.is_dir():
+            continue
+
+        resolved = _resolve_structure_stage_from_selected_dir(child)
+
+        if resolved is None:
+            continue
+
+        choices.append(resolved)
+
+    return choices
+
+
+def _select_stage_for_structure(
+    parent: QWidget | None,
+    structure: str,
+    stages: list[tuple[str, int]],
+) -> tuple[str, int] | None:
+    if not stages:
+        return None
+
+    if len(stages) == 1:
+        return stages[0]
+
+    dialog = QDialog(parent)
+    dialog.setWindowTitle(f"Open Structure — {structure}")
+    layout = QVBoxLayout(dialog)
+
+    prompt = QLabel("Select a stage:")
+    layout.addWidget(prompt)
+
+    buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+    layout.addWidget(buttons)
+    buttons.rejected.connect(dialog.reject)
+
+    selected: dict[str, tuple[str, int] | None] = {"value": None}
+
+    for _, stage in sorted(stages, key=lambda item: item[1]):
+        button = QPushButton(f"Stage {stage}")
+
+        def pick(value: tuple[str, int]) -> None:
+            selected["value"] = value
+            dialog.accept()
+
+        button.clicked.connect(lambda _checked=False, value=(structure, stage): pick(value))
+        layout.insertWidget(layout.count() - 1, button)
+
+    if not dialog.exec():
+        return None
+
+    return selected["value"]
+
+
+def _pick_structure_stage(parent: QWidget | None) -> tuple[str, int] | None:
+    selected = QFileDialog.getExistingDirectory(
+        parent,
+        "Open Structure",
+        str(STRUCTURES_FOLDER),
+        QFileDialog.Option.ShowDirsOnly,
+    )
+
+    if not selected:
+        return None
+
+    selected_dir = Path(selected)
+    stage_choice = _resolve_structure_stage_from_selected_dir(selected_dir)
+
+    if stage_choice is not None:
+        return stage_choice
+
+    structure = selected_dir.name.lower()
+    choices = _structure_stage_choices(selected_dir)
+    return _select_stage_for_structure(parent, structure, choices)
+
+
+class NoStructureLoadedWindow(QMainWindow):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Structure Editor — No structure loaded")
+        self.resize(1280, 800)
+
+        center = QLabel("No structure loaded")
+        center.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        center.setStyleSheet("font-size: 24px; color: #666;")
+        open_button = QPushButton("Open Structure...")
+        open_button.clicked.connect(self._on_open_structure)
+
+        wrapper = QWidget()
+        layout = QVBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        layout.addStretch(1)
+        layout.addWidget(center, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(open_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addStretch(1)
+        self.setCentralWidget(wrapper)
+
+        status = QStatusBar()
+        status.showMessage("Use File > New Structure or File > Open Recent.", 5000)
+        self.setStatusBar(status)
+
+        self._init_file_menu()
+
+    def _init_file_menu(self) -> None:
+        file_menu = self.menuBar().addMenu("&File")
+
+        new_structure_action = QAction("&New Structure", self)
+        new_structure_action.setShortcut(QKeySequence("Ctrl+N"))
+        new_structure_action.triggered.connect(self._on_new_structure)
+        file_menu.addAction(new_structure_action)
+
+        open_structure_action = QAction("&Open Structure...", self)
+        open_structure_action.setShortcut(QKeySequence.StandardKey.Open)
+        open_structure_action.triggered.connect(self._on_open_structure)
+        file_menu.addAction(open_structure_action)
+
+        delete_stage_action = QAction("Delete Current &Stage...", self)
+        delete_stage_action.triggered.connect(self._on_delete_current_stage)
+        file_menu.addAction(delete_stage_action)
+
+        self._open_recent_menu = file_menu.addMenu("Open &Recent")
+        self._open_recent_menu.aboutToShow.connect(self._refresh_open_recent_menu)
+
+        file_menu.addSeparator()
+
+        exit_action = QAction("E&xit", self)
+        exit_action.setShortcut(QKeySequence("Ctrl+Q"))
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+    def _refresh_open_recent_menu(self) -> None:
+        self._open_recent_menu.clear()
+        entries = load_recent_structures()
+
+        if entries:
+            for structure, stage in entries:
+                action = QAction(f"{structure} (Stage {stage})", self)
+                action.triggered.connect(
+                    lambda _checked=False, s=structure, st=stage: self._open_recent_entry(s, st)
+                )
+                self._open_recent_menu.addAction(action)
+        else:
+            empty_action = QAction("(No recent files)", self)
+            empty_action.setEnabled(False)
+            self._open_recent_menu.addAction(empty_action)
+
+        self._open_recent_menu.addSeparator()
+        clear_action = QAction("Clear Recent Files", self)
+        clear_action.setEnabled(bool(entries))
+        clear_action.triggered.connect(self._clear_recent_entries)
+        self._open_recent_menu.addAction(clear_action)
+
+    def _clear_recent_entries(self) -> None:
+        clear_recent_structures()
+        self._refresh_open_recent_menu()
+
+    def _open_recent_entry(self, structure: str, stage: int) -> None:
+        add_recent_structure(structure, stage)
+
+        try:
+            open_structure_in_editor_process(structure, stage)
+        except OSError as exc:
+            QMessageBox.critical(self, "Open recent failed", str(exc))
+
+    def _on_open_structure(self) -> None:
+        selection = _pick_structure_stage(self)
+
+        if selection is None:
+            return
+
+        structure, stage = selection
+        add_recent_structure(structure, stage)
+
+        try:
+            open_structure_in_editor_process(structure, stage)
+        except OSError as exc:
+            QMessageBox.critical(self, "Open Structure failed", str(exc))
+
+    def _on_delete_current_stage(self) -> None:
+        structure = str(self._document.metadata.get("structure", self._structure))
+        stage = int(self._document.metadata.get("stage", self._stage))
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Current Stage",
+            (
+                f"Delete {structure} Stage {stage}?\n\n"
+                "This removes its stage folder and cannot be undone."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        if self._dirty_layers or self._dirty_structure:
+            save_answer = QMessageBox.question(
+                self,
+                "Unsaved changes",
+                "Save unsaved changes before deleting this stage?",
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save,
+            )
+
+            if save_answer == QMessageBox.StandardButton.Cancel:
+                return
+
+            if save_answer == QMessageBox.StandardButton.Save:
+                if self._dirty_structure and not self._save_site_settings():
+                    return
+
+                for layer_index in sorted(self._dirty_layers):
+                    if not self._save_layer(layer_index):
+                        return
+
+        try:
+            delete_structure_stage_document(structure=structure, stage=stage)
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            QMessageBox.critical(self, "Delete Stage failed", str(exc))
+            return
+
+        remaining = _structure_stage_choices(STRUCTURES_FOLDER / structure)
+
+        if remaining:
+            _, next_stage = remaining[0]
+            add_recent_structure(structure, next_stage)
+
+            try:
+                open_structure_in_editor_process(structure, next_stage)
+            except OSError as exc:
+                QMessageBox.critical(self, "Open Structure failed", str(exc))
+            return
+
+        reload_editor_process()
+
+    def _on_new_structure(self) -> None:
+        while True:
+            dialog = NewStructureDialog(self)
+
+            if not dialog.exec():
+                return
+
+            (
+                structure,
+                stage,
+                site_width,
+                site_depth,
+                structure_width,
+                structure_depth,
+                dimension,
+            ) = dialog.values()
+
+            try:
+                create_structure_stage_document(
+                    structure=structure,
+                    stage=stage,
+                    site_width=site_width,
+                    site_depth=site_depth,
+                    structure_width=structure_width,
+                    structure_depth=structure_depth,
+                    dimension=dimension,
+                )
+            except FileExistsError as exc:
+                QMessageBox.warning(self, "New Structure", str(exc))
+                continue
+            except ValueError as exc:
+                QMessageBox.warning(self, "New Structure", str(exc))
+                continue
+            except OSError as exc:
+                QMessageBox.critical(self, "Save failed", str(exc))
+                return
+
+            add_recent_structure(structure, stage)
+
+            try:
+                open_structure_in_editor_process(structure, stage)
+            except OSError as exc:
+                QMessageBox.critical(self, "Open New Structure failed", str(exc))
+
+            return
 
 
 class MainWindow(QMainWindow):
@@ -273,12 +591,20 @@ class MainWindow(QMainWindow):
         self._palette_column_layout = QVBoxLayout(palette_column)
         self._palette_column_layout.setContentsMargins(0, 0, 0, 0)
         self._palette_column_layout.setSpacing(0)
-        self._structure_settings_panel.close_requested.connect(self._hide_structure_settings_panel)
         self._palette_column_layout.addWidget(self._palette_panel)
         self._palette_column_layout.addWidget(self._groups_panel)
         self._palette_column_layout.addWidget(self._layer_list_panel)
-        self._palette_column_layout.addWidget(self._structure_settings_panel)
         self._update_palette_column_layout()
+
+        self._structure_properties_dialog = QDialog(self)
+        self._structure_properties_dialog.setWindowTitle("Structure Properties")
+        self._structure_properties_dialog.setModal(True)
+        self._structure_properties_dialog_layout = QVBoxLayout(self._structure_properties_dialog)
+        self._structure_properties_dialog_layout.setContentsMargins(0, 0, 0, 0)
+        self._structure_properties_dialog_layout.addWidget(self._structure_settings_panel)
+        self._structure_settings_panel.close_requested.connect(
+            self._structure_properties_dialog.close
+        )
 
         structure_header = self._build_structure_header()
         self._structure_grid_viewport = LayerGridViewport(self._structure_grid)
@@ -371,9 +697,29 @@ class MainWindow(QMainWindow):
 
     def _init_menus(self) -> None:
         self._init_file_menu()
+        self._init_structure_menu()
         self._init_edit_menu()
         self._init_view_menu()
         self._init_help_menu()
+
+    def _init_structure_menu(self) -> None:
+        structure_menu = self.menuBar().addMenu("&Structure")
+
+        new_stage_action = QAction("&New Stage...", self)
+        new_stage_action.triggered.connect(self._on_new_stage)
+        structure_menu.addAction(new_stage_action)
+
+        structure_menu.addSeparator()
+
+        delete_stage_action = QAction("&Delete Stage...", self)
+        delete_stage_action.triggered.connect(self._on_delete_stage)
+        structure_menu.addAction(delete_stage_action)
+
+        structure_menu.addSeparator()
+
+        structure_properties_action = QAction("Structure &Properties", self)
+        structure_properties_action.triggered.connect(self._on_open_structure_properties)
+        structure_menu.addAction(structure_properties_action)
 
     def _init_file_menu(self) -> None:
         file_menu = self.menuBar().addMenu("&File")
@@ -382,6 +728,14 @@ class MainWindow(QMainWindow):
         new_structure_action.setShortcut(QKeySequence("Ctrl+N"))
         new_structure_action.triggered.connect(self._on_new_structure_placeholder)
         file_menu.addAction(new_structure_action)
+
+        open_structure_action = QAction("&Open Structure...", self)
+        open_structure_action.setShortcut(QKeySequence.StandardKey.Open)
+        open_structure_action.triggered.connect(self._on_open_structure)
+        file_menu.addAction(open_structure_action)
+
+        self._open_recent_menu = file_menu.addMenu("Open &Recent")
+        self._open_recent_menu.aboutToShow.connect(self._refresh_open_recent_menu)
 
         file_menu.addSeparator()
 
@@ -403,6 +757,111 @@ class MainWindow(QMainWindow):
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+
+    def _refresh_open_recent_menu(self) -> None:
+        self._open_recent_menu.clear()
+        entries = load_recent_structures()
+
+        if entries:
+            for structure, stage in entries:
+                action = QAction(f"{structure} (Stage {stage})", self)
+                action.triggered.connect(
+                    lambda _checked=False, s=structure, st=stage: self._open_recent_entry(s, st)
+                )
+                self._open_recent_menu.addAction(action)
+        else:
+            empty_action = QAction("(No recent files)", self)
+            empty_action.setEnabled(False)
+            self._open_recent_menu.addAction(empty_action)
+
+        self._open_recent_menu.addSeparator()
+        clear_action = QAction("Clear Recent Files", self)
+        clear_action.setEnabled(bool(entries))
+        clear_action.triggered.connect(self._clear_recent_entries)
+        self._open_recent_menu.addAction(clear_action)
+
+    def _clear_recent_entries(self) -> None:
+        clear_recent_structures()
+        self._refresh_open_recent_menu()
+        self._status.showMessage("Cleared recent files.", 3000)
+
+    def _open_recent_entry(self, structure: str, stage: int) -> None:
+        current_structure = str(self._document.metadata.get("structure", self._structure))
+        current_stage = int(self._document.metadata.get("stage", self._stage))
+
+        if structure == current_structure and int(stage) == current_stage:
+            return
+
+        if self._dirty_layers or self._dirty_structure:
+            answer = QMessageBox.question(
+                self,
+                "Unsaved changes",
+                "Save unsaved changes before opening a recent structure?",
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save,
+            )
+
+            if answer == QMessageBox.StandardButton.Cancel:
+                return
+
+            if answer == QMessageBox.StandardButton.Save:
+                if self._dirty_structure and not self._save_site_settings():
+                    return
+
+                for layer_index in sorted(self._dirty_layers):
+                    if not self._save_layer(layer_index):
+                        return
+
+        add_recent_structure(structure, stage)
+
+        try:
+            open_structure_in_editor_process(structure, stage)
+        except OSError as exc:
+            QMessageBox.critical(self, "Open recent failed", str(exc))
+
+    def _on_open_structure(self) -> None:
+        selection = _pick_structure_stage(self)
+
+        if selection is None:
+            return
+
+        structure, stage = selection
+        current_structure = str(self._document.metadata.get("structure", self._structure))
+        current_stage = int(self._document.metadata.get("stage", self._stage))
+
+        if structure == current_structure and stage == current_stage:
+            return
+
+        if self._dirty_layers or self._dirty_structure:
+            answer = QMessageBox.question(
+                self,
+                "Unsaved changes",
+                "Save unsaved changes before opening a structure?",
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save,
+            )
+
+            if answer == QMessageBox.StandardButton.Cancel:
+                return
+
+            if answer == QMessageBox.StandardButton.Save:
+                if self._dirty_structure and not self._save_site_settings():
+                    return
+
+                for layer_index in sorted(self._dirty_layers):
+                    if not self._save_layer(layer_index):
+                        return
+
+        add_recent_structure(structure, stage)
+
+        try:
+            open_structure_in_editor_process(structure, stage)
+        except OSError as exc:
+            QMessageBox.critical(self, "Open Structure failed", str(exc))
 
     def _init_view_menu(self) -> None:
         view_menu = self.menuBar().addMenu("&View")
@@ -426,14 +885,6 @@ class MainWindow(QMainWindow):
         self._materials_action.setChecked(True)
         self._materials_action.triggered.connect(self._on_materials_action_triggered)
         view_menu.addAction(self._materials_action)
-
-        self._structure_settings_action = QAction("Structure &settings", self)
-        self._structure_settings_action.setCheckable(True)
-        self._structure_settings_action.setChecked(True)
-        self._structure_settings_action.triggered.connect(
-            self._on_structure_settings_action_triggered
-        )
-        view_menu.addAction(self._structure_settings_action)
 
         self._block_tooltips_action = QAction("Block &tooltips", self)
         self._block_tooltips_action.setCheckable(True)
@@ -466,7 +917,6 @@ class MainWindow(QMainWindow):
     def _apply_panel_visibility_prefs(self) -> None:
         self._set_compass_panels_visible(panel_compass_visible())
         self._set_materials_panel_visible(panel_materials_visible())
-        self._set_structure_settings_panel_visible(panel_structure_settings_visible())
 
     def _on_compass_action_triggered(self, checked: bool) -> None:
         self._set_compass_panels_visible(checked)
@@ -488,20 +938,6 @@ class MainWindow(QMainWindow):
 
     def _hide_materials_panel(self) -> None:
         self._set_materials_panel_visible(False)
-
-    def _on_structure_settings_action_triggered(self, checked: bool) -> None:
-        self._set_structure_settings_panel_visible(checked)
-
-    def _hide_structure_settings_panel(self) -> None:
-        self._set_structure_settings_panel_visible(False)
-
-    def _set_structure_settings_panel_visible(self, visible: bool) -> None:
-        self._structure_settings_action.blockSignals(True)
-        self._structure_settings_action.setChecked(visible)
-        self._structure_settings_action.blockSignals(False)
-        self._structure_settings_panel.setVisible(visible)
-        set_panel_structure_settings_visible(visible)
-        self._update_palette_column_layout()
 
     def _set_materials_panel_visible(self, visible: bool) -> None:
         self._materials_action.blockSignals(True)
@@ -556,6 +992,151 @@ class MainWindow(QMainWindow):
         self._unselect_cells_action.triggered.connect(self._on_unselect_cells)
         edit_menu.addAction(self._unselect_cells_action)
 
+    def _on_open_structure_properties(self) -> None:
+        self._structure_settings_panel.set_structure_path(self._document.structure_path)
+        self._structure_settings_panel.load_from_metadata(self._document.metadata)
+        self._structure_properties_dialog.resize(420, 640)
+        self._structure_properties_dialog.exec()
+
+    def _on_new_stage(self) -> None:
+        current_structure = str(self._document.metadata.get("structure", self._structure))
+        current_stage = int(self._document.metadata.get("stage", self._stage))
+        site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
+        structure_width, structure_depth = structure_dimensions_from_layers(self._document.layers)
+        default_stage = current_stage + 1
+
+        existing = _structure_stage_choices(STRUCTURES_FOLDER / current_structure)
+        if existing:
+            default_stage = max(stage for _, stage in existing) + 1
+
+        while True:
+            dialog = NewStructureDialog(
+                self,
+                structure=current_structure,
+                stage=default_stage,
+                site_width=site_width,
+                site_depth=site_depth,
+                structure_width=structure_width,
+                structure_depth=structure_depth,
+                dimension=str(self._document.metadata.get("dimension", "overworld")),
+            )
+
+            if not dialog.exec():
+                return
+
+            (
+                selected_structure,
+                stage,
+                selected_site_width,
+                selected_site_depth,
+                selected_structure_width,
+                selected_structure_depth,
+                dimension,
+            ) = dialog.values()
+
+            if selected_structure != current_structure:
+                QMessageBox.warning(
+                    self,
+                    "New Stage",
+                    "Structure cannot be changed from Structure > New Stage.",
+                )
+                continue
+
+            if self._dirty_layers or self._dirty_structure:
+                answer = QMessageBox.question(
+                    self,
+                    "Unsaved changes",
+                    "Save unsaved changes before creating and opening the new stage?",
+                    QMessageBox.StandardButton.Save
+                    | QMessageBox.StandardButton.Discard
+                    | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Save,
+                )
+
+                if answer == QMessageBox.StandardButton.Cancel:
+                    return
+
+                if answer == QMessageBox.StandardButton.Save:
+                    if self._dirty_structure and not self._save_site_settings():
+                        return
+
+                    for layer_index in sorted(self._dirty_layers):
+                        if not self._save_layer(layer_index):
+                            return
+
+            try:
+                create_structure_stage_document(
+                    structure=current_structure,
+                    stage=stage,
+                    site_width=selected_site_width,
+                    site_depth=selected_site_depth,
+                    structure_width=selected_structure_width,
+                    structure_depth=selected_structure_depth,
+                    dimension=dimension,
+                )
+            except (FileExistsError, ValueError) as exc:
+                QMessageBox.warning(self, "New Stage", str(exc))
+                default_stage = stage
+                continue
+            except OSError as exc:
+                QMessageBox.critical(self, "New Stage", str(exc))
+                return
+
+            add_recent_structure(current_structure, stage)
+            open_structure_in_editor_process(current_structure, stage)
+
+    def _on_delete_stage(self) -> None:
+        structure = str(self._document.metadata.get("structure", self._structure))
+        stage = int(self._document.metadata.get("stage", self._stage))
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Stage",
+            f"Delete {structure} stage {stage}? This cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        if self._dirty_layers or self._dirty_structure:
+            save_answer = QMessageBox.question(
+                self,
+                "Unsaved changes",
+                "Save unsaved changes before deleting this stage?",
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save,
+            )
+
+            if save_answer == QMessageBox.StandardButton.Cancel:
+                return
+
+            if save_answer == QMessageBox.StandardButton.Save:
+                if self._dirty_structure and not self._save_site_settings():
+                    return
+
+                for layer_index in sorted(self._dirty_layers):
+                    if not self._save_layer(layer_index):
+                        return
+
+        try:
+            delete_structure_stage_document(structure=structure, stage=stage)
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            QMessageBox.critical(self, "Delete Stage", str(exc))
+            return
+
+        remaining = _structure_stage_choices(STRUCTURES_FOLDER / structure)
+        if remaining:
+            _, next_stage = remaining[0]
+            add_recent_structure(structure, next_stage)
+            open_structure_in_editor_process(structure, next_stage)
+            return
+
+        open_editor_in_empty_state_process()
+
     def _init_help_menu(self) -> None:
         help_menu = self.menuBar().addMenu("&Help")
 
@@ -567,11 +1148,89 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl(_STRUCTURE_EDITOR_GUIDE_URL))
 
     def _on_new_structure_placeholder(self) -> None:
-        QMessageBox.information(
-            self,
-            "New Structure",
-            "Creating a new structure from the editor is not implemented yet.",
-        )
+        site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
+        structure_width, structure_depth = structure_dimensions_from_layers(self._document.layers)
+        default_structure = str(self._document.metadata.get("structure", "structure"))
+        default_stage = int(self._document.metadata.get("stage", 1))
+
+        while True:
+            dialog = NewStructureDialog(
+                self,
+                structure=default_structure,
+                stage=default_stage,
+                site_width=site_width,
+                site_depth=site_depth,
+                structure_width=structure_width,
+                structure_depth=structure_depth,
+            )
+
+            if not dialog.exec():
+                self._status.showMessage("New structure canceled.", 2500)
+                return
+
+            (
+                structure,
+                stage,
+                selected_site_width,
+                selected_site_depth,
+                selected_structure_width,
+                selected_structure_depth,
+                dimension,
+            ) = dialog.values()
+
+            default_structure = structure
+            default_stage = stage
+            site_width = selected_site_width
+            site_depth = selected_site_depth
+            structure_width = selected_structure_width
+            structure_depth = selected_structure_depth
+
+            try:
+                structure_path = create_structure_stage_document(
+                    structure=structure,
+                    stage=stage,
+                    site_width=selected_site_width,
+                    site_depth=selected_site_depth,
+                    structure_width=selected_structure_width,
+                    structure_depth=selected_structure_depth,
+                    dimension=dimension,
+                )
+            except FileExistsError as exc:
+                QMessageBox.warning(self, "New Structure", str(exc))
+                continue
+            except ValueError as exc:
+                QMessageBox.warning(self, "New Structure", str(exc))
+                continue
+            except OSError as exc:
+                QMessageBox.critical(self, "Save failed", str(exc))
+                return
+
+            if self._dirty_layers or self._dirty_structure:
+                answer = QMessageBox.question(
+                    self,
+                    "Open New Structure",
+                    "Open the newly created structure now and discard unsaved changes "
+                    "in the current editor?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+
+                if answer != QMessageBox.StandardButton.Yes:
+                    self._status.showMessage(f"Created {structure_path}", 5000)
+                    return
+
+            self._status.showMessage(f"Created {structure_path}. Opening...", 2000)
+            add_recent_structure(structure, stage)
+
+            try:
+                open_structure_in_editor_process(structure, stage)
+            except OSError as exc:
+                QMessageBox.critical(
+                    self,
+                    "Open New Structure failed",
+                    f"Created:\n{structure_path}\n\nCould not open automatically:\n{exc}",
+                )
+            return
 
     def _reload_window(self) -> None:
         if self._render_thread is not None:
@@ -722,7 +1381,6 @@ class MainWindow(QMainWindow):
         for widget in (
             self._groups_panel,
             self._layer_list_panel,
-            self._structure_settings_panel,
         ):
             layout.setStretchFactor(widget, 0)
             widget.setSizePolicy(
@@ -3181,23 +3839,50 @@ def build_main_window(structure: str, stage: int) -> MainWindow:
         )
         raise
 
+    add_recent_structure(structure, stage)
     return MainWindow(document, structure=structure, stage=stage)
+
+
+def _resolve_startup_target(structure: str | None, stage: int | None) -> tuple[str, int] | None:
+    if structure:
+        return structure, int(stage or 1)
+
+    for recent_structure, recent_stage in load_recent_structures():
+        try:
+            open_structure(recent_structure, recent_stage)
+        except Exception:
+            continue
+
+        return recent_structure, recent_stage
+
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Structure schematic editor")
-    parser.add_argument("--structure", default="residence")
-    parser.add_argument("--stage", type=int, default=1)
+    parser.add_argument("--structure")
+    parser.add_argument("--stage", type=int)
     args = parser.parse_args(argv)
+
+    if args.stage is not None and not args.structure:
+        parser.error("--stage requires --structure")
 
     ensure_qt_platform()
     app = QApplication(sys.argv)
     configure_ui_icon_theme()
     configure_ui_tooltips()
     configure_ui_menus()
-    window = build_main_window(args.structure, args.stage)
+    target = _resolve_startup_target(args.structure, args.stage)
+
+    if target is None:
+        window = NoStructureLoadedWindow()
+        window.show()
+        return app.exec()
+
+    structure, stage = target
+    window = build_main_window(structure, stage)
     window.show()
     return app.exec()
 

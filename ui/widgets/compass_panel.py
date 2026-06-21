@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap, QPolygonF
-from PySide6.QtWidgets import QGroupBox, QLabel, QWidget
+from PySide6.QtWidgets import QGroupBox, QWidget
 
 from helpers.paths import UI_ASSETS_FOLDER
 from ui.widgets.panel_header import PANEL_COMPASS_MAX_HEIGHT, create_titled_panel_layout
 from ui.widgets.panel_tool_button import make_panel_close_button
 
 _COMPASS_SVG = UI_ASSETS_FOLDER / "compass.svg"
-_ROSE_SIZE = 80
+_ROSE_SIZE = 100
 
 
 class CompassRoseWidget(QWidget):
@@ -142,12 +142,7 @@ class CompassPanel(QGroupBox):
         layout.setSpacing(4)
 
         rose = CompassRoseWidget()
-        hint = QLabel("Top of grid = north\n+x → east, +z ↓ south")
-        hint.setWordWrap(True)
-        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        hint.setStyleSheet("color: #ffffff; font-size: 11px;")
 
         layout.addWidget(rose, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addWidget(hint)
 
         self.setMaximumHeight(PANEL_COMPASS_MAX_HEIGHT)

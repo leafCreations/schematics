@@ -26,7 +26,7 @@ REQUIRED_GRID_KEYS = ("offset_x", "offset_z")
 
 INLINE_LAYERS_EDITOR_MESSAGE = (
     "uses inline layers; split into layers/*.yaml and add layer_files "
-    "(see structures/residence/stage2/structure.yaml)"
+    "(see structures/residence/stage2/stage.yaml)"
 )
 
 
@@ -357,6 +357,51 @@ def load_structure_yaml(path: Path) -> StructureConfig:
     if not isinstance(data, dict):
         raise ValueError(f"{path} must contain a YAML mapping")
 
+    structure_name = str(data.get("structure", path.parent.parent.name)).strip().lower()
+
+    stage_raw = data.get("stage")
+    if stage_raw is None:
+        stage_dir = path.parent.name
+        if stage_dir.startswith("stage"):
+            stage_raw = stage_dir.removeprefix("stage")
+
+    try:
+        stage_value = int(stage_raw)
+    except (TypeError, ValueError):
+        stage_value = None
+
+    if stage_value is not None:
+        manifest_path = STRUCTURES_FOLDER / structure_name / "structure.yaml"
+        if manifest_path.is_file():
+            with manifest_path.open(encoding="utf-8") as handle:
+                manifest = yaml.safe_load(handle)
+
+            if isinstance(manifest, dict):
+                for entry in manifest.get("stages", []):
+                    if not isinstance(entry, dict):
+                        continue
+
+                    try:
+                        entry_stage = int(entry.get("stage"))
+                    except (TypeError, ValueError):
+                        continue
+
+                    if entry_stage != stage_value:
+                        continue
+
+                    if "dimension" in entry:
+                        data["dimension"] = entry.get("dimension")
+
+                    if "grid" in entry:
+                        data["grid"] = entry.get("grid")
+
+                    if "output_folder" in entry:
+                        data["output_folder"] = entry.get("output_folder")
+                    break
+
+                if "site_ground" in manifest:
+                    data["site_ground"] = manifest.get("site_ground")
+
     layers = load_structure_layers(path, data)
     config = {**data, "layers": layers}
     config.pop("layer_files", None)
@@ -368,7 +413,7 @@ def load_structure_module(path: Path) -> StructureConfig:
     """Load a legacy ``stage{N}_structure.py`` module (deprecated; use YAML)."""
     warnings.warn(
         f"Python structure modules are deprecated ({path.name}); "
-        f"migrate to {path.parent / 'structure.yaml'} "
+        f"migrate to {path.parent / 'stage.yaml'} "
         "(see scripts/migrate_structure_to_yaml.py).",
         DeprecationWarning,
         stacklevel=2,
@@ -392,10 +437,15 @@ def load_structure_module(path: Path) -> StructureConfig:
 
 
 def resolve_structure_source(structure: str, stage: int) -> Path:
-    yaml_path = STRUCTURES_FOLDER / structure / f"stage{stage}" / "structure.yaml"
+    yaml_path = STRUCTURES_FOLDER / structure / f"stage{stage}" / "stage.yaml"
 
     if yaml_path.is_file():
         return yaml_path
+
+    legacy_yaml_path = STRUCTURES_FOLDER / structure / f"stage{stage}" / "structure.yaml"
+
+    if legacy_yaml_path.is_file():
+        return legacy_yaml_path
 
     python_path = STRUCTURES_FOLDER / structure / f"stage{stage}_structure.py"
 
@@ -404,7 +454,7 @@ def resolve_structure_source(structure: str, stage: int) -> Path:
 
     raise FileNotFoundError(
         f"No structure definition found for {structure} stage {stage}; "
-        f"expected {yaml_path} or {python_path}"
+        f"expected {yaml_path}, {legacy_yaml_path}, or {python_path}"
     )
 
 

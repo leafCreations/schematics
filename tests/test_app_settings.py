@@ -26,6 +26,7 @@ def test_defaults_when_no_user_file():
     assert settings.panel_compass is True
     assert settings.panel_materials is True
     assert settings.panel_structure_settings is True
+    assert settings.recent_structures == []
     assert user_settings_path().is_file()
 
 
@@ -76,3 +77,32 @@ def test_save_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         panel_materials=True,
         panel_structure_settings=False,
     )
+
+
+def test_recent_structures_round_trip_and_clear():
+    app_settings.add_recent_structure("residence", 1)
+    app_settings.add_recent_structure("well", 2)
+    app_settings.add_recent_structure("residence", 1)
+
+    app_settings.reset_editor_settings_cache()
+    settings = load_editor_settings(force_reload=True)
+    assert settings.recent_structures == [("residence", 1), ("well", 2)]
+
+    app_settings.clear_recent_structures()
+    app_settings.reset_editor_settings_cache()
+    assert load_editor_settings(force_reload=True).recent_structures == []
+
+
+def test_sync_editor_settings_from_ui_preserves_recent_structures():
+    app_settings.add_recent_structure("residence", 1)
+    app_settings.sync_editor_settings_from_ui(
+        block_tooltips=True,
+        grid_axis_labels=False,
+        panel_compass=True,
+        panel_materials=False,
+        panel_structure_settings=True,
+    )
+
+    app_settings.reset_editor_settings_cache()
+    settings = load_editor_settings(force_reload=True)
+    assert settings.recent_structures == [("residence", 1)]

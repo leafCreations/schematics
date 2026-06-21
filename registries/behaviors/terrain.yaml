@@ -33,9 +33,9 @@ GRASS:
   render:
     top: grass_block_top.png
     background_color:
-    - 95
-    - 160
-    - 75
+    - 85
+    - 255
+    - 85
 GRAVEL:
   behavior: solid
   ui:

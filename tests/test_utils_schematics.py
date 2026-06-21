@@ -128,3 +128,12 @@ def test_resolve_cell_texture_returns_planks_image():
     assert image is not None
     assert image.size == (constants.BLOCK_PX, constants.BLOCK_PX)
     assert image.getpixel((0, 0))[3] == 255
+
+
+@pytest.mark.requires_assets
+def test_resolve_cell_texture_grass_registry_token_uses_catalog_fallback():
+    image = schematics_utils.resolve_cell_texture("GRASS", {}, size=constants.BLOCK_PX)
+
+    assert image is not None
+    assert image.size == (constants.BLOCK_PX, constants.BLOCK_PX)
+    assert image.getpixel((0, 0))[3] == 255

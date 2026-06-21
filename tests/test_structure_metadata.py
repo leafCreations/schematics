@@ -37,7 +37,7 @@ def test_apply_structure_identity_sets_derived_name_and_output_folder():
 
 
 def test_identity_from_structure_path():
-    path = Path("structures/residence/stage1/structure.yaml")
+    path = Path("structures/residence/stage1/stage.yaml")
     assert identity_from_structure_path(path) == ("residence", 1)
 
 

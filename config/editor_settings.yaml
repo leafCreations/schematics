@@ -14,3 +14,6 @@ panels:
   compass: true
   materials: true
   structure_settings: true
+
+recent:
+  opened: []

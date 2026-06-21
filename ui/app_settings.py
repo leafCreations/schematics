@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +33,7 @@ class EditorSettings:
     panel_compass: bool = True
     panel_materials: bool = True
     panel_structure_settings: bool = True
+    recent_structures: list[tuple[str, int]] = field(default_factory=list)
 
 
 def bundled_settings_path() -> Path:
@@ -67,6 +68,29 @@ def _coerce_bool(value: object, default: bool) -> bool:
 def _settings_from_mapping(data: dict[str, Any]) -> EditorSettings:
     display = data.get("display") if isinstance(data.get("display"), dict) else {}
     panels = data.get("panels") if isinstance(data.get("panels"), dict) else {}
+    recent = data.get("recent") if isinstance(data.get("recent"), dict) else {}
+    opened = recent.get("opened") if isinstance(recent.get("opened"), list) else []
+
+    parsed_recent: list[tuple[str, int]] = []
+
+    for item in opened:
+        if not isinstance(item, dict):
+            continue
+
+        structure = str(item.get("structure", "")).strip().lower()
+
+        if not structure:
+            continue
+
+        try:
+            stage = int(item.get("stage", 1))
+        except (TypeError, ValueError):
+            continue
+
+        if stage < 1:
+            continue
+
+        parsed_recent.append((structure, stage))
 
     return EditorSettings(
         block_tooltips=_coerce_bool(display.get("block_tooltips"), True),
@@ -74,6 +98,7 @@ def _settings_from_mapping(data: dict[str, Any]) -> EditorSettings:
         panel_compass=_coerce_bool(panels.get("compass"), True),
         panel_materials=_coerce_bool(panels.get("materials"), True),
         panel_structure_settings=_coerce_bool(panels.get("structure_settings"), True),
+        recent_structures=parsed_recent,
     )
 
 
@@ -102,6 +127,12 @@ def settings_to_mapping(settings: EditorSettings) -> dict[str, Any]:
             "compass": settings.panel_compass,
             "materials": settings.panel_materials,
             "structure_settings": settings.panel_structure_settings,
+        },
+        "recent": {
+            "opened": [
+                {"structure": structure, "stage": stage}
+                for structure, stage in settings.recent_structures
+            ]
         },
     }
 
@@ -196,11 +227,51 @@ def sync_editor_settings_from_ui(
     panel_structure_settings: bool,
 ) -> None:
     """Write the current UI state to the user settings file."""
+    current = load_editor_settings()
     settings = EditorSettings(
         block_tooltips=block_tooltips,
         grid_axis_labels=grid_axis_labels,
         panel_compass=panel_compass,
         panel_materials=panel_materials,
         panel_structure_settings=panel_structure_settings,
+        recent_structures=list(current.recent_structures),
     )
     save_user_editor_settings(settings)
+
+
+def load_recent_structures() -> list[tuple[str, int]]:
+    return list(load_editor_settings().recent_structures)
+
+
+def save_recent_structures(entries: list[tuple[str, int]]) -> None:
+    current = load_editor_settings()
+    current.recent_structures = list(entries)
+    save_user_editor_settings(current)
+
+
+def add_recent_structure(structure: str, stage: int, *, limit: int = 10) -> None:
+    normalized = str(structure).strip().lower()
+
+    if not normalized:
+        return
+
+    stage_value = int(stage)
+
+    if stage_value < 1:
+        return
+
+    current = load_editor_settings()
+    existing = [
+        (item_structure, item_stage)
+        for item_structure, item_stage in current.recent_structures
+        if not (item_structure == normalized and item_stage == stage_value)
+    ]
+    existing.insert(0, (normalized, stage_value))
+    current.recent_structures = existing[: max(1, int(limit))]
+    save_user_editor_settings(current)
+
+
+def clear_recent_structures() -> None:
+    current = load_editor_settings()
+    current.recent_structures = []
+    save_user_editor_settings(current)
