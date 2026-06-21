@@ -229,10 +229,10 @@ def test_create_structure_stage_document_writes_yaml_and_layer(
     assert manifest["structure"] == "tower"
     assert manifest["stages"][0]["stage"] == 3
     assert manifest["stages"][0]["path"] == "stage3/stage.yaml"
-    assert manifest["stages"][0]["dimension"] == "overworld"
     assert manifest["stages"][0]["output_folder"] == "stage3_tower"
-    assert manifest["stages"][0]["grid"]["site_width"] == 40
-    assert manifest["stages"][0]["grid"]["site_depth"] == 32
+    assert manifest["dimension"] == "overworld"
+    assert manifest["grid"]["site_width"] == 40
+    assert manifest["grid"]["site_depth"] == 32
     assert all(cell == "GRASS" for row in manifest["site_ground"] for cell in row)
 
 
@@ -295,6 +295,9 @@ def test_create_structure_stage_document_allows_new_stage_for_existing_structure
 
     manifest = yaml.safe_load((tmp_path / "structures" / "villa" / "structure.yaml").read_text())
     assert manifest["structure"] == "villa"
+    assert manifest["dimension"] == "nether"
+    assert manifest["grid"]["site_width"] == 20
+    assert manifest["grid"]["site_depth"] == 20
     assert [entry["stage"] for entry in manifest["stages"]] == [1, 2]
     assert manifest["stages"][0]["path"] == "stage1/stage.yaml"
     assert manifest["stages"][1]["path"] == "stage2/stage.yaml"

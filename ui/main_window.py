@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpacerItem,
+    QSpinBox,
     QSplitter,
     QStatusBar,
     QTabWidget,
@@ -89,6 +90,12 @@ from ui.app_settings import (
     clear_recent_structures,
     load_recent_structures,
     sync_editor_settings_from_ui,
+)
+from ui.dialog_layout import (
+    DIALOG_FIELD_MIN_WIDTH,
+    apply_dialog_field_style,
+    create_dialog_form_layout,
+    create_dialog_shell,
 )
 from ui.document import (
     StructureDocument,
@@ -246,6 +253,18 @@ def _pick_structure_stage(parent: QWidget | None) -> tuple[str, int] | None:
     return _select_stage_for_structure(parent, structure, choices)
 
 
+def _format_recent_entry_label(index: int, structure: str, stage: int) -> str:
+    dimension = "unknown"
+
+    try:
+        document = open_structure(structure, stage)
+        dimension = str(document.metadata.get("dimension", "overworld"))
+    except (FileNotFoundError, ValueError, OSError):
+        pass
+
+    return f"{index}. {dimension}:{structure}_stage{stage}"
+
+
 class NoStructureLoadedWindow(QMainWindow):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -306,8 +325,8 @@ class NoStructureLoadedWindow(QMainWindow):
         entries = load_recent_structures()
 
         if entries:
-            for structure, stage in entries:
-                action = QAction(f"{structure} (Stage {stage})", self)
+            for index, (structure, stage) in enumerate(entries, start=1):
+                action = QAction(_format_recent_entry_label(index, structure, stage), self)
                 action.triggered.connect(
                     lambda _checked=False, s=structure, st=stage: self._open_recent_entry(s, st)
                 )
@@ -411,7 +430,11 @@ class NoStructureLoadedWindow(QMainWindow):
 
     def _on_new_structure(self) -> None:
         while True:
-            dialog = NewStructureDialog(self)
+            dialog = NewStructureDialog(
+                self,
+                stage=1,
+                allow_stage_edit=False,
+            )
 
             if not dialog.exec():
                 return
@@ -554,9 +577,6 @@ class MainWindow(QMainWindow):
         self._layer_list_panel.copy_requested.connect(self._on_copy_layer)
         self._layer_list_panel.paste_requested.connect(self._on_paste_layer)
         self._save_site_button.clicked.connect(self._save_site_settings)
-        self._structure_settings_panel.properties_changed.connect(
-            self._on_structure_properties_changed
-        )
         self._site_settings_panel.settings_changed.connect(self._on_site_settings_changed)
         self._apply_block_tooltips_pref(block_tooltips_enabled())
         self._apply_grid_axis_labels_pref(grid_axis_labels_enabled())
@@ -585,7 +605,6 @@ class MainWindow(QMainWindow):
         self._structure_grid.move_selection_empty.connect(self._on_move_selection_empty)
         self._structure_grid.itemSelectionChanged.connect(self._on_grid_selection_changed)
         self._materials_panel.scope_changed.connect(self._refresh_materials_list)
-        self._structure_settings_panel.resize_requested.connect(self._on_structure_resize_requested)
 
         palette_column = QWidget()
         self._palette_column_layout = QVBoxLayout(palette_column)
@@ -602,8 +621,19 @@ class MainWindow(QMainWindow):
         self._structure_properties_dialog_layout = QVBoxLayout(self._structure_properties_dialog)
         self._structure_properties_dialog_layout.setContentsMargins(0, 0, 0, 0)
         self._structure_properties_dialog_layout.addWidget(self._structure_settings_panel)
+        self._structure_properties_buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
+            self._structure_properties_dialog,
+        )
+        self._structure_properties_buttons.accepted.connect(
+            self._on_save_structure_properties_requested
+        )
+        self._structure_properties_buttons.rejected.connect(
+            self._structure_properties_dialog.reject
+        )
+        self._structure_properties_dialog_layout.addWidget(self._structure_properties_buttons)
         self._structure_settings_panel.close_requested.connect(
-            self._structure_properties_dialog.close
+            self._structure_properties_dialog.reject
         )
 
         structure_header = self._build_structure_header()
@@ -697,9 +727,9 @@ class MainWindow(QMainWindow):
 
     def _init_menus(self) -> None:
         self._init_file_menu()
-        self._init_structure_menu()
         self._init_edit_menu()
         self._init_view_menu()
+        self._init_structure_menu()
         self._init_help_menu()
 
     def _init_structure_menu(self) -> None:
@@ -708,6 +738,10 @@ class MainWindow(QMainWindow):
         new_stage_action = QAction("&New Stage...", self)
         new_stage_action.triggered.connect(self._on_new_stage)
         structure_menu.addAction(new_stage_action)
+
+        stage_properties_action = QAction("Stage &Properties...", self)
+        stage_properties_action.triggered.connect(self._on_open_stage_properties)
+        structure_menu.addAction(stage_properties_action)
 
         structure_menu.addSeparator()
 
@@ -763,8 +797,8 @@ class MainWindow(QMainWindow):
         entries = load_recent_structures()
 
         if entries:
-            for structure, stage in entries:
-                action = QAction(f"{structure} (Stage {stage})", self)
+            for index, (structure, stage) in enumerate(entries, start=1):
+                action = QAction(_format_recent_entry_label(index, structure, stage), self)
                 action.triggered.connect(
                     lambda _checked=False, s=structure, st=stage: self._open_recent_entry(s, st)
                 )
@@ -995,8 +1029,65 @@ class MainWindow(QMainWindow):
     def _on_open_structure_properties(self) -> None:
         self._structure_settings_panel.set_structure_path(self._document.structure_path)
         self._structure_settings_panel.load_from_metadata(self._document.metadata)
-        self._structure_properties_dialog.resize(420, 640)
+        self._structure_properties_dialog.adjustSize()
+        size_hint = self._structure_properties_dialog.sizeHint()
+        self._structure_properties_dialog.resize(max(460, size_hint.width()), size_hint.height())
         self._structure_properties_dialog.exec()
+
+    def _on_save_structure_properties_requested(self) -> None:
+        if self._on_structure_properties_changed():
+            self._structure_properties_dialog.accept()
+
+    def _on_open_stage_properties(self) -> None:
+        current_stage = int(self._document.metadata.get("stage", self._stage))
+        current_width, current_depth = structure_dimensions_from_layers(self._document.layers)
+        site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Stage {current_stage} Properties")
+        layout = create_dialog_shell(dialog, min_width=460)
+
+        description = QLabel("Adjust the current stage footprint across all layers.")
+        description.setWordWrap(True)
+        layout.addWidget(description)
+
+        form = create_dialog_form_layout()
+        width_spin = QSpinBox(dialog)
+        width_spin.setRange(1, max(1, site_width))
+        width_spin.setValue(max(1, min(current_width, site_width)))
+        width_spin.setSuffix(" x")
+        apply_dialog_field_style(width_spin, min_width=DIALOG_FIELD_MIN_WIDTH)
+        form.addRow("Stage width", width_spin)
+
+        depth_spin = QSpinBox(dialog)
+        depth_spin.setRange(1, max(1, site_depth))
+        depth_spin.setValue(max(1, min(current_depth, site_depth)))
+        depth_spin.setSuffix(" z")
+        apply_dialog_field_style(depth_spin, min_width=DIALOG_FIELD_MIN_WIDTH)
+        form.addRow("Stage depth", depth_spin)
+
+        layout.addLayout(form)
+
+        limits_label = QLabel(f"Site maximum: {site_width} x {site_depth}")
+        limits_label.setWordWrap(True)
+        layout.addWidget(limits_label)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
+            parent=dialog,
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        dialog.adjustSize()
+        size_hint = dialog.sizeHint()
+        dialog.resize(max(460, size_hint.width()), size_hint.height())
+
+        if not dialog.exec():
+            return
+
+        self._on_structure_resize_requested(width_spin.value(), depth_spin.value())
 
     def _on_new_stage(self) -> None:
         current_structure = str(self._document.metadata.get("structure", self._structure))
@@ -1019,6 +1110,11 @@ class MainWindow(QMainWindow):
                 structure_width=structure_width,
                 structure_depth=structure_depth,
                 dimension=str(self._document.metadata.get("dimension", "overworld")),
+                title="New Stage",
+                allow_structure_edit=False,
+                allow_stage_edit=False,
+                show_site_size_fields=False,
+                show_dimension_field=False,
             )
 
             if not dialog.exec():
@@ -1027,11 +1123,11 @@ class MainWindow(QMainWindow):
             (
                 selected_structure,
                 stage,
-                selected_site_width,
-                selected_site_depth,
-                selected_structure_width,
-                selected_structure_depth,
-                dimension,
+                _selected_site_width,
+                _selected_site_depth,
+                _selected_structure_width,
+                _selected_structure_depth,
+                _selected_dimension,
             ) = dialog.values()
 
             if selected_structure != current_structure:
@@ -1068,15 +1164,15 @@ class MainWindow(QMainWindow):
                 create_structure_stage_document(
                     structure=current_structure,
                     stage=stage,
-                    site_width=selected_site_width,
-                    site_depth=selected_site_depth,
-                    structure_width=selected_structure_width,
-                    structure_depth=selected_structure_depth,
-                    dimension=dimension,
+                    site_width=site_width,
+                    site_depth=site_depth,
+                    structure_width=structure_width,
+                    structure_depth=structure_depth,
+                    dimension=str(self._document.metadata.get("dimension", "overworld")),
                 )
             except (FileExistsError, ValueError) as exc:
                 QMessageBox.warning(self, "New Stage", str(exc))
-                default_stage = stage
+                default_stage = stage + 1
                 continue
             except OSError as exc:
                 QMessageBox.critical(self, "New Stage", str(exc))
@@ -1084,6 +1180,7 @@ class MainWindow(QMainWindow):
 
             add_recent_structure(current_structure, stage)
             open_structure_in_editor_process(current_structure, stage)
+            return
 
     def _on_delete_stage(self) -> None:
         structure = str(self._document.metadata.get("structure", self._structure))
@@ -1151,17 +1248,17 @@ class MainWindow(QMainWindow):
         site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
         structure_width, structure_depth = structure_dimensions_from_layers(self._document.layers)
         default_structure = str(self._document.metadata.get("structure", "structure"))
-        default_stage = int(self._document.metadata.get("stage", 1))
 
         while True:
             dialog = NewStructureDialog(
                 self,
                 structure=default_structure,
-                stage=default_stage,
+                stage=1,
                 site_width=site_width,
                 site_depth=site_depth,
                 structure_width=structure_width,
                 structure_depth=structure_depth,
+                allow_stage_edit=False,
             )
 
             if not dialog.exec():
@@ -1179,7 +1276,6 @@ class MainWindow(QMainWindow):
             ) = dialog.values()
 
             default_structure = structure
-            default_stage = stage
             site_width = selected_site_width
             site_depth = selected_site_depth
             structure_width = selected_structure_width
@@ -2631,10 +2727,8 @@ class MainWindow(QMainWindow):
         self._status.showMessage(f"Editing {layer_path.name}")
 
     def _sync_structure_size_controls(self) -> None:
-        structure_width, structure_depth = structure_dimensions_from_layers(self._document.layers)
         site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
-        self._structure_settings_panel.set_structure_size(structure_width, structure_depth)
-        self._structure_settings_panel.set_site_limits(site_width, site_depth)
+        self._structure_settings_panel.set_site_grid_size(site_width, site_depth)
 
     def _on_structure_resize_requested(self, new_width: int, new_depth: int) -> None:
         site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
@@ -3485,15 +3579,50 @@ class MainWindow(QMainWindow):
         self._render_panel.set_output_hint(output_folder)
         self._last_schematics_dir = OUTPUT_SCHEMATICS_FOLDER / output_folder
 
-    def _on_structure_properties_changed(self) -> None:
+    def _on_structure_properties_changed(self) -> bool:
+        previous_metadata = {
+            "structure": self._document.metadata.get("structure"),
+            "name": self._document.metadata.get("name"),
+            "output_folder": self._document.metadata.get("output_folder"),
+            "dimension": self._document.metadata.get("dimension"),
+            "grid": dict(self._document.metadata.get("grid", {})),
+        }
         self._push_undo_snapshot()
         self._structure_settings_panel.apply_to_metadata(self._document.metadata)
+
+        structure_width, structure_depth = structure_dimensions_from_layers(self._document.layers)
+        site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
+        size_error = structure_site_size_error(
+            structure_width,
+            structure_depth,
+            site_width,
+            site_depth,
+        )
+
+        if size_error is not None:
+            self._discard_last_undo_snapshot()
+            self._document.metadata.update(previous_metadata)
+            self._structure_settings_panel.load_from_metadata(self._document.metadata)
+            self._status.showMessage(size_error, 4000)
+            return False
+
+        self._document.site_ground = resize_site_ground(
+            self._document.site_ground,
+            site_width,
+            site_depth,
+        )
         self._structure = str(self._document.metadata.get("structure", self._structure))
         self._stage = int(self._document.metadata.get("stage", self._stage))
+        self._site_settings_panel.load_from_metadata(self._document.metadata, self._document.layers)
+        self._site_settings_panel.sync_offsets_from_grid(self._document.metadata)
+        self._refresh_site_preview()
+        self._sync_path_panel_from_metadata()
+        self._sync_structure_size_controls()
         self._sync_render_output_hint()
         self._dirty_structure = True
         self._update_save_site_button()
         self._update_window_title()
+        return True
 
     def _on_site_settings_changed(self) -> None:
         self._push_undo_snapshot()

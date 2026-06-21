@@ -87,9 +87,7 @@ def _upsert_manifest_stage(
     stage_entry = {
         "stage": stage_value,
         "path": f"stage{stage_value}/stage.yaml",
-        "dimension": _normalize_dimension(dimension),
         "output_folder": output_folder,
-        "grid": dict(grid),
     }
 
     stages = [entry for entry in manifest.get("stages", []) if isinstance(entry, dict)]
@@ -102,6 +100,9 @@ def _upsert_manifest_stage(
             continue
 
         if entry_stage == stage_value:
+            groups = entry.get("groups")
+            if isinstance(groups, list):
+                stage_entry["groups"] = groups
             stages[index] = stage_entry
             updated = True
             break
@@ -112,6 +113,8 @@ def _upsert_manifest_stage(
     stages.sort(key=lambda entry: int(entry.get("stage", 0)))
     manifest["stages"] = stages
     manifest["structure"] = structure_slug
+    manifest["dimension"] = _normalize_dimension(dimension)
+    manifest["grid"] = dict(grid)
 
     if shared_site_ground is not None:
         manifest["site_ground"] = shared_site_ground
@@ -226,10 +229,16 @@ def load_structure_document(path: Path) -> StructureDocument:
         if key not in ("layer_files", "layers", "site_ground")
     }
 
+    if isinstance(manifest, dict):
+        if "dimension" in manifest:
+            metadata["dimension"] = manifest.get("dimension")
+        if "grid" in manifest:
+            metadata["grid"] = manifest.get("grid")
+
     if manifest_entry is not None:
-        if "dimension" in manifest_entry:
+        if "dimension" in manifest_entry and "dimension" not in metadata:
             metadata["dimension"] = manifest_entry.get("dimension")
-        if "grid" in manifest_entry:
+        if "grid" in manifest_entry and "grid" not in metadata:
             metadata["grid"] = manifest_entry.get("grid")
         if "output_folder" in manifest_entry:
             metadata["output_folder"] = manifest_entry.get("output_folder")

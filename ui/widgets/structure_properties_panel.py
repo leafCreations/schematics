@@ -8,6 +8,7 @@ from typing import Any
 from PySide6.QtCore import QRegularExpression, Signal
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtWidgets import (
+    QComboBox,
     QFormLayout,
     QLabel,
     QLineEdit,
@@ -16,10 +17,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from helpers.grid import resolve_site_dimensions
 from helpers.structure_metadata import (
     apply_structure_identity,
     derive_output_folder,
-    derive_structure_name,
     identity_from_structure_path,
     normalize_structure_slug,
     read_structure_identity,
@@ -33,6 +34,7 @@ class StructurePropertiesPanel(QWidget):
         super().__init__(parent)
         self._structure_path: Path | None = None
         self._block_signals = False
+        self._stage_value = 1
 
         self._structure_edit = QLineEdit()
         self._structure_edit.setPlaceholderText("e.g. residence")
@@ -42,29 +44,29 @@ class StructurePropertiesPanel(QWidget):
         self._structure_edit.setToolTip("Lowercase letters a-z only (e.g. residence).")
         self._structure_edit.textChanged.connect(self._on_structure_text_changed)
 
-        self._stage_spin = QSpinBox()
-        self._stage_spin.setRange(1, 99)
-        self._stage_spin.valueChanged.connect(self._on_field_changed)
+        self._site_width_spin = QSpinBox()
+        self._site_width_spin.setRange(1, 512)
+        self._site_width_spin.valueChanged.connect(self._on_field_changed)
 
-        self._name_label = QLabel("—")
-        self._name_label.setWordWrap(True)
-        self._name_label.setToolTip("Derived from structure and stage (e.g. Residence Stage 1).")
+        self._site_depth_spin = QSpinBox()
+        self._site_depth_spin.setRange(1, 512)
+        self._site_depth_spin.valueChanged.connect(self._on_field_changed)
 
-        self._output_folder_label = QLabel("—")
-        self._output_folder_label.setWordWrap(True)
-        self._output_folder_label.setToolTip(
-            "Derived automatically as stage{N}_{structure} for render/world output."
-        )
+        self._dimension_combo = QComboBox()
+        self._dimension_combo.addItem("Overworld", "overworld")
+        self._dimension_combo.addItem("Nether", "nether")
+        self._dimension_combo.addItem("End", "end")
+        self._dimension_combo.currentIndexChanged.connect(self._on_field_changed)
 
         self._path_warning = QLabel("")
         self._path_warning.setWordWrap(True)
         self._path_warning.setStyleSheet("color: #a63;")
 
         form = QFormLayout()
-        form.addRow("Structure", self._structure_edit)
-        form.addRow("Stage", self._stage_spin)
-        form.addRow("Name", self._name_label)
-        form.addRow("Output folder", self._output_folder_label)
+        form.addRow("Structure name", self._structure_edit)
+        form.addRow("Site width", self._site_width_spin)
+        form.addRow("Site depth", self._site_depth_spin)
+        form.addRow("Dimension", self._dimension_combo)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -76,12 +78,20 @@ class StructurePropertiesPanel(QWidget):
         self._refresh_path_warning()
 
     def load_from_metadata(self, metadata: dict[str, Any]) -> None:
-        structure, stage, name, output_folder = read_structure_identity(metadata)
+        structure, stage, _name, _output_folder = read_structure_identity(metadata)
+        site_width, site_depth = resolve_site_dimensions(metadata.get("grid", {}))
+        dimension = str(metadata.get("dimension", "overworld")).strip().lower()
+
+        if dimension not in {"overworld", "nether", "end"}:
+            dimension = "overworld"
+
         self._block_signals = True
+        self._stage_value = int(stage)
         self._structure_edit.setText(structure)
-        self._stage_spin.setValue(stage)
-        self._name_label.setText(name)
-        self._output_folder_label.setText(output_folder)
+        self._site_width_spin.setValue(site_width)
+        self._site_depth_spin.setValue(site_depth)
+        index = self._dimension_combo.findData(dimension)
+        self._dimension_combo.setCurrentIndex(max(0, index))
         self._block_signals = False
         self._refresh_path_warning()
 
@@ -89,13 +99,22 @@ class StructurePropertiesPanel(QWidget):
         apply_structure_identity(
             metadata,
             structure=self._structure_edit.text(),
-            stage=self._stage_spin.value(),
+            stage=int(metadata.get("stage", self._stage_value)),
         )
-        self._name_label.setText(metadata["name"])
-        self._output_folder_label.setText(metadata["output_folder"])
+        grid = dict(metadata.get("grid", {}))
+        grid["site_width"] = int(self._site_width_spin.value())
+        grid["site_depth"] = int(self._site_depth_spin.value())
+        metadata["grid"] = grid
+        metadata["dimension"] = str(self._dimension_combo.currentData())
 
     def current_output_folder(self) -> str:
-        return derive_output_folder(self._structure_edit.text(), self._stage_spin.value())
+        return derive_output_folder(self._structure_edit.text(), self._stage_value)
+
+    def set_site_grid_size(self, site_width: int, site_depth: int) -> None:
+        self._block_signals = True
+        self._site_width_spin.setValue(max(1, int(site_width)))
+        self._site_depth_spin.setValue(max(1, int(site_depth)))
+        self._block_signals = False
 
     def _on_structure_text_changed(self, text: str) -> None:
         slug = normalize_structure_slug(text)
@@ -112,11 +131,6 @@ class StructurePropertiesPanel(QWidget):
     def _on_field_changed(self) -> None:
         if self._block_signals:
             return
-
-        structure = self._structure_edit.text()
-        stage = self._stage_spin.value()
-        self._name_label.setText(derive_structure_name(structure, stage))
-        self._output_folder_label.setText(derive_output_folder(structure, stage))
         self._refresh_path_warning()
         self.properties_changed.emit()
 
@@ -132,7 +146,7 @@ class StructurePropertiesPanel(QWidget):
 
         disk_structure, disk_stage = on_disk
         edit_structure = self._structure_edit.text().strip().lower()
-        edit_stage = self._stage_spin.value()
+        edit_stage = self._stage_value
 
         if edit_structure == disk_structure and edit_stage == disk_stage:
             self._path_warning.setText("")

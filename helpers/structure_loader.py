@@ -377,6 +377,12 @@ def load_structure_yaml(path: Path) -> StructureConfig:
                 manifest = yaml.safe_load(handle)
 
             if isinstance(manifest, dict):
+                if "dimension" in manifest and "dimension" not in data:
+                    data["dimension"] = manifest.get("dimension")
+
+                if "grid" in manifest and "grid" not in data:
+                    data["grid"] = manifest.get("grid")
+
                 for entry in manifest.get("stages", []):
                     if not isinstance(entry, dict):
                         continue

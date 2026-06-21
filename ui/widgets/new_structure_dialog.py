@@ -36,13 +36,22 @@ class NewStructureDialog(QDialog):
         structure_width: int = 9,
         structure_depth: int = 9,
         dimension: str = "overworld",
+        title: str = "New Structure",
+        allow_structure_edit: bool = True,
+        allow_stage_edit: bool = True,
+        show_site_size_fields: bool = True,
+        show_dimension_field: bool = True,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("New Structure")
+        self.setWindowTitle(title)
+
+        self._allow_stage_edit = bool(allow_stage_edit)
+        self._fixed_stage = max(1, int(stage))
 
         self._structure = QLineEdit()
         self._structure.setPlaceholderText("e.g. residence")
         self._structure.setValidator(QRegularExpressionValidator(QRegularExpression(r"^[a-z]*$")))
+        self._structure.setReadOnly(not allow_structure_edit)
         apply_dialog_field_style(self._structure, min_width=DIALOG_FIELD_MIN_WIDTH)
 
         self._stage = QSpinBox()
@@ -83,6 +92,14 @@ class NewStructureDialog(QDialog):
         self._output_folder_label = QLabel("")
         self._output_folder_label.setWordWrap(True)
 
+        self._structure_width_row_label = QLabel("")
+        self._structure_depth_row_label = QLabel("")
+
+        self._site_size_reference_label = QLabel(
+            f"{max(1, int(site_width))}x{max(1, int(site_depth))}"
+        )
+        self._site_size_reference_label.setWordWrap(True)
+
         self._hint = QLabel(
             "Creates structures/{structure}/stage{N}/stage.yaml and layers/layer_00.yaml."
         )
@@ -90,12 +107,18 @@ class NewStructureDialog(QDialog):
 
         form = create_dialog_form_layout()
         form.addRow("Structure", self._structure)
-        form.addRow("Stage", self._stage)
-        form.addRow("Site width", self._site_width)
-        form.addRow("Site depth", self._site_depth)
-        form.addRow("Structure width", self._structure_width)
-        form.addRow("Structure depth", self._structure_depth)
-        form.addRow("Dimension", self._dimension)
+        if show_dimension_field:
+            form.addRow("Dimension", self._dimension)
+        if self._allow_stage_edit:
+            form.addRow("Stage", self._stage)
+        if show_site_size_fields:
+            form.addRow("Site width", self._site_width)
+            form.addRow("Site depth", self._site_depth)
+        else:
+            form.addRow("Site grid size", self._site_size_reference_label)
+        form.addRow(self._structure_width_row_label, self._structure_width)
+        form.addRow(self._structure_depth_row_label, self._structure_depth)
+
         form.addRow("Name", self._name_label)
         form.addRow("Output folder", self._output_folder_label)
 
@@ -107,7 +130,8 @@ class NewStructureDialog(QDialog):
 
         self._structure.setText(_normalize_structure_input(structure))
         self._structure.textChanged.connect(self._on_identity_changed)
-        self._stage.valueChanged.connect(self._on_identity_changed)
+        if self._allow_stage_edit:
+            self._stage.valueChanged.connect(self._on_identity_changed)
         self._on_identity_changed()
         self._structure.setFocus()
 
@@ -121,15 +145,18 @@ class NewStructureDialog(QDialog):
             self._structure.setCursorPosition(min(cursor, len(slug)))
             self._structure.blockSignals(False)
 
-        stage = self._stage.value()
+        stage = self._stage.value() if self._allow_stage_edit else self._fixed_stage
+        self._structure_width_row_label.setText(f"Stage {stage} width")
+        self._structure_depth_row_label.setText(f"Stage {stage} depth")
         identity_slug = normalize_structure_slug(slug)
         self._name_label.setText(f"{identity_slug.title()} Stage {stage}")
         self._output_folder_label.setText(derive_output_folder(identity_slug, stage))
 
     def values(self) -> tuple[str, int, int, int, int, int, str]:
+        stage_value = self._stage.value() if self._allow_stage_edit else self._fixed_stage
         return (
             normalize_structure_slug(self._structure.text()),
-            int(self._stage.value()),
+            int(stage_value),
             int(self._site_width.value()),
             int(self._site_depth.value()),
             int(self._structure_width.value()),
