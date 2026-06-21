@@ -21,6 +21,8 @@ grid:
   - DIRT
   - COBBLESTONE
   - COBBLESTONE#mossy
+  groups:
+  - Main
 site_ground:
 - - GRASS
   - GRASS

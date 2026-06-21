@@ -5,6 +5,8 @@ tokens:
 - GRASS
 - GRAVEL
 - COBBLESTONE
+- WATER
+- LAVA
 blocks:
 - minecraft:stone
 - minecraft:mossy_cobblestone

@@ -64,3 +64,35 @@ COBBLESTONE:
         block: minecraft:cobblestone
       mossy:
         block: minecraft:mossy_cobblestone
+WATER:
+  behavior: solid
+  ui:
+    label: Water
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:water
+  render:
+    top: water_still.png
+    background_color:
+    - 63
+    - 118
+    - 228
+LAVA:
+  behavior: solid
+  ui:
+    label: Lava
+    palette: terrain
+    requires_material: false
+    requires_direction: false
+    requires_variant: false
+  minecraft:
+    block: minecraft:lava
+  render:
+    top: lava_still.png
+    background_color:
+    - 207
+    - 92
+    - 15
