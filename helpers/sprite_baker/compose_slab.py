@@ -72,6 +72,20 @@ def _load_texture(textures_dir: Path, filename: str, size: int) -> Image.Image:
     return bake_texture_file(texture_path, size)
 
 
+def _load_first_available_texture(
+    textures_dir: Path,
+    filenames: tuple[str, ...],
+    size: int,
+) -> Image.Image:
+    for filename in filenames:
+        texture_path = find_block_texture_path(textures_dir, filename)
+
+        if texture_path is not None:
+            return bake_texture_file(texture_path, size)
+
+    raise SpriteBakeError(f"Texture source not found: {', '.join(filenames)}")
+
+
 def _compose_half_block(texture: Image.Image, *, placement: str) -> Image.Image:
     size = texture.size[0]
     half = size // 2
@@ -114,9 +128,12 @@ def compose_slab(
             material=material,
             variant=parsed.variant,
         )
-        if filename is None:
-            filename = f"{material}_planks.png"
-        texture = _load_texture(textures_dir, filename, size)
+        if isinstance(filename, str):
+            candidates = (filename, f"{material}_planks.png", f"{material}.png")
+        else:
+            candidates = (f"{material}_planks.png", f"{material}.png")
+
+        texture = _load_first_available_texture(textures_dir, candidates, size)
         return _compose_half_block(texture, placement=placement)
 
     if view == "side":
@@ -128,10 +145,17 @@ def compose_slab(
         else:
             side_filename = f"{material}_slab.png"
 
-        if find_block_texture_path(textures_dir, side_filename):
-            texture = _load_texture(textures_dir, side_filename, size)
+        if isinstance(side_filename, str):
+            candidates = (
+                side_filename,
+                f"{material}_slab.png",
+                f"{material}_planks.png",
+                f"{material}.png",
+            )
         else:
-            texture = _load_texture(textures_dir, f"{material}_planks.png", size)
+            candidates = (f"{material}_slab.png", f"{material}_planks.png", f"{material}.png")
+
+        texture = _load_first_available_texture(textures_dir, candidates, size)
 
         return _compose_half_block(texture, placement=placement)
 

@@ -71,13 +71,21 @@ def _resolve_material(parsed_material: str | None, entry: BlockRegistryEntry) ->
 
 
 def _load_planks_texture(textures_dir: Path, material: str, size: int) -> Image.Image:
-    filename = f"{material}_planks.png"
-    texture_path = find_block_texture_path(textures_dir, filename)
+    candidates = (
+        f"{material}_planks.png",
+        f"{material}.png",
+        f"{material}_stairs.png",
+    )
 
-    if texture_path is None:
-        raise SpriteBakeError(f"Texture source not found: {filename}")
+    for filename in candidates:
+        texture_path = find_block_texture_path(textures_dir, filename)
 
-    return bake_texture_file(texture_path, size)
+        if texture_path is not None:
+            return bake_texture_file(texture_path, size)
+
+    raise SpriteBakeError(
+        f"Texture source not found for stairs material {material!r}; tried {', '.join(candidates)}"
+    )
 
 
 def compose_stairs(

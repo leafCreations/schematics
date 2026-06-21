@@ -73,6 +73,22 @@ def test_compose_slab_bottom_and_top_differ(tmp_path: Path):
     assert top.getpixel((8, 12)) == (0, 0, 0, 0)
 
 
+def test_compose_slab_falls_back_to_base_material_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+
+    Image.new("RGBA", (16, 16), (90, 90, 90, 255)).save(textures_dir / "cobblestone.png")
+
+    image = compose_slab(
+        key="SLAB:cobblestone",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((8, 12))[3] == 255
+
+
 @pytest.mark.requires_assets
 def test_compose_slab_uses_planks_texture():
     if not (BLOCK_TEXTURES_FOLDER / "oak_planks.png").exists():

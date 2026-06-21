@@ -19,7 +19,7 @@ def resolve_site_dimensions(grid: dict) -> tuple[int, int]:
         depth = int(grid["site_depth"])
         return int(grid.get("site_width", depth)), depth
 
-    return 30, 30
+    return 15, 15
 
 
 def get_site_width(ctx: SchematicContext) -> int:

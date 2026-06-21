@@ -1123,10 +1123,10 @@ class MainWindow(QMainWindow):
             (
                 selected_structure,
                 stage,
-                _selected_site_width,
-                _selected_site_depth,
-                _selected_structure_width,
-                _selected_structure_depth,
+                selected_site_width,
+                selected_site_depth,
+                selected_structure_width,
+                selected_structure_depth,
                 _selected_dimension,
             ) = dialog.values()
 
@@ -1164,10 +1164,10 @@ class MainWindow(QMainWindow):
                 create_structure_stage_document(
                     structure=current_structure,
                     stage=stage,
-                    site_width=site_width,
-                    site_depth=site_depth,
-                    structure_width=structure_width,
-                    structure_depth=structure_depth,
+                    site_width=selected_site_width,
+                    site_depth=selected_site_depth,
+                    structure_width=selected_structure_width,
+                    structure_depth=selected_structure_depth,
                     dimension=str(self._document.metadata.get("dimension", "overworld")),
                 )
             except (FileExistsError, ValueError) as exc:
@@ -1245,9 +1245,9 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl(_STRUCTURE_EDITOR_GUIDE_URL))
 
     def _on_new_structure_placeholder(self) -> None:
-        site_width, site_depth = resolve_site_dimensions(self._document.metadata.get("grid", {}))
-        structure_width, structure_depth = structure_dimensions_from_layers(self._document.layers)
-        default_structure = str(self._document.metadata.get("structure", "structure"))
+        site_width, site_depth = 15, 15
+        structure_width, structure_depth = 9, 9
+        default_structure = ""
 
         while True:
             dialog = NewStructureDialog(

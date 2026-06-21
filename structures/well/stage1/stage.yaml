@@ -1,0 +1,9 @@
+structure: well
+stage: 1
+name: Well Stage 1
+layer_files:
+- layers/layer_00.yaml
+- layers/layer_01.yaml
+- layers/layer_02.yaml
+- layers/layer_03.yaml
+- layers/layer_04.yaml

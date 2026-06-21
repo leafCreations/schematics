@@ -86,6 +86,22 @@ def test_compose_stairs_shapes_differ(tmp_path: Path):
     assert outer_left.getpixel((4, 4))[3] == 0
 
 
+def test_compose_stairs_falls_back_to_base_material_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+
+    Image.new("RGBA", (16, 16), (80, 80, 80, 255)).save(textures_dir / "cobblestone.png")
+
+    image = compose_stairs(
+        key="STAIRS:cobblestone",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((8, 12))[3] == 255
+
+
 @pytest.mark.requires_assets
 def test_compose_stairs_uses_planks_texture():
     if not (BLOCK_TEXTURES_FOLDER / "oak_planks.png").exists():
