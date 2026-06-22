@@ -63,6 +63,7 @@ def list_simple_bake_keys(
     *,
     textures_dir: Path | None = None,
 ) -> list[str]:
+    from helpers.terrain_tokens import iter_terrain_palette_block_ids
     from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping
 
     mapping = build_registry_texture_mapping(view)
@@ -76,12 +77,18 @@ def list_simple_bake_keys(
             keys.append(key)
 
     if textures_dir is None:
-        return sorted(keys)
+        keys.extend(iter_terrain_palette_block_ids())
+        return sorted(dict.fromkeys(keys))
 
-    return expand_material_bake_keys(
-        keys,
-        token="PLANKS",
-        materials=list_plank_materials(textures_dir=textures_dir),
+    keys.extend(iter_terrain_palette_block_ids())
+    return sorted(
+        dict.fromkeys(
+            expand_material_bake_keys(
+                keys,
+                token="PLANKS",
+                materials=list_plank_materials(textures_dir=textures_dir),
+            )
+        )
     )
 
 
@@ -121,10 +128,16 @@ def compose_simple(
     size: int,
     textures_dir: Path,
 ) -> Image.Image:
-    from registries.loader import BLOCK_REGISTRY
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
 
     parsed = parse_bake_key(key)
-    entry = BLOCK_REGISTRY.get(parsed.token)
+    structure_parsed = parse_structure_token(key)
+
+    if structure_parsed is None:
+        raise SpriteBakeError(f"Invalid bake key: {key}")
+
+    entry = get_block_entry(structure_parsed)
 
     if entry is None:
         raise SpriteBakeError(f"Unknown registry token: {parsed.token}")
@@ -151,7 +164,7 @@ def compose_simple(
         raise SpriteBakeError(f"Texture source not found for {key}: {texture_filename}")
 
     image = bake_texture_file(texture_path, size)
-    return apply_background_tint(entry, image)
+    return image
 
 
 def compose_simple_entry(

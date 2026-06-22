@@ -38,6 +38,11 @@ def resolve_minecraft_block_id(entry: BlockRegistryEntry, parsed: ParsedToken) -
         block_name = minecraft["block"]
 
     if material and "{material}" in block_name:
+        if entry.get("behavior") == "log":
+            from helpers.log_materials import resolve_log_block_id
+
+            return resolve_log_block_id(material)
+
         block_name = block_name.format(material=material)
 
     color = resolve_token_color(entry, parsed)

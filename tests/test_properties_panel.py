@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from helpers.block_picker import picker_entry_for_token
+from helpers.block_picker import picker_entry_for_block_id, picker_entry_for_token
 from ui.widgets.properties_panel import PropertiesPanel
 
 pytest.importorskip("PySide6")
@@ -94,6 +94,18 @@ def test_trapdoor_open_state_in_build_placement_token(qapp):
 
     panel._open_combo.setCurrentText("true")
     assert panel.build_placement_token() == "TRAPDOOR:oak@north;open=true"
+
+
+def test_campfire_facing_and_lit_in_build_placement_token(qapp):
+    panel = PropertiesPanel()
+    entry = picker_entry_for_block_id("minecraft:campfire", palette="lighting")
+
+    panel.show_picker_entry(entry, emit_brush=False)
+    assert panel.build_placement_token() == "minecraft:campfire@north;lit=true"
+
+    panel._direction_combo.setCurrentText("west")
+    panel._lit_combo.setCurrentText("false")
+    assert panel.build_placement_token() == "minecraft:campfire@west;lit=false"
 
 
 def test_show_picker_entry_trapdoor_brush_token_preserves_open_state(qapp):

@@ -338,10 +338,11 @@ def resolve_cell_texture(
     tex = textures[texture_key]
 
     if view == "top":
+        rotate_direction = None if entry.get("behavior") == "campfire" else direction
         tex = _prepare_topdown_texture(
             tex.copy(),
             base_token,
-            direction,
+            rotate_direction,
             parsed.rotation,
             corner_stair_shape=_is_corner_stair_shape(parsed, entry),
         )

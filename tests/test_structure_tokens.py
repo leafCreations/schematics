@@ -75,3 +75,12 @@ def test_trapdoor_open_state_suffix():
 
     parsed = parse_structure_token("TRAPDOOR:oak@north#top;open=true!90")
     assert format_structure_token(parsed) == "TRAPDOOR:oak@north#top;open=true!90"
+
+
+def test_campfire_lit_state_suffix():
+    assert parse_structure_token("minecraft:campfire@north;lit=false") == ParsedToken(
+        token="minecraft",
+        material="campfire",
+        direction="north",
+        states=(("lit", False),),
+    )

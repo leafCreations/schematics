@@ -8,20 +8,24 @@
 * Advanced landscaping systems
 * Desktop UI for structure authoring
 
+## Statuses
+
+- Not Started = Item has not been started yet
+- Up Next = Item is planned but not yet started
+- In Progress = Item is currently being worked on
+- Completed = Item has been completed and is ready for use
+
 ## UI (in progress)
 
 | Status | Item |
 | ------ | ---- |
-| Done | PySide6 editor shell, palette tabs, texture grid |
-| Done | Paint / erase, per-layer save, unsaved indicators |
-| Done | `helpers/block_picker.py`, palette integrity validation |
-| Done | Generate renders from editor (Render tab) |
-| Planned | Live render preview pane |
-| Planned | In-app structure metadata editing |
-| Done | Undo/redo (paint/erase, structure resize, site grid, placement nudge) |
-| Done | Site path brush (trim / randomized path / trim, configurable width) |
-| Planned | Fill, clipboard |
-| Planned | Multiple structures per site — each selectable and nudged independently on the Site tab |
+| Up Next  | Create a new skill to help agent with decision making to limit token use. |
+| Not Started | Live render preview pane |
+| Not Started | In-app structure metadata editing |
+| Not Started | Multiple structures per site — each selectable and nudged independently on the Site tab |
+| Not Started | Allow for custom mod assets |
+| Not Started | Select world version to generate |
+| Not Started | Add 26.2 assets |
 
 See [ui.md](ui.md) for the current editor guide.
 

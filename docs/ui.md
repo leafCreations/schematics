@@ -8,7 +8,9 @@
 
 PySide6 desktop editor for structure layer YAML. Browse and edit `structures/{structure}/stage{N}/layers/*.yaml` with registry-driven block palettes, Minecraft texture previews in the grid, and per-layer save.
 
-The editor shares the same token grammar, registry, and texture pipeline as the blueprint renderers. See [structure-tokens.md](structure-tokens.md) and [registry.md](registry.md) for token and palette details.
+Structure packages use a **manifest** (`structures/{structure}/structure.yaml`) plus per-stage `stage.yaml` files — see [structure-tokens.md](structure-tokens.md#structure-packages).
+
+The editor shares the same token grammar, registry, and texture pipeline as the blueprint renderers. See [registry.md](registry.md) for palette and behavior details.
 
 ## Install
 
@@ -56,7 +58,7 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 
 | Area | Role |
 | ---- | ---- |
-| **Palettes** (left) | Category dropdown plus block list from `registries/palettes/*.yaml` |
+| **Palettes** (left) | **Search** (all palettes), **Category**, **Dimension** (terrain), and block list from `registries/palettes/*.yaml` |
 | **Structure grid** (center) | Current layer `cells` — paint and erase; use **Structure size** to grow (pad with `.`) or shrink (trim east/south) |
 | **Structure** (left, bottom) | Combined identity (**Structure**, **Stage**, derived name/output folder) and grid size (width/depth, resize). Saved with **Save Site Settings** on the Site tab |
 | **Compass** (right, top) | North-up reference (+x east, +z south) |
@@ -138,7 +140,7 @@ Opening a structure or saving a layer/site file runs the same validation as rend
 
 ### Site placement
 
-Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not layer files):
+Open the **Site** tab. The **Site settings** panel edits the structure **manifest** (`structures/{structure}/structure.yaml`), not layer files:
 
 - **Site width (x)** and **Site depth (z)** — rectangular footprint for path view, site facades, and worldgen (e.g. 20×10). Legacy YAML may still use `site_size: 30` for a 30×30 square.
 - **Placement** — nine anchors (top/middle/bottom × left/center/right). **Center** is the default; offsets are computed from structure and site dimensions and written as `offset_x` / `offset_z` (and `placement` when saved).
@@ -150,17 +152,21 @@ Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not l
 
 | Item | Shortcut | Action |
 | ---- | -------- | ------ |
-| New Structure | `Ctrl+N` | Placeholder (not implemented) |
-| Save | `Ctrl+S` | Structure tab: active layer. Site tab: site settings (`structure.yaml`). |
-| Save All | `Ctrl+Shift+S` | Saves every unsaved layer and site settings (`structure.yaml`) |
+| New Structure | `Ctrl+N` | Create a new structure package (`structure.yaml` manifest + `stage{N}/stage.yaml` + first layer) and open it |
+| Open Structure… | — | Pick an existing structure and stage to open |
+| Open Recent | — | Reopen recently used structure/stage pairs |
+| Save | `Ctrl+S` | Structure tab: active layer. Site tab: site settings (manifest + `stage.yaml`). |
+| Save All | `Ctrl+Shift+S` | Saves every unsaved layer and site settings |
 | Exit | `Ctrl+Q` | Close the editor (unsaved-changes prompt) |
 
 **Edit**
 
-| Item | Shortcut |
-| ---- | -------- |
-| Undo | `Ctrl+Z` |
-| Redo | `Ctrl+Y` |
+| Item | Shortcut | Action |
+| ---- | -------- | ------ |
+| Undo | `Ctrl+Z` | |
+| Redo | `Ctrl+Y` | |
+| Copy | `Ctrl+C` | Copy selected grid cells (selector active) |
+| Paste | `Ctrl+V` | Paste copied cells |
 
 **View**
 
@@ -183,8 +189,8 @@ Open the **Site** tab. The **Site settings** panel edits `structure.yaml` (not l
 
 - **Save Layer** writes only the active layer file (e.g. `layers/layer_00.yaml`), including optional `visible: false` when hidden from renders.
 - **File → Save** (`Ctrl+S`) is the same operation when the current layer is dirty.
-- **File → Save All** (`Ctrl+Shift+S`) writes all dirty layer files, then `structure.yaml` / site settings if those are unsaved (same order as quitting with save).
-- **Save Site Settings** writes `structure.yaml` grid fields (`site_width`, `site_depth`, `placement`, `offset_x`, `offset_z`).
+- **File → Save All** (`Ctrl+Shift+S`) writes all dirty layer files, then site settings if those are unsaved (same order as quitting with save).
+- **Save Site Settings** writes the manifest (`structures/{structure}/structure.yaml`: `dimension`, `grid`, `site_ground`, `stages`) and updates `stage{N}/stage.yaml` (`layer_files`, identity fields).
 - Unsaved layers or site settings show `(unsaved)` in the window title and `*` on the matching save button.
 - Switching layers or quitting with unsaved changes prompts **Save / Discard / Cancel**.
 
@@ -212,20 +218,31 @@ See [render-types.md](render-types.md) for individual render types and output pa
 
 ## Palette and brush behavior
 
-Palettes are loaded via `list_palettes()` in `helpers/block_picker.py`. The block list shows a short type name (e.g. **Planks**, **Log**); material and color are chosen in the paint brush, not in the list label.
+Palettes are loaded via `list_palettes()` in `helpers/block_picker.py`.
+
+### Browse vs search
+
+* **Search** (top of the panel) — type to search **every** palette at once. The block list is replaced with matches labeled `Block — Category` (e.g. `Cobblestone — Terrain`). Category and dimension controls hide until search is cleared.
+* **Category** — pick a palette tab (Building, Terrain, Wood, …) when search is empty.
+* **Dimension** — **Terrain** only: filter overworld / nether / end blocks. Defaults to the site `dimension` from structure settings.
+
+### Token types
+
+The block list shows a short type name (e.g. **Planks**, **Stone**). Material and color for semantic tokens are chosen in the paint brush, not in the list label.
 
 * **Semantic tokens** (`PLANKS`, `STAIRS`, …) — behavior + `ui:` metadata from `registries/behaviors/`
-* **Catalog blocks** (`minecraft:stone`, …) — display names and textures from `registries/generated/catalog.json`
+* **Catalog blocks** (`minecraft:stone`, …) — display names and textures from `registries/generated/catalog.json`. The **Terrain** palette uses catalog ids exclusively, grouped by dimension in `registries/palettes/terrain.yaml`.
+
+Legacy terrain tokens (`GRASS`, `COBBLESTONE#mossy`, …) still load in existing YAML; migrate with `scripts/migrate_terrain_tokens.py`.
 
 | Brush field | When shown | Example |
 | ----------- | ---------- | ------- |
 | Material | `requires_material: true` | `PLANKS` → `oak`, `spruce`, … (from catalog) |
 | Direction | `requires_direction: true` | `@north`, `@south`, … |
-| Variant | `ui.variants` non-empty | `#mossy` on `COBBLESTONE`; stair shapes on `STAIRS` |
+| Variant | Catalog variant key or `ui.variants` | Terrain `stone` → `smooth` writes `minecraft:smooth_stone`; stair shapes on `STAIRS` |
 | Part | `BED` (`head` / `foot`) | `BED:blue@north#head`, `BED:blue@north#foot` |
 | Half | `DOOR` (`lower` / `upper`) | `DOOR:oak@north#lower`, `DOOR:oak@north#upper` |
 | Hanging | `LANTERN` | **Auto** (worldgen: `true` if layer above has a block); **Hanging** → `;hanging=true`; **Standing** → `;hanging=false` |
-| (default) variant | First combo item on other tokens | Omits `#variant` (e.g. plain `COBBLESTONE`) |
 
 Integrity checks for palette ↔ registry ↔ catalog references: `registries/validate.py` (`validate_palettes()`).
 
@@ -241,12 +258,14 @@ Fence icons refresh on neighboring cells when you paint or erase adjacent blocks
 ## Files touched by the editor
 
 ```text
-structures/residence/stage1/
-  structure.yaml          # metadata + layer_files list (read-only in UI today)
-  layers/
-    layer_00.yaml           # index, group, cells — edited and saved per layer
-    layer_01.yaml
-    ...
+structures/residence/
+  structure.yaml          # manifest: dimension, grid, site_ground, stages[]
+  stage1/
+    stage.yaml            # per-stage: structure, stage, name, layer_files
+    layers/
+      layer_00.yaml       # index, group, cells — edited and saved per layer
+      layer_01.yaml
+      ...
 ```
 
 Layer YAML shape:
@@ -255,35 +274,48 @@ Layer YAML shape:
 index: 0
 group: Floor 1
 cells:
-  - - COBBLESTONE
+  - - minecraft:cobblestone
     - PLANKS:oak
     - .
 ```
 
-The editor loads `structure.yaml`, resolves `layer_files` paths, and keeps layers in memory until **Save Layer** flushes the active layer to disk.
+The editor loads `stage{N}/stage.yaml` and the manifest, resolves `layer_files` paths, and keeps layers in memory until **Save Layer** flushes the active layer to disk. See [structure-tokens.md](structure-tokens.md#structure-packages) for the full field split.
 
 ## Package layout
 
 ```text
 ui/
-  __main__.py           # CLI: python -m ui
-  main_window.py        # MainWindow, dirty tracking, save prompts
-  document.py           # StructureDocument load/save
-  platform.py           # Linux Qt library preflight
-  texture_cache.py      # PIL → QIcon, compile_texture_set cache
+  __main__.py               # CLI: python -m ui
+  main_window.py            # MainWindow, dirty tracking, save prompts
+  document.py               # StructureDocument load/save (manifest + stage.yaml)
+  app_settings.py           # Editor settings YAML
+  editor_prefs.py           # Preference accessors
+  editor_history.py         # Undo/redo stack
+  editor_materials.py       # Shared inventory context for the UI
+  materials_icons.py        # Inventory icon cache
+  platform.py               # Linux Qt library preflight
+  texture_cache.py          # PIL → QIcon, compile_texture_set cache
+  dialog_layout.py          # Shared modal dialog metrics
+  icon_theme.py             # Bundled icon theme
+  menu_style.py             # Global QMenu styling
+  tooltip_style.py          # Global QToolTip styling
+  toolbar_icons.py          # Grid header and panel icons
+  selector_mode.py          # Selector rectangle / same-block modes
+  render_worker.py          # Background QThread render jobs
+  reload.py                 # Editor process reload
+  site_cells.py             # Site ↔ structure coordinate mapping
   widgets/
-    palette_panel.py    # Category dropdown + block list
-    grid.py             # Structure layer grid (paint/erase)
-    structure_settings_panel.py  # Structure identity + footprint size (combined)
-    structure_size_panel.py  # Grid size section (embedded in settings panel)
-    site_grid.py        # Scaled read-only site footprint preview
-    render_panel.py     # Render type checkboxes and generate action
-  site_cells.py         # Site ↔ structure coordinate mapping
-  render_worker.py      # Background QThread render jobs
-    materials_panel.py  # Live all-layer materials table
-    properties_panel.py # Brush + cell inspector
-  editor_materials.py # Shared inventory context for the UI
-  materials_icons.py    # Inventory icon cache for the materials table
+    palette_panel.py        # Search, category, dimension filter, block list
+    grid.py                 # Structure layer grid (paint/erase/move)
+    layer_tools_panel.py    # Grid header toolbar (selector, move, paint, eraser, …)
+    structure_settings_panel.py  # Structure identity + footprint size
+    site_grid.py            # Scaled read-only site footprint preview
+    render_panel.py         # Render type checkboxes and generate action
+    materials_panel.py      # Live all-layer materials table
+    properties_panel.py     # Brush + cell inspector
+    groups_panel.py         # Layer group list
+    layer_list_panel.py     # Layer list
+    …                       # Other panel and dialog widgets
 ```
 
 Shared helpers (not under `ui/`):
@@ -346,14 +378,16 @@ The editor runs `ui/platform.py` preflight on Linux and prints install hints whe
 * Palette browser and layer grid with texture icons
 * Paint / erase / per-layer save with unsaved indicators
 * Direction, material, and variant in placed tokens
+* **Selector** (rectangle and same-block modes), **Move**, **Copy** / **Paste**, paint **Fill** / **Outline**, and **Rotate** (all layers)
+* **New Structure** (`Ctrl+N`), **Open Structure…**, and **Open Recent**
 * **Render** tab — generate schematics/worldgen from the editor (background job)
 * Live **Materials** list on the Structure tab (current layer or all layers)
-* Undo/redo for paint/erase, structure resize, site grid, and placement nudge
+* Undo/redo for paint/erase, structure resize, site grid, placement nudge, and paths
 
 **Not yet:**
 
 * Live render preview pane (embedded thumbnails in the editor)
-* Copy/paste, fill tools
-* New structure / stage wizard
+* Multi-stage wizard (add stage to existing structure from the UI)
+* Multiple structures per site (independent placement per structure)
 
 See [roadmap.md](roadmap.md) for longer-term plans.

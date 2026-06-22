@@ -75,8 +75,9 @@ BED:
     direction: north
     part: head
   minecraft:
-    block: minecraft:{color}_bed
+    block: minecraft:bed
     blockstates:
+      color: '{color}'
       facing: '{direction}'
       part: '{part}'
       occupied: false

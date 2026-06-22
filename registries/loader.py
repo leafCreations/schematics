@@ -146,10 +146,17 @@ def _format_registry_value(
         or ""
     )
     resolved_material = material or entry.get("material_default") or defaults.get("material") or ""
+    kind = "log"
+
+    if entry.get("behavior") == "log" and resolved_material:
+        from helpers.log_materials import log_block_suffix
+
+        kind = log_block_suffix(resolved_material)
 
     return value.format(
         material=resolved_material,
         color=resolved_color,
+        kind=kind,
         variant=variant or defaults.get("variant") or "",
         type=defaults.get("type") or "",
         shape=defaults.get("shape") or "",
@@ -216,6 +223,11 @@ def _get_default_minecraft_block(
     material: str | None = None,
     variant: str | None = None,
 ) -> str | None:
+    if entry.get("behavior") == "log" and material:
+        from helpers.log_materials import resolve_log_block_id
+
+        return resolve_log_block_id(material)
+
     minecraft = entry.get("minecraft", {})
 
     block_id = minecraft.get("block")
@@ -397,17 +409,19 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     keys: set[str] = set()
 
     from helpers.sprite_baker.compose_bed import list_bed_bake_keys
+    from helpers.sprite_baker.compose_campfire import list_campfire_bake_keys
     from helpers.sprite_baker.compose_chest import list_chest_bake_keys
     from helpers.sprite_baker.compose_door import list_door_bake_keys
     from helpers.sprite_baker.compose_fence import list_fence_bake_keys
     from helpers.sprite_baker.compose_lantern import list_lantern_bake_keys
     from helpers.sprite_baker.compose_log import list_log_bake_keys
-    from helpers.sprite_baker.compose_simple import list_planks_bake_keys
+    from helpers.sprite_baker.compose_simple import list_planks_bake_keys, list_simple_bake_keys
     from helpers.sprite_baker.compose_slab import list_slab_bake_keys
     from helpers.sprite_baker.compose_stairs import list_stairs_bake_keys
     from helpers.sprite_baker.compose_torch import list_torch_bake_keys
     from helpers.sprite_baker.compose_trapdoor import list_trapdoor_bake_keys
 
+    keys.update(list_simple_bake_keys(texture_type))
     keys.update(list_bed_bake_keys(texture_type))
     keys.update(list_chest_bake_keys(texture_type))
     keys.update(list_door_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
@@ -419,6 +433,7 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     keys.update(list_trapdoor_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_torch_bake_keys(texture_type))
     keys.update(list_lantern_bake_keys(texture_type))
+    keys.update(list_campfire_bake_keys(texture_type))
 
     return keys
 

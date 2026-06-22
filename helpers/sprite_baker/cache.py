@@ -14,6 +14,8 @@ def sanitize_cache_key(key: str) -> str:
         key.replace(":", "_")
         .replace("@", "_at_")
         .replace("#", "_")
+        .replace(";", "_")
+        .replace("=", "_eq_")
         .replace("/", "_")
         .replace("\\", "_")
     )

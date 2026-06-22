@@ -104,11 +104,11 @@ def test_load_structure_yaml_residence_stage1():
     assert config["structure"] == "residence"
     assert config["stage"] == 1
     assert len(config["layers"]) == 6
-    assert config["grid"]["trim_block"] == "COBBLESTONE#mossy"
+    assert config["grid"]["trim_block"] == "minecraft:mossy_cobblestone"
     assert config["output_folder"] == "stage1_residence"
     assert config["site_ground"]
     floor_layer = next(layer for layer in config["layers"] if layer.get("index") == 0)
-    assert floor_layer["cells"][0][2] == "COBBLESTONE#mossy"
+    assert floor_layer["cells"][0][2] == "minecraft:mossy_cobblestone"
 
 
 def test_load_structure_yaml_residence_stage2():

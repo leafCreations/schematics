@@ -11,12 +11,20 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from helpers.block_picker import PickerEntry, cell_token
+from helpers.block_picker import (
+    PickerEntry,
+    catalog_block_ids,
+    cell_token,
+    variant_key_for_catalog_block,
+)
+from helpers.brush_preview import load_brush_preview_image
+from helpers.campfire_state import LIT_STATE, explicit_lit
 from helpers.grid_labels import grid_axis_position, grid_axis_selection_range
 from helpers.lantern_placement import HANGING_STATE, explicit_hanging
+from helpers.registry_lookup import is_minecraft_block_token, minecraft_block_id
 from helpers.structure_tokens import BlockStates, parse_structure_token
 from helpers.trapdoor_state import OPEN_STATE, explicit_open
-from ui.texture_cache import DEFAULT_ICON_SIZE, GridTextureCache
+from ui.texture_cache import DEFAULT_ICON_SIZE, pil_to_qpixmap
 from ui.widgets.panel_header import create_nested_group_layout
 
 _DEFAULT_VARIANT_LABEL = "(default)"
@@ -37,12 +45,12 @@ class PropertiesPanel(QWidget):
             _BRUSH_PREVIEW_ICON_SIZE,
             _BRUSH_PREVIEW_ICON_SIZE,
         )
-        self._texture_cache: GridTextureCache | None = None
         self._material_combo = QComboBox()
         self._direction_combo = QComboBox()
         self._variant_combo = QComboBox()
         self._hanging_combo = QComboBox()
         self._open_combo = QComboBox()
+        self._lit_combo = QComboBox()
         self._active_entry: PickerEntry | None = None
         self._selected_cell: tuple[int, int] | None = None
 
@@ -51,6 +59,7 @@ class PropertiesPanel(QWidget):
         self._variant_combo.currentTextChanged.connect(self._on_brush_option_changed)
         self._hanging_combo.currentTextChanged.connect(self._on_blockstate_option_changed)
         self._open_combo.currentTextChanged.connect(self._on_blockstate_option_changed)
+        self._lit_combo.currentTextChanged.connect(self._on_blockstate_option_changed)
 
         for direction in ("north", "south", "east", "west"):
             self._direction_combo.addItem(direction)
@@ -68,6 +77,8 @@ class PropertiesPanel(QWidget):
         picker_form.addRow(self._hanging_label, self._hanging_combo)
         self._open_label = QLabel("Open")
         picker_form.addRow(self._open_label, self._open_combo)
+        self._lit_label = QLabel("Lit")
+        picker_form.addRow(self._lit_label, self._lit_combo)
         picker_form.addRow("Preview", self._brush_preview)
 
         cell_group = QGroupBox()
@@ -94,8 +105,8 @@ class PropertiesPanel(QWidget):
     def selected_trapdoor_open(self) -> bool:
         return self._open_combo.currentText().lower() == "true"
 
-    def set_texture_cache(self, texture_cache: GridTextureCache | None) -> None:
-        self._texture_cache = texture_cache
+    def selected_campfire_lit(self) -> bool:
+        return self._lit_combo.currentText().lower() == "true"
 
     def build_placement_token(self) -> str | None:
         entry = self._active_entry
@@ -126,6 +137,7 @@ class PropertiesPanel(QWidget):
         self._variant_combo.blockSignals(True)
         self._hanging_combo.blockSignals(True)
         self._open_combo.blockSignals(True)
+        self._lit_combo.blockSignals(True)
         try:
             self._material_combo.clear()
 
@@ -196,12 +208,27 @@ class PropertiesPanel(QWidget):
                 self._open_combo.setVisible(False)
                 self._open_combo.setEnabled(False)
                 self._open_combo.addItem("—")
+
+            self._lit_combo.clear()
+
+            if entry.behavior == "campfire":
+                self._lit_label.setVisible(True)
+                self._lit_combo.setVisible(True)
+                self._lit_combo.setEnabled(True)
+                self._lit_combo.addItems(["true", "false"])
+                self._lit_combo.setCurrentText("true")
+            else:
+                self._lit_label.setVisible(False)
+                self._lit_combo.setVisible(False)
+                self._lit_combo.setEnabled(False)
+                self._lit_combo.addItem("—")
         finally:
             self._material_combo.blockSignals(False)
             self._direction_combo.blockSignals(False)
             self._variant_combo.blockSignals(False)
             self._hanging_combo.blockSignals(False)
             self._open_combo.blockSignals(False)
+            self._lit_combo.blockSignals(False)
 
         if brush_token:
             self.sync_brush_from_cell(brush_token)
@@ -265,6 +292,7 @@ class PropertiesPanel(QWidget):
                     f"Variant: {parsed.variant or '—'}",
                     f"Hanging: {self._format_hanging_display(parsed)}",
                     f"Open: {self._format_open_display(parsed)}",
+                    f"Lit: {self._format_lit_display(parsed)}",
                 ]
             )
 
@@ -292,7 +320,10 @@ class PropertiesPanel(QWidget):
             return
 
         if self._active_entry.is_catalog_block:
-            if raw_token != self._active_entry.token:
+            if not is_minecraft_block_token(parsed):
+                return
+
+            if minecraft_block_id(parsed) not in catalog_block_ids(self._active_entry):
                 return
         elif parsed.token != self._active_entry.token:
             return
@@ -313,7 +344,23 @@ class PropertiesPanel(QWidget):
             if direction_index >= 0:
                 self._direction_combo.setCurrentIndex(direction_index)
 
-        if parsed.variant and self._variant_combo.isEnabled():
+        if self._active_entry.is_catalog_block and is_minecraft_block_token(parsed):
+            variant_key = variant_key_for_catalog_block(
+                self._active_entry,
+                minecraft_block_id(parsed),
+            )
+
+            if variant_key and self._variant_combo.isEnabled():
+                variant_index = self._variant_combo.findText(variant_key)
+
+                if variant_index >= 0:
+                    self._variant_combo.setCurrentIndex(variant_index)
+            elif self._variant_combo.isEnabled():
+                default_index = self._variant_combo.findText(_DEFAULT_VARIANT_LABEL)
+
+                if default_index >= 0:
+                    self._variant_combo.setCurrentIndex(default_index)
+        elif parsed.variant and self._variant_combo.isEnabled():
             variant_index = self._variant_combo.findText(parsed.variant)
 
             if variant_index >= 0:
@@ -344,6 +391,17 @@ class PropertiesPanel(QWidget):
                 self._open_combo.setCurrentText("false")
 
             self._open_combo.blockSignals(False)
+
+        if self._active_entry is not None and self._active_entry.behavior == "campfire":
+            self._lit_combo.blockSignals(True)
+            lit_state = explicit_lit(parsed)
+
+            if lit_state is False:
+                self._lit_combo.setCurrentText("false")
+            else:
+                self._lit_combo.setCurrentText("true")
+
+            self._lit_combo.blockSignals(False)
 
         self._variant_combo.blockSignals(False)
         self._refresh_entry_preview()
@@ -411,6 +469,17 @@ class PropertiesPanel(QWidget):
 
             return ()
 
+        if self._active_entry.behavior == "campfire":
+            lit_value = self._lit_combo.currentText().lower()
+
+            if lit_value == "true":
+                return ((LIT_STATE, True),)
+
+            if lit_value == "false":
+                return ((LIT_STATE, False),)
+
+            return ()
+
         return ()
 
     @staticmethod
@@ -421,6 +490,15 @@ class PropertiesPanel(QWidget):
             return "auto"
 
         return "true" if hanging else "false"
+
+    @staticmethod
+    def _format_lit_display(parsed) -> str:
+        lit = explicit_lit(parsed)
+
+        if lit is None:
+            return "true"
+
+        return "true" if lit else "false"
 
     @staticmethod
     def _format_open_display(parsed) -> str:
@@ -441,21 +519,13 @@ class PropertiesPanel(QWidget):
         self._refresh_brush_preview(token)
 
     def _refresh_brush_preview(self, token: str) -> None:
-        if self._texture_cache is None:
+        image = load_brush_preview_image(token, _BRUSH_PREVIEW_ICON_SIZE)
+
+        if image is None:
             self._brush_preview.clear()
             return
 
-        self._texture_cache.invalidate_token(token)
-        icon = self._texture_cache.icon_for_cell(
-            token,
-            size=_BRUSH_PREVIEW_ICON_SIZE,
-        )
-
-        if icon is None:
-            self._brush_preview.clear()
-            return
-
-        pixmap = icon.pixmap(QSize(_BRUSH_PREVIEW_ICON_SIZE, _BRUSH_PREVIEW_ICON_SIZE))
+        pixmap = pil_to_qpixmap(image)
         scaled = pixmap.scaled(
             QSize(_BRUSH_PREVIEW_ICON_SIZE, _BRUSH_PREVIEW_ICON_SIZE),
             Qt.AspectRatioMode.IgnoreAspectRatio,
@@ -471,6 +541,8 @@ class PropertiesPanel(QWidget):
         self._hanging_combo.setVisible(False)
         self._open_label.setVisible(False)
         self._open_combo.setVisible(False)
+        self._lit_label.setVisible(False)
+        self._lit_combo.setVisible(False)
         self._title.setText("—")
         self._brush_preview.clear()
         self._cell_info.setText("No cell selected.")

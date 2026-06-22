@@ -93,6 +93,24 @@ def try_runtime_bake_sprite(
     behavior = behavior_for_bake_key(key)
 
     if behavior is None or get_composer(behavior) is None:
+        from helpers.sprite_baker.compose_campfire import compose_campfire, is_campfire_bake_key
+
+        if is_campfire_bake_key(key):
+            try:
+                return load_or_bake(
+                    view,
+                    key,
+                    lambda: compose_campfire(
+                        key=key,
+                        view=view,
+                        size=block_px,
+                        textures_dir=textures_dir,
+                    ),
+                    generated_root=generated_root,
+                )
+            except SpriteBakeError:
+                return None
+
         return None
 
     try:

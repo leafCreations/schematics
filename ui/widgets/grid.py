@@ -47,6 +47,45 @@ _TOKEN_ROLE = 256
 _NEIGHBOR_OFFSETS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
 
+def measure_table_content_size(table: QTableWidget) -> tuple[int, int]:
+    """Return the pixel size required to show the full table without scrolling."""
+    cols = table.columnCount()
+    rows = table.rowCount()
+
+    if cols == 0 or rows == 0:
+        return 0, 0
+
+    width = table.verticalHeader().width() + sum(table.columnWidth(col) for col in range(cols))
+    height = table.horizontalHeader().height() + sum(table.rowHeight(row) for row in range(rows))
+    frame = 2 * table.frameWidth()
+
+    if table.showGrid():
+        width += 1
+        height += 1
+
+    return width + frame, height + frame
+
+
+def sync_table_scroll_and_size(
+    table: QTableWidget,
+    viewport_width: int,
+    viewport_height: int,
+) -> None:
+    """Hide scrollbars when the grid fits; show them only when content exceeds the panel."""
+    content_w, content_h = measure_table_content_size(table)
+    fits = content_w <= viewport_width and content_h <= viewport_height
+
+    if fits:
+        table.setFixedSize(max(content_w, 1), max(content_h, 1))
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        return
+
+    table.setFixedSize(max(viewport_width, 1), max(viewport_height, 1))
+    table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+
 class LayerGridCellDelegate(QStyledItemDelegate):
     """Paint block icons edge-to-edge; default item view leaves margins and white fill."""
 
@@ -187,8 +226,8 @@ class LayerGridWidget(QTableWidget):
         self._paint_drag_last_pos = None
         self._paint_drag_moved = False
         self._active_cell: tuple[int, int] | None = None
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
@@ -254,7 +293,6 @@ class LayerGridWidget(QTableWidget):
         self._show_axis_labels = show
         self.horizontalHeader().setVisible(show)
         self.verticalHeader().setVisible(show)
-        self._update_fixed_size()
         self.refit_viewport()
 
     def show_axis_labels(self) -> bool:
@@ -475,8 +513,10 @@ class LayerGridWidget(QTableWidget):
             return
 
         label_w, label_h = self._axis_label_chrome_size()
-        grid_w = max(viewport_width - label_w, 1)
-        grid_h = max(viewport_height - label_h, 1)
+        frame = 2 * self.frameWidth()
+        gridline = 1 if self.showGrid() else 0
+        grid_w = max(viewport_width - label_w - frame - gridline, 1)
+        grid_h = max(viewport_height - label_h - frame - gridline, 1)
 
         cell_px = min(
             max(_MIN_CELL_PX, grid_w // cols),
@@ -488,7 +528,7 @@ class LayerGridWidget(QTableWidget):
             self._apply_cell_pixel_size(cell_px)
             self._refresh_cell_icons()
 
-        self._update_fixed_size()
+        sync_table_scroll_and_size(self, viewport_width, viewport_height)
 
     def refit_viewport(self) -> None:
         """Scale cells so the full grid fits the available center panel."""
@@ -529,14 +569,6 @@ class LayerGridWidget(QTableWidget):
                     self._apply_token_to_item(item, raw_token, row_idx, col_idx)
 
         self.highlight_selection()
-
-    def _update_fixed_size(self) -> None:
-        cols = self.columnCount()
-        rows = self.rowCount()
-        label_w, label_h = self._axis_label_chrome_size()
-        width = label_w + max(cols * self._cell_px, 1)
-        height = label_h + max(rows * self._cell_px, 1)
-        self.setFixedSize(width, height)
 
     def update_cell(self, row: int, col: int, raw_token: str) -> None:
         if not self._layer_cells:

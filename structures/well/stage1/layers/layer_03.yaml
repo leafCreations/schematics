@@ -9,11 +9,11 @@ cells:
   - .
   - .
 - - .
-  - COBBLESTONE
+  - minecraft:cobblestone
   - STAIRS:oak@south
-  - COBBLESTONE
+  - minecraft:cobblestone
   - STAIRS:oak@south
-  - COBBLESTONE
+  - minecraft:cobblestone
   - .
 - - .
   - STAIRS:oak@east
@@ -23,11 +23,11 @@ cells:
   - STAIRS:oak@west
   - .
 - - TORCH@west#wall
-  - COBBLESTONE
+  - minecraft:cobblestone
   - SLAB:oak#top
   - PLANKS:oak
   - SLAB:oak#top
-  - COBBLESTONE
+  - minecraft:cobblestone
   - TORCH@east#wall
 - - .
   - STAIRS:oak@east
@@ -37,11 +37,11 @@ cells:
   - STAIRS:oak@west
   - .
 - - .
-  - COBBLESTONE
+  - minecraft:cobblestone
   - STAIRS:oak@north
-  - COBBLESTONE
+  - minecraft:cobblestone
   - STAIRS:oak@north
-  - COBBLESTONE
+  - minecraft:cobblestone
   - .
 - - .
   - .

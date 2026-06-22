@@ -177,9 +177,10 @@ for file in "${STAGED[@]}"; do
       add tests/test_block_picker.py
       ;;
 
-    renderers/worldgen.py)
+    renderers/worldgen.py | helpers/worldgen_*.py)
       CODE_TOUCHED=1
-      add tests/test_worldgen_chest.py tests/test_worldgen_tokens.py
+      add tests/test_worldgen_chest.py tests/test_worldgen_tokens.py tests/test_worldgen_site.py
+      add tests/test_worldgen_bed.py tests/test_worldgen_region_patch.py tests/test_worldgen_functional_blocks.py
       add tests/test_lantern_placement.py tests/test_fence_adjacency.py
       ;;
 

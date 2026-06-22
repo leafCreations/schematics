@@ -33,21 +33,36 @@ After changing editor code, use **View → Reload Window** (`Ctrl+Shift+Q`) inst
 
 ### What you are editing
 
-Each stage is a folder on disk, for example:
+Each structure package has a **manifest** and one folder per stage:
 
 ```text
-structures/residence/stage1/
-  structure.yaml     # site size, placement, layer list, paths
-  layers/
-    layer_00.yaml    # one floor / slice: cells grid + group name
-    layer_01.yaml
-    ...
+structures/residence/
+  structure.yaml     # manifest: dimension, grid, site_ground, stages[]
+  stage1/
+    stage.yaml       # per-stage identity and layer_files list
+    layers/
+      layer_00.yaml  # one floor / slice: cells grid + group name
+      layer_01.yaml
+  stage2/
+    stage.yaml
+    layers/ …
 ```
 
-- **Layers** hold the block grid (`cells`) you paint in the Structure tab.
-- **structure.yaml** holds site size, where the building sits on the site, which layers appear in site preview, path settings, and group visibility for renders.
+- **Layers** (`stage{N}/layers/*.yaml`) hold the block grid (`cells`) you paint in the Structure tab.
+- **Manifest** (`structure.yaml`) holds site size, dimension, where the building sits on the site, path cells (`site_ground`), and the stage list.
+- **`stage.yaml`** holds structure name, stage number, display name, and `layer_files` order.
+
+See [structure-tokens.md](structure-tokens.md#structure-packages) for the full field reference.
 
 The window title shows the structure name and `(unsaved)` when something has not been written to disk.
+
+### File menu
+
+| Item | Shortcut | Action |
+| ---- | -------- | ------ |
+| **New Structure** | `Ctrl+N` | Create a new package (manifest + first stage + empty layer) and open it |
+| **Open Structure…** | — | Choose an existing structure and stage |
+| **Open Recent** | — | Reopen a recently used structure/stage |
 
 ---
 
@@ -77,7 +92,7 @@ Work in **Structure** to design the building, **Site** to fit it on the ground a
 
 **Left column**
 
-- **Palettes** — pick block types (stairs, planks, terrain, …).
+- **Palettes** — search all blocks or browse by category; terrain is grouped by dimension (overworld / nether / end).
 - **Groups** — filter and manage layer groups (e.g. “Floor 1”, “Roof”).
 - **Layers** — choose which layer you are editing, reorder, show/hide in renders.
 - **Structure** — structure name, stage, grid width/depth, resize, tooltip preference.
@@ -120,7 +135,9 @@ The **Grid cell** panel shows the token that will be placed (e.g. `STAIRS:oak@no
 The structure grid shows **column numbers** across the top and **row letters** (A, B, …) down the left edge. Toggle them with **View → Grid axis labels** (on by default; preference is saved locally). The **Grid cell** panel uses the same addressing (e.g. **A8** = row A, column 8).
 
 - **Paint brush**: drag to select a region (light green overlay), then release to place blocks. **Brush type** — **Fill** (every cell) or **Outline** (border cells only).
-- **Selector** tool (toolbar, first button): drag to select cells — a light blue overlay shows the region (including on block textures). The **Selector** panel shows the selection bounds (e.g. **B1: E5**). **Copy** / **Paste** or Ctrl+C / Ctrl+V. **Ctrl+click** still adds or removes cells while the selector is active. The **Grid cell** panel stays visible so you can inspect the focused cell.
+- **Selector** tool: drag to select cells — a light blue overlay shows the region. Open the selector **dropdown** to switch **Rectangle** (drag a box) or **Same block** (click one cell to select all matching tokens on the layer). The **Selector** panel shows the selection bounds (e.g. **B1: E5**). **Copy** / **Paste** or `Ctrl+C` / `Ctrl+V`. **Ctrl+click** adds or removes cells while the selector is active.
+- **Move** tool: drag a rectangle to select, then drag to place the selection at a new top-left (clears the source).
+- **Rotate left** / **Rotate right**: rotate **all** layers 90° (swaps width/depth; updates `@direction` and `!rotation` on placed blocks).
 - Click a cell that already has the same block type to select it without changing it.
 - **Middle-click** a non-empty cell to **pick** that block into the brush (loads material, direction, variant into the panels).
 
@@ -159,7 +176,7 @@ The **Layers** panel lists every layer file. The highlighted row is the layer sh
 | **Edit** | Change the current layer Y level and group |
 | **−** | Delete the selected layer (at least one layer must remain) |
 | Copy / Paste | Duplicate a layer (paste creates a new layer file) |
-| **↑** / **↓** | Change order in `structure.yaml` (save site settings to persist order) |
+| **↑** / **↓** | Change order in `stage.yaml` `layer_files` (save site settings to persist order) |
 | Eye icon on a row | Hide that layer from **renders** (save the layer to persist `visible: false`) |
 
 **Save** the active layer with the toolbar **Save** button or **File → Save** (`Ctrl+S`) on the Structure tab. On the Site tab, **Save** / `Ctrl+S` writes site settings (same as **Save Site Settings**). Unsaved layers show `*` in the list.
@@ -180,7 +197,7 @@ Layers belong to a **group** (stored as `group:` in each layer YAML). Groups let
 | Copy / Paste | Copy all layers in a group; paste creates new layers under a `(copy)` name |
 | Eye icon | Hide the whole group from renders (save **site settings** to persist) |
 
-Group visibility is saved in `structure.yaml` (`hidden_groups`). Layer visibility is saved in each layer file.
+Group visibility is saved in the manifest (`grid.hidden_groups`). Layer visibility is saved in each layer file.
 
 ---
 
@@ -202,9 +219,9 @@ Structure identity (name, stage, output folder) is edited here too. Save with **
 | Button / menu | Saves |
 | ------------- | ----- |
 | **Save** (Structure toolbar) or **File → Save** (`Ctrl+S`) on Structure tab | Active layer file only (`layers/layer_XX.yaml`) |
-| **File → Save** (`Ctrl+S`) on Site tab | `structure.yaml` and site settings (same as **Save Site Settings**) |
-| **Save All** (**File → Save All**, `Ctrl+Shift+S`) | Every unsaved layer plus `structure.yaml` / site settings when dirty |
-| **Save Site Settings** (Site tab) | `structure.yaml` — site size, placement, offsets, layer order, paths, group visibility |
+| **File → Save** (`Ctrl+S`) on Site tab | Manifest + `stage.yaml` (same as **Save Site Settings**) |
+| **Save All** (**File → Save All**, `Ctrl+Shift+S`) | Every unsaved layer plus manifest / site settings when dirty |
+| **Save Site Settings** (Site tab) | Manifest (`dimension`, `grid`, `site_ground`, `stages`) and `stage.yaml` (`layer_files`, identity) |
 
 The window title shows `(unsaved)` when layers or site settings need saving. Switching layers with unsaved edits asks **Save / Discard / Cancel**.
 
@@ -286,8 +303,11 @@ python render_main.py --structure residence --stage 1
 
 | Shortcut | Action |
 | -------- | ------ |
-| `Ctrl+S` | Save current layer |
+| `Ctrl+N` | New Structure |
+| `Ctrl+S` | Save (active layer on Structure tab; site settings on Site tab) |
 | `Ctrl+Shift+S` | Save All (unsaved layers and site settings) |
+| `Ctrl+C` | Copy selected cells |
+| `Ctrl+V` | Paste copied cells |
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` | Redo |
 | `Ctrl+Q` | Quit (prompts if unsaved) |

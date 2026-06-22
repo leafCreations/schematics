@@ -19,7 +19,7 @@ from helpers.sprite_baker.compose_slab import resolve_slab_placement
 from helpers.sprite_baker.compose_trapdoor import resolve_trapdoor_half
 from helpers.sprite_baker.runtime_bake import load_or_bake_generated_sprite
 from helpers.sprite_baker.stair_shapes import STAIR_SHAPES
-from helpers.structure_tokens import ParsedToken, parse_structure_token
+from helpers.structure_tokens import ParsedToken, format_structure_token, parse_structure_token
 from helpers.types import (
     MaterialsIconList,
     MaterialsIconTokens,
@@ -29,6 +29,7 @@ from helpers.types import (
 )
 from helpers.utils_schematics import (
     corner_stair_facing_rotation,
+    get_texture_for_render,
     is_corner_stair_shape,
     resolve_token_for_render,
 )
@@ -326,6 +327,13 @@ def resolve_material_display_name(parsed: ParsedToken, ctx: SchematicContext) ->
         return format_material_name(parsed.token)
 
     block_id = registry_blocks.resolve_minecraft_block_id(entry, parsed)
+
+    if registry_blocks.get_block_behavior(entry) == "bed":
+        color = registry_blocks.resolve_token_color(entry, parsed)
+        color_display = catalog_display_name(f"minecraft:{color}_bed")
+        if color_display is not None:
+            return color_display
+
     display_name = catalog_display_name(block_id)
 
     if display_name is not None:
@@ -426,12 +434,41 @@ def build_material_inventory_from_raw_tokens(
     return build_material_inventory(parsed_tokens, ctx, raw_tokens=filtered_raw_tokens)
 
 
+def _inventory_tint_token(
+    parsed: ParsedToken | None,
+    raw_token: RawToken | None,
+) -> str | None:
+    if raw_token:
+        return raw_token
+
+    if parsed is not None:
+        return format_structure_token(parsed)
+
+    return None
+
+
+def _apply_inventory_schematic_tint(
+    tex: Image.Image,
+    *,
+    parsed: ParsedToken | None,
+    raw_token: RawToken | None,
+) -> Image.Image:
+    tint_token = _inventory_tint_token(parsed, raw_token)
+
+    if tint_token is None:
+        return tex
+
+    return get_texture_for_render(tint_token, tex)
+
+
 def _paste_catalog_inventory_icon(
     img: Image.Image,
     parsed: ParsedToken,
     x: int,
     y: int,
     size: int,
+    *,
+    raw_token: RawToken | None = None,
 ) -> bool:
     if not is_minecraft_block_token(parsed):
         return False
@@ -441,6 +478,7 @@ def _paste_catalog_inventory_icon(
     if tex is None:
         return False
 
+    tex = _apply_inventory_schematic_tint(tex, parsed=parsed, raw_token=raw_token)
     img.paste(tex, (x, y), tex)
     return True
 
@@ -504,10 +542,18 @@ def draw_inventory_icon(
         if texture_path.exists():
             tex = Image.open(texture_path).convert("RGBA")
             tex = tex.resize((size, size), resample=Image.Resampling.NEAREST)
+            tex = _apply_inventory_schematic_tint(tex, parsed=parsed, raw_token=raw_token)
             img.paste(tex, (x, y), tex)
             return
 
-    if parsed is not None and _paste_catalog_inventory_icon(img, parsed, x, y, size):
+    if parsed is not None and _paste_catalog_inventory_icon(
+        img,
+        parsed,
+        x,
+        y,
+        size,
+        raw_token=raw_token,
+    ):
         return
 
     draw.rectangle(

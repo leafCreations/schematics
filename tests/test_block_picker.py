@@ -2,6 +2,7 @@ from helpers.block_picker import (
     PickerEntry,
     cell_positions_with_same_block_type,
     cell_token,
+    entry_matches_search,
     enumerate_token_materials,
     format_entry_label,
     homogeneous_picker_entry_for_positions,
@@ -10,8 +11,10 @@ from helpers.block_picker import (
     picker_entry_for_cell,
     picker_entry_for_token,
     resolve_palette,
+    search_picker_entries,
 )
 from registries.loader import BLOCK_PALETTES
+from tests.palette_helpers import terrain_section_entry_counts
 
 
 def test_enumerate_token_materials_from_catalog():
@@ -88,8 +91,12 @@ def test_cell_token_includes_direction_and_variant():
         == "STAIRS:oak@south#outer_left"
     )
 
-    cobblestone = picker_entry_for_token("COBBLESTONE")
-    assert cell_token(cobblestone, variant="mossy") == "COBBLESTONE#mossy"
+    cobblestone = next(
+        entry
+        for entry in resolve_palette("terrain").entries
+        if entry.token == "minecraft:cobblestone"
+    )
+    assert cell_token(cobblestone, variant="mossy") == "minecraft:mossy_cobblestone"
 
     door = picker_entry_for_token("DOOR")
     assert door.variants == ("lower", "upper")
@@ -119,6 +126,14 @@ def test_cell_token_includes_block_states():
     assert (
         cell_token(trapdoor, "oak", direction="north", states=(("open", False),))
         == "TRAPDOOR:oak@north;open=false"
+    )
+
+    campfire = picker_entry_for_block_id("minecraft:campfire", palette="lighting")
+    assert campfire.requires_direction is True
+    assert campfire.behavior == "campfire"
+    assert (
+        cell_token(campfire, direction="east", states=(("lit", False),))
+        == "minecraft:campfire@east;lit=false"
     )
 
 
@@ -200,6 +215,13 @@ def test_cell_positions_with_same_block_type_variant_matches_own_variant():
     assert set(positions) == {(0, 1), (1, 0)}
 
 
+def test_cell_positions_with_same_block_type_legacy_and_catalog_equivalent():
+    cells = [["COBBLESTONE", "minecraft:cobblestone"], ["GRASS", "."]]
+    positions = cell_positions_with_same_block_type(cells, "minecraft:cobblestone")
+
+    assert set(positions) == {(0, 0), (0, 1)}
+
+
 def test_cell_positions_with_same_block_type_exact_token_fallback():
     cells = [["CUSTOM:1", "CUSTOM:2"], ["CUSTOM:1", "."]]
     positions = cell_positions_with_same_block_type(cells, "CUSTOM:1")
@@ -221,17 +243,106 @@ def test_format_entry_label_uses_catalog():
     assert format_entry_label(planks, "spruce") == "Spruce Planks"
 
 
-def test_resolve_palette_includes_tokens_and_blocks():
+def test_format_entry_label_uses_stem_for_nether_logs():
+    log = picker_entry_for_token("LOG")
+
+    assert log is not None
+    assert format_entry_label(log, "crimson") == "Crimson Stem"
+    assert format_entry_label(log, "warped") == "Warped Stem"
+
+
+def test_resolve_palette_includes_catalog_terrain_blocks():
     palette = resolve_palette("terrain")
 
     assert palette is not None
     assert palette.label == "Terrain"
+    assert palette.sections == ("overworld", "nether", "end")
 
     tokens = {e.token for e in palette.entries if not e.is_catalog_block}
     catalog_blocks = {e.token for e in palette.entries if e.is_catalog_block}
 
-    assert "GRASS" in tokens
+    assert tokens == set()
+    assert "minecraft:grass_block" in catalog_blocks
     assert "minecraft:stone" in catalog_blocks
+    assert "minecraft:mossy_cobblestone" not in catalog_blocks
+
+    cobblestone = next(entry for entry in palette.entries if entry.token == "minecraft:cobblestone")
+    assert cobblestone.section == "overworld"
+    assert cobblestone.variants == ("mossy",)
+    assert cobblestone.variant_blocks == (("mossy", "minecraft:mossy_cobblestone"),)
+
+
+def test_resolve_palette_terrain_sections_have_entries_per_dimension():
+    palette = resolve_palette("terrain")
+    assert palette is not None
+
+    section_counts = terrain_section_entry_counts()
+
+    assert section_counts.keys() == {"overworld", "nether", "end"}
+    assert all(count > 0 for count in section_counts.values())
+    assert sum(section_counts.values()) == len(palette.entries)
+
+    for entry in palette.entries:
+        assert entry.section in section_counts
+
+
+def test_cell_token_for_catalog_terrain_variant():
+    palette = resolve_palette("terrain")
+    assert palette is not None
+
+    cobblestone = next(entry for entry in palette.entries if entry.token == "minecraft:cobblestone")
+
+    assert cell_token(cobblestone) == "minecraft:cobblestone"
+    assert cell_token(cobblestone, variant="mossy") == "minecraft:mossy_cobblestone"
+
+
+def test_picker_entry_for_cell_resolves_catalog_variant_block():
+    entry = picker_entry_for_cell("minecraft:mossy_cobblestone")
+
+    assert entry is not None
+    assert entry.token == "minecraft:cobblestone"
+    assert entry.is_catalog_block is True
+
+
+def test_entry_matches_search_by_label_and_token():
+    slab = picker_entry_for_token("SLAB")
+    assert slab is not None
+
+    assert entry_matches_search(slab, "slab")
+    assert entry_matches_search(slab, "SLAB")
+    assert not entry_matches_search(slab, "stairs")
+
+
+def test_entry_matches_search_by_material():
+    slab = picker_entry_for_token("SLAB")
+    assert slab is not None
+
+    assert entry_matches_search(slab, "oak")
+    assert not entry_matches_search(slab, "zzznotablock")
+
+
+def test_entry_matches_search_by_catalog_variant_block():
+    palette = resolve_palette("terrain")
+    assert palette is not None
+
+    stone = next(entry for entry in palette.entries if entry.token == "minecraft:stone")
+    cobblestone = next(entry for entry in palette.entries if entry.token == "minecraft:cobblestone")
+
+    assert entry_matches_search(stone, "smooth stone")
+    assert entry_matches_search(stone, "smooth_stone")
+    assert entry_matches_search(cobblestone, "mossy")
+    assert entry_matches_search(cobblestone, "mossy_cobblestone")
+    assert not entry_matches_search(stone, "dirt")
+
+
+def test_search_picker_entries_across_palettes():
+    palettes = list_palettes()
+    results = search_picker_entries(palettes, "cobblestone")
+    tokens = {entry.token for entry in results}
+
+    assert "minecraft:cobblestone" in tokens
+    assert any(entry.palette == "building" for entry in results)
+    assert any(entry.palette == "terrain" for entry in results)
 
 
 def test_resolve_palette_unknown_returns_none():

@@ -1,22 +1,22 @@
 index: 0
 group: Floor 1
 cells:
-- - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-- - COBBLESTONE
+- - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+- - minecraft:cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
@@ -24,14 +24,14 @@ cells:
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE
+  - minecraft:cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE
-- - COBBLESTONE#mossy
+  - minecraft:cobblestone
+- - minecraft:mossy_cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
@@ -45,8 +45,8 @@ cells:
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE#mossy
-- - COBBLESTONE#mossy
+  - minecraft:mossy_cobblestone
+- - minecraft:mossy_cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
@@ -54,14 +54,14 @@ cells:
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE
+  - minecraft:cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE
-- - COBBLESTONE#mossy
+  - minecraft:cobblestone
+- - minecraft:mossy_cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
@@ -69,14 +69,14 @@ cells:
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-- - COBBLESTONE
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+- - minecraft:cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
@@ -84,14 +84,14 @@ cells:
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE
+  - minecraft:cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE
-- - COBBLESTONE
+  - minecraft:cobblestone
+- - minecraft:cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
@@ -105,8 +105,8 @@ cells:
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE
-- - COBBLESTONE#mossy
+  - minecraft:cobblestone
+- - minecraft:mossy_cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
@@ -114,28 +114,28 @@ cells:
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE#mossy
+  - minecraft:mossy_cobblestone
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
   - PLANKS:oak
-  - COBBLESTONE#mossy
-- - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
-  - COBBLESTONE
-  - COBBLESTONE#mossy
+  - minecraft:mossy_cobblestone
+- - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
+  - minecraft:cobblestone
+  - minecraft:mossy_cobblestone
 - - .
   - .
   - .

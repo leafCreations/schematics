@@ -34,11 +34,11 @@ def test_get_path_geometry_accepts_deprecated_stair_local_x(ctx):
 
 def test_painted_site_ground_ignores_path_center_metadata(ctx):
     ctx.grid["path_center_local_x"] = 99
-    ctx.site_ground = [["GRASS"] * 12 for _ in range(15)]
+    ctx.site_ground = [["minecraft:grass_block"] * 12 for _ in range(15)]
     for site_z in range(5, 12):
-        ctx.site_ground[site_z][2] = "GRAVEL"
-        ctx.site_ground[site_z][3] = "DIRT_PATH"
-        ctx.site_ground[site_z][4] = "GRAVEL"
+        ctx.site_ground[site_z][2] = "minecraft:gravel"
+        ctx.site_ground[site_z][3] = "minecraft:dirt_path"
+        ctx.site_ground[site_z][4] = "minecraft:gravel"
 
     geom = path_geometry.get_path_geometry(ctx)
 

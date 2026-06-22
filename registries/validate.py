@@ -6,7 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from helpers.block_catalog import load_block_catalog, normalize_block_id
+from helpers.block_catalog import load_block_catalog
+from helpers.block_picker import _parse_palette_block_spec
 from helpers.paths import BLOCK_TEXTURES_FOLDER, GENERATED_ASSETS_FOLDER
 from registries.loader import (
     BLOCK_PALETTES,
@@ -163,6 +164,9 @@ def collect_behavior_texture_errors(
         if behavior == "fence" or isinstance(render_textures.get("top"), dict):
             continue
 
+        if "top" not in render_textures:
+            continue
+
         texture_name = resolve_registry_texture_filename(entry, "top")
 
         if not texture_name or "{" in texture_name:
@@ -214,13 +218,51 @@ def collect_palette_integrity_errors(
             if token not in registry:
                 errors.append(f"palettes/{palette_name}.yaml references unknown token {token!r}")
 
-        for block_id in palette.get("blocks", []) or []:
-            normalized = normalize_block_id(block_id)
+        for block_spec in palette.get("blocks", []) or []:
+            try:
+                block_id, variants = _parse_palette_block_spec(block_spec)
+            except ValueError as exc:
+                errors.append(f"palettes/{palette_name}.yaml has invalid block entry: {exc}")
+                continue
 
-            if normalized not in resolved_catalog:
-                errors.append(
-                    f"palettes/{palette_name}.yaml references unknown catalog block {block_id!r}"
-                )
+            block_ids = [block_id, *variants.values()]
+
+            for catalog_block_id in block_ids:
+                if catalog_block_id not in resolved_catalog:
+                    errors.append(
+                        "palettes/"
+                        f"{palette_name}.yaml references unknown catalog block "
+                        f"{catalog_block_id!r}"
+                    )
+
+        sections = palette.get("sections")
+        if isinstance(sections, dict):
+            for section_key, section_blocks in sections.items():
+                if not isinstance(section_blocks, list):
+                    errors.append(
+                        f"palettes/{palette_name}.yaml section {section_key!r} must be a list"
+                    )
+                    continue
+
+                for block_spec in section_blocks:
+                    try:
+                        block_id, variants = _parse_palette_block_spec(block_spec)
+                    except ValueError as exc:
+                        errors.append(
+                            f"palettes/{palette_name}.yaml section {section_key!r} "
+                            f"has invalid block entry: {exc}"
+                        )
+                        continue
+
+                    block_ids = [block_id, *variants.values()]
+
+                    for catalog_block_id in block_ids:
+                        if catalog_block_id not in resolved_catalog:
+                            errors.append(
+                                "palettes/"
+                                f"{palette_name}.yaml section {section_key!r} "
+                                f"references unknown catalog block {catalog_block_id!r}"
+                            )
 
     for token, entry in registry.items():
         ui = entry.get("ui", {})

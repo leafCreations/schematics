@@ -13,8 +13,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from helpers.block_catalog import catalog_display_name, load_block_catalog, normalize_block_id
+from helpers.campfire_state import is_campfire_block_id
+from helpers.palette_sections import normalize_palette_section_keys
 from helpers.registry_lookup import is_minecraft_block_token, minecraft_block_id
 from helpers.structure_tokens import BlockStates, format_block_states, parse_structure_token
+from helpers.terrain_tokens import legacy_terrain_block_id, migrate_terrain_token
 from registries.loader import BLOCK_PALETTES, BLOCK_REGISTRY
 
 _PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
@@ -37,6 +40,8 @@ class PickerEntry:
     variants: tuple[str, ...] = ()
     materials: tuple[str, ...] = ()
     is_catalog_block: bool = False
+    variant_blocks: tuple[tuple[str, str], ...] = ()
+    section: str | None = None
 
 
 @dataclass(frozen=True)
@@ -46,6 +51,7 @@ class PickerPalette:
     name: str
     label: str
     entries: tuple[PickerEntry, ...] = field(default_factory=tuple)
+    sections: tuple[str, ...] = ()
 
 
 def _placeholder_field(template: str | None) -> str | None:
@@ -162,9 +168,15 @@ def picker_entry_for_token(
 
     material_default = entry.get("material_default") or entry.get("color_default")
 
-    materials = (
-        enumerate_token_materials(block_template, catalog=catalog) if requires_material else ()
-    )
+    materials = ()
+
+    if requires_material:
+        if token == "LOG":
+            from helpers.log_materials import enumerate_log_materials
+
+            materials = enumerate_log_materials(catalog=catalog)
+        else:
+            materials = enumerate_token_materials(block_template, catalog=catalog)
 
     return PickerEntry(
         token=token,
@@ -204,7 +216,8 @@ def _ensure_picker_entry_indexes(*, catalog: dict[str, Any] | None = None) -> No
     for palette in list_palettes(catalog=catalog):
         for entry in palette.entries:
             if entry.is_catalog_block:
-                by_block[entry.token] = entry
+                for block_id in catalog_block_ids(entry):
+                    by_block[block_id] = entry
             else:
                 by_registry[entry.token] = entry
 
@@ -274,6 +287,11 @@ def cell_positions_with_same_block_type(
                 continue
 
             if entry is not None:
+                if entry.is_catalog_block:
+                    if migrate_terrain_token(token) == migrate_terrain_token(reference_token):
+                        positions.append((row, col))
+                    continue
+
                 cell_entry = picker_entry_for_cell(token)
                 cell_parsed = parse_structure_token(token)
                 cell_variant = cell_parsed.variant if cell_parsed else None
@@ -304,8 +322,36 @@ def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
         assert _picker_by_block_id is not None
         return _picker_by_block_id.get(block_id) or picker_entry_for_block_id(block_id)
 
+    legacy_block_id = legacy_terrain_block_id(parsed)
+
+    if legacy_block_id is not None:
+        assert _picker_by_block_id is not None
+        return _picker_by_block_id.get(legacy_block_id) or picker_entry_for_block_id(
+            legacy_block_id,
+            palette="terrain",
+        )
+
     assert _picker_by_registry_token is not None
     return _picker_by_registry_token.get(parsed.token) or picker_entry_for_token(parsed.token)
+
+
+def catalog_block_ids(entry: PickerEntry) -> frozenset[str]:
+    ids = {entry.token}
+
+    for _variant_key, block_id in entry.variant_blocks:
+        ids.add(block_id)
+
+    return frozenset(ids)
+
+
+def variant_key_for_catalog_block(entry: PickerEntry, block_id: str) -> str | None:
+    normalized = normalize_block_id(block_id)
+
+    for variant_key, variant_block_id in entry.variant_blocks:
+        if normalize_block_id(variant_block_id) == normalized:
+            return variant_key
+
+    return None
 
 
 def picker_entry_for_block_id(
@@ -313,18 +359,106 @@ def picker_entry_for_block_id(
     *,
     palette: str = "",
     catalog: dict[str, Any] | None = None,
+    variants: dict[str, str] | None = None,
+    section: str | None = None,
 ) -> PickerEntry:
     """Build a :class:`PickerEntry` for a raw ``minecraft:`` catalog block."""
     normalized = normalize_block_id(block_id)
     display = catalog_display_name(normalized, catalog=catalog)
+    variant_items = tuple(
+        (str(variant_key), normalize_block_id(variant_block_id))
+        for variant_key, variant_block_id in sorted((variants or {}).items())
+    )
+
+    is_campfire = is_campfire_block_id(normalized)
 
     return PickerEntry(
         token=normalized,
         label=display or normalized.split(":", 1)[-1].replace("_", " ").title(),
-        behavior="solid",
+        behavior="campfire" if is_campfire else "solid",
         palette=palette,
         is_catalog_block=True,
+        requires_direction=is_campfire,
+        variants=tuple(variant_key for variant_key, _block_id in variant_items),
+        variant_blocks=variant_items,
+        section=section,
     )
+
+
+def _parse_palette_block_spec(
+    block_spec: str | dict[str, Any],
+) -> tuple[str, dict[str, str]]:
+    if isinstance(block_spec, str):
+        return normalize_block_id(block_spec), {}
+
+    if not isinstance(block_spec, dict):
+        raise ValueError(
+            f"Palette block entry must be a string or mapping, got {type(block_spec)!r}"
+        )
+
+    block_id = block_spec.get("id")
+
+    if not isinstance(block_id, str) or not block_id.strip():
+        raise ValueError(f"Palette block entry missing string 'id': {block_spec!r}")
+
+    raw_variants = block_spec.get("variants") or {}
+    variants: dict[str, str] = {}
+
+    if not isinstance(raw_variants, dict):
+        raise ValueError(f"Palette block variants must be a mapping: {block_spec!r}")
+
+    for variant_key, variant_block_id in raw_variants.items():
+        if not isinstance(variant_key, str) or not isinstance(variant_block_id, str):
+            raise ValueError(
+                f"Palette block variant keys and values must be strings: {block_spec!r}"
+            )
+
+        variants[variant_key] = normalize_block_id(variant_block_id)
+
+    return normalize_block_id(block_id), variants
+
+
+def picker_entry_for_palette_block(
+    block_spec: str | dict[str, Any],
+    *,
+    palette: str,
+    catalog: dict[str, Any] | None = None,
+    section: str | None = None,
+) -> PickerEntry:
+    block_id, variants = _parse_palette_block_spec(block_spec)
+    return picker_entry_for_block_id(
+        block_id,
+        palette=palette,
+        catalog=catalog,
+        variants=variants,
+        section=section,
+    )
+
+
+PaletteBlockSpec = tuple[str | None, str | dict[str, Any]]
+
+
+def _collect_palette_block_specs(palette: dict[str, Any]) -> list[PaletteBlockSpec]:
+    specs: list[PaletteBlockSpec] = []
+
+    sections = palette.get("sections")
+    if isinstance(sections, dict):
+        for section_key in normalize_palette_section_keys(sections):
+            section_blocks = sections.get(section_key) or []
+            if not isinstance(section_blocks, list):
+                raise ValueError(
+                    f"Palette section {section_key!r} must be a list, got {type(section_blocks)!r}"
+                )
+
+            for block_spec in section_blocks:
+                specs.append((section_key, block_spec))
+
+        return specs
+
+    for block_spec in palette.get("blocks", []) or ():
+        specs.append((None, block_spec))
+
+    return specs
 
 
 def cell_token(
@@ -337,7 +471,25 @@ def cell_token(
 ) -> str:
     """Return the structure-layer cell string for a picker selection."""
     if entry.is_catalog_block:
-        return entry.token
+        block_id = entry.token
+
+        if variant:
+            for variant_key, variant_block_id in entry.variant_blocks:
+                if variant_key == variant:
+                    block_id = variant_block_id
+                    break
+
+        token = block_id
+
+        if entry.requires_direction:
+            token = f"{token}@{direction or 'north'}"
+
+        if states:
+            token = f"{token};{format_block_states(states)}"
+        elif entry.behavior == "campfire":
+            token = f"{token};lit=true"
+
+        return token
 
     token = entry.token
 
@@ -366,10 +518,18 @@ def format_entry_label(
     catalog: dict[str, Any] | None = None,
 ) -> str:
     """Resolve a display label for a picker entry at a chosen material."""
-    if not entry.requires_material or material is None or not entry.block_template:
+    if not entry.requires_material or material is None:
         return entry.label
 
-    block_id = entry.block_template.format(material=material, color=material)
+    if entry.behavior == "log":
+        from helpers.log_materials import resolve_log_block_id
+
+        block_id = resolve_log_block_id(material, catalog=catalog)
+    elif entry.block_template:
+        block_id = entry.block_template.format(material=material, color=material)
+    else:
+        return entry.label
+
     display = catalog_display_name(block_id, catalog=catalog)
 
     return display or f"{material} {entry.label}".strip()
@@ -383,6 +543,7 @@ def resolve_palette(name: str, *, catalog: dict[str, Any] | None = None) -> Pick
         return None
 
     entries: list[PickerEntry] = []
+    section_keys: tuple[str, ...] = ()
 
     for token in palette.get("tokens", []) or ():
         token_entry = picker_entry_for_token(token, catalog=catalog)
@@ -390,14 +551,96 @@ def resolve_palette(name: str, *, catalog: dict[str, Any] | None = None) -> Pick
         if token_entry is not None:
             entries.append(token_entry)
 
-    for block_id in palette.get("blocks", []) or ():
-        entries.append(picker_entry_for_block_id(block_id, palette=name, catalog=catalog))
+    sections = palette.get("sections")
+    if isinstance(sections, dict):
+        section_keys = normalize_palette_section_keys(sections)
+
+    for section_key, block_spec in _collect_palette_block_specs(palette):
+        entries.append(
+            picker_entry_for_palette_block(
+                block_spec,
+                palette=name,
+                catalog=catalog,
+                section=section_key,
+            ),
+        )
 
     return PickerPalette(
         name=name,
         label=palette.get("label", name.title()),
         entries=tuple(entries),
+        sections=section_keys,
     )
+
+
+def picker_entry_search_terms(entry: PickerEntry) -> tuple[str, ...]:
+    """Lowercase strings used to match palette search queries."""
+    terms: list[str] = [
+        entry.label,
+        entry.token,
+        entry.behavior,
+        entry.palette,
+    ]
+
+    if entry.section:
+        terms.append(entry.section)
+
+    for variant_key in entry.variants:
+        terms.append(variant_key)
+
+    for variant_key, block_id in entry.variant_blocks:
+        terms.append(variant_key)
+        terms.append(block_id)
+
+        block_name = block_id.split(":", 1)[-1]
+        terms.append(block_name)
+        terms.append(block_name.replace("_", " "))
+
+    for material in entry.materials:
+        terms.append(material)
+
+    return tuple(term.casefold() for term in terms if term)
+
+
+def entry_matches_search(entry: PickerEntry, query: str) -> bool:
+    """Return whether ``query`` matches a palette entry's searchable fields."""
+    normalized = query.strip().casefold()
+
+    if not normalized:
+        return True
+
+    query_variants = {
+        normalized,
+        normalized.replace(" ", "_"),
+        normalized.replace("_", " "),
+    }
+
+    for term in picker_entry_search_terms(entry):
+        for query_variant in query_variants:
+            if query_variant in term:
+                return True
+
+    return False
+
+
+def search_picker_entries(
+    palettes: list[PickerPalette],
+    query: str,
+) -> list[PickerEntry]:
+    """Return palette entries matching ``query`` across every palette tab."""
+    normalized = query.strip()
+
+    if not normalized:
+        return []
+
+    results: list[PickerEntry] = []
+
+    for palette in palettes:
+        for entry in palette.entries:
+            if entry_matches_search(entry, query):
+                results.append(entry)
+
+    return results
 
 
 def list_palettes(*, catalog: dict[str, Any] | None = None) -> list[PickerPalette]:

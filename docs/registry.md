@@ -25,7 +25,7 @@ Palettes reference semantic tokens and/or raw Minecraft block ids:
 
 ```text
 registries/palettes/
-  terrain.yaml      # Dirt, grass, cobblestone, …
+  terrain.yaml        # Catalog `minecraft:` ids by dimension (overworld / nether / end)
   wood.yaml           # Log, planks
   functional.yaml     # Furnace, crafting table, chest, door, bed
   building.yaml       # Slab, fence, stairs
@@ -33,20 +33,15 @@ registries/palettes/
   …
 ```
 
-Structure layers can use either semantic tokens (`PLANKS:oak`) or catalog-backed cells (`minecraft:stone`). The latter synthesizes a solid behavior entry at lookup time.
+The terrain palette lists **full cube blocks** only (no stairs, slabs, or doors). Variant blocks (e.g. `minecraft:mossy_cobblestone`) are grouped under a parent entry in YAML; the editor writes the full catalog id via the variant picker.
+
+Structure layers can use either semantic tokens (`PLANKS:oak`) or catalog-backed cells (`minecraft:stone`). The latter synthesizes a solid behavior entry at lookup time. Legacy terrain tokens (`GRASS`, `COBBLESTONE#mossy`) still resolve for old YAML; run `scripts/migrate_terrain_tokens.py` to convert them.
 
 ## Example behavior entries
 
-```yaml
-GRASS:
-  behavior: solid
-  minecraft:
-    block: minecraft:grass_block
-  render:
-    textures:
-      top: grass_block_top.png
-    background_color: [95, 160, 75]
+Semantic tokens in non-terrain palettes still use behavior YAML. Terrain blocks are defined in `registries/palettes/terrain.yaml` as catalog ids; lookup falls back through `helpers/terrain_tokens.py` for legacy cells.
 
+```yaml
 FURNACE:
   behavior: facing_block
   defaults:

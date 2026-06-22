@@ -740,6 +740,51 @@ def test_draw_inventory_icon_uses_catalog_fallback_for_minecraft_block(monkeypat
     assert img.getpixel((0, 0))[:3] == (10, 20, 30)
 
 
+@pytest.mark.requires_assets
+def test_draw_inventory_icon_applies_schematic_tint_for_grass_and_water():
+    from PIL import Image, ImageDraw
+
+    from helpers.materials import draw_inventory_icon, resolve_material_inventory_icon
+    from helpers.structure_tokens import parse_structure_token
+
+    if not (BLOCK_TEXTURES_FOLDER / "grass_block_top.png").is_file():
+        pytest.skip("grass_block_top.png not available")
+    if not (BLOCK_TEXTURES_FOLDER / "water_still.png").is_file():
+        pytest.skip("water_still.png not available")
+
+    ctx = _ctx_with_registry({})
+    ctx.assets_dir = BLOCK_TEXTURES_FOLDER
+
+    for raw_token in ("minecraft:grass_block", "minecraft:water"):
+        parsed = parse_structure_token(raw_token)
+        assert parsed is not None
+        texture_name = resolve_material_inventory_icon(parsed, ctx)
+        img = Image.new("RGBA", (25, 25), (255, 255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        plain = (
+            Image.open(BLOCK_TEXTURES_FOLDER / texture_name)
+            .convert("RGBA")
+            .resize(
+                (25, 25),
+                resample=Image.Resampling.NEAREST,
+            )
+        )
+
+        draw_inventory_icon(
+            img,
+            draw,
+            ctx,
+            texture_name=texture_name,
+            x=0,
+            y=0,
+            size=25,
+            parsed=parsed,
+            raw_token=raw_token,
+        )
+
+        assert img.getpixel((12, 12)) != plain.getpixel((12, 12))
+
+
 def test_draw_inventory_icon_gray_placeholder_without_catalog_fallback():
     from PIL import Image, ImageDraw
 

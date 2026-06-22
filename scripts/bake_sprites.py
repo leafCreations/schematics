@@ -16,6 +16,7 @@ from helpers.paths import BLOCK_TEXTURES_FOLDER, GENERATED_ASSETS_FOLDER
 from helpers.sprite_baker import load_or_bake
 from helpers.sprite_baker.cache import cache_path
 from helpers.sprite_baker.compose_bed import compose_bed, list_bed_bake_keys
+from helpers.sprite_baker.compose_campfire import compose_campfire, list_campfire_bake_keys
 from helpers.sprite_baker.compose_chest import compose_chest, list_chest_bake_keys
 from helpers.sprite_baker.compose_door import compose_door, list_door_bake_keys
 from helpers.sprite_baker.compose_fence import compose_fence, list_fence_bake_keys
@@ -46,6 +47,7 @@ def _parse_args() -> argparse.Namespace:
             "fence",
             "torch",
             "lantern",
+            "campfire",
             "log",
             "trapdoor",
             "demo",
@@ -53,7 +55,7 @@ def _parse_args() -> argparse.Namespace:
         default="simple",
         help=(
             "Bake mode: simple solids, slabs, stairs, doors, trapdoors, beds, chests, "
-            "fences, torches, lanterns, logs, or Phase 0 demo"
+            "fences, torches, lanterns, campfires, logs, or Phase 0 demo"
         ),
     )
     parser.add_argument(
@@ -117,6 +119,8 @@ def _resolve_keys(args: argparse.Namespace) -> list[str]:
             return list_torch_bake_keys(args.view)
         if args.type == "lantern":
             return list_lantern_bake_keys(args.view)
+        if args.type == "campfire":
+            return list_campfire_bake_keys(args.view)
         if args.type == "log":
             return list_log_bake_keys(args.view, textures_dir=args.textures_dir)
         if args.type == "trapdoor":
@@ -124,7 +128,7 @@ def _resolve_keys(args: argparse.Namespace) -> list[str]:
 
         raise SpriteBakeError(
             "--all is only supported with --type simple, slab, stairs, door, trapdoor, "
-            "bed, chest, fence, torch, lantern, or log"
+            "bed, chest, fence, torch, lantern, campfire, or log"
         )
 
     if args.key:
@@ -226,6 +230,16 @@ def _bake_key(args: argparse.Namespace, key: str) -> Path:
 
         def bake_fn():
             return compose_log(
+                key=key,
+                view=args.view,
+                size=args.size,
+                textures_dir=args.textures_dir,
+            )
+
+    elif args.type == "campfire":
+
+        def bake_fn():
+            return compose_campfire(
                 key=key,
                 view=args.view,
                 size=args.size,

@@ -5,7 +5,7 @@ EMPTY_CELL = "."
 BlockStateValue: TypeAlias = str | bool
 BlockStates: TypeAlias = tuple[tuple[str, BlockStateValue], ...]
 
-_KNOWN_STATE_KEYS = frozenset({"hanging", "open"})
+_KNOWN_STATE_KEYS = frozenset({"hanging", "open", "lit"})
 
 
 @dataclass(frozen=True)

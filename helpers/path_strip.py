@@ -8,31 +8,17 @@ from typing import Literal
 
 from helpers.grid_placement import site_cell_in_structure_footprint
 from helpers.site_ground import GRASS_BLOCK
-
-DIRT_PATH_BLOCK = "DIRT_PATH"
-TRIM_BLOCK = "GRAVEL"
-
-PATH_VARIETY_OPTIONS: tuple[str, ...] = (
-    "GRAVEL",
-    "DIRT",
-    "COBBLESTONE",
-    "COBBLESTONE#mossy",
+from helpers.terrain_tokens import (
+    DIRT_PATH_BLOCK,
+    PATH_VARIETY_OPTIONS,
+    PATH_VARIETY_WEIGHTS,
+    TRIM_BLOCK,
+    TRIM_BLOCK_OPTIONS,
+    canonical_terrain_token,
+    migrate_terrain_token,
 )
+
 DEFAULT_PATH_VARIETY_BLOCKS: tuple[str, ...] = PATH_VARIETY_OPTIONS
-TRIM_BLOCK_OPTIONS: tuple[str, ...] = (
-    "GRAVEL",
-    "DIRT",
-    "COBBLESTONE",
-    "COBBLESTONE#mossy",
-)
-
-PATH_VARIETY_WEIGHTS: dict[str, float] = {
-    "GRAVEL": 0.15,
-    "DIRT": 0.15,
-    "COBBLESTONE": 0.07,
-    "COBBLESTONE#mossy": 0.03,
-}
-DIRT_PATH_WEIGHT = 0.60
 
 PATH_SURFACE_TOKENS = frozenset({DIRT_PATH_BLOCK, *PATH_VARIETY_OPTIONS})
 DEFAULT_PATH_WIDTH = 3
@@ -42,21 +28,31 @@ DEFAULT_PATH_ORIENTATION: PathOrientation = "horizontal"
 PathOrientation = Literal["horizontal", "vertical"]
 RandomPathFn = Callable[[], str]
 
+_CANONICAL_PATH_VARIETY = {canonical_terrain_token(block): block for block in PATH_VARIETY_OPTIONS}
+_CANONICAL_TRIM_OPTIONS = {canonical_terrain_token(block): block for block in TRIM_BLOCK_OPTIONS}
+
 
 def is_path_surface_token(token: str, *, variety_blocks: list[str] | None = None) -> bool:
-    if token == DIRT_PATH_BLOCK:
+    canonical = canonical_terrain_token(token)
+
+    if canonical == canonical_terrain_token(DIRT_PATH_BLOCK):
         return True
 
-    allowed = set(variety_blocks) if variety_blocks is not None else set(PATH_VARIETY_OPTIONS)
-    return token in allowed
+    allowed = (
+        {canonical_terrain_token(block) for block in variety_blocks}
+        if variety_blocks is not None
+        else set(_CANONICAL_PATH_VARIETY)
+    )
+
+    return canonical in allowed
 
 
 def is_trim_token(token: str, *, trim_block: str | None = None) -> bool:
-    return token == (trim_block or TRIM_BLOCK)
+    return canonical_terrain_token(token) == canonical_terrain_token(trim_block or TRIM_BLOCK)
 
 
 def is_legacy_trim_token(token: str) -> bool:
-    return token in TRIM_BLOCK_OPTIONS
+    return canonical_terrain_token(token) in _CANONICAL_TRIM_OPTIONS
 
 
 def is_path_related_token(token: str, *, variety_blocks: list[str] | None = None) -> bool:
@@ -66,12 +62,8 @@ def is_path_related_token(token: str, *, variety_blocks: list[str] | None = None
 
 
 def resolve_trim_block(grid: dict) -> str:
-    block = grid.get("trim_block", TRIM_BLOCK)
-
-    if block in TRIM_BLOCK_OPTIONS:
-        return block
-
-    return TRIM_BLOCK
+    block = migrate_terrain_token(str(grid.get("trim_block", TRIM_BLOCK)))
+    return _CANONICAL_TRIM_OPTIONS.get(canonical_terrain_token(block), TRIM_BLOCK)
 
 
 def resolve_path_variety_blocks(grid: dict) -> list[str]:
@@ -80,9 +72,22 @@ def resolve_path_variety_blocks(grid: dict) -> list[str]:
     if not isinstance(raw, list) or not raw:
         return list(DEFAULT_PATH_VARIETY_BLOCKS)
 
-    blocks = [block for block in raw if block in PATH_VARIETY_OPTIONS]
+    blocks: list[str] = []
+
+    for block in raw:
+        if not isinstance(block, str):
+            continue
+
+        canonical = canonical_terrain_token(block)
+        catalog_block = _CANONICAL_PATH_VARIETY.get(canonical)
+
+        if catalog_block is not None:
+            blocks.append(catalog_block)
 
     return blocks or list(DEFAULT_PATH_VARIETY_BLOCKS)
+
+
+DIRT_PATH_WEIGHT = 0.60
 
 
 def random_path_block(

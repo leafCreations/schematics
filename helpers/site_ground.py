@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 from helpers.grid_cells import resize_cells
+from helpers.terrain_tokens import GRASS_BLOCK
 
-GRASS_BLOCK = "GRASS"
+__all__ = [
+    "GRASS_BLOCK",
+    "create_grass_site_ground",
+    "ensure_site_ground",
+    "resize_site_ground",
+    "validate_site_ground",
+]
 
 
 def create_grass_site_ground(site_width: int, site_depth: int) -> list[list[str]]:
     if site_width < 1 or site_depth < 1:
         raise ValueError("Site width and depth must be at least 1")
 
-    return [["GRASS" for _ in range(site_width)] for _ in range(site_depth)]
+    return [[GRASS_BLOCK for _ in range(site_width)] for _ in range(site_depth)]
 
 
 def resize_site_ground(

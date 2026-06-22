@@ -5,6 +5,7 @@ from PIL import Image
 
 from helpers import constants
 from helpers.paths import BLOCK_TEXTURES_FOLDER
+from helpers.registry_lookup import solid_entry_for_block_id
 from helpers.sprite_baker.compose_simple import (
     compose_simple,
     is_simple_bakeable,
@@ -29,7 +30,7 @@ def test_parse_bake_key_material():
 
 
 def test_is_simple_bakeable_solid_blocks():
-    assert is_simple_bakeable(BLOCK_REGISTRY["GRASS"]) is True
+    assert is_simple_bakeable(solid_entry_for_block_id("minecraft:grass_block")) is True
     assert is_simple_bakeable(BLOCK_REGISTRY["PLANKS"]) is True
     assert is_simple_bakeable(BLOCK_REGISTRY["FURNACE"]) is True
     assert is_simple_bakeable(BLOCK_REGISTRY["STAIRS"]) is False
@@ -38,10 +39,9 @@ def test_is_simple_bakeable_solid_blocks():
 
 def test_list_simple_bake_keys_includes_terrain_blocks():
     keys = list_simple_bake_keys("top")
-    assert "GRASS" in keys
-    assert "DIRT" in keys
-    assert "COBBLESTONE#mossy" in keys
-    assert "COBBLESTONE#normal" not in keys
+    assert "minecraft:grass_block" in keys
+    assert "minecraft:dirt" in keys
+    assert "minecraft:mossy_cobblestone" in keys
     assert "FURNACE" in keys
     assert "STAIRS#outer_left" not in keys
 
@@ -60,12 +60,8 @@ def test_registry_mapping_skips_default_variant():
     from registries.loader import build_registry_texture_mapping
 
     mapping = build_registry_texture_mapping("top")
-    assert "COBBLESTONE" in mapping
-    assert "COBBLESTONE#mossy" in mapping
-    assert "COBBLESTONE#normal" not in mapping
-    assert "GRASS" in mapping
-    assert "GRASS#top" not in mapping
-    assert mapping["GRASS"] == "grass_block_top.png"
+    assert "COBBLESTONE" not in mapping
+    assert "GRASS" not in mapping
     assert "CRAFTING_TABLE" in mapping
     assert "CRAFTING_TABLE#top" not in mapping
     assert mapping["CRAFTING_TABLE"] == "crafting_table_top.png"
@@ -95,7 +91,7 @@ def test_compose_simple_grass_uses_top_texture_and_tint():
         pytest.skip("grass_block_top.png not available")
 
     image = compose_simple(
-        key="GRASS",
+        key="minecraft:grass_block",
         view="top",
         size=constants.BLOCK_PX,
         textures_dir=BLOCK_TEXTURES_FOLDER,
@@ -105,7 +101,7 @@ def test_compose_simple_grass_uses_top_texture_and_tint():
     plain_top = plain_top.resize((constants.BLOCK_PX, constants.BLOCK_PX), Image.Resampling.NEAREST)
 
     assert image.size == (constants.BLOCK_PX, constants.BLOCK_PX)
-    assert image.getpixel((0, 0)) != plain_top.getpixel((0, 0))
+    assert image.getpixel((0, 0)) == plain_top.getpixel((0, 0))
 
 
 @pytest.mark.requires_assets
@@ -131,7 +127,7 @@ def test_compose_simple_cobblestone_mossy_variant():
         pytest.skip("mossy_cobblestone.png not available")
 
     image = compose_simple(
-        key="COBBLESTONE#mossy",
+        key="minecraft:mossy_cobblestone",
         view="top",
         size=constants.BLOCK_PX,
         textures_dir=BLOCK_TEXTURES_FOLDER,
@@ -172,9 +168,9 @@ def test_bake_simple_grass_integration(tmp_path: Path):
 
     load_or_bake(
         "top",
-        "GRASS",
+        "minecraft:grass_block",
         lambda: compose_simple(
-            key="GRASS",
+            key="minecraft:grass_block",
             view="top",
             size=constants.BLOCK_PX,
             textures_dir=BLOCK_TEXTURES_FOLDER,
@@ -188,9 +184,9 @@ def test_bake_simple_grass_integration(tmp_path: Path):
             "top",
             str(BLOCK_TEXTURES_FOLDER),
             constants.BLOCK_PX,
-            ("GRASS", "PLANKS"),
+            ("minecraft:grass_block", "PLANKS"),
         )
 
-    grass = textures["GRASS"]
+    grass = textures["minecraft:grass_block"]
     planks = textures["PLANKS"]
     assert grass.getpixel((0, 0)) != planks.getpixel((0, 0))

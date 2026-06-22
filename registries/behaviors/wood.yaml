@@ -18,9 +18,9 @@ LOG:
       axis: '{axis}'
   render:
     textures:
-      top: '{material}_log_top.png'
-      side: '{material}_log.png'
-    inventory_image: '{material}_log.png'
+      top: '{material}_{kind}_top.png'
+      side: '{material}_{kind}.png'
+    inventory_image: '{material}_{kind}.png'
 PLANKS:
   behavior: solid
   material_default: oak

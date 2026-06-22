@@ -11,16 +11,25 @@ from registries.loader import BEHAVIORS_DIR, BLOCK_PALETTES, BLOCK_REGISTRY, PAL
 
 def test_behavior_registry_loads_from_split_files():
     assert BEHAVIORS_DIR.is_dir()
-    assert "GRASS" in BLOCK_REGISTRY
     assert "STAIRS" in BLOCK_REGISTRY
-    assert BLOCK_REGISTRY["GRASS"]["behavior"] == "solid"
+    assert "GRASS" not in BLOCK_REGISTRY
+
+
+def test_legacy_grass_resolves_through_catalog():
+    parsed = parse_structure_token("GRASS")
+    assert parsed is not None
+
+    entry = get_block_entry(parsed)
+    assert entry is not None
+    assert entry["behavior"] == "solid"
+    assert entry["minecraft"]["block"] == "minecraft:grass_block"
 
 
 def test_block_palettes_load():
     assert PALETTES_DIR.is_dir()
     assert "terrain" in BLOCK_PALETTES
     assert "PLANKS" in BLOCK_PALETTES["wood"]["tokens"]
-    assert "minecraft:stone" in BLOCK_PALETTES["terrain"]["blocks"]
+    assert BLOCK_PALETTES["terrain"]["sections"]["overworld"][0]["id"] == "minecraft:dirt"
 
 
 def test_minecraft_block_token_parsing():

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from helpers.log_materials import enumerate_log_materials, log_block_suffix
 from helpers.log_orientation import resolve_log_orientation
 from helpers.sprite_baker.compose_simple import parse_bake_key
 from helpers.sprite_baker.demo import SpriteBakeError, bake_texture_file
@@ -26,13 +27,19 @@ def is_log_bake_key(key: str) -> bool:
 
 
 def list_log_materials(*, textures_dir: Path) -> list[str]:
+    materials = list(enumerate_log_materials())
+
+    if materials:
+        return materials
+
     if not textures_dir.exists():
         return ["oak"]
 
-    materials = sorted(
-        path.stem.removesuffix("_log_top") for path in textures_dir.glob("*_log_top.png")
+    discovered = {path.stem.removesuffix("_log_top") for path in textures_dir.glob("*_log_top.png")}
+    discovered.update(
+        path.stem.removesuffix("_stem_top") for path in textures_dir.glob("*_stem_top.png")
     )
-    return materials or ["oak"]
+    return sorted(discovered) or ["oak"]
 
 
 def list_log_bake_keys(
@@ -97,12 +104,13 @@ def compose_log(
 
     material = _resolve_material(parsed.material, entry)
     orientation = resolve_log_orientation_from_key(key, entry)
+    suffix = log_block_suffix(material)
 
     if view == "top" and orientation == "vertical":
-        return _load_texture(textures_dir, f"{material}_log_top.png", size)
+        return _load_texture(textures_dir, f"{material}_{suffix}_top.png", size)
 
     if view in {"top", "side", "inventory"}:
-        return _load_texture(textures_dir, f"{material}_log.png", size)
+        return _load_texture(textures_dir, f"{material}_{suffix}.png", size)
 
     raise SpriteBakeError(f"Unsupported log bake view: {view}")
 

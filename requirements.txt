@@ -14,6 +14,6 @@ pillow==12.2.0
 platformdirs==3.11.0
 portalocker==2.10.1
 pybind11==3.0.4
-PyMCTranslate==1.2.43
+PyMCTranslate==1.2.44
 PyYAML==6.0.3
 versioneer==0.29

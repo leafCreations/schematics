@@ -3,3 +3,7 @@ tokens:
 - TORCH
 - LANTERN
 - COPPER_LANTERN
+blocks:
+- id: minecraft:campfire
+  variants:
+    soul: minecraft:soul_campfire

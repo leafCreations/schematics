@@ -26,7 +26,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import helpers.constants as constants
 from helpers.block_picker import homogeneous_picker_entry_for_positions, picker_entry_for_cell
+from helpers.campfire_state import with_campfire_lit
 from helpers.cell_clipboard import CellRegionClipboard, copy_region, move_region, paste_region
 from helpers.grid import resolve_site_dimensions
 from helpers.grid_brush import rect_cell_indices, region_cell_indices, square_cell_indices
@@ -148,7 +150,7 @@ from ui.widgets.materials_panel import MaterialsPanel
 from ui.widgets.new_structure_dialog import NewStructureDialog
 from ui.widgets.palette_panel import PalettePanel
 from ui.widgets.properties_panel import PropertiesPanel
-from ui.widgets.render_panel import RenderPanel
+from ui.widgets.render_panel import worldgen_dependencies_available
 from ui.widgets.site_grid import SiteGridView
 from ui.widgets.site_nudge_controls import SiteNudgeControls
 from ui.widgets.site_path_panel import SitePathPanel
@@ -520,7 +522,6 @@ class MainWindow(QMainWindow):
         self._layer_selector_panel = LayerSelectorPanel()
         self._layer_eraser_panel = LayerEraserPanel()
         self._properties_panel = PropertiesPanel()
-        self._properties_panel.set_texture_cache(self._grid_texture_cache)
         self._materials_context = build_editor_materials_context()
         self._materials_icon_cache = MaterialsIconCache(self._materials_context)
         self._materials_panel = MaterialsPanel(self._materials_icon_cache)
@@ -528,7 +529,6 @@ class MainWindow(QMainWindow):
         self._site_settings_panel = SiteSettingsPanel()
         self._site_path_panel = SitePathPanel()
         self._site_nudge_controls = SiteNudgeControls()
-        self._render_panel = RenderPanel()
         self._render_thread: QThread | None = None
         self._render_worker: RenderWorker | None = None
         self._last_schematics_dir: Path | None = None
@@ -701,16 +701,14 @@ class MainWindow(QMainWindow):
         self._tabs = QTabWidget()
         self._tabs.addTab(structure_splitter, "Structure")
         self._tabs.addTab(site_splitter, "Site")
-        self._tabs.addTab(self._render_panel, "Render")
         self._tabs.currentChanged.connect(self._on_tab_changed)
-        self._render_panel.generate_requested.connect(self._on_generate_renders_requested)
-        self._render_panel.open_output_requested.connect(self._open_render_output_folder)
 
         self.setCentralWidget(self._tabs)
         QApplication.instance().installEventFilter(self)
 
         self._structure_settings_panel.set_structure_path(document.structure_path)
         self._structure_settings_panel.load_from_metadata(document.metadata)
+        self._sync_palette_from_metadata()
         self._sync_render_output_hint()
         self._site_settings_panel.load_from_metadata(document.metadata, document.layers)
         self._sync_path_panel_from_metadata()
@@ -749,15 +747,47 @@ class MainWindow(QMainWindow):
         stage_properties_action.triggered.connect(self._on_open_stage_properties)
         structure_menu.addAction(stage_properties_action)
 
-        structure_menu.addSeparator()
-
         delete_stage_action = QAction("&Delete Stage...", self)
         delete_stage_action.triggered.connect(self._on_delete_stage)
         structure_menu.addAction(delete_stage_action)
 
         structure_menu.addSeparator()
 
-        structure_properties_action = QAction("Structure &Properties", self)
+        render_menu = structure_menu.addMenu("&Render")
+        self._add_render_menu_action(render_menu, "&Top-Down", constants.RENDER_TOP_VIEW)
+        self._add_render_menu_action(render_menu, "&Roof", constants.RENDER_ROOF)
+        self._add_render_menu_action(
+            render_menu,
+            "Structure &Facades",
+            constants.RENDER_STRUCTURE_FACADES,
+        )
+        self._add_render_menu_action(render_menu, "&Path", constants.RENDER_PATH)
+        self._add_render_menu_action(render_menu, "Site &Facades", constants.RENDER_SITE_FACADES)
+        self._add_render_menu_action(render_menu, "&Materials", constants.RENDER_MATERIALS)
+        self._add_render_menu_action(
+            render_menu,
+            "&World Generation",
+            constants.RENDER_WORLDGEN,
+            enabled=worldgen_dependencies_available(),
+            tooltip=(
+                'Install worldgen dependencies (see docs/worldgen.md): pip install -e ".[worldgen]"'
+                if not worldgen_dependencies_available()
+                else None
+            ),
+        )
+        render_menu.addSeparator()
+
+        self._add_render_menu_action(
+            render_menu, "&All", constants.RENDER_ALL, shortcut="Ctrl+Shift+R"
+        )
+
+        open_output_action = QAction("&Open Output Folder...", self)
+        open_output_action.triggered.connect(self._open_render_output_folder)
+        structure_menu.addAction(open_output_action)
+
+        structure_menu.addSeparator()
+
+        structure_properties_action = QAction("Structure &Properties...", self)
         structure_properties_action.triggered.connect(self._on_open_structure_properties)
         structure_menu.addAction(structure_properties_action)
 
@@ -1439,6 +1469,7 @@ class MainWindow(QMainWindow):
             self._refresh_layer_panels()
             self._show_layer(self._clamp_layer_index(self._current_layer_index))
             self._structure_settings_panel.load_from_metadata(self._document.metadata)
+            self._sync_palette_from_metadata()
             self._sync_render_output_hint()
             self._site_settings_panel.load_from_metadata(
                 self._document.metadata,
@@ -2220,11 +2251,6 @@ class MainWindow(QMainWindow):
                 self._site_grid_view.set_path_eraser_active(True)
             else:
                 self._site_grid_view.set_structure_selected(True)
-        else:
-            self._status.showMessage(
-                "Choose render types and generate — save layers first so disk matches the editor.",
-                6000,
-            )
 
         self._update_save_actions()
 
@@ -3194,10 +3220,6 @@ class MainWindow(QMainWindow):
 
     def _on_brush_changed(self) -> None:
         self._update_window_title()
-        token = self._properties_panel.build_placement_token()
-
-        if token is not None:
-            self._grid_texture_cache.invalidate_token(token)
 
     def _apply_blockstate_to_selected_cell(self) -> None:
         if self._eraser_active or not self._structure_tab_active():
@@ -3221,6 +3243,11 @@ class MainWindow(QMainWindow):
             new_token = with_trapdoor_open(
                 raw_token,
                 self._properties_panel.selected_trapdoor_open(),
+            )
+        elif entry.behavior == "campfire":
+            new_token = with_campfire_lit(
+                raw_token,
+                self._properties_panel.selected_campfire_lit(),
             )
         else:
             return
@@ -3304,10 +3331,8 @@ class MainWindow(QMainWindow):
 
         if self._structure_tab_active():
             self._save_action.setEnabled(dirty_current_layer)
-        elif self._site_tab_active():
-            self._save_action.setEnabled(self._dirty_structure)
         else:
-            self._save_action.setEnabled(False)
+            self._save_action.setEnabled(self._dirty_structure)
 
         self._save_all_action.setEnabled(bool(self._dirty_layers or self._dirty_structure))
 
@@ -3319,6 +3344,10 @@ class MainWindow(QMainWindow):
         self._site_path_panel.set_path_width(resolve_path_width(grid))
         self._site_path_panel.set_path_orientation(resolve_path_orientation(grid))
         self._site_path_panel.load_path_blocks_from_grid(grid)
+
+    def _sync_palette_from_metadata(self) -> None:
+        dimension = str(self._document.metadata.get("dimension", "overworld"))
+        self._palette_panel.set_site_dimension(dimension)
 
     def _on_path_width_changed(self, width: int) -> None:
         grid = self._document.metadata.setdefault("grid", {})
@@ -3554,7 +3583,6 @@ class MainWindow(QMainWindow):
 
     def _sync_render_output_hint(self) -> None:
         output_folder = self._structure_settings_panel.current_output_folder()
-        self._render_panel.set_output_hint(output_folder)
         self._last_schematics_dir = OUTPUT_SCHEMATICS_FOLDER / output_folder
 
     def _on_structure_properties_changed(self) -> bool:
@@ -3596,6 +3624,7 @@ class MainWindow(QMainWindow):
         self._refresh_site_preview()
         self._sync_path_panel_from_metadata()
         self._sync_structure_size_controls()
+        self._sync_palette_from_metadata()
         self._sync_render_output_hint()
         self._dirty_structure = True
         self._update_save_site_button()
@@ -3722,9 +3751,6 @@ class MainWindow(QMainWindow):
 
             if self._save_site_settings():
                 self._status.showMessage("Saved site settings.", 3000)
-            return
-
-        self._status.showMessage("Nothing to save on the Render tab.", 2000)
 
     def _save_current_layer(self) -> None:
         if self._current_layer_index not in self._dirty_layers:
@@ -3834,6 +3860,32 @@ class MainWindow(QMainWindow):
             panel_structure_settings=self._structure_settings_panel.isVisible(),
         )
 
+    def _add_render_menu_action(
+        self,
+        menu,
+        label: str,
+        render_name: str,
+        *,
+        enabled: bool = True,
+        tooltip: str | None = None,
+        shortcut: str | None = None,
+    ) -> None:
+        action = QAction(label, self)
+        action.setEnabled(enabled)
+
+        if shortcut:
+            action.setShortcut(QKeySequence(shortcut))
+
+        if tooltip:
+            action.setToolTip(tooltip)
+
+        action.triggered.connect(
+            lambda _checked=False, renders=[render_name]: self._on_generate_renders_requested(
+                renders
+            )
+        )
+        menu.addAction(action)
+
     def _on_generate_renders_requested(self, renders: list[str]) -> None:
         if self._render_thread is not None:
             self._status.showMessage("A render is already in progress.", 3000)
@@ -3842,7 +3894,6 @@ class MainWindow(QMainWindow):
         if not self._confirm_render_save():
             return
 
-        self._render_panel.set_busy(True)
         self._status.showMessage("Starting renders…")
 
         self._render_thread = QThread(self)
@@ -3868,7 +3919,6 @@ class MainWindow(QMainWindow):
         self._status.showMessage(f"Rendering {label}…")
 
     def _on_render_finished(self, result: RenderJobResult) -> None:
-        self._render_panel.set_busy(False)
         self._last_schematics_dir = result.schematics_dir
         self._status.showMessage(
             f"Renders complete — {result.schematics_dir}",
@@ -3882,7 +3932,6 @@ class MainWindow(QMainWindow):
         )
 
     def _on_render_failed(self, message: str) -> None:
-        self._render_panel.set_busy(False)
         self._status.showMessage("Render failed.", 5000)
         QMessageBox.critical(self, "Render failed", message)
 

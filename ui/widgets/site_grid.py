@@ -12,8 +12,11 @@ from PySide6.QtWidgets import (
 )
 
 from helpers.grid_placement import site_cell_in_structure_footprint
+from helpers.site_ground import GRASS_BLOCK
+from helpers.terrain_tokens import canonical_terrain_token
 from ui.site_cells import SiteDisplayToken
 from ui.texture_cache import DEFAULT_ICON_SIZE, GridTextureCache
+from ui.widgets.grid import sync_table_scroll_and_size
 
 _SITE_GRASS_FILL = QColor(228, 242, 218)
 _STRUCTURE_FILL = QColor(255, 255, 255)
@@ -192,7 +195,7 @@ class SiteGridWidget(QTableWidget):
         self._apply_cell_pixel_size(self._cell_px)
         self._refresh_structure_highlights()
         self.blockSignals(False)
-        self._update_fixed_size()
+        self._sync_viewport_layout()
 
     def fit_to_viewport(self, viewport_width: int, viewport_height: int) -> None:
         cols = self.columnCount()
@@ -201,9 +204,14 @@ class SiteGridWidget(QTableWidget):
         if cols == 0 or rows == 0 or viewport_width <= 0 or viewport_height <= 0:
             return
 
+        frame = 2 * self.frameWidth()
+        gridline = 1 if self.showGrid() else 0
+        grid_w = max(viewport_width - frame - gridline, 1)
+        grid_h = max(viewport_height - frame - gridline, 1)
+
         cell_px = min(
-            max(_MIN_CELL_PX, viewport_width // cols),
-            max(_MIN_CELL_PX, viewport_height // rows),
+            max(_MIN_CELL_PX, grid_w // cols),
+            max(_MIN_CELL_PX, grid_h // rows),
             _MAX_CELL_PX,
         )
 
@@ -211,7 +219,20 @@ class SiteGridWidget(QTableWidget):
             self._apply_cell_pixel_size(cell_px)
             self._refresh_structure_icons()
 
-        self._update_fixed_size()
+        sync_table_scroll_and_size(self, viewport_width, viewport_height)
+
+    def _sync_viewport_layout(self) -> None:
+        host = self.parentWidget()
+        margins = 8
+
+        if host is not None and host.width() > margins and host.height() > margins:
+            available_w = host.width() - margins
+            available_h = host.height() - margins
+        else:
+            available_w = max(self.width() - margins, 1)
+            available_h = max(self.height() - margins, 1)
+
+        sync_table_scroll_and_size(self, available_w, available_h)
 
     def _apply_cell_pixel_size(self, cell_px: int) -> None:
         self._cell_px = cell_px
@@ -280,17 +301,12 @@ class SiteGridWidget(QTableWidget):
                     item.setBackground(_EMPTY_FILL)
                 elif on_structure:
                     item.setBackground(_STRUCTURE_FILL)
-                elif token == "GRASS" or token in _GROUND_OVERLAY_TOKENS:
+                elif (
+                    canonical_terrain_token(token) == GRASS_BLOCK or token in _GROUND_OVERLAY_TOKENS
+                ):
                     item.setBackground(_SITE_GRASS_FILL)
                 else:
                     item.setBackground(_STRUCTURE_FILL)
-
-    def _update_fixed_size(self) -> None:
-        cols = self.columnCount()
-        rows = self.rowCount()
-        width = max(cols * self._cell_px, 1)
-        height = max(rows * self._cell_px, 1)
-        self.setFixedSize(width, height)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         item = self.itemAt(event.pos())
@@ -356,7 +372,7 @@ class SiteGridWidget(QTableWidget):
             )
             fill = _STRUCTURE_FILL
         else:
-            if token in _GROUND_OVERLAY_TOKENS or token == "GRASS":
+            if token in _GROUND_OVERLAY_TOKENS or canonical_terrain_token(token) == GRASS_BLOCK:
                 fill = _SITE_GRASS_FILL
             else:
                 fill = _STRUCTURE_FILL

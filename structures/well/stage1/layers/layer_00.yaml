@@ -9,11 +9,11 @@ cells:
   - TRAPDOOR:oak@north;open=true
   - .
 - - TRAPDOOR:oak@west;open=true
-  - COBBLESTONE
+  - minecraft:mossy_cobblestone
   - STAIRS:cobblestone@south
   - STAIRS:cobblestone@south
   - STAIRS:cobblestone@south
-  - COBBLESTONE
+  - minecraft:cobblestone
   - TRAPDOOR:oak@east;open=true
 - - .
   - STAIRS:cobblestone@east
@@ -37,11 +37,11 @@ cells:
   - STAIRS:cobblestone@west
   - .
 - - TRAPDOOR:oak@west;open=true
-  - COBBLESTONE
+  - minecraft:mossy_cobblestone
   - STAIRS:cobblestone@north
   - STAIRS:cobblestone@north
   - STAIRS:cobblestone@north
-  - COBBLESTONE
+  - minecraft:cobblestone
   - TRAPDOOR:oak@east;open=true
 - - .
   - TRAPDOOR:oak@south;open=true
