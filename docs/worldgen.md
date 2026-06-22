@@ -4,6 +4,8 @@ World generation copies a template world and writes blocks via [Amulet](https://
 
 ## Requirements
 
+See [project-info.md](project-info.md) for supported Minecraft versions (**Java 26.x**; legacy 1.x is not supported).
+
 1. Create a new world in **Minecraft Java 26.1.2** and copy it into `template/`. This is the version the project template targets; other releases may work but are not routinely tested.
 2. Create a `template/` folder in the project root (if it does not exist).
 3. Copy the world folders/files into `template/`.

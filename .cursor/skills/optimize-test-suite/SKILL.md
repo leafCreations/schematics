@@ -11,6 +11,8 @@ disable-model-invocation: true
 
 Systematically review tests, merge overlap safely, and shorten total runtime without losing meaningful coverage.
 
+**Not for normal commits or verifying a small change** — use [targeted-testing](../targeted-testing/SKILL.md) instead.
+
 ## Goals (in order)
 
 1. **Keep behavior coverage** — do not delete tests that guard distinct failures.

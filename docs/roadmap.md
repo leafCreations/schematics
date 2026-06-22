@@ -12,20 +12,27 @@
 
 - Not Started = Item has not been started yet
 - Up Next = Item is planned but not yet started
+- Planned = Item is ready for implementation and will be started soon
 - In Progress = Item is currently being worked on
 - Completed = Item has been completed and is ready for use
 
-## UI (in progress)
+## UI
 
 | Status | Item |
 | ------ | ---- |
-| Up Next  | Create a new skill to help agent with decision making to limit token use. |
+| Completed | Agent triage skill — [`.cursor/skills/agent-triage/SKILL.md`](../.cursor/skills/agent-triage/SKILL.md) |
+| Completed | Agent repo-map skill — [`.cursor/skills/repo-map/SKILL.md`](../.cursor/skills/repo-map/SKILL.md) |
+| Completed | Agent targeted-testing skill — [`.cursor/skills/targeted-testing/SKILL.md`](../.cursor/skills/targeted-testing/SKILL.md) |
+| Completed | Agent pre-commit workflow skill — [`.cursor/skills/pre-commit-workflow/SKILL.md`](../.cursor/skills/pre-commit-workflow/SKILL.md) |
+| Completed | Agent ui-change skill — [`.cursor/skills/ui-change/SKILL.md`](../.cursor/skills/ui-change/SKILL.md) |
+| Completed | Agent self evaluation skill — [`.cursor/skills/agent-self-evaluation/SKILL.md`](../.cursor/skills/agent-self-evaluation/SKILL.md) (exit review + skill feedback loop) |
+| Not Started | Add 26.2 assets. Come up with a process to avoid duplicate folder structures. |
 | Not Started | Live render preview pane |
 | Not Started | In-app structure metadata editing |
 | Not Started | Multiple structures per site — each selectable and nudged independently on the Site tab |
 | Not Started | Allow for custom mod assets |
 | Not Started | Select world version to generate |
-| Not Started | Add 26.2 assets |
+
 
 See [ui.md](ui.md) for the current editor guide.
 

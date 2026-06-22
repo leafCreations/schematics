@@ -8,7 +8,7 @@ Registry-driven architecture: YAML block definitions, shared `SchematicContext`,
 
 ## Quick start
 
-Requires **Python 3.11+**.
+Requires **Python 3.11+**. Targets **Minecraft Java Edition 26.x** (see [docs/project-info.md](docs/project-info.md)).
 
 ```bash
 python3 -m venv .venv
