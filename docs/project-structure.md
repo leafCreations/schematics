@@ -74,7 +74,7 @@ output/
   schematics/           # Rendered PNG blueprints
   worlds/               # Generated Minecraft worlds
 
-template/               # Base world copied for worldgen
+template/               # Base world copied for worldgen (Minecraft Java 26.1.2)
 
 render_main.py          # Pipeline entry point (dispatches via renderers/registry.py)
 pyproject.toml

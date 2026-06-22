@@ -1,8 +1,6 @@
 import shutil
 
 from amulet.api.block import Block
-from amulet.api.chunk import Chunk
-from amulet.api.errors import ChunkDoesNotExist
 from amulet.level.formats.anvil_world import AnvilFormat
 
 from helpers.context import SchematicContext
@@ -17,6 +15,9 @@ from helpers.registry_blocks import (
 )
 from helpers.registry_lookup import get_block_entry, registry_lookup_token
 from helpers.structure_tokens import ParsedToken, parse_structure_token
+from helpers.worldgen_chunk_writer import WorldgenChunkWriter
+from helpers.worldgen_multiblock import WorldgenPlacement, parsed_needs_deferred_placement
+from helpers.worldgen_region_patch import patch_world_bed_placements
 
 BLOCK_CACHE: dict[ParsedToken, Block] = {}
 
@@ -82,22 +83,8 @@ def generate_block(parsed: ParsedToken) -> Block:
     return generated_block
 
 
-def generate_minecraft_world(ctx: SchematicContext) -> None:
-    BLOCK_CACHE.clear()
-
-    if ctx.output_worldgen_dir.exists():
-        shutil.rmtree(ctx.output_worldgen_dir)
-    shutil.copytree(ctx.worldgen_template_dir, ctx.output_worldgen_dir)
-
-    level = AnvilFormat(ctx.output_worldgen_dir)
-    level.open()
-
-    dimension = "minecraft:overworld"
+def _iter_worldgen_placements(ctx: SchematicContext):
     base_y = get_worldgen_base_y(ctx)
-
-    print("🔨 TRANSLATING 3D TOKENS INTO ANVIL CHUNK MATRIX MAPS...")
-    current_chunk = None
-    last_coords = None
 
     for layer_array_index, layer in enumerate(ctx.layers):
         if not is_layer_render_visible(layer, layer_array_index, ctx.grid):
@@ -118,22 +105,6 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
                     raise ValueError(f"Unknown block token: {registry_lookup_token(parsed)}")
 
                 global_x = ctx.grid["offset_x"] + x_idx
-
-                chunk_x = global_x // 16
-                chunk_z = global_z // 16
-                chunk_coords = (chunk_x, chunk_z)
-
-                if chunk_coords != last_coords:
-                    if current_chunk is not None:
-                        level.commit_chunk(current_chunk, dimension)
-
-                    try:
-                        current_chunk = level.load_chunk(chunk_x, chunk_z, dimension)
-                    except ChunkDoesNotExist:
-                        current_chunk = Chunk(chunk_x, chunk_z)
-
-                    last_coords = chunk_coords
-
                 resolved = resolve_worldgen_token(
                     parsed,
                     ctx,
@@ -142,19 +113,61 @@ def generate_minecraft_world(ctx: SchematicContext) -> None:
                     z_idx,
                 )
                 block_to_place = generate_block(resolved)
+                yield WorldgenPlacement(global_x, actual_y, global_z, block_to_place, resolved)
 
-                current_chunk.set_block(
-                    global_x % 16,
-                    actual_y,
-                    global_z % 16,
-                    block_to_place,
-                )
-                current_chunk.changed = True
 
-    if current_chunk is not None:
-        level.commit_chunk(current_chunk, dimension)
+def generate_minecraft_world(ctx: SchematicContext) -> None:
+    BLOCK_CACHE.clear()
+
+    if ctx.output_worldgen_dir.exists():
+        shutil.rmtree(ctx.output_worldgen_dir)
+    shutil.copytree(ctx.worldgen_template_dir, ctx.output_worldgen_dir)
+
+    level = AnvilFormat(ctx.output_worldgen_dir)
+    level.open()
+
+    dimension = "minecraft:overworld"
+    deferred_placements: list[WorldgenPlacement] = []
+    bed_placements: list[WorldgenPlacement] = []
+
+    print("🔨 TRANSLATING 3D TOKENS INTO ANVIL CHUNK MATRIX MAPS...")
+    writer = WorldgenChunkWriter(level, dimension)
+
+    for placement in _iter_worldgen_placements(ctx):
+        if parsed_needs_deferred_placement(placement.parsed):
+            deferred_placements.append(placement)
+            if get_block_behavior(get_block_entry(placement.parsed) or {}) == "bed":
+                bed_placements.append(placement)
+            continue
+
+        writer.place(
+            placement.global_x,
+            placement.world_y,
+            placement.global_z,
+            placement.block,
+            placement.parsed,
+        )
+
+    writer.flush()
+
+    if deferred_placements:
+        print("🛏️ PLACING MULTI-BLOCK COUPLINGS...")
+        for placement in deferred_placements:
+            writer.place(
+                placement.global_x,
+                placement.world_y,
+                placement.global_z,
+                placement.block,
+                placement.parsed,
+            )
+        writer.flush()
 
     print("💾 WRITING BLOCKSTATES TO MCA REGION ARCHIVES...")
     level.save()
     level.close()
+
+    if bed_placements:
+        print("🧩 PATCHING BED BLOCK ENTITIES AND POST-LOAD UPDATES...")
+        patch_world_bed_placements(ctx.output_worldgen_dir, bed_placements)
+
     print(f"🎉 SUCCESS! World generated at: ./{ctx.output_worldgen_dir}")

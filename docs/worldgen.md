@@ -4,8 +4,8 @@ World generation copies a template world and writes blocks via [Amulet](https://
 
 ## Requirements
 
-1. Create a new world in Minecraft 1.21 or later.
-2. Create a `template/` folder in the project root.
+1. Create a new world in **Minecraft Java 26.1.2** and copy it into `template/`. This is the version the project template targets; other releases may work but are not routinely tested.
+2. Create a `template/` folder in the project root (if it does not exist).
 3. Copy the world folders/files into `template/`.
 4. Install the worldgen optional dependencies:
 
@@ -24,6 +24,21 @@ build_stage_complete_schematics(structure="residence", stage=1, renders="worldge
 ```
 
 Output is written to `output/worlds/{output_folder}/`.
+
+## Beds on Minecraft Java 26.1
+
+Beds use a special renderer in 26.1 (they move to standard block models in 26.2). Amulet writes the correct `minecraft:*_bed` blockstates, but programmatic placement does not queue all of the follow-up data vanilla placement would.
+
+Worldgen uses a two-pass placement strategy:
+
+1. **Pass 1** — shell blocks (walls, floors, chests, etc.)
+2. **Pass 2** — multi-block couplings (beds, doors)
+
+After Amulet saves the world, a region-file patch injects `block_entities`, `PostProcessing`, and `block_ticks` entries for each bed. This covers cases where Amulet drops bed block entities during encode and where a neighbor block update is required to initialize the renderer.
+
+If a bed still appears invisible after regenerating, place or break a block beside it once to force a local block update.
+
+Amulet does not expose a `dimension.send_changes()` API; chunk commits use `level.commit_chunk()` and `level.save()` as today.
 
 ## Amulet install issues
 
