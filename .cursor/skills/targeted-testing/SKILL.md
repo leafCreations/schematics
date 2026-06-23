@@ -63,15 +63,52 @@ Options:
 
 **Do not** re-run the same failing test three times without a code or analysis change.
 
-### 5. After green run (commit prep)
+### 5. Before commit — match pre-commit scope (mandatory)
 
-If staged files match what you tested:
+**Do not** rely on “I ran some tests earlier.” Re-verify against **staged** paths right before commit.
 
-```bash
-scripts/record-pytest-pass.sh
-```
+1. `git diff --cached --name-only` — list what will be committed.
+2. Run the hook script (same selection logic as commit):
+
+   ```bash
+   scripts/pre-commit-pytest.sh
+   ```
+
+   Read the first line of output:
+
+   | Output | Run |
+   | ------ | --- |
+   | `full suite (core or global change detected)` | `.venv/bin/pytest -q` |
+   | `full suite (…)` (other reasons) | `.venv/bin/pytest -q` |
+   | `N file(s) — test_…` | those files only |
+   | `skipped (no mapped code changes)` | no pytest |
+
+3. If the script exits non-zero, fix → re-run **the same scope** (not a smaller subset) until green.
+4. Optional after green on staged hash:
+
+   ```bash
+   scripts/record-pytest-pass.sh
+   ```
 
 Pre-commit may skip pytest for 30 minutes for the same staged hash. Ruff and palette checks still run. Full hook order: [pre-commit-workflow](../pre-commit-workflow/SKILL.md).
+
+### 6. After fixes — re-evaluate scope (common agent gap)
+
+When you change code **because a test failed**, the right re-run is often **broader** than the single failing file:
+
+| You fixed | Also re-run (if staged or related) |
+| --------- | ---------------------------------- |
+| `registries/palettes/*.yaml` moved blocks between tabs | `test_palette_integrity`, `test_block_picker`, `test_sprite_baker_simple`, `test_registry_phase_b` |
+| `helpers/terrain_tokens.py` / natural vs terrain split | `test_terrain_tokens`, `test_sprite_baker_simple` |
+| `structures/**` layer YAML (beds, chests, tokens) | `test_worldgen_functional_blocks`, `test_structure_loader` |
+| `render_main.py` or `registries/loader.py` staged | **full suite** (hook forces it) |
+| Any `tests/test_*.py` edited | that file + tests that import the same fixtures |
+
+**Rule:** after a fix, run `scripts/pre-commit-pytest.sh` again — not only `pytest failed_file.py`.
+
+### 7. After green run (commit prep)
+
+If staged files match what you tested, `scripts/record-pytest-pass.sh` (see §5).
 
 ## When to run the full suite
 
@@ -114,6 +151,7 @@ Full list: [reference.md](reference.md).
 Prefer:
 
 - `assert "minecraft:stone" in tokens`
+- `assert "WALL" in tokens` + `enumerate_token_materials("minecraft:{material}_wall")` for templated families — **not** raw `minecraft:*_wall` in palette `blocks:`
 - `tests/palette_helpers.py` → `terrain_section_entry_counts()`
 - `assert panel._block_list.count() == section_counts["overworld"]`
 

@@ -49,7 +49,7 @@ def test_worldgen_writes_chest_block_entities_to_chunk_nbt():
 def test_worldgen_writes_bed_blocks_to_chunk_palette():
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "world"
-        ctx = load_structure_config("well", 2)
+        ctx = load_structure_config("residence", 2)
         ctx = ctx.__class__(**{**ctx.__dict__, "output_worldgen_dir": out})
         worldgen.generate_minecraft_world(ctx)
 
@@ -71,7 +71,7 @@ def test_worldgen_writes_bed_blocks_to_chunk_palette():
 def test_worldgen_writes_bed_block_entities_to_chunk_nbt():
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "world"
-        ctx = load_structure_config("well", 2)
+        ctx = load_structure_config("residence", 2)
         ctx = ctx.__class__(**{**ctx.__dict__, "output_worldgen_dir": out})
         worldgen.generate_minecraft_world(ctx)
 
@@ -83,4 +83,4 @@ def test_worldgen_writes_bed_block_entities_to_chunk_nbt():
         ]
 
         assert len(bed_entities) >= 2
-        assert {int(entity["y"]) for entity in bed_entities} >= {-60}
+        assert {int(entity["y"]) for entity in bed_entities} >= {-59}

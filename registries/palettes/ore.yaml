@@ -1,0 +1,38 @@
+label: Ore
+tokens: []
+sections:
+  overworld:
+  - id: minecraft:coal_ore
+    variants:
+      deepslate: minecraft:deepslate_coal_ore
+  - id: minecraft:iron_ore
+    variants:
+      deepslate: minecraft:deepslate_iron_ore
+  - id: minecraft:copper_ore
+    variants:
+      deepslate: minecraft:deepslate_copper_ore
+  - id: minecraft:gold_ore
+    variants:
+      deepslate: minecraft:deepslate_gold_ore
+  - id: minecraft:redstone_ore
+    variants:
+      deepslate: minecraft:deepslate_redstone_ore
+  - id: minecraft:lapis_ore
+    variants:
+      deepslate: minecraft:deepslate_lapis_ore
+  - id: minecraft:diamond_ore
+    variants:
+      deepslate: minecraft:deepslate_diamond_ore
+  - id: minecraft:emerald_ore
+    variants:
+      deepslate: minecraft:deepslate_emerald_ore
+  - minecraft:raw_iron_block
+  - minecraft:raw_copper_block
+  - minecraft:raw_gold_block
+  - minecraft:amethyst_block
+  - minecraft:budding_amethyst
+  - minecraft:amethyst_cluster
+  nether:
+  - minecraft:nether_gold_ore
+  - minecraft:ancient_debris
+blocks: []

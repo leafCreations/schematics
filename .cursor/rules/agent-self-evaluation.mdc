@@ -1,0 +1,32 @@
+---
+description: Mandatory end-of-turn self-evaluation and skill feedback loop for every agent response
+alwaysApply: true
+---
+
+# Agent Self-Evaluation (mandatory)
+
+**Every agent turn that responds to the user MUST end with a `### Self-evaluation` block.** No exceptions — including read-only Q&A, single-line answers, Ask mode, and failed/aborted work.
+
+Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
+
+## Hard requirements
+
+1. **Run before sending the final message** — not optional, not deferred to a follow-up.
+2. **Include the handoff block** (≤6 lines) as the **last section** of the response.
+3. **§6 skill feedback loop** — always ask whether a skill update would have prevented churn; edit skills in the same turn when yes; otherwise state `Skills updated: none`.
+4. **Never skip** because the task was "trivial", "docs-only", "question-only", or "no code changed".
+
+## Handoff block (required format)
+
+```markdown
+### Self-evaluation
+- **Scope:** <on-target | read-only | note drift>
+- **Tests:** <paths + result | n/a + why>
+- **Skills used:** <names | none>
+- **Skills updated:** <skill + one-line change | none>
+- **Commit-ready:** <yes | no | n/a>
+```
+
+## Pair with agent-triage
+
+Start every task with [agent-triage](../skills/agent-triage/SKILL.md). End every task with self-evaluation. A response without the handoff block is **incomplete**.

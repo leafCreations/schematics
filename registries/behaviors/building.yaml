@@ -48,6 +48,37 @@ FENCE:
       tee: '{material}_fence_tee.png'
       cross: '{material}_fence_cross.png'
     inventory_image: '{material}_fence_inventory.png'
+WALL:
+  behavior: wall
+  material_default: cobblestone
+  ui:
+    label: '{material} Wall'
+    palette: building
+    requires_material: true
+    requires_direction: true
+    requires_variant: false
+  defaults:
+    north: false
+    south: false
+    east: false
+    west: false
+  minecraft:
+    block: minecraft:{material}_wall
+    blockstates:
+      north: '{north}'
+      south: '{south}'
+      east: '{east}'
+      west: '{west}'
+      up: '{up}'
+  render:
+    textures:
+      post: '{material}.png'
+      end: '{material}.png'
+      straight: '{material}.png'
+      corner: '{material}.png'
+      tee: '{material}.png'
+      cross: '{material}.png'
+    inventory_image: '{material}.png'
 STAIRS:
   behavior: stairs
   material_default: oak

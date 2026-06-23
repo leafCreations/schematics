@@ -9,14 +9,7 @@ cells:
   - .
   - .
 - - .
-  - BED:red@north#head
   - .
-  - minecraft:blast_furnace
-  - .
-  - CRAFTING_TABLE
-  - .
-- - .
-  - BED:red@north#foot
   - .
   - .
   - .
@@ -25,9 +18,9 @@ cells:
 - - .
   - .
   - .
-  - FURNACE@north
   - .
-  - minecraft:smoker
+  - .
+  - .
   - .
 - - .
   - .
@@ -37,9 +30,16 @@ cells:
   - .
   - .
 - - .
-  - CHEST@north#left
-  - CHEST@north#right
-  - DOOR:oak@north#lower
+  - .
+  - .
+  - .
+  - .
+  - .
+  - .
+- - .
+  - .
+  - .
+  - .
   - .
   - .
   - .

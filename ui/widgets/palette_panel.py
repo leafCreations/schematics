@@ -151,7 +151,11 @@ class PalettePanel(QGroupBox):
 
         palette_name = self._current_palette_name()
 
-        if palette_name != "terrain" or self._dimension_combo.count() == 0:
+        if palette_name is None or self._dimension_combo.count() == 0:
+            return
+
+        palette = self._palettes_by_name.get(palette_name)
+        if palette is None or not palette.sections:
             return
 
         section_index = self._dimension_combo.findData(self._site_dimension)
@@ -165,7 +169,7 @@ class PalettePanel(QGroupBox):
         self._dimension_combo.blockSignals(True)
         self._dimension_combo.setCurrentIndex(section_index)
         self._dimension_combo.blockSignals(False)
-        self._populate_block_list("terrain")
+        self._populate_block_list(palette_name)
 
     def _configure_dimension_filter(self, palette_name: str) -> None:
         palette = self._palettes_by_name.get(palette_name)

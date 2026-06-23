@@ -105,7 +105,8 @@ class RenderPanel(QWidget):
 
         self._output_label.setText(
             f"Schematics: output/schematics/{output_folder}/\n"
-            f"Worlds: output/worlds/{output_folder}/"
+            f"Worlds: output/worlds/{output_folder}/v{{version}}/ "
+            "(version chosen when worldgen runs)"
         )
 
     def set_busy(self, busy: bool) -> None:

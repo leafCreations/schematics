@@ -28,8 +28,8 @@ Human doc: [docs/project-info.md](../../docs/project-info.md).
 | Topic | Answer |
 | ----- | ------ |
 | Edition | Java only (not Bedrock) |
-| Template / worldgen | **Minecraft Java 26.1.2** → `template/` |
-| Next asset target | **26.2** (roadmap: bed models, catalog layout) |
+| Template / worldgen | **26.1.2** → `worldgen_templates/v26_1_2/` via `resolve_worldgen_template_dir()` |
+| Asset catalog default | **26.2** → `assets/minecraft/` (`DEFAULT_MINECRAFT_VERSION`) |
 | Python | 3.11+ |
 | Dependencies | `requirements.txt` (pins); `pyproject.toml` (optional groups) |
 | Worldgen deps | `pip install -e ".[worldgen]"` |
@@ -48,7 +48,7 @@ Human doc: [docs/project-info.md](../../docs/project-info.md).
 
 | | 26.1.x (template today) | 26.2 (forward) |
 | - | ----------------------- | -------------- |
-| Template | **26.1.2** in `template/` | Not default yet |
+| Template | **26.1.2** in `worldgen_templates/v26_1_2/` | `worldgen_templates/v26_2/` (Amulet may not support yet) |
 | Beds | Special renderer; per-color `minecraft:{color}_bed`; block-entity patch | Standard block models; unified bed properties |
 | Code | `helpers/worldgen_block_entities.py`, `docs/worldgen.md` | Roadmap + incremental asset work |
 

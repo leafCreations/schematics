@@ -84,7 +84,12 @@ from helpers.path_strip import (
     resolve_path_orientation,
     resolve_path_width,
 )
-from helpers.paths import OUTPUT_SCHEMATICS_FOLDER, STRUCTURES_FOLDER
+from helpers.paths import (
+    OUTPUT_SCHEMATICS_FOLDER,
+    STRUCTURES_FOLDER,
+    list_worldgen_template_versions,
+)
+from helpers.pipeline import renders_include_worldgen
 from helpers.site_ground import resize_site_ground
 from helpers.structure_metadata import identity_from_structure_path
 from helpers.trapdoor_state import with_trapdoor_open
@@ -156,6 +161,7 @@ from ui.widgets.site_nudge_controls import SiteNudgeControls
 from ui.widgets.site_path_panel import SitePathPanel
 from ui.widgets.site_settings_panel import SiteSettingsPanel
 from ui.widgets.structure_settings_panel import StructureSettingsPanel
+from ui.widgets.worldgen_version_dialog import WorldgenVersionDialog
 
 _STRUCTURE_EDITOR_GUIDE_URL = (
     "https://github.com/leafCreations/schematics/blob/main/docs/structure-editor-guide.md"
@@ -3894,6 +3900,12 @@ class MainWindow(QMainWindow):
         if not self._confirm_render_save():
             return
 
+        worldgen_version: str | None = None
+        if worldgen_dependencies_available() and renders_include_worldgen(renders):
+            worldgen_version = self._prompt_worldgen_version()
+            if worldgen_version is None:
+                return
+
         self._status.showMessage("Starting renders…")
 
         self._render_thread = QThread(self)
@@ -3904,6 +3916,7 @@ class MainWindow(QMainWindow):
             stage,
             renders,
             structure_path=self._document.structure_path,
+            worldgen_version=worldgen_version,
         )
         self._render_worker.moveToThread(self._render_thread)
         self._render_thread.started.connect(self._render_worker.run)
@@ -3914,6 +3927,23 @@ class MainWindow(QMainWindow):
         self._render_worker.failed.connect(self._render_thread.quit)
         self._render_thread.finished.connect(self._finish_render_thread)
         self._render_thread.start()
+
+    def _prompt_worldgen_version(self) -> str | None:
+        versions = list_worldgen_template_versions()
+        if not versions:
+            QMessageBox.warning(
+                self,
+                "Worldgen version",
+                "No worldgen templates found under worldgen_templates/. "
+                "Add a versioned world folder (see docs/worldgen.md) before generating worlds.",
+            )
+            return None
+
+        dialog = WorldgenVersionDialog(self, versions=versions)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+
+        return dialog.selected_version()
 
     def _on_render_progress(self, label: str) -> None:
         self._status.showMessage(f"Rendering {label}…")

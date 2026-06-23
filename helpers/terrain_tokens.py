@@ -95,14 +95,13 @@ def terrain_tokens_equivalent(left: str, right: str) -> bool:
     return canonical_terrain_token(left) == canonical_terrain_token(right)
 
 
-def iter_terrain_palette_block_ids() -> tuple[str, ...]:
-    """Catalog block ids declared in the terrain palette (for rendering/baking)."""
+def _palette_catalog_block_ids(palette_name: str) -> list[str]:
     from helpers.block_picker import resolve_palette
 
-    palette = resolve_palette("terrain")
+    palette = resolve_palette(palette_name)
 
     if palette is None:
-        return ()
+        return []
 
     block_ids: list[str] = []
 
@@ -111,5 +110,15 @@ def iter_terrain_palette_block_ids() -> tuple[str, ...]:
 
         for _variant_key, variant_block_id in entry.variant_blocks:
             block_ids.append(variant_block_id)
+
+    return block_ids
+
+
+def iter_terrain_palette_block_ids() -> tuple[str, ...]:
+    """Catalog block ids from terrain and natural palettes (for rendering/baking)."""
+    block_ids: list[str] = []
+
+    for palette_name in ("terrain", "natural"):
+        block_ids.extend(_palette_catalog_block_ids(palette_name))
 
     return tuple(dict.fromkeys(block_ids))

@@ -39,6 +39,24 @@ registries/
 
 Terrain blocks use **catalog** `minecraft:` ids in `palettes/terrain.yaml`, not legacy `GRASS` tokens. Legacy cells still resolve via `helpers/terrain_tokens.py`.
 
+## Templated block families (FENCE, WALL, SLAB, STAIRS, …)
+
+**Do not** add per-material catalog blocks to palette `blocks:` (e.g. `minecraft:cinnabar_wall`). Use **one semantic token** per family.
+
+| Step | Where |
+| ---- | ----- |
+| Palette token | `registries/palettes/*.yaml` → `tokens: [WALL]` (empty or minimal `blocks:`) |
+| Behavior | `registries/behaviors/*.yaml` → `minecraft:{material}_wall`, adjacency defaults |
+| Materials list | `enumerate_token_materials("minecraft:{material}_wall")` in `helpers/block_picker.py` |
+| Adjacency / worldgen | Mirror FENCE: `helpers/fence_adjacency.py`, `renderers/worldgen.py` |
+| Blockstates | `helpers/registry_blocks.py` + dedicated helper (e.g. `wall_blockstates.py`) |
+| Schematic top view | `helpers/utils_schematics.py` connection texture keys |
+| Sprite bake | `helpers/sprite_baker/compose_*.py`, `setup.py`, `registries/loader.py`, `scripts/bake_sprites.py` |
+| Validate | `registries/validate.py` — procedural textures like fence skip `top` check |
+| Tests | Mirror fence: `test_sprite_baker_fence.py` pattern, **not** `assert minecraft:*_wall in palette.blocks` |
+
+Reference implementation: **FENCE**; WALL reuses fence adjacency masks and adds wall inventory models.
+
 ## Render pipeline
 
 ```text
@@ -50,6 +68,18 @@ render_main.py
 ```
 
 Output: `output/schematics/{output_folder}/`, `output/worlds/{output_folder}/`.
+
+## Worldgen templates
+
+```text
+worldgen_templates/
+  v26_1_2/     Default worldgen template (Amulet-compatible today)
+  v26_2/       Forward template when Amulet supports 26.2
+template/      Legacy fallback (deprecated)
+```
+
+Resolve at runtime: `helpers/paths.py` → `resolve_worldgen_template_dir()`.  
+**Asset catalog default** (`DEFAULT_MINECRAFT_VERSION` = 26.2) ≠ **worldgen template default** (`DEFAULT_WORLGEN_VERSION` = 26.1.2 until Amulet catches up).
 
 ## UI module map
 

@@ -3,9 +3,15 @@ from pathlib import Path
 
 from PIL import Image
 
-from helpers.paths import GENERATED_ASSETS_FOLDER
+from helpers.paths import resolve_generated_assets_folder
 
 BakeFn = Callable[[], Image.Image]
+
+
+def _generated_root(generated_root: Path | None) -> Path:
+    if generated_root is not None:
+        return generated_root
+    return resolve_generated_assets_folder()
 
 
 def sanitize_cache_key(key: str) -> str:
@@ -21,16 +27,16 @@ def sanitize_cache_key(key: str) -> str:
     )
 
 
-def cache_path(view: str, key: str, *, generated_root: Path = GENERATED_ASSETS_FOLDER) -> Path:
+def cache_path(view: str, key: str, *, generated_root: Path | None = None) -> Path:
     safe_key = sanitize_cache_key(key)
-    return generated_root / view / f"{safe_key}.png"
+    return _generated_root(generated_root) / view / f"{safe_key}.png"
 
 
 def load_cached(
     view: str,
     key: str,
     *,
-    generated_root: Path = GENERATED_ASSETS_FOLDER,
+    generated_root: Path | None = None,
 ) -> Image.Image | None:
     path = cache_path(view, key, generated_root=generated_root)
 
@@ -45,7 +51,7 @@ def save_cached(
     key: str,
     image: Image.Image,
     *,
-    generated_root: Path = GENERATED_ASSETS_FOLDER,
+    generated_root: Path | None = None,
 ) -> Path:
     path = cache_path(view, key, generated_root=generated_root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,11 +68,13 @@ def load_or_bake(
     key: str,
     bake_fn: BakeFn,
     *,
-    generated_root: Path = GENERATED_ASSETS_FOLDER,
+    generated_root: Path | None = None,
     force: bool = False,
 ) -> Image.Image:
+    root = _generated_root(generated_root)
+
     if not force:
-        cached = load_cached(view, key, generated_root=generated_root)
+        cached = load_cached(view, key, generated_root=root)
 
         if cached is not None:
             return cached
@@ -76,7 +84,7 @@ def load_or_bake(
     if image.mode != "RGBA":
         image = image.convert("RGBA")
 
-    save_cached(view, key, image, generated_root=generated_root)
+    save_cached(view, key, image, generated_root=root)
     return image
 
 
@@ -85,7 +93,7 @@ def load_generated_sprite(
     key: str,
     block_px: int,
     *,
-    generated_root: Path = GENERATED_ASSETS_FOLDER,
+    generated_root: Path | None = None,
 ) -> Image.Image | None:
     cached = load_cached(view, key, generated_root=generated_root)
 

@@ -5,7 +5,11 @@ from typing import Any
 import yaml
 from PIL import Image
 
-from helpers.paths import BLOCK_TEXTURES_FOLDER, GENERATED_ASSETS_FOLDER
+from helpers.paths import (
+    BLOCK_TEXTURES_FOLDER,
+    GENERATED_ASSETS_FOLDER,
+    resolve_project_custom_folder,
+)
 from helpers.sprite_baker.cache import load_generated_sprite
 from helpers.types import MappedTextureImages, MappedTextureNames, TextureType
 
@@ -390,11 +394,14 @@ def find_block_texture_path(assets_dir: str | Path, filename: str) -> Path | Non
 def _find_texture_path(assets_dir: str, filename: str) -> str | None:
     normalized_filename = filename.lstrip("/\\")
 
+    custom_folder = str(resolve_project_custom_folder())
+
     for folder in [
         assets_dir,
         os.path.join(assets_dir, "block_assets"),
         os.path.join(assets_dir, "item_assets"),
         os.path.join(assets_dir, "custom"),
+        custom_folder,
     ]:
         path = os.path.join(folder, normalized_filename)
 
@@ -420,12 +427,14 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     from helpers.sprite_baker.compose_stairs import list_stairs_bake_keys
     from helpers.sprite_baker.compose_torch import list_torch_bake_keys
     from helpers.sprite_baker.compose_trapdoor import list_trapdoor_bake_keys
+    from helpers.sprite_baker.compose_wall import list_wall_bake_keys
 
     keys.update(list_simple_bake_keys(texture_type))
     keys.update(list_bed_bake_keys(texture_type))
     keys.update(list_chest_bake_keys(texture_type))
     keys.update(list_door_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_fence_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
+    keys.update(list_wall_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_log_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_planks_bake_keys(textures_dir=BLOCK_TEXTURES_FOLDER))
     keys.update(list_slab_bake_keys(texture_type, textures_dir=BLOCK_TEXTURES_FOLDER))

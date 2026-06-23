@@ -13,6 +13,12 @@ def test_validate_render_names_accepts_all_and_known():
     pipeline.validate_render_names({constants.RENDER_ALL, constants.RENDER_TOP_VIEW})
 
 
+def test_renders_include_worldgen():
+    assert pipeline.renders_include_worldgen([constants.RENDER_ALL])
+    assert pipeline.renders_include_worldgen([constants.RENDER_WORLDGEN])
+    assert not pipeline.renders_include_worldgen([constants.RENDER_TOP_VIEW])
+
+
 def test_import_render_registry_without_amulet():
     import importlib
 

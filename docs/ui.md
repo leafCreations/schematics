@@ -20,7 +20,7 @@ Requires **Python 3.11+** and the optional `[ui]` extra:
 pip install -e ".[dev,ui]"
 ```
 
-Block textures must exist under `assets/minecraft/textures/block/` (same as rendering). Generated sprites under `assets/minecraft/generated/` improve stairs, fences, doors, and similar blocks — see [sprite-baker.md](sprite-baker.md). Toolbar icons load from `assets/icons/` when present.
+Block textures must exist under `assets/minecraft/textures/block/` (same as rendering). Generated sprites under `assets/project/generated/` improve stairs, fences, doors, and similar blocks — see [sprite-baker.md](sprite-baker.md). Toolbar icons load from `assets/icons/` when present.
 
 ## Launch
 
@@ -106,6 +106,8 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 Renders always load from **saved** YAML on disk. If you have unsaved layers or site settings, the editor prompts to save before generating (or you can render the last saved version).
 
 Worldgen is only available when `amulet` is installed; see [worldgen.md](worldgen.md).
+
+When worldgen is included (worldgen checkbox, **All**, or **Structure → Render → Worldgen**), the editor prompts for a **Minecraft version** and copies the matching template from `worldgen_templates/` (for example `v26_1_2/` or `v26_2/`).
 
 ## Editing workflow
 

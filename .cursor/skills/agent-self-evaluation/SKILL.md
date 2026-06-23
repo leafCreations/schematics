@@ -1,25 +1,29 @@
 ---
 name: agent-self-evaluation
 description: >-
-  End-of-task self-review for structure_scripts agent work. Use before handing
-  off to the user, after completing a feature or fix, when wrapping a commit,
-  or when asked to reduce churn, reflect on token use, or verify the task is
-  done. Updates relevant skills with durable learnings. Pairs with agent-triage
-  at task start.
+  Mandatory end-of-turn review for every agent response in structure_scripts.
+  Always run before handing off to the user — no exceptions. Includes skill
+  feedback loop. Pairs with agent-triage at task start. Enforced by
+  .cursor/rules/agent-self-evaluation.mdc (alwaysApply).
 ---
 
 # Agent Self-Evaluation
 
-Exit review **and skill feedback loop** before you tell the user the task is complete. Goal: **proficiency and churn reduction** — not only for this session, but for the next agent on the same task type.
+**Hard constraint:** every response to the user MUST end with §7 handoff block.  
+Start tasks with [agent-triage](../agent-triage/SKILL.md). **Always** end with this skill.
 
-Start tasks with [agent-triage](../agent-triage/SKILL.md). End with this skill.
+Also enforced in `.cursor/rules/agent-self-evaluation.mdc` (`alwaysApply: true`).
 
 ## When to run
 
-- Implementation or fix is **code-complete**
-- Before saying "done", "ready to commit", or summarizing PR work
-- After a failed commit loop (verify root cause fixed, not symptoms)
-- **Skip** for pure Q&A in Ask mode with no edits
+**Every turn.** Including:
+
+- Implementation, fix, refactor, docs edit
+- Read-only Q&A and explanations (Ask mode)
+- Failed commit, blocked work, partial progress
+- Single-line or one-file surgical changes
+
+**There is no skip list.** If you are about to send a message to the user, run self-evaluation first.
 
 ## 1. Scope check
 
@@ -49,9 +53,11 @@ Start tasks with [agent-triage](../agent-triage/SKILL.md). End with this skill.
 | ------------ | ------ |
 | Structure YAML / editor save | Manifest vs `stage.yaml` split correct ([repo-map](../repo-map/SKILL.md)) |
 | UI panel/dialog | [ui-change](../ui-change/SKILL.md) checklist |
-| Registry/palette | `validate_palettes()` if behavior/palette changed |
+| Registry/palette | `validate_palettes()` if behavior/palette changed; **templated families** use one token + materials, not raw catalog ids in `blocks:` ([repo-map](../repo-map/SKILL.md) § Templated block families) |
 | Tests added/changed | No hard-coded catalog block counts ([targeted-testing](../targeted-testing/SKILL.md)) |
 | Docs updated | Only if user-facing or user asked; paths match manifest layout |
+
+Read-only turns: mark N/A for rows that do not apply.
 
 ## 4. Verification check
 
@@ -61,7 +67,7 @@ Start tasks with [agent-triage](../agent-triage/SKILL.md). End with this skill.
 | Ruff clean on touched `.py` | Or pre-commit ruff hook would pass |
 | Pre-commit path | If user will commit: hooks order known ([pre-commit-workflow](../pre-commit-workflow/SKILL.md)) |
 
-**Never claim tests passed if they were not executed.**
+**Never claim tests passed if they were not executed.** Read-only: `Tests: n/a (no code changes)`.
 
 ## 5. Churn review
 
@@ -73,16 +79,19 @@ Note anything that cost extra turns, tokens, or user corrections:
 | Missing test mapping | Yes — add to targeted-testing or repo-map |
 | Hook failure with non-obvious fix | Yes — pre-commit-workflow |
 | UI wiring trap | Yes — ui-change |
+| User had to repeat a process expectation | Yes — update skill or this rule |
 | One-off typo or bad local edit | No |
 | Task-specific business logic only | No — belongs in code/docs, not skills |
 
-If **two or more** churn signals fired, §6 is **required** (not optional).
+If **any** churn signal fired, §6 skill edit is **strongly preferred**. If **two or more**, §6 edit is **required** before handoff.
 
 ## 6. Skill feedback loop (core)
 
-**After every non-trivial task**, ask: *Would a one-line addition to a skill have prevented this churn?*
+**Every turn:** ask *Would a one-line addition to a skill have prevented this churn or mistake?*
 
 If yes → **edit the skill in the same turn** before handoff. Do not only promise to update later.
+
+If no → handoff must still say `Skills updated: none` (not omit the line).
 
 ### 6a. Pick the target
 
@@ -95,7 +104,7 @@ If yes → **edit the skill in the same turn** before handoff. Do not only promi
 | Ruff / palette / pytest hook order | [pre-commit-workflow/SKILL.md](../pre-commit-workflow/SKILL.md) |
 | Panel/dialog/grid wiring | [ui-change/SKILL.md](../ui-change/SKILL.md) |
 | Cross-cutting failure pattern | [reference.md](reference.md) § Common failure patterns |
-| Meta: self-eval process itself | This skill |
+| Self-eval not run / skipped | This skill + `.cursor/rules/agent-self-evaluation.mdc` |
 
 Prefer **`reference.md`** for examples, path→test rows, and failure-pattern tables.  
 Prefer **`SKILL.md`** for a single actionable rule an agent reads every time.
@@ -124,27 +133,38 @@ Bad additions (skip):
 3. **Concrete** — name files, tests, or commands; avoid vague advice.
 4. If a skill section grows past ~15 lines of accumulated tips, **consolidate** or move detail to `reference.md`.
 
-### 6d. When to skip skill edits
+### 6d. When to skip skill file edits
 
-- Ask/read-only with no churn
-- Surgical fix with zero surprises and skills already covered it
+Only skip **editing skill files** when:
+
 - User explicitly asked for no skill changes
-- Learning is uncertain — note in handoff under **Skills updated: none (uncertain)** instead of guessing
+- Learning is uncertain — handoff: `Skills updated: none (uncertain)`
 
-## 7. Handoff format
+**Do not skip the handoff block or the §6 question** — only skip writing to skill files.
 
-Use at the end of **implementation** responses (omit for trivial one-line answers):
+## 7. Handoff format (required every turn)
+
+**Last section of every response.** ≤6 lines. Do not repeat the full diff.
 
 ```markdown
 ### Self-evaluation
-- **Scope:** <on-target | note drift>
-- **Tests:** <paths run + result, or why skipped>
-- **Skills used:** <e.g. ui-change, targeted-testing — or none>
+- **Scope:** <on-target | read-only | note drift>
+- **Tests:** <paths run + result | n/a + why>
+- **Skills used:** <e.g. ui-change, targeted-testing | none>
 - **Skills updated:** <skill name + one-line what added | none>
-- **Commit-ready:** <yes / needs pre-commit / docs-only>
+- **Commit-ready:** <yes | needs pre-commit | n/a>
 ```
 
-Keep **6 lines max**. Do not repeat the full diff.
+Read-only example:
+
+```markdown
+### Self-evaluation
+- **Scope:** read-only — explained registry layout
+- **Tests:** n/a (no code changes)
+- **Skills used:** repo-map
+- **Skills updated:** none
+- **Commit-ready:** n/a
+```
 
 ## 8. Commit-specific add-on
 
@@ -167,6 +187,8 @@ Ask instead of guessing when:
 - UI change needs manual visual check and UI was not launched
 - Two valid architectures (user decision)
 - Skill update would change team workflow (new mandatory step) — propose first
+
+Escalation does **not** exempt you from §7 handoff.
 
 ## Related skills
 

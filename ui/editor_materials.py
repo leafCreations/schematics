@@ -14,7 +14,7 @@ from helpers.paths import (
     BLOCK_TEXTURES_FOLDER,
     OUTPUT_SCHEMATICS_FOLDER,
     OUTPUT_WORLDS_FOLDER,
-    TEMPLATE_FOLDER,
+    resolve_worldgen_template_dir,
 )
 from registries.loader import BLOCK_REGISTRY
 
@@ -28,7 +28,7 @@ def build_editor_materials_context() -> SchematicContext:
         grid={},
         block_registry=BLOCK_REGISTRY,
         assets_dir=BLOCK_TEXTURES_FOLDER,
-        worldgen_template_dir=TEMPLATE_FOLDER,
+        worldgen_template_dir=resolve_worldgen_template_dir(),
         output_schematics_dir=OUTPUT_SCHEMATICS_FOLDER / "_editor",
         output_worldgen_dir=OUTPUT_WORLDS_FOLDER / "_editor",
     )

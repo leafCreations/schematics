@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from PIL import Image
 
-from helpers.paths import ASSET_FOLDER
+from helpers.paths import PROJECT_CUSTOM_FOLDER
 from helpers.sprite_baker.bed_atlas import FOOT_TOP
 from helpers.sprite_baker.template_fit import fit_template_to_cell
 
-BED_TOP_TEMPLATE_PATH = ASSET_FOLDER / "textures" / "block" / "custom" / "red_bed.png"
-BED_SIDE_HEAD_TEMPLATE_PATH = ASSET_FOLDER / "textures" / "block" / "custom" / "red_bed_top.png"
-BED_SIDE_FOOT_TEMPLATE_PATH = ASSET_FOLDER / "textures" / "block" / "custom" / "red_bed_bottom.png"
+BED_TOP_TEMPLATE_PATH = PROJECT_CUSTOM_FOLDER / "red_bed.png"
+BED_SIDE_HEAD_TEMPLATE_PATH = PROJECT_CUSTOM_FOLDER / "red_bed_top.png"
+BED_SIDE_FOOT_TEMPLATE_PATH = PROJECT_CUSTOM_FOLDER / "red_bed_bottom.png"
 
 
 def _is_blanket_pixel(red: int, green: int, blue: int, alpha: int) -> bool:

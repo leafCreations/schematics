@@ -18,6 +18,7 @@ FENCE_CONNECTABLE_BEHAVIORS = frozenset(
         "solid",
         "facing_block",
         "fence",
+        "wall",
         "log",
         "slab",
         "stairs",
@@ -27,6 +28,8 @@ FENCE_CONNECTABLE_BEHAVIORS = frozenset(
         "chest",
     }
 )
+
+CONNECTION_BEHAVIORS = frozenset({"fence", "wall"})
 
 FENCE_VARIANTS = frozenset({"post", "end", "straight", "corner", "tee", "cross"})
 
@@ -56,7 +59,12 @@ def should_fence_connect(raw_neighbor: RawToken | None) -> bool:
     if entry is None:
         return False
 
-    return get_block_behavior(entry) in FENCE_CONNECTABLE_BEHAVIORS
+    behavior = get_block_behavior(entry)
+
+    if behavior in CONNECTION_BEHAVIORS:
+        return True
+
+    return behavior in FENCE_CONNECTABLE_BEHAVIORS
 
 
 def resolve_fence_connections(

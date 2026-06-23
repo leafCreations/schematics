@@ -29,7 +29,8 @@ def test_block_palettes_load():
     assert PALETTES_DIR.is_dir()
     assert "terrain" in BLOCK_PALETTES
     assert "PLANKS" in BLOCK_PALETTES["wood"]["tokens"]
-    assert BLOCK_PALETTES["terrain"]["sections"]["overworld"][0]["id"] == "minecraft:dirt"
+    assert BLOCK_PALETTES["terrain"]["sections"]["overworld"][0] == "minecraft:water"
+    assert BLOCK_PALETTES["natural"]["sections"]["overworld"][0]["id"] == "minecraft:dirt"
 
 
 def test_minecraft_block_token_parsing():

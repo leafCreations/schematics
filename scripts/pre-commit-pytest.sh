@@ -84,6 +84,7 @@ for file in "${STAGED[@]}"; do
     helpers/structure_loader.py | helpers/structure_tokens.py)
       CODE_TOUCHED=1
       add tests/test_structure_loader.py tests/test_structure_tokens.py tests/test_ui_document.py
+      add tests/test_worldgen_functional_blocks.py
       ;;
 
     helpers/cells.py)
@@ -112,10 +113,25 @@ for file in "${STAGED[@]}"; do
       add tests/test_layer_rotation.py
       ;;
 
+    helpers/terrain_tokens.py)
+      CODE_TOUCHED=1
+      add tests/test_terrain_tokens.py tests/test_sprite_baker_simple.py
+      add tests/test_palette_integrity.py tests/test_block_picker.py
+      ;;
+
     helpers/fence_adjacency.py)
       CODE_TOUCHED=1
       add tests/test_fence_adjacency.py tests/test_utils_schematics_fence.py
+      add tests/test_wall_blockstates.py tests/test_utils_schematics_wall.py
       add_glob "tests/test_sprite_baker_fence.py"
+      add_glob "tests/test_sprite_baker_wall.py"
+      ;;
+
+    helpers/wall_blockstates.py)
+      CODE_TOUCHED=1
+      add tests/test_wall_blockstates.py tests/test_utils_schematics_wall.py
+      add_glob "tests/test_sprite_baker_wall.py"
+      add tests/test_fence_adjacency.py tests/test_palette_integrity.py
       ;;
 
     helpers/lantern_placement.py)
@@ -125,7 +141,8 @@ for file in "${STAGED[@]}"; do
 
     helpers/paths.py | helpers/layers.py | helpers/layer_management.py)
       CODE_TOUCHED=1
-      add tests/test_layers.py tests/test_layer_management.py
+      add tests/test_paths.py tests/test_layers.py tests/test_layer_management.py
+      add tests/test_worldgen_functional_blocks.py
       ;;
 
     helpers/materials.py | helpers/collect_material_tokens.py)
@@ -216,6 +233,7 @@ for file in "${STAGED[@]}"; do
     structures/*)
       CODE_TOUCHED=1
       add tests/test_structure_loader.py tests/test_ui_document.py
+      add tests/test_worldgen_functional_blocks.py tests/test_worldgen_chest.py
       ;;
 
     tests/test_*.py)
@@ -228,10 +246,11 @@ for file in "${STAGED[@]}"; do
       add tests/test_structure_loader.py
       ;;
 
-    scripts/bake_sprites.py | scripts/generate_catalog.py)
+    scripts/bake_sprites.py | scripts/generate_catalog.py | scripts/prune_minecraft_assets.py | scripts/migrate_project_assets.py | scripts/dedupe_minecraft_assets.py)
       CODE_TOUCHED=1
       add_glob "tests/test_sprite_baker_*.py"
       add tests/test_block_catalog.py
+      add tests/test_minecraft_assets.py
       ;;
 
     *.py | *.pyi)

@@ -117,13 +117,17 @@ Adding "use grep before reading main_window.py" when agent-triage §2 already sa
 | `--no-verify` on hook failure | Fix hooks in order | pre-commit-workflow |
 | Reading all of `main_window.py` | Grep first | agent-triage |
 | Web search “minecraft 1.21” for repo task | project-context + docs/project-info.md | project-context |
-| Self-eval without skill update | §6 feedback loop | agent-self-evaluation |
+| Added new blocks to palette as `minecraft:*` ids | One semantic token + `enumerate_token_materials`; mirror FENCE/SLAB wiring | repo-map |
+| Worldgen tests: `template/` not found | Use `resolve_worldgen_template_dir()` → `worldgen_templates/v26_1_2/` | repo-map, project-context |
+| Worldgen tests: Amulet `4903` interface missing | Template is 26.2 but Amulet only supports 26.1.x — default worldgen to `DEFAULT_WORLGEN_VERSION` | project-context |
+| Commit failed pytest after “tests passed” earlier | Run `scripts/pre-commit-pytest.sh` on staged files before commit; re-run same scope after fixes | targeted-testing §5–§6, pre-commit-workflow |
+| Self-eval skipped / missing handoff block | Violates `.cursor/rules/agent-self-evaluation.mdc` — required every turn | agent-self-evaluation |
 
 Add rows here **and** to the owning skill when a new pattern appears twice.
 
-## Ask mode
+## Read-only / Ask mode
 
-In Ask mode: no handoff block required. If audit reveals a doc/skill gap the user did not ask to fix, mention it once ("repo-map could note X") — do not edit skills unless the user wants follow-up.
+Self-evaluation is **still required**. Use `Scope: read-only`, `Tests: n/a`, `Commit-ready: n/a`. Skill edits only when the user asks or churn revealed a durable gap worth proposing.
 
 ## Maintenance
 

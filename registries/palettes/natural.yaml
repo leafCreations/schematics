@@ -1,0 +1,110 @@
+label: Natural
+tokens: []
+sections:
+  overworld:
+  - id: minecraft:dirt
+    variants:
+      coarse: minecraft:coarse_dirt
+      rooted: minecraft:rooted_dirt
+  - minecraft:dirt_path
+  - id: minecraft:grass_block
+    variants:
+      podzol: minecraft:podzol
+      mycelium: minecraft:mycelium
+  - minecraft:moss_block
+  - minecraft:mud
+  - minecraft:clay
+  - id: minecraft:sand
+    variants:
+      sandstone: minecraft:sandstone
+  - id: minecraft:red_sand
+    variants:
+      sandstone: minecraft:red_sandstone
+  - minecraft:gravel
+  - id: minecraft:stone
+    variants:
+      smooth: minecraft:smooth_stone
+  - id: minecraft:granite
+    variants:
+      polished: minecraft:polished_granite
+  - id: minecraft:diorite
+    variants:
+      polished: minecraft:polished_diorite
+  - id: minecraft:andesite
+    variants:
+      polished: minecraft:polished_andesite
+  - id: minecraft:deepslate
+    variants:
+      polished: minecraft:polished_deepslate
+      chiseled: minecraft:chiseled_deepslate
+  - minecraft:cobbled_deepslate
+  - id: minecraft:tuff
+    variants:
+      polished: minecraft:polished_tuff
+  - minecraft:calcite
+  - minecraft:dripstone_block
+  - id: minecraft:cobblestone
+    variants:
+      mossy: minecraft:mossy_cobblestone
+  - id: minecraft:cinnabar
+    variants:
+      chiseled: minecraft:chiseled_cinnabar
+      polished: minecraft:polished_cinnabar
+  - id: minecraft:cinnabar_bricks
+  - id: minecraft:sulfur
+    variants:
+      chiseled: minecraft:chiseled_sulfur
+      polished: minecraft:polished_sulfur
+  - id: minecraft:sulfur_bricks
+  - minecraft:sulfur_spike
+  - minecraft:potent_sulfur
+  - minecraft:snow_block
+  - minecraft:powder_snow
+  - id: minecraft:ice
+    variants:
+      packed: minecraft:packed_ice
+      blue: minecraft:blue_ice
+  - minecraft:obsidian
+  - minecraft:bedrock
+  - id: minecraft:stone_bricks
+    variants:
+      mossy: minecraft:mossy_stone_bricks
+      cracked: minecraft:cracked_stone_bricks
+      chiseled: minecraft:chiseled_stone_bricks
+  - id: minecraft:deepslate_bricks
+    variants:
+      cracked: minecraft:cracked_deepslate_bricks
+  - id: minecraft:deepslate_tiles
+    variants:
+      cracked: minecraft:cracked_deepslate_tiles
+  nether:
+  - minecraft:netherrack
+  - minecraft:soul_sand
+  - minecraft:soul_soil
+  - id: minecraft:basalt
+    variants:
+      smooth: minecraft:smooth_basalt
+      polished: minecraft:polished_basalt
+  - id: minecraft:blackstone
+    variants:
+      polished: minecraft:polished_blackstone
+  - minecraft:bedrock
+  - minecraft:crimson_nylium
+  - minecraft:warped_nylium
+  - minecraft:red_nether_bricks
+  - id: minecraft:polished_blackstone_bricks
+    variants:
+      cracked: minecraft:cracked_polished_blackstone_bricks
+      chiseled: minecraft:chiseled_polished_blackstone
+  - id: minecraft:nether_bricks
+    variants:
+      cracked: minecraft:cracked_nether_bricks
+      chiseled: minecraft:chiseled_nether_bricks
+  end:
+  - minecraft:end_stone
+  - minecraft:end_stone_bricks
+  - id: minecraft:purpur_block
+    variants:
+      pillar: minecraft:purpur_pillar
+  - minecraft:bedrock
+blocks: []

@@ -61,6 +61,11 @@ def resolve_minecraft_blockstates(
 
     color = resolve_token_color(entry, parsed)
 
+    if entry.get("behavior") == "wall":
+        from helpers.wall_blockstates import resolve_wall_blockstates
+
+        return resolve_wall_blockstates(parsed)
+
     format_values = {
         **defaults,
         "material": material,

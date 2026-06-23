@@ -32,9 +32,14 @@ Use `.venv/bin/pytest … -q` from repo root.
 | `ui/widgets/grid.py` | `tests/test_grid_scrollbars.py` + grid-related tests |
 | `ui/main_window.py` | `tests/test_main_window.py` |
 | `renderers/worldgen.py`, `helpers/worldgen_*.py` | `tests/test_worldgen_*.py` (see pre-commit script list) |
+| `helpers/paths.py`, `helpers/structure_loader.py` | `tests/test_paths.py`, `tests/test_structure_loader.py`, `tests/test_worldgen_functional_blocks.py` |
 | `docs/**` only | *(none)* |
 
 When in doubt, grep `scripts/pre-commit-pytest.sh` for the file you changed.
+
+## Before commit
+
+Run `scripts/pre-commit-pytest.sh` on **staged** files — same script as the hook. After fixing a failure, re-run that script (or full suite if it says full suite), not only the single failed test file. See [targeted-testing](../targeted-testing/SKILL.md) §5–§6.
 
 ## Forces full pytest suite (pre-commit)
 

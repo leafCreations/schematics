@@ -1,6 +1,6 @@
 # Sprite Baker
 
-Many block sprites are composed procedurally from vanilla textures and cached under `assets/minecraft/generated/`. The renderer loads these via `compile_texture_set()` and material inventory panels use them for generated icons.
+Many block sprites are composed procedurally from vanilla textures and cached under `assets/project/generated/`. The renderer loads these via `compile_texture_set()` and material inventory panels use them for generated icons.
 
 `assets/` is gitignored — place Minecraft resources under `assets/minecraft/` and bake sprites locally after cloning or when adding new block types.
 
@@ -31,9 +31,9 @@ Many block sprites are composed procedurally from vanilla textures and cached un
 
 | `--view`      | Output folder              | Used for                    |
 | ------------- | -------------------------- | --------------------------- |
-| `top`         | `assets/minecraft/generated/top/`    | Top-down schematic panels   |
-| `side`        | `assets/minecraft/generated/side/`   | Side elevations; stair inventory icons |
-| `inventory`   | `assets/minecraft/generated/inventory/` | Material list and panel inventory icons |
+| `top`         | `assets/project/generated/top/`    | Top-down schematic panels   |
+| `side`        | `assets/project/generated/side/`   | Side elevations; stair inventory icons |
+| `inventory`   | `assets/project/generated/inventory/` | Material list and panel inventory icons |
 
 ### Examples
 
@@ -52,12 +52,12 @@ Many block sprites are composed procedurally from vanilla textures and cached un
 
 Baked files use sanitized keys:
 
-* `STAIRS:oak#outer_left` → `assets/minecraft/generated/top/STAIRS_oak_outer_left.png`
-* `DOOR:oak` (inventory) → `assets/minecraft/generated/inventory/DOOR_oak.png`
+* `STAIRS:oak#outer_left` → `assets/project/generated/top/STAIRS_oak_outer_left.png`
+* `DOOR:oak` (inventory) → `assets/project/generated/inventory/DOOR_oak.png`
 
 ## Runtime baking
 
-`compile_texture_set()` and `compile_inventory_texture_set()` load cached sprites from `assets/minecraft/generated/` first. When a registry-mapped bake key is missing from cache, `helpers/sprite_baker/runtime_bake.py` composes it from vanilla textures, writes the PNG to the cache, and returns it — so fresh clones can render without running the bake CLI first.
+`compile_texture_set()` and `compile_inventory_texture_set()` load cached sprites from `assets/project/generated/` first. When a registry-mapped bake key is missing from cache, `helpers/sprite_baker/runtime_bake.py` composes it from vanilla textures, writes the PNG to the cache, and returns it — so fresh clones can render without running the bake CLI first.
 
 Only keys present in the registry texture mapping are baked on demand during compile. Extra material variants listed by `_generated_bake_keys()` are loaded from disk when pre-baked, not composed eagerly during startup.
 

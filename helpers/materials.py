@@ -8,7 +8,7 @@ import helpers.utils as utils
 from helpers.block_catalog import catalog_display_name
 from helpers.context import SchematicContext
 from helpers.layer_groups import is_layer_render_visible
-from helpers.paths import ASSET_FOLDER, GENERATED_ASSETS_FOLDER
+from helpers.paths import ASSET_FOLDER, GENERATED_ASSETS_FOLDER, resolve_project_custom_folder
 from helpers.registry_lookup import (
     get_block_entry,
     is_minecraft_block_token,
@@ -37,16 +37,28 @@ from registries.loader import resolve_registry_texture_filename
 
 GENERATED_ICON_PREFIX = "generated:"
 BAKEABLE_INVENTORY_BEHAVIORS = frozenset(
-    {"slab", "stairs", "bed", "chest", "fence", "torch", "lantern", "log", "door", "trapdoor"}
+    {
+        "slab",
+        "stairs",
+        "bed",
+        "chest",
+        "fence",
+        "wall",
+        "torch",
+        "lantern",
+        "log",
+        "door",
+        "trapdoor",
+    }
 )
 INVENTORY_VIEW_BEHAVIORS = frozenset(
-    {"bed", "fence", "torch", "lantern", "stairs", "door", "trapdoor"}
+    {"bed", "fence", "wall", "torch", "lantern", "stairs", "door", "trapdoor"}
 )
 
 
 def resolve_texture_path(ctx: SchematicContext, texture_name: str) -> Path:
     if texture_name.startswith("/custom/"):
-        return ctx.assets_dir / "custom" / texture_name.removeprefix("/custom/")
+        return resolve_project_custom_folder() / texture_name.removeprefix("/custom/")
 
     if texture_name.startswith("/item/"):
         return ASSET_FOLDER / "textures" / "item" / texture_name.removeprefix("/item/")
@@ -135,7 +147,7 @@ def resolve_material_sprite_key(parsed: ParsedToken, ctx: SchematicContext) -> s
     elif behavior == "bed":
         color = registry_blocks.resolve_token_color(entry, parsed)
         key = f"{key}:{color}"
-    elif behavior == "fence":
+    elif behavior == "fence" or behavior == "wall":
         material = parsed.material or entry.get("material_default")
         if material:
             key = f"{key}:{material}"

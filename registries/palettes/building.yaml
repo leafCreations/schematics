@@ -2,6 +2,7 @@ label: Building
 tokens:
 - SLAB
 - FENCE
+- WALL
 - STAIRS
 - TRAPDOOR
 blocks: []

@@ -21,6 +21,11 @@ def normalize_renders(renders):
     return set(renders)
 
 
+def renders_include_worldgen(renders: set[str] | list[str]) -> bool:
+    render_set = set(renders)
+    return constants.RENDER_ALL in render_set or constants.RENDER_WORLDGEN in render_set
+
+
 def validate_render_names(renders: set[str]) -> None:
     unknown = renders - {constants.RENDER_ALL} - VALID_RENDERERS
 

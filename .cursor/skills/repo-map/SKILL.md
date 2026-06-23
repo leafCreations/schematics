@@ -24,7 +24,8 @@ docs/              User and developer documentation
 config/            Default editor_settings.yaml
 assets/minecraft/  Vanilla textures/models (often gitignored locally)
 output/            schematics/ and worlds/
-template/          Base Minecraft world for worldgen
+worldgen_templates/  Versioned base worlds for worldgen (v26_1_2/, v26_2/; gitignored)
+assets/project/    Project-owned custom templates + generated sprite cache
 render_main.py     CLI render entry point
 ```
 
@@ -57,7 +58,7 @@ Details: [docs/structure-tokens.md](../../docs/structure-tokens.md#structure-pac
 | Subsystem | Start here | Docs |
 | --------- | ---------- | ---- |
 | **Render CLI** | `render_main.py`, `renderers/registry.py` | [render-types.md](../../docs/render-types.md) |
-| **Block registry** | `registries/loader.py`, `helpers/registry_lookup.py` | [registry.md](../../docs/registry.md) |
+| **Block registry** | `registries/loader.py`, `helpers/registry_lookup.py` | [registry.md](../../docs/registry.md) — templated families: [reference.md](reference.md) § Templated block families |
 | **Palette / picker** | `helpers/block_picker.py`, `registries/palettes/` | [registry.md](../../docs/registry.md) |
 | **Cell tokens** | `helpers/structure_tokens.py` | [structure-tokens.md](../../docs/structure-tokens.md) |
 | **Structure editor** | `ui/main_window.py`, `ui/document.py` | [ui.md](../../docs/ui.md) |
@@ -84,7 +85,7 @@ Details: [docs/structure-tokens.md](../../docs/structure-tokens.md#structure-pac
 | Palette validation | `registries/validate.py` |
 | Pre-commit test mapping | `scripts/pre-commit-pytest.sh` |
 | Layer save / dirty state | `ui/document.py`, `ui/main_window.py` |
-| Fence adjacency icons | `helpers/fence_adjacency.py` |
+| Fence / wall adjacency icons | `helpers/fence_adjacency.py`, `helpers/wall_blockstates.py` |
 | Bed worldgen patch | `helpers/worldgen_region_patch.py` |
 | Terrain legacy tokens | `helpers/terrain_tokens.py` |
 | Editor prefs | `config/editor_settings.yaml`, `ui/app_settings.py` |
@@ -103,7 +104,8 @@ Use `.venv/bin/pytest … -q`. Full map: [reference.md](reference.md) and `scrip
 | `helpers/materials.py` | `tests/test_materials.py` |
 | `helpers/path_geometry.py`, `path_strip.py` | `tests/test_path_geometry.py`, `tests/test_path_strip.py` |
 | `renderers/worldgen.py` | `tests/test_worldgen_*.py` (see pre-commit script) |
-| `docs/**` only | *(no pytest)* |
+| `helpers/paths.py`, `helpers/structure_loader.py` | `tests/test_paths.py`, `tests/test_worldgen_functional_blocks.py` |
+| `registries/` (new token) | `tests/test_palette_integrity.py`, `tests/test_block_picker.py`, fence/wall baker tests if procedural |
 
 **Full suite triggers:** `conftest.py`, `registries/loader.py`, `render_main.py`, `helpers/context.py`, unmapped `*.py`.
 

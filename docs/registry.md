@@ -25,15 +25,19 @@ Palettes reference semantic tokens and/or raw Minecraft block ids:
 
 ```text
 registries/palettes/
-  terrain.yaml        # Catalog `minecraft:` ids by dimension (overworld / nether / end)
+  terrain.yaml        # Fluids and nether surface blocks (water, lava, wart, glowstone, …)
   wood.yaml           # Log, planks
   functional.yaml     # Furnace, crafting table, chest, door, bed
   building.yaml       # Slab, fence, stairs
+  colored.yaml        # Dyed blocks and color variants (empty until populated)
+  natural.yaml        # Earth, stone, bricks, minerals, and dimension blocks by section
+  ore.yaml            # Ores, raw blocks, and amethyst by dimension
+  redstone.yaml       # Redstone components and mechanisms (empty until populated)
   lighting.yaml       # Torch, lantern, soul lantern, copper lanterns (`hanging` blockstate)
   …
 ```
 
-The terrain palette lists **full cube blocks** only (no stairs, slabs, or doors). Variant blocks (e.g. `minecraft:mossy_cobblestone`) are grouped under a parent entry in YAML; the editor writes the full catalog id via the variant picker.
+The **Natural** palette lists catalog `minecraft:` block ids by dimension (overworld / nether / end). The **Terrain** palette holds fluids and decorative nether surface blocks. Variant blocks (e.g. `minecraft:mossy_cobblestone`) are grouped under a parent entry in YAML; the editor writes the full catalog id via the variant picker.
 
 Structure layers can use either semantic tokens (`PLANKS:oak`) or catalog-backed cells (`minecraft:stone`). The latter synthesizes a solid behavior entry at lookup time. Legacy terrain tokens (`GRASS`, `COBBLESTONE#mossy`) still resolve for old YAML; run `scripts/migrate_terrain_tokens.py` to convert them.
 
@@ -61,7 +65,7 @@ FURNACE:
 
 Textures are loaded from `assets/minecraft/textures/block/` (and subfolders `block_assets/`, `item_assets/`, `custom/`).
 
-For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture_set()` prefers baked sprites under `assets/minecraft/generated/` when available. See [sprite-baker.md](sprite-baker.md).
+For procedurally composed blocks (fences, stairs, doors, etc.), `compile_texture_set()` prefers baked sprites under `assets/project/generated/` when available. See [sprite-baker.md](sprite-baker.md).
 
 `minecraft:` cells load textures from the catalog when not present in the compiled registry texture set, including materials-list inventory icons.
 

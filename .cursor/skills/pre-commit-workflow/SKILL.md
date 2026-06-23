@@ -19,11 +19,18 @@ Fix failures **top to bottom**. Do not skip hooks unless the user explicitly ask
 
 Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
 
-## Before committing
+## Before committing (mandatory)
 
 1. Stage intended files: `git add …`
-2. Run targeted tests locally (see targeted-testing skill).
-3. Optional after green pytest on **same staged hash**:
+2. **Simulate the pytest hook** on staged paths (not a hand-picked subset):
+
+   ```bash
+   scripts/pre-commit-pytest.sh
+   ```
+
+   This is the same script the commit hook runs. If it chooses **full suite**, run `.venv/bin/pytest -q` until green. See [targeted-testing](../targeted-testing/SKILL.md) §5–§6 for scope rules and post-fix re-runs.
+3. After a test failure fix, re-run `scripts/pre-commit-pytest.sh` (or full suite if that was the scope) — **not** only the one failing file unless the hook listed a single file.
+4. Optional after green pytest on **same staged hash**:
 
    ```bash
    scripts/record-pytest-pass.sh

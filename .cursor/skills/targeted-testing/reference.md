@@ -25,7 +25,7 @@ Also: unmapped `*.py` changes, or >20 targeted test files accumulated.
 | `helpers/grid.py` | `test_grid` |
 | `helpers/grid_cells.py`, `grid_placement.py` | `test_grid_cells`, `test_grid_placement` |
 | `helpers/layer_rotation.py` | `test_layer_rotation` |
-| `helpers/fence_adjacency.py` | `test_fence_adjacency`, `test_utils_schematics_fence`, `test_sprite_baker_fence*` |
+| `helpers/fence_adjacency.py`, `helpers/wall_blockstates.py` | `test_fence_adjacency`, `test_wall_blockstates`, `test_utils_schematics_fence`, `test_utils_schematics_wall`, `test_sprite_baker_fence*`, `test_sprite_baker_wall` |
 | `helpers/lantern_placement.py` | `test_lantern_placement`, `test_sprite_baker_lantern` |
 | `helpers/paths.py`, `layers.py`, `layer_management.py` | `test_layers`, `test_layer_management` |
 | `helpers/materials.py`, `collect_material_tokens.py` | `test_materials`, `test_collect_material_tokens` |
@@ -69,11 +69,25 @@ Widget-specific shortcuts (manual edits, narrower than hook):
 | `properties_panel.py` | `test_properties_panel.py` |
 | `site_grid.py` | site/worldgen-related tests if behavior changed |
 
+## Commit verification (avoid hook surprises)
+
+Agents often run a narrow test set during development, then commit fails because the hook chose a **different** scope.
+
+| Situation | What to run before commit |
+| --------- | ------------------------- |
+| Any multi-file / cross-package change | `scripts/pre-commit-pytest.sh` (read first line) |
+| `render_main.py` staged | Full suite (hook always) |
+| Palette YAML moved blocks between tabs | `test_palette_integrity`, `test_block_picker`, `test_sprite_baker_simple`, `test_registry_phase_b` |
+| `helpers/terrain_tokens.py` | `test_terrain_tokens`, `test_sprite_baker_simple` |
+| `structures/**` layer cells changed | `test_worldgen_functional_blocks`, `test_structure_loader` |
+| Fixed one failing test | Re-run `scripts/pre-commit-pytest.sh` — same scope as hook |
+
 ## structures/ and scripts/
 
 | Staged path | Tests |
 | ----------- | ----- |
-| `structures/*` | `test_structure_loader`, `test_ui_document` |
+| `structures/*` | `test_structure_loader`, `test_ui_document`, `test_worldgen_functional_blocks`, `test_worldgen_chest` |
+| `helpers/terrain_tokens.py` | `test_terrain_tokens`, `test_sprite_baker_simple`, `test_palette_integrity`, `test_block_picker` |
 | `tests/test_*.py` | that test file only |
 | `scripts/migrate_structure_to_yaml.py` | `test_structure_loader` |
 | `scripts/bake_sprites.py`, `generate_catalog.py` | `test_sprite_baker_*`, `test_block_catalog` |

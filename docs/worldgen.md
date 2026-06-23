@@ -6,10 +6,11 @@ World generation copies a template world and writes blocks via [Amulet](https://
 
 See [project-info.md](project-info.md) for supported Minecraft versions (**Java 26.x**; legacy 1.x is not supported).
 
-1. Create a new world in **Minecraft Java 26.1.2** and copy it into `template/`. This is the version the project template targets; other releases may work but are not routinely tested.
-2. Create a `template/` folder in the project root (if it does not exist).
-3. Copy the world folders/files into `template/`.
-4. Install the worldgen optional dependencies:
+1. Create a new world in **Minecraft Java 26.1.2** and copy it into `worldgen_templates/v26_1_2/`. Add `worldgen_templates/v26_2/` when targeting **26.2**.
+2. Create a `worldgen_templates/` folder in the project root (if it does not exist).
+3. Copy the world folders/files into the versioned subfolder (e.g. `worldgen_templates/v26_1_2/`).
+4. Legacy `template/` at the project root is still supported as a fallback.
+5. Install the worldgen optional dependencies:
 
 ```bash
 pip install -e ".[worldgen]"
@@ -25,7 +26,9 @@ from render_main import build_stage_complete_schematics
 build_stage_complete_schematics(structure="residence", stage=1, renders="worldgen")
 ```
 
-Output is written to `output/worlds/{output_folder}/`.
+**Version:** pass `worldgen_version` to `build_stage_complete_schematics` / `run_stage_renders`, or use `--worldgen-version 26.2` on the CLI. The editor shows a version picker when worldgen is included in a render job. Templates resolve under `worldgen_templates/v{version}/` via `resolve_worldgen_template_dir()`.
+
+Output is written to `output/worlds/{output_folder}/v{version}/` (for example `output/worlds/residence/v26_2/`), matching the template folder naming under `worldgen_templates/`.
 
 ## Beds on Minecraft Java 26.1
 

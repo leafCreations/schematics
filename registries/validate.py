@@ -161,7 +161,7 @@ def collect_behavior_texture_errors(
         behavior = entry.get("behavior")
         render_textures = entry.get("render", {}).get("textures", {})
 
-        if behavior == "fence" or isinstance(render_textures.get("top"), dict):
+        if behavior in {"fence", "wall"} or isinstance(render_textures.get("top"), dict):
             continue
 
         if "top" not in render_textures:

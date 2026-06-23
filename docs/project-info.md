@@ -67,4 +67,5 @@ Agents: see [`.cursor/skills/project-context/SKILL.md`](../.cursor/skills/projec
 | --- | -------- |
 | [worldgen.md](worldgen.md) | Template world, Amulet, bed placement |
 | [sprite-baker.md](sprite-baker.md) | Vanilla assets under `assets/minecraft/` |
+| [assets.md](assets.md) | Asset layout, prune script, versioned extracts |
 | [project-structure.md](project-structure.md) | Repo layout |

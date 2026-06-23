@@ -4,7 +4,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 from helpers.block_picker import picker_entry_for_token, resolve_palette
-from tests.palette_helpers import terrain_section_entry_counts
+from tests.palette_helpers import palette_section_entry_counts, terrain_section_entry_counts
 from ui.widgets.palette_panel import PalettePanel
 
 pytest.importorskip("PySide6")
@@ -57,7 +57,50 @@ def test_terrain_palette_shows_dimension_filter(qapp):
 
     panel._category_combo.setCurrentIndex(terrain_index)
 
+    assert panel._dimension_combo.count() == 3
+    assert panel._dimension_combo.currentData() == "overworld"
+    assert panel._block_list.count() == section_counts["overworld"]
+    assert panel._block_list.count() > 0
+
+
+def test_natural_palette_shows_dimension_filter(qapp):
+    panel = PalettePanel()
+    section_counts = palette_section_entry_counts("natural")
+    natural_index = panel._category_combo.findData("natural")
+    assert natural_index >= 0
+
+    panel._category_combo.setCurrentIndex(natural_index)
+
     assert panel._dimension_combo.count() == 4
+    assert panel._dimension_combo.currentData() == "overworld"
+    assert panel._block_list.count() == section_counts["overworld"]
+    assert panel._block_list.count() > 0
+
+
+def test_natural_palette_defaults_to_site_dimension(qapp):
+    panel = PalettePanel()
+    section_counts = palette_section_entry_counts("natural")
+    panel.set_site_dimension("end")
+
+    natural_index = panel._category_combo.findData("natural")
+    assert natural_index >= 0
+
+    panel._category_combo.setCurrentIndex(natural_index)
+
+    assert panel._dimension_combo.currentData() == "end"
+    assert panel._block_list.count() == section_counts["end"]
+    assert panel._block_list.count() > 0
+
+
+def test_ore_palette_shows_dimension_filter(qapp):
+    panel = PalettePanel()
+    section_counts = palette_section_entry_counts("ore")
+    ore_index = panel._category_combo.findData("ore")
+    assert ore_index >= 0
+
+    panel._category_combo.setCurrentIndex(ore_index)
+
+    assert panel._dimension_combo.count() == 3
     assert panel._dimension_combo.currentData() == "overworld"
     assert panel._block_list.count() == section_counts["overworld"]
     assert panel._block_list.count() > 0
@@ -105,7 +148,7 @@ def test_search_replaces_block_list_globally(qapp):
     assert "minecraft:cobblestone" in tokens
 
     labels = [panel._block_list.item(row).text() for row in range(panel._block_list.count())]
-    assert any("Terrain" in label for label in labels)
+    assert any("Natural" in label or "Terrain" in label for label in labels)
 
 
 def test_search_finds_terrain_variant_without_category(qapp):
@@ -114,6 +157,7 @@ def test_search_finds_terrain_variant_without_category(qapp):
 
     entries = [panel._block_list.item(row).data(256) for row in range(panel._block_list.count())]
     assert any(entry.token == "minecraft:stone" for entry in entries)
+    assert all(entry.palette == "natural" for entry in entries if entry.token == "minecraft:stone")
 
 
 def test_clearing_search_restores_category_browsing(qapp):
@@ -146,7 +190,7 @@ def test_select_entry_clears_search_when_filtered_out(qapp):
 
 def test_select_entry_highlights_match_during_search(qapp):
     panel = PalettePanel()
-    palette = resolve_palette("terrain")
+    palette = resolve_palette("natural")
     assert palette is not None
 
     cobblestone = next(entry for entry in palette.entries if entry.token == "minecraft:cobblestone")

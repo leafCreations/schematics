@@ -11,9 +11,9 @@ from helpers.grid import resolve_site_dimensions
 from helpers.paths import (
     BLOCK_TEXTURES_FOLDER,
     OUTPUT_SCHEMATICS_FOLDER,
-    OUTPUT_WORLDS_FOLDER,
     STRUCTURES_FOLDER,
-    TEMPLATE_FOLDER,
+    resolve_worldgen_output_dir,
+    resolve_worldgen_template_dir,
 )
 from helpers.site_ground import validate_site_ground
 from helpers.structure_metadata import validate_structure_slug
@@ -317,7 +317,11 @@ def validate_structure_config(config: dict[str, Any]) -> StructureConfig:
     }  # type: ignore[return-value]
 
 
-def build_schematic_context(config: StructureConfig) -> SchematicContext:
+def build_schematic_context(
+    config: StructureConfig,
+    *,
+    worldgen_version: str | None = None,
+) -> SchematicContext:
     validated = validate_structure_config(config)
 
     ctx = SchematicContext(
@@ -329,8 +333,11 @@ def build_schematic_context(config: StructureConfig) -> SchematicContext:
         block_registry=BLOCK_REGISTRY,
         assets_dir=BLOCK_TEXTURES_FOLDER,
         output_schematics_dir=OUTPUT_SCHEMATICS_FOLDER / validated["output_folder"],
-        output_worldgen_dir=OUTPUT_WORLDS_FOLDER / validated["output_folder"],
-        worldgen_template_dir=TEMPLATE_FOLDER,
+        output_worldgen_dir=resolve_worldgen_output_dir(
+            validated["output_folder"],
+            version=worldgen_version,
+        ),
+        worldgen_template_dir=resolve_worldgen_template_dir(version=worldgen_version),
         site_ground=validated.get("site_ground"),
     )
 
@@ -464,7 +471,12 @@ def resolve_structure_source(structure: str, stage: int) -> Path:
     )
 
 
-def load_structure_config(structure: str, stage: int) -> SchematicContext:
+def load_structure_config(
+    structure: str,
+    stage: int,
+    *,
+    worldgen_version: str | None = None,
+) -> SchematicContext:
     structure_path = resolve_structure_source(structure, stage).resolve()
 
     if structure_path.suffix == ".yaml":
@@ -472,4 +484,4 @@ def load_structure_config(structure: str, stage: int) -> SchematicContext:
     else:
         config = load_structure_module(structure_path)
 
-    return build_schematic_context(config)
+    return build_schematic_context(config, worldgen_version=worldgen_version)

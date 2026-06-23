@@ -44,7 +44,7 @@ def resolve_worldgen_token(
     if entry is None:
         raise ValueError(f"Unknown block token: {registry_lookup_token(parsed)}")
 
-    if get_block_behavior(entry) == "fence":
+    if get_block_behavior(entry) in {"fence", "wall"}:
         cells = ctx.layers[layer_array_index]["cells"]
         return resolve_fence_adjacency(parsed, cells, x, z)
 

@@ -11,6 +11,8 @@ description: >-
 
 Decide **how** to work before reading files or running commands. Follow this skill first; drill into `.cursor/rules/` and other skills only when the table below says so.
 
+**Every turn ends with** [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §7 handoff (`.cursor/rules/agent-self-evaluation.mdc`, alwaysApply).
+
 **Version / Minecraft facts:** read [project-context](../project-context/SKILL.md) before web search or assuming 1.x vs 26.x.
 
 ## 1. Classify the request
@@ -22,6 +24,7 @@ Decide **how** to work before reading files or running commands. Follow this ski
 | Feature, multi-file, refactor | **Implementation** | Read [repo-map](../repo-map/SKILL.md) + [reference.md](reference.md) area map → targeted reads |
 | Commit / pre-commit failed | **Unblock** | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) → fix reported hook |
 | "Run tests" / verify | **Verify** | [targeted-testing](../targeted-testing/SKILL.md) — smallest test set |
+| User will commit / "commit-ready" | **Verify** | `scripts/pre-commit-pytest.sh` on staged files → green → optional `record-pytest-pass.sh` |
 
 If the user is in **Ask mode**, stop at read-only even when they say "fix".
 
@@ -46,11 +49,11 @@ If the user is in **Ask mode**, stop at read-only even when they say "fix".
 | `ui/widgets/*` panel | `.cursor/rules/ui-panels.mdc`, [ui-change](../ui-change/SKILL.md) | Matching `tests/test_*panel*.py` |
 | `ui/*` dialog | `.cursor/rules/ui-dialogs.mdc`, [ui-change](../ui-change/SKILL.md) | Dialog + `tests/test_main_window.py` if wired |
 | Grid toolbar split button | `.cursor/rules/ui-split-buttons.mdc` | `tests/test_main_window.py` |
-| `registries/` | `registries/validate.py` behavior | `tests/test_palette_integrity.py` |
+| `registries/` (new token / behavior) | `registries/validate.py`, [repo-map](../repo-map/SKILL.md) § Templated block families | `tests/test_palette_integrity.py`, `tests/test_block_picker.py` |
 | Structure YAML / loader | `docs/structure-tokens.md` (manifest + `stage.yaml`) | `tests/test_structure_loader.py` |
 | `helpers/*` | Matching `tests/test_<module>.py` | See [reference.md](reference.md) |
 | `docs/*` only | — | No pytest unless code also changed |
-| Worldgen | `.cursor/rules/worldgen.mdc`, [project-context](../project-context/SKILL.md) | `tests/test_worldgen_*.py` subset |
+| Worldgen | `.cursor/rules/worldgen.mdc`, [project-context](../project-context/SKILL.md) | `tests/test_worldgen_*.py` subset; template via `resolve_worldgen_template_dir()` not `template/` |
 | Version / assets / dependencies | [project-context](../project-context/SKILL.md), `docs/project-info.md` | As area touched |
 
 Full path→test map: `scripts/pre-commit-pytest.sh` (source of truth).
@@ -102,18 +105,21 @@ structures/{name}/stage{N}/layers/*.yaml
 
 Save targets: layers → layer files; site settings → manifest + `stage.yaml`. Details: `docs/structure-tokens.md`.
 
-## 8. End-of-task checklist
+## 8. End-of-task checklist (mandatory)
 
-Before handoff, run [agent-self-evaluation](../agent-self-evaluation/SKILL.md): verify the task, then **update relevant skills** with any durable learnings (§6 feedback loop).
+**Every response** must end with [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §7 handoff block. Enforced by `.cursor/rules/agent-self-evaluation.mdc` (`alwaysApply: true`). No exceptions for Ask mode, trivial answers, or read-only work.
 
 ```
 - [ ] Request classified (read-only vs surgical vs implementation)
 - [ ] Discovery used grep/targeted read, not unnecessary explore
 - [ ] Only relevant rules/docs opened
 - [ ] Tests named before run; full suite only if justified
+- [ ] Before commit: `scripts/pre-commit-pytest.sh` green on staged paths (not stale earlier run)
+- [ ] After test fix: re-ran hook scope, not only the single failed file
 - [ ] Pre-commit failures addressed in hook order
 - [ ] No unrelated files changed
-- [ ] Skills updated where churn revealed a gap (or noted none)
+- [ ] §6 skill question answered; skills updated or "none" stated
+- [ ] ### Self-evaluation block present as last section of response
 ```
 
 ## Related skills

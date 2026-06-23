@@ -16,7 +16,7 @@ Summarized for agent use — full pages at the URLs in [SKILL.md](SKILL.md).
 | Minimum Java | Java SE 25 |
 | Wiki | https://minecraft.wiki/w/Java_Edition_26.1.2 |
 
-**Project use:** default `template/` world; worldgen and Amulet export tested against this release.
+**Project use:** default worldgen template `worldgen_templates/v26_1_2/`; Amulet export tested against data version 4790.
 
 ### Java Edition 26.2 (“Chaos Cubed”)
 
@@ -56,7 +56,9 @@ Worldgen-specific pins live in both `requirements.txt` and `[project.optional-de
 
 | Path | Version note |
 | ---- | ------------ |
-| `template/` | World created in **26.1.2** |
+| `worldgen_templates/v26_1_2/` | World created in **26.1.2** (default worldgen) |
+| `worldgen_templates/v26_2/` | World created in **26.2** (forward; Amulet may not support data 4903 yet) |
+| `template/` | Legacy fallback (deprecated) |
 | `assets/minecraft/` | Vanilla jar extract; must match target game version for bakes |
 | `registries/generated/catalog.json` | Built from assets + behaviors |
 

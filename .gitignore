@@ -25,7 +25,7 @@ output/
 
 # Experimental files
 experimental/
-template/
+worldgen_templates/
 
 # Build artifacts
 build/

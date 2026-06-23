@@ -17,9 +17,12 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
-Bake block sprites (required before first render; place Minecraft files under `assets/minecraft/` — `assets/` is not in the repo):
+Place Minecraft client resources under versioned folders, then run the asset setup scripts — see [docs/assets.md](docs/assets.md). `assets/` is not in the repo.
 
 ```bash
+.venv/bin/python scripts/prune_minecraft_assets.py --all-versioned
+.venv/bin/python scripts/migrate_project_assets.py
+.venv/bin/python scripts/dedupe_minecraft_assets.py --clean
 .venv/bin/python scripts/generate_catalog.py   # if catalog missing/outdated
 .venv/bin/python scripts/bake_sprites.py --type simple --view top --all --force
 .venv/bin/python scripts/bake_sprites.py --type stairs --view top --all --force
@@ -52,7 +55,8 @@ Outputs go to `output/schematics/{output_folder}/`.
 | [docs/project-structure.md](docs/project-structure.md) | Repository layout |
 | [docs/registry.md](docs/registry.md) | Behavior registry, palettes, and texture loading |
 | [docs/ui.md](docs/ui.md) | Structure editor technical reference (PySide6) |
-| [docs/sprite-baker.md](docs/sprite-baker.md) | Baking `assets/minecraft/generated/` sprites |
+| [docs/assets.md](docs/assets.md) | Asset layout, prune script, versioned extracts |
+| [docs/sprite-baker.md](docs/sprite-baker.md) | Baking `assets/project/generated/` sprites |
 | [docs/render-types.md](docs/render-types.md) | Renderers, examples, output paths |
 | [docs/worldgen.md](docs/worldgen.md) | Template world and Amulet export |
 | [docs/roadmap.md](docs/roadmap.md) | Design goals and future plans |

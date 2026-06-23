@@ -1,5 +1,6 @@
 from helpers.block_picker import (
     PickerEntry,
+    catalog_block_ids,
     cell_positions_with_same_block_type,
     cell_token,
     entry_matches_search,
@@ -93,7 +94,7 @@ def test_cell_token_includes_direction_and_variant():
 
     cobblestone = next(
         entry
-        for entry in resolve_palette("terrain").entries
+        for entry in resolve_palette("natural").entries
         if entry.token == "minecraft:cobblestone"
     )
     assert cell_token(cobblestone, variant="mossy") == "minecraft:mossy_cobblestone"
@@ -256,20 +257,81 @@ def test_resolve_palette_includes_catalog_terrain_blocks():
 
     assert palette is not None
     assert palette.label == "Terrain"
-    assert palette.sections == ("overworld", "nether", "end")
+    assert palette.sections == ("overworld", "nether")
 
     tokens = {e.token for e in palette.entries if not e.is_catalog_block}
     catalog_blocks = {e.token for e in palette.entries if e.is_catalog_block}
 
     assert tokens == set()
-    assert "minecraft:grass_block" in catalog_blocks
-    assert "minecraft:stone" in catalog_blocks
-    assert "minecraft:mossy_cobblestone" not in catalog_blocks
+    assert catalog_blocks == {
+        "minecraft:water",
+        "minecraft:lava",
+        "minecraft:nether_wart_block",
+        "minecraft:warped_wart_block",
+        "minecraft:shroomlight",
+        "minecraft:glowstone",
+        "minecraft:magma_block",
+    }
+    assert "minecraft:grass_block" not in catalog_blocks
+    assert "minecraft:stone" not in catalog_blocks
 
-    cobblestone = next(entry for entry in palette.entries if entry.token == "minecraft:cobblestone")
-    assert cobblestone.section == "overworld"
-    assert cobblestone.variants == ("mossy",)
-    assert cobblestone.variant_blocks == (("mossy", "minecraft:mossy_cobblestone"),)
+
+def test_natural_palette_includes_brick_and_nether_building_blocks():
+    palette = resolve_palette("natural")
+    assert palette is not None
+
+    catalog_blocks = {entry.token for entry in palette.entries if entry.is_catalog_block}
+
+    assert "minecraft:stone_bricks" in catalog_blocks
+    assert "minecraft:deepslate_bricks" in catalog_blocks
+    assert "minecraft:cinnabar_bricks" in catalog_blocks
+    assert "minecraft:sulfur_bricks" in catalog_blocks
+    assert "minecraft:potent_sulfur" in catalog_blocks
+    assert "minecraft:crimson_nylium" in catalog_blocks
+    assert "minecraft:nether_bricks" in catalog_blocks
+    assert "minecraft:end_stone_bricks" in catalog_blocks
+    assert "minecraft:purpur_block" in catalog_blocks
+
+    cinnabar = next(entry for entry in palette.entries if entry.token == "minecraft:cinnabar")
+    assert cinnabar.section == "overworld"
+    assert cinnabar.variants == ("chiseled", "polished")
+
+
+def test_building_palette_includes_wall_token():
+    palette = resolve_palette("building")
+    assert palette is not None
+
+    tokens = {entry.token for entry in palette.entries if not entry.is_catalog_block}
+    assert "WALL" in tokens
+
+
+def test_wall_materials_include_26_2_cinnabar_and_sulfur():
+    from helpers.block_picker import enumerate_token_materials
+
+    materials = set(enumerate_token_materials("minecraft:{material}_wall"))
+    assert {
+        "cinnabar",
+        "cinnabar_brick",
+        "polished_cinnabar",
+        "sulfur",
+        "sulfur_brick",
+        "polished_sulfur",
+    }.issubset(materials)
+
+
+def test_slab_materials_include_26_2_cinnabar_and_sulfur():
+    from helpers.block_picker import enumerate_token_materials
+
+    materials = set(enumerate_token_materials("minecraft:{material}_slab"))
+    expected = {
+        "cinnabar",
+        "cinnabar_brick",
+        "polished_cinnabar",
+        "sulfur",
+        "sulfur_brick",
+        "polished_sulfur",
+    }
+    assert expected.issubset(materials)
 
 
 def test_resolve_palette_terrain_sections_have_entries_per_dimension():
@@ -278,7 +340,7 @@ def test_resolve_palette_terrain_sections_have_entries_per_dimension():
 
     section_counts = terrain_section_entry_counts()
 
-    assert section_counts.keys() == {"overworld", "nether", "end"}
+    assert section_counts.keys() == {"overworld", "nether"}
     assert all(count > 0 for count in section_counts.values())
     assert sum(section_counts.values()) == len(palette.entries)
 
@@ -287,7 +349,7 @@ def test_resolve_palette_terrain_sections_have_entries_per_dimension():
 
 
 def test_cell_token_for_catalog_terrain_variant():
-    palette = resolve_palette("terrain")
+    palette = resolve_palette("natural")
     assert palette is not None
 
     cobblestone = next(entry for entry in palette.entries if entry.token == "minecraft:cobblestone")
@@ -322,7 +384,7 @@ def test_entry_matches_search_by_material():
 
 
 def test_entry_matches_search_by_catalog_variant_block():
-    palette = resolve_palette("terrain")
+    palette = resolve_palette("natural")
     assert palette is not None
 
     stone = next(entry for entry in palette.entries if entry.token == "minecraft:stone")
@@ -342,7 +404,7 @@ def test_search_picker_entries_across_palettes():
 
     assert "minecraft:cobblestone" in tokens
     assert any(entry.palette == "building" for entry in results)
-    assert any(entry.palette == "terrain" for entry in results)
+    assert any(entry.palette == "natural" for entry in results)
 
 
 def test_resolve_palette_unknown_returns_none():
@@ -354,3 +416,166 @@ def test_list_palettes_covers_all():
 
     assert {p.name for p in palettes} == set(BLOCK_PALETTES)
     assert all(isinstance(e, PickerEntry) for p in palettes for e in p.entries)
+
+
+def test_colored_palette_exists_without_blocks():
+    palette = resolve_palette("colored")
+
+    assert palette is not None
+    assert palette.label == "Colored"
+    assert len(palette.entries) == 0
+
+
+def test_natural_palette_includes_planned_blocks():
+    palette = resolve_palette("natural")
+
+    assert palette is not None
+    assert palette.label == "Natural"
+    assert palette.sections == ("overworld", "nether", "end")
+
+    catalog_blocks = {entry.token for entry in palette.entries if entry.is_catalog_block}
+    assert "minecraft:dirt" in catalog_blocks
+    assert "minecraft:grass_block" in catalog_blocks
+    assert "minecraft:cobblestone" in catalog_blocks
+    assert "minecraft:netherrack" in catalog_blocks
+    assert "minecraft:end_stone" in catalog_blocks
+    assert "minecraft:cinnabar" in catalog_blocks
+    assert "minecraft:sulfur" in catalog_blocks
+    assert "minecraft:sulfur_spike" in catalog_blocks
+    assert "minecraft:dirt_path" in catalog_blocks
+    assert "minecraft:cobbled_deepslate" in catalog_blocks
+    assert "minecraft:snow_block" in catalog_blocks
+    assert "minecraft:powder_snow" in catalog_blocks
+    assert "minecraft:obsidian" in catalog_blocks
+    assert "minecraft:bedrock" in catalog_blocks
+
+    grass = next(entry for entry in palette.entries if entry.token == "minecraft:grass_block")
+    assert grass.section == "overworld"
+    assert grass.variants == ("mycelium", "podzol")
+
+    cinnabar = next(entry for entry in palette.entries if entry.token == "minecraft:cinnabar")
+    assert cinnabar.section == "overworld"
+    assert cinnabar.variants == ("chiseled", "polished")
+
+    red_sand = next(entry for entry in palette.entries if entry.token == "minecraft:red_sand")
+    assert red_sand.section == "overworld"
+    assert red_sand.variants == ("sandstone",)
+
+    end_stone = next(entry for entry in palette.entries if entry.token == "minecraft:end_stone")
+    assert end_stone.section == "end"
+
+    ice = next(entry for entry in palette.entries if entry.token == "minecraft:ice")
+    assert ice.section == "overworld"
+    assert ice.variants == ("blue", "packed")
+
+
+def test_natural_palette_covers_roadmap_catalog_ids():
+    palette = resolve_palette("natural")
+    assert palette is not None
+
+    roadmap_ids = {
+        "minecraft:dirt",
+        "minecraft:coarse_dirt",
+        "minecraft:rooted_dirt",
+        "minecraft:grass_block",
+        "minecraft:podzol",
+        "minecraft:mycelium",
+        "minecraft:moss_block",
+        "minecraft:mud",
+        "minecraft:clay",
+        "minecraft:sand",
+        "minecraft:red_sand",
+        "minecraft:gravel",
+        "minecraft:soul_sand",
+        "minecraft:soul_soil",
+        "minecraft:stone",
+        "minecraft:granite",
+        "minecraft:diorite",
+        "minecraft:andesite",
+        "minecraft:deepslate",
+        "minecraft:tuff",
+        "minecraft:calcite",
+        "minecraft:dripstone_block",
+        "minecraft:cobblestone",
+        "minecraft:netherrack",
+        "minecraft:basalt",
+        "minecraft:blackstone",
+        "minecraft:end_stone",
+    }
+
+    covered = set()
+    for entry in palette.entries:
+        covered |= catalog_block_ids(entry)
+
+    assert roadmap_ids.issubset(covered)
+
+
+def test_redstone_palette_exists_without_blocks():
+    palette = resolve_palette("redstone")
+
+    assert palette is not None
+    assert palette.label == "Redstone"
+    assert len(palette.entries) == 0
+
+
+def test_ore_palette_includes_planned_blocks():
+    palette = resolve_palette("ore")
+
+    assert palette is not None
+    assert palette.label == "Ore"
+    assert palette.sections == ("overworld", "nether")
+
+    catalog_blocks = {entry.token for entry in palette.entries if entry.is_catalog_block}
+    assert "minecraft:coal_ore" in catalog_blocks
+    assert "minecraft:diamond_ore" in catalog_blocks
+    assert "minecraft:amethyst_block" in catalog_blocks
+    assert "minecraft:nether_gold_ore" in catalog_blocks
+    assert "minecraft:ancient_debris" in catalog_blocks
+
+    coal = next(entry for entry in palette.entries if entry.token == "minecraft:coal_ore")
+    assert coal.section == "overworld"
+    assert coal.variants == ("deepslate",)
+    assert coal.variant_blocks == (("deepslate", "minecraft:deepslate_coal_ore"),)
+
+    ancient_debris = next(
+        entry for entry in palette.entries if entry.token == "minecraft:ancient_debris"
+    )
+    assert ancient_debris.section == "nether"
+
+
+def test_ore_palette_covers_roadmap_catalog_ids():
+    palette = resolve_palette("ore")
+    assert palette is not None
+
+    roadmap_ids = {
+        "minecraft:coal_ore",
+        "minecraft:deepslate_coal_ore",
+        "minecraft:iron_ore",
+        "minecraft:deepslate_iron_ore",
+        "minecraft:copper_ore",
+        "minecraft:deepslate_copper_ore",
+        "minecraft:gold_ore",
+        "minecraft:deepslate_gold_ore",
+        "minecraft:redstone_ore",
+        "minecraft:deepslate_redstone_ore",
+        "minecraft:lapis_ore",
+        "minecraft:deepslate_lapis_ore",
+        "minecraft:diamond_ore",
+        "minecraft:deepslate_diamond_ore",
+        "minecraft:emerald_ore",
+        "minecraft:deepslate_emerald_ore",
+        "minecraft:nether_gold_ore",
+        "minecraft:ancient_debris",
+        "minecraft:raw_iron_block",
+        "minecraft:raw_copper_block",
+        "minecraft:raw_gold_block",
+        "minecraft:amethyst_block",
+        "minecraft:budding_amethyst",
+        "minecraft:amethyst_cluster",
+    }
+
+    covered = set()
+    for entry in palette.entries:
+        covered |= catalog_block_ids(entry)
+
+    assert roadmap_ids.issubset(covered)

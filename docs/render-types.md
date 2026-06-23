@@ -66,7 +66,7 @@ output/schematics/{output_folder}/
 Generated worlds:
 
 ```text
-output/worlds/{output_folder}/
+output/worlds/{output_folder}/v{version}/
 ```
 
 Example schematic outputs:

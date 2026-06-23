@@ -23,6 +23,7 @@ def run_stage_renders(
     renders: RenderList | str | None = None,
     *,
     structure_path: Path | None = None,
+    worldgen_version: str | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Load structure from disk and run the selected render handlers."""
@@ -35,9 +36,12 @@ def run_stage_renders(
     if structure_path is not None:
         from helpers.structure_loader import build_schematic_context, load_structure_yaml
 
-        ctx = build_schematic_context(load_structure_yaml(structure_path.resolve()))
+        ctx = build_schematic_context(
+            load_structure_yaml(structure_path.resolve()),
+            worldgen_version=worldgen_version,
+        )
     else:
-        ctx = utils.load_structure_config(structure, stage)
+        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
     ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
 
     if progress is None:
@@ -65,9 +69,18 @@ def run_stage_renders(
 
 
 def build_stage_complete_schematics(
-    structure: str, stage: int, renders: RenderList | str | None = None
+    structure: str,
+    stage: int,
+    renders: RenderList | str | None = None,
+    *,
+    worldgen_version: str | None = None,
 ) -> SchematicContext:
-    return run_stage_renders(structure, stage, renders)
+    return run_stage_renders(
+        structure,
+        stage,
+        renders,
+        worldgen_version=worldgen_version,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -80,6 +93,12 @@ def main(argv: list[str] | None = None) -> int:
         default=[constants.RENDER_ALL],
         help="Render types to generate, or 'all'",
     )
+    parser.add_argument(
+        "--worldgen-version",
+        default=None,
+        metavar="VERSION",
+        help="Minecraft version for the worldgen template (e.g. 26.1.2, 26.2)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -88,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
             structure=args.structure,
             stage=args.stage,
             renders=args.renders,
+            worldgen_version=args.worldgen_version,
         )
     except (FileNotFoundError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

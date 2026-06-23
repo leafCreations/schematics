@@ -234,16 +234,20 @@ def _paste_prepared_texture(img, tex: Image.Image, xy) -> None:
     img.paste(tex, xy, tex if tex.mode == "RGBA" else None)
 
 
-def _build_fence_texture_keys(parsed: ParsedToken, variant: str) -> list[str]:
+def _build_connection_texture_keys(parsed: ParsedToken, variant: str) -> list[str]:
     keys: list[str] = []
 
     if parsed.material:
-        keys.append(f"FENCE:{parsed.material}#{variant}")
-        keys.append(f"FENCE:{parsed.material}")
+        keys.append(f"{parsed.token}:{parsed.material}#{variant}")
+        keys.append(f"{parsed.token}:{parsed.material}")
 
-    keys.append(f"FENCE#{variant}")
+    keys.append(f"{parsed.token}#{variant}")
     keys.append(parsed.token)
     return keys
+
+
+def _build_fence_texture_keys(parsed: ParsedToken, variant: str) -> list[str]:
+    return _build_connection_texture_keys(parsed, variant)
 
 
 def resolve_cell_texture(
@@ -272,7 +276,7 @@ def resolve_cell_texture(
 
     if (
         view == "top"
-        and entry.get("behavior") == "fence"
+        and entry.get("behavior") in {"fence", "wall"}
         and layer_cells is not None
         and cell_x is not None
         and cell_z is not None

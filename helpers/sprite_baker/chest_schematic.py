@@ -4,17 +4,13 @@ from pathlib import Path
 
 from PIL import Image
 
-from helpers.paths import ASSET_FOLDER
+from helpers.paths import PROJECT_CUSTOM_FOLDER
 from helpers.sprite_baker.chest_atlas import BASE_FRONT, LATCH, LID_FRONT, PART_ATLAS_FILES
 from helpers.sprite_baker.template_fit import fit_template_to_cell
 
-CHEST_SINGLE_TEMPLATE_PATH = ASSET_FOLDER / "textures" / "block" / "custom" / "chest.png"
-CHEST_DOUBLE_LEFT_TEMPLATE_PATH = (
-    ASSET_FOLDER / "textures" / "block" / "custom" / "double_chest_left.png"
-)
-CHEST_DOUBLE_RIGHT_TEMPLATE_PATH = (
-    ASSET_FOLDER / "textures" / "block" / "custom" / "double_chest_right.png"
-)
+CHEST_SINGLE_TEMPLATE_PATH = PROJECT_CUSTOM_FOLDER / "chest.png"
+CHEST_DOUBLE_LEFT_TEMPLATE_PATH = PROJECT_CUSTOM_FOLDER / "double_chest_left.png"
+CHEST_DOUBLE_RIGHT_TEMPLATE_PATH = PROJECT_CUSTOM_FOLDER / "double_chest_right.png"
 
 _TOP_TEMPLATE_PATHS = {
     "single": CHEST_SINGLE_TEMPLATE_PATH,

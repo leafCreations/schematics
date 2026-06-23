@@ -13,7 +13,8 @@
     "display_name": "Acacia Fence Gate"
   },
   "minecraft:acacia_hanging_sign": {
-    "display_name": "Acacia Hanging Sign"
+    "display_name": "Acacia Hanging Sign",
+    "texture": "acacia_hanging_sign.png"
   },
   "minecraft:acacia_leaves": {
     "display_name": "Acacia Leaves",
@@ -39,7 +40,8 @@
     "texture": "acacia_shelf.png"
   },
   "minecraft:acacia_sign": {
-    "display_name": "Acacia Sign"
+    "display_name": "Acacia Sign",
+    "texture": "acacia_sign.png"
   },
   "minecraft:acacia_slab": {
     "display_name": "Acacia Slab"
@@ -143,7 +145,8 @@
     "texture": "bamboo_fence_gate.png"
   },
   "minecraft:bamboo_hanging_sign": {
-    "display_name": "Bamboo Hanging Sign"
+    "display_name": "Bamboo Hanging Sign",
+    "texture": "bamboo_hanging_sign.png"
   },
   "minecraft:bamboo_mosaic": {
     "display_name": "Bamboo Mosaic",
@@ -170,7 +173,8 @@
     "texture": "bamboo_shelf.png"
   },
   "minecraft:bamboo_sign": {
-    "display_name": "Bamboo Sign"
+    "display_name": "Bamboo Sign",
+    "texture": "bamboo_sign.png"
   },
   "minecraft:bamboo_slab": {
     "display_name": "Bamboo Slab"
@@ -243,7 +247,8 @@
     "display_name": "Birch Fence Gate"
   },
   "minecraft:birch_hanging_sign": {
-    "display_name": "Birch Hanging Sign"
+    "display_name": "Birch Hanging Sign",
+    "texture": "birch_hanging_sign.png"
   },
   "minecraft:birch_leaves": {
     "display_name": "Birch Leaves",
@@ -269,7 +274,8 @@
     "texture": "birch_shelf.png"
   },
   "minecraft:birch_sign": {
-    "display_name": "Birch Sign"
+    "display_name": "Birch Sign",
+    "texture": "birch_sign.png"
   },
   "minecraft:birch_slab": {
     "display_name": "Birch Slab"
@@ -615,7 +621,8 @@
     "display_name": "Cherry Fence Gate"
   },
   "minecraft:cherry_hanging_sign": {
-    "display_name": "Cherry Hanging Sign"
+    "display_name": "Cherry Hanging Sign",
+    "texture": "cherry_hanging_sign.png"
   },
   "minecraft:cherry_leaves": {
     "display_name": "Cherry Leaves",
@@ -641,7 +648,8 @@
     "texture": "cherry_shelf.png"
   },
   "minecraft:cherry_sign": {
-    "display_name": "Cherry Sign"
+    "display_name": "Cherry Sign",
+    "texture": "cherry_sign.png"
   },
   "minecraft:cherry_slab": {
     "display_name": "Cherry Slab"
@@ -672,6 +680,10 @@
   "minecraft:chiseled_bookshelf": {
     "display_name": "Chiseled Bookshelf",
     "texture": "chiseled_bookshelf_top.png"
+  },
+  "minecraft:chiseled_cinnabar": {
+    "display_name": "Chiseled Cinnabar",
+    "texture": "chiseled_cinnabar.png"
   },
   "minecraft:chiseled_copper": {
     "display_name": "Chiseled Copper",
@@ -709,6 +721,10 @@
     "display_name": "Chiseled Stone Bricks",
     "texture": "chiseled_stone_bricks.png"
   },
+  "minecraft:chiseled_sulfur": {
+    "display_name": "Chiseled Sulfur",
+    "texture": "chiseled_sulfur.png"
+  },
   "minecraft:chiseled_tuff": {
     "display_name": "Chiseled Tuff",
     "texture": "chiseled_tuff.png"
@@ -724,6 +740,32 @@
   "minecraft:chorus_plant": {
     "display_name": "Chorus Plant",
     "texture": "chorus_plant.png"
+  },
+  "minecraft:cinnabar": {
+    "display_name": "Cinnabar",
+    "texture": "cinnabar.png"
+  },
+  "minecraft:cinnabar_brick_slab": {
+    "display_name": "Cinnabar Brick Slab"
+  },
+  "minecraft:cinnabar_brick_stairs": {
+    "display_name": "Cinnabar Brick Stairs"
+  },
+  "minecraft:cinnabar_brick_wall": {
+    "display_name": "Cinnabar Brick Wall"
+  },
+  "minecraft:cinnabar_bricks": {
+    "display_name": "Cinnabar Bricks",
+    "texture": "cinnabar_bricks.png"
+  },
+  "minecraft:cinnabar_slab": {
+    "display_name": "Cinnabar Slab"
+  },
+  "minecraft:cinnabar_stairs": {
+    "display_name": "Cinnabar Stairs"
+  },
+  "minecraft:cinnabar_wall": {
+    "display_name": "Cinnabar Wall"
   },
   "minecraft:clay": {
     "display_name": "Clay",
@@ -902,7 +944,8 @@
     "texture": "crimson_fungus.png"
   },
   "minecraft:crimson_hanging_sign": {
-    "display_name": "Crimson Hanging Sign"
+    "display_name": "Crimson Hanging Sign",
+    "texture": "crimson_hanging_sign.png"
   },
   "minecraft:crimson_hyphae": {
     "display_name": "Crimson Hyphae"
@@ -927,7 +970,8 @@
     "texture": "crimson_shelf.png"
   },
   "minecraft:crimson_sign": {
-    "display_name": "Crimson Sign"
+    "display_name": "Crimson Sign",
+    "texture": "crimson_sign.png"
   },
   "minecraft:crimson_slab": {
     "display_name": "Crimson Slab"
@@ -1050,7 +1094,8 @@
     "display_name": "Dark Oak Fence Gate"
   },
   "minecraft:dark_oak_hanging_sign": {
-    "display_name": "Dark Oak Hanging Sign"
+    "display_name": "Dark Oak Hanging Sign",
+    "texture": "dark_oak_hanging_sign.png"
   },
   "minecraft:dark_oak_leaves": {
     "display_name": "Dark Oak Leaves",
@@ -1076,7 +1121,8 @@
     "texture": "dark_oak_shelf.png"
   },
   "minecraft:dark_oak_sign": {
-    "display_name": "Dark Oak Sign"
+    "display_name": "Dark Oak Sign",
+    "texture": "dark_oak_sign.png"
   },
   "minecraft:dark_oak_slab": {
     "display_name": "Dark Oak Slab"
@@ -1756,7 +1802,8 @@
     "display_name": "Jungle Fence Gate"
   },
   "minecraft:jungle_hanging_sign": {
-    "display_name": "Jungle Hanging Sign"
+    "display_name": "Jungle Hanging Sign",
+    "texture": "jungle_hanging_sign.png"
   },
   "minecraft:jungle_leaves": {
     "display_name": "Jungle Leaves",
@@ -1782,7 +1829,8 @@
     "texture": "jungle_shelf.png"
   },
   "minecraft:jungle_sign": {
-    "display_name": "Jungle Sign"
+    "display_name": "Jungle Sign",
+    "texture": "jungle_sign.png"
   },
   "minecraft:jungle_slab": {
     "display_name": "Jungle Slab"
@@ -2104,7 +2152,8 @@
     "display_name": "Mangrove Fence Gate"
   },
   "minecraft:mangrove_hanging_sign": {
-    "display_name": "Mangrove Hanging Sign"
+    "display_name": "Mangrove Hanging Sign",
+    "texture": "mangrove_hanging_sign.png"
   },
   "minecraft:mangrove_leaves": {
     "display_name": "Mangrove Leaves",
@@ -2134,7 +2183,8 @@
     "texture": "mangrove_shelf.png"
   },
   "minecraft:mangrove_sign": {
-    "display_name": "Mangrove Sign"
+    "display_name": "Mangrove Sign",
+    "texture": "mangrove_sign.png"
   },
   "minecraft:mangrove_slab": {
     "display_name": "Mangrove Slab"
@@ -2297,7 +2347,8 @@
     "display_name": "Oak Fence Gate"
   },
   "minecraft:oak_hanging_sign": {
-    "display_name": "Oak Hanging Sign"
+    "display_name": "Oak Hanging Sign",
+    "texture": "oak_hanging_sign.png"
   },
   "minecraft:oak_leaves": {
     "display_name": "Oak Leaves",
@@ -2323,7 +2374,8 @@
     "texture": "oak_shelf.png"
   },
   "minecraft:oak_sign": {
-    "display_name": "Oak Sign"
+    "display_name": "Oak Sign",
+    "texture": "oak_sign.png"
   },
   "minecraft:oak_slab": {
     "display_name": "Oak Slab"
@@ -2509,7 +2561,8 @@
     "display_name": "Pale Oak Fence Gate"
   },
   "minecraft:pale_oak_hanging_sign": {
-    "display_name": "Pale Oak Hanging Sign"
+    "display_name": "Pale Oak Hanging Sign",
+    "texture": "pale_oak_hanging_sign.png"
   },
   "minecraft:pale_oak_leaves": {
     "display_name": "Pale Oak Leaves",
@@ -2535,7 +2588,8 @@
     "texture": "pale_oak_shelf.png"
   },
   "minecraft:pale_oak_sign": {
-    "display_name": "Pale Oak Sign"
+    "display_name": "Pale Oak Sign",
+    "texture": "pale_oak_sign.png"
   },
   "minecraft:pale_oak_slab": {
     "display_name": "Pale Oak Slab"
@@ -2705,6 +2759,19 @@
   "minecraft:polished_blackstone_wall": {
     "display_name": "Polished Blackstone Wall"
   },
+  "minecraft:polished_cinnabar": {
+    "display_name": "Polished Cinnabar",
+    "texture": "polished_cinnabar.png"
+  },
+  "minecraft:polished_cinnabar_slab": {
+    "display_name": "Polished Cinnabar Slab"
+  },
+  "minecraft:polished_cinnabar_stairs": {
+    "display_name": "Polished Cinnabar Stairs"
+  },
+  "minecraft:polished_cinnabar_wall": {
+    "display_name": "Polished Cinnabar Wall"
+  },
   "minecraft:polished_deepslate": {
     "display_name": "Polished Deepslate",
     "texture": "polished_deepslate.png"
@@ -2738,6 +2805,19 @@
   "minecraft:polished_granite_stairs": {
     "display_name": "Polished Granite Stairs"
   },
+  "minecraft:polished_sulfur": {
+    "display_name": "Polished Sulfur",
+    "texture": "polished_sulfur.png"
+  },
+  "minecraft:polished_sulfur_slab": {
+    "display_name": "Polished Sulfur Slab"
+  },
+  "minecraft:polished_sulfur_stairs": {
+    "display_name": "Polished Sulfur Stairs"
+  },
+  "minecraft:polished_sulfur_wall": {
+    "display_name": "Polished Sulfur Wall"
+  },
   "minecraft:polished_tuff": {
     "display_name": "Polished Tuff",
     "texture": "polished_tuff.png"
@@ -2757,6 +2837,10 @@
   },
   "minecraft:potatoes": {
     "display_name": "Potatoes"
+  },
+  "minecraft:potent_sulfur": {
+    "display_name": "Potent Sulfur",
+    "texture": "potent_sulfur.png"
   },
   "minecraft:potted_acacia_sapling": {
     "display_name": "Potted Acacia Sapling"
@@ -2973,7 +3057,7 @@
   },
   "minecraft:purpur_pillar": {
     "display_name": "Purpur Pillar",
-    "texture": "purpur_pillar.png"
+    "texture": "purpur_pillar_top.png"
   },
   "minecraft:purpur_slab": {
     "display_name": "Purpur Slab"
@@ -2991,7 +3075,7 @@
   },
   "minecraft:quartz_pillar": {
     "display_name": "Quartz Pillar",
-    "texture": "quartz_pillar.png"
+    "texture": "quartz_pillar_top.png"
   },
   "minecraft:quartz_slab": {
     "display_name": "Quartz Slab"
@@ -3368,7 +3452,8 @@
     "display_name": "Spruce Fence Gate"
   },
   "minecraft:spruce_hanging_sign": {
-    "display_name": "Spruce Hanging Sign"
+    "display_name": "Spruce Hanging Sign",
+    "texture": "spruce_hanging_sign.png"
   },
   "minecraft:spruce_leaves": {
     "display_name": "Spruce Leaves",
@@ -3394,7 +3479,8 @@
     "texture": "spruce_shelf.png"
   },
   "minecraft:spruce_sign": {
-    "display_name": "Spruce Sign"
+    "display_name": "Spruce Sign",
+    "texture": "spruce_sign.png"
   },
   "minecraft:spruce_slab": {
     "display_name": "Spruce Slab"
@@ -3542,6 +3628,35 @@
   "minecraft:sugar_cane": {
     "display_name": "Sugar Cane",
     "texture": "sugar_cane.png"
+  },
+  "minecraft:sulfur": {
+    "display_name": "Sulfur",
+    "texture": "sulfur.png"
+  },
+  "minecraft:sulfur_brick_slab": {
+    "display_name": "Sulfur Brick Slab"
+  },
+  "minecraft:sulfur_brick_stairs": {
+    "display_name": "Sulfur Brick Stairs"
+  },
+  "minecraft:sulfur_brick_wall": {
+    "display_name": "Sulfur Brick Wall"
+  },
+  "minecraft:sulfur_bricks": {
+    "display_name": "Sulfur Bricks",
+    "texture": "sulfur_bricks.png"
+  },
+  "minecraft:sulfur_slab": {
+    "display_name": "Sulfur Slab"
+  },
+  "minecraft:sulfur_spike": {
+    "display_name": "Sulfur Spike"
+  },
+  "minecraft:sulfur_stairs": {
+    "display_name": "Sulfur Stairs"
+  },
+  "minecraft:sulfur_wall": {
+    "display_name": "Sulfur Wall"
   },
   "minecraft:sunflower": {
     "display_name": "Sunflower",
@@ -3705,7 +3820,8 @@
     "texture": "warped_fungus.png"
   },
   "minecraft:warped_hanging_sign": {
-    "display_name": "Warped Hanging Sign"
+    "display_name": "Warped Hanging Sign",
+    "texture": "warped_hanging_sign.png"
   },
   "minecraft:warped_hyphae": {
     "display_name": "Warped Hyphae"
@@ -3730,7 +3846,8 @@
     "texture": "warped_shelf.png"
   },
   "minecraft:warped_sign": {
-    "display_name": "Warped Sign"
+    "display_name": "Warped Sign",
+    "texture": "warped_sign.png"
   },
   "minecraft:warped_slab": {
     "display_name": "Warped Slab"

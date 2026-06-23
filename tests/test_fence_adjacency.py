@@ -36,3 +36,13 @@ def test_resolve_fence_connections():
     assert resolve_fence_connections(cells, 1, 1) == frozenset({"north", "east", "south", "west"})
     assert resolve_fence_connections(cells, 0, 1) == frozenset({"east"})
     assert resolve_fence_connections(cells, 1, 0) == frozenset({"south"})
+
+
+def test_resolve_fence_connections_includes_walls():
+    cells = [
+        ["WALL:cobblestone", "FENCE:oak"],
+        ["FENCE:oak", "WALL:cobblestone"],
+    ]
+
+    assert resolve_fence_connections(cells, 0, 0) == frozenset({"east", "south"})
+    assert resolve_fence_connections(cells, 1, 1) == frozenset({"north", "west"})
