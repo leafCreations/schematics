@@ -3,7 +3,7 @@ name: agent-triage
 description: >-
   Routes agent work in structure_scripts to reduce token use and rework. Use at
   the start of any task, when choosing tools (grep vs explore vs Task), picking
-  tests, fixing pre-commit failures, editing UI/docs/registry/helpers, or when
+  tests, fixing pre-commit failures, failure-pattern lookup on signals (§1b), editing UI/docs/registry/helpers, or when
   the user asks to limit tokens, avoid churn, or work efficiently in this repo.
 ---
 
@@ -13,11 +13,13 @@ description: >-
 
 Decide **how** to work before reading files or running commands. Follow this skill first; drill into `.cursor/rules/` and other skills only when the table below says so.
 
-**Every turn ends with** [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §7 handoff (`.cursor/rules/agent-self-evaluation.mdc`, alwaysApply).
+**Every turn ends with** [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §7 handoff — **`### Files used`** (load order) then **`### Self-evaluation`** (`.cursor/rules/agent-self-evaluation.mdc`, alwaysApply).
+
+**During the turn:** track paths and skills/rules loaded in order; use for context-load audit (correct files, no excess, classify-before-read, [AGENTS.md](../../AGENTS.md) freshness).
 
 **Version / Minecraft facts:** read [project-context](../project-context/SKILL.md) before web search or assuming 1.x vs 26.x.
 
-**Planned work:** read [kanban-markdown](../kanban-markdown/SKILL.md) — **To Do** only; **ignore Backlog**; card types: **feature** (default), **bug** (`labels` includes `bug`), **inquiry** (`labels` includes `inquiry`); pre-implementation card review before feature/bug code; inquiry cards get **`## Response`** only (research, no code by default); resolve **`## Feature Areas`** → **`## Label Paths`** via `docs/feature-areas.yaml` when areas are set; agent writes **`## Decisions`** (feature) or **`## Corrective Action`** + **`## Root Cause (current code)`** (bug) before `in-progress`; **MUST** update `docs/feature-areas.yaml` after every **implementation**; **MUST** review and update **`docs/`** per [docs-maintenance](../docs-maintenance/SKILL.md) (no exceptions); **MUST** mark **`## Acceptance Criteria` `[x]`** before feature/bug `in-progress` → `review`; do **not** use `docs/roadmap.md`.
+**Planned work:** read [kanban-markdown](../kanban-markdown/SKILL.md) — **To Do** only; **ignore Backlog**; card types: **feature** (default), **bug** (`labels` includes `bug`), **inquiry** (`labels` includes `inquiry`), **commit-issue** (`labels` includes `commit-issue` — auto-captured failed commits); pre-implementation card review before feature/bug/commit-issue code; inquiry cards get **`## Response`** only (research, no code by default); resolve **`## Feature Areas`** → **`## Label Paths`** via `docs/feature-areas.yaml` when areas are set; agent writes **`## Decisions`** (feature) or **`## Corrective Action`** + **`## Root Cause (current code)`** (bug, commit-issue) before `in-progress`; **MUST** update `docs/feature-areas.yaml` after every **implementation**; **MUST** review and update **`docs/`** per [docs-maintenance](../docs-maintenance/SKILL.md) (no exceptions); **MUST** mark **`## Acceptance Criteria` `[x]`** before feature/bug `in-progress` → `review`; do **not** use `docs/roadmap.md`.
 
 ## 1. Classify the request
 
@@ -26,14 +28,42 @@ Decide **how** to work before reading files or running commands. Follow this ski
 | Explain, review, audit, "is this correct?" | **Read-only** | No edits. Grep/Read only. |
 | Fix one error, rename, small doc fix; bug found, fix bug, bug reported; failing test, ruff/lint, typo, quick fix | **Surgical** | Grep → Read 1–3 files → minimal edit |
 | Feature, multi-file, refactor | **Implementation** | Read [repo-map](../repo-map/SKILL.md) + [reference.md](reference.md) area map → targeted reads → [docs-maintenance](../docs-maintenance/SKILL.md) before Review |
-| Planned work / implement from card; "kanban", card path or title | **Review first** — [kanban-markdown](../kanban-markdown/SKILL.md): feature/bug → implement; **inquiry** → **`## Response`** only. **Default work queue** when not in Ask mode — see [AGENTS.md](../../AGENTS.md) |
-| Commit / pre-commit failed | **Unblock** | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) → fix reported hook |
+| Planned work / implement from card; "kanban", card path or title | **Review first** — [kanban-markdown](../kanban-markdown/SKILL.md): feature/bug → implement; **inquiry** → **`## Response`**; spawn **todo** feature cards + `epic` when user approves recommendations |
+| Commit / pre-commit failed | **Unblock** or **Review** | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) + [reference.md](../pre-commit-workflow/reference.md) § Failure patterns; `commit-issue` card → [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc) when user asks |
 | "Run tests" / verify | **Verify** | [targeted-testing](../targeted-testing/SKILL.md) — smallest test set |
 | User will commit / "commit-ready" | **Verify** | `scripts/pre-commit-pytest.sh` on staged files → green → optional `record-pytest-pass.sh` (also required before kanban **Review**) |
 
 If the user is in **Ask mode**, stop at read-only even when they say "fix".
 
 **Surgical vs kanban:** Ad-hoc bugs and one-file fixes are **Surgical** — no card review, no column moves. Use the kanban row only when the user assigns a **To Do** card (path, id, title) or asks to implement planned board work.
+
+### 1b. Failure-pattern lookup (on signals only)
+
+**Not every turn** — skip on read-only, greenfield implementation, and questions with no failure symptom.
+
+After §1 maps to a **failure** signal (pre-commit/hook, pytest, UI wiring, worldgen, agent handoff/process), grep durable patterns **before** broad exploration:
+
+1. Pick table(s) from [reference.md](reference.md) § Failure pattern routing (area → `reference.md`).
+2. `Grep` the error snippet, hook name, test path, log line, or known **Signature** (phase-1 schema: [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §6f).
+3. **Match** → apply **Fix pattern** from the row, then open the owning skill/rule for procedure detail.
+4. **No match** → continue §2 discovery; if the same failure recurs in-session, flag as churn candidate for [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6.
+
+**Example — pre-commit pytest failed, no `commit-issue` card:**
+
+```text
+Classify → Commit / pre-commit failed
+Grep pre-commit-workflow/reference.md + agent-self-evaluation/reference.md
+  e.g. rg "commit-issue|precommit-stash|FAILED tests/" .cursor/skills/pre-commit-workflow/reference.md
+Match precommit-stash-old-hooks → stage all scripts/pre-commit-*.sh + on_pre_commit_failure.sh
+Then pre-commit-workflow/SKILL.md hook order
+```
+
+**Example — dialog OK but layer not saved:**
+
+```text
+Grep agent-self-evaluation/reference.md for _persist_dialog_changes or ui-dialog-no-persist
+Match → ui-change checklist + ui-dialogs.mdc
+```
 
 ## 2. Choose discovery tools (token budget)
 
@@ -118,6 +148,7 @@ Save targets: layers → layer files; site settings → manifest + `stage.yaml`.
 
 ```
 - [ ] Request classified (read-only vs surgical vs implementation)
+- [ ] On failure signals: §1b pattern grep before broad explore (skip when no failure symptom)
 - [ ] Discovery used grep/targeted read, not unnecessary explore
 - [ ] Only relevant rules/docs opened
 - [ ] Tests named before run; full suite only if justified

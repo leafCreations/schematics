@@ -17,7 +17,7 @@ alwaysApply: true
 ## Turn lifecycle
 
 ```text
-START → agent-triage/SKILL.md (classify + tools)
+START → agent-triage/SKILL.md (classify; §1b failure-pattern grep on signals only)
 WORK  → card Label Paths OR surgical grep → minimal edit
 VERIFY → targeted pytest; pre-commit-pytest.sh before Review/commit
 END   → agent-self-evaluation/SKILL.md + handoff block
@@ -30,7 +30,8 @@ END   → agent-self-evaluation/SKILL.md + handoff block
 | Label | Rule | Agent plan section |
 | ----- | ---- | ------------------ |
 | `bug` | [kanban-bug-cards.mdc](kanban-bug-cards.mdc) | **Corrective Action** (not Decisions) |
-| `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response** only — no code by default |
+| `commit-issue` | [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) | **Review** → Root Cause + Corrective Action; implement only after user approval |
+| `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response**; spawn **todo** + `epic` when user approves recommendations |
 | *(feature)* | — | **Decisions** |
 
 Resolve **Feature Areas** → **Label Paths** via `docs/feature-areas.yaml` before `in-progress`.
@@ -48,10 +49,14 @@ Resolve **Feature Areas** → **Label Paths** via `docs/feature-areas.yaml` befo
 
 ## Discovery budget
 
+- **Failure signals** (hook, pytest, UI wiring, handoff) → [agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) §1b grep before broad reads
 - **Grep** before opening `ui/main_window.py` or other large files
 - After **3** full file reads → prefer grep or semantic search
 - Ad-hoc one-file fixes → **surgical** (no kanban) unless user assigns a card
 
-## Handoff (last section — every response)
+## Handoff (last sections — every response)
 
-Include `Skills updated:` and `Rules updated:` — both required on implementation turns. See [agent-self-evaluation.mdc](agent-self-evaluation.mdc).
+1. **`### Files used`** — load order; role tags — see [agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §7
+2. **`### Self-evaluation`** — include **Context load** and **AGENTS.md** freshness; `Skills updated:` and `Rules updated:` on implementation turns. See [agent-self-evaluation.mdc](agent-self-evaluation.mdc).
+
+**[AGENTS.md](../../AGENTS.md):** evaluate for staleness every turn; update when routing, card types, or handoff format changes.

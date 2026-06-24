@@ -1,5 +1,5 @@
 ---
-description: Kanban inquiry cards — research-only Response workflow
+description: Kanban inquiry cards — research Response, spawn feature cards from recommendations
 globs: .devtool/features/**/*.md
 alwaysApply: false
 ---
@@ -15,8 +15,19 @@ When a feature file has frontmatter `labels` including **`inquiry`** (case-insen
 
 ## Agent provides
 
-- `## Response` — answer the question; include content usable to create follow-up feature/bug cards later
-- `## Label Paths` — when user provided **Feature Areas**, resolve via `docs/feature-areas.yaml`
+- `## Response` — answer the question; include **Suggested follow-up cards** when applicable
+- `## Label Paths` — when user provided **Feature Areas**, or when inferred during research
+
+## Spawn feature cards (mandatory when user asks)
+
+When the user requests implementation of inquiry recommendations, spawn **todo** feature (or bug) cards per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § **Spawn feature cards from inquiry**:
+
+- `status: "todo"`, `labels: []` (feature) or `["bug"]`
+- `epic: "{EpicName}"` — PascalCase theme (e.g. `DesignFailureMemorySystem`)
+- Body sections: **Acceptance Criteria**, **Out of Scope**, **Feature Areas**, **Label Paths**, **Decisions**, **Context**
+- Parent inquiry: **`## Spawned feature cards`** table + matching `epic`
+
+Do **not** start implementation on spawned cards until user assigns work (pre-implementation review still applies).
 
 ## Workflow
 
@@ -24,13 +35,15 @@ When a feature file has frontmatter `labels` including **`inquiry`** (case-insen
 2. Resolve **Feature Areas** → **Label Paths** when areas are set
 3. `todo` → `in-progress` → research (read-only)
 4. Write **Response** on the card → `review`
-5. User may spawn new cards from **Suggested follow-up cards** in Response
+5. User asks to spawn → create **todo** child cards with `epic` + review-ready sections
+6. User moves inquiry → `done` when satisfied
 
 ## Do not
 
-- Use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on inquiry cards
-- Implement code unless the user explicitly asks on the same card
-- Require pytest before **Review** (no code changes by default)
+- Use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on the **inquiry** card itself
+- Implement application code on the inquiry card unless user explicitly asks
+- Spawn cards in **Backlog** — always **todo**
+- Skip **Decisions** / **Label Paths** on spawned **feature** cards
 
 ## Full workflow
 

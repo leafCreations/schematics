@@ -45,7 +45,22 @@ Also enforced in `.cursor/rules/agent-self-evaluation.mdc` (`alwaysApply: true`)
 - [ ] Did not run full pytest without justification
 ```
 
+**Track context load during the turn** — maintain a mental (or scratch) **ordered list** of every path read, edited, grepped-as-primary-source, or skill/rule loaded for decisions. You will output it in §7 **Files used**.
+
 **Fail →** run missing step if cheap; capture gap in §6 skill & rule feedback.
+
+## 2b. Context load audit (feeds §7)
+
+Before handoff, score the turn against these four checks:
+
+| # | Check | Pass if |
+| - | ----- | ------- |
+| 1 | **Correct files loaded** | Every path read/edited was needed for the task; skills/rules match the area ([AGENTS.md](../../AGENTS.md) area table or triage §1) |
+| 2 | **No excess load** | No whole-file reads that grep would replace; no explore/Task for a single needle; stayed within triage read budget (≤3 full reads before grep/search) unless justified |
+| 3 | **Proper order** | **Classify before deep read** — [AGENTS.md](../../AGENTS.md) or [agent-triage](../agent-triage/SKILL.md) → area skill/rule → grep → targeted reads → edits → tests |
+| 4 | **[AGENTS.md](../../AGENTS.md) not stale** | Routing guide still matches what you used: card types, area→skill table, turn lifecycle, handoff format. If this turn added a workflow (new label, skill, gate, script), **update AGENTS.md** in the same turn or flag **stale** in handoff |
+
+**Fail any check →** note in **Context load** line; fix AGENTS.md or add a skill/rule row in §6 when durable.
 
 ## 3. Correctness check
 
@@ -123,19 +138,24 @@ Do **not** paste the same bullet into skill and rule — pair a workflow tip (sk
 | Which tests to run, catalog counts, Qt sandbox | [targeted-testing](../targeted-testing/SKILL.md) | [testing.mdc](../../rules/testing.mdc) if hook-level |
 | Ruff / palette / pytest hook order | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) | — |
 | Panel/dialog/grid wiring | [ui-change](../ui-change/SKILL.md) | [ui-dialogs.mdc](../../rules/ui-dialogs.mdc), [ui-panels.mdc](../../rules/ui-panels.mdc), etc. |
-| Cross-cutting failure pattern | [reference.md](reference.md) § Common failure patterns | Owning area `.mdc` if editing that path should always trigger check |
+| Cross-cutting failure pattern | [reference.md](reference.md) § Common failure patterns (§6f row) | Owning area `.mdc` — cite **Signature** only; no duplicate fix prose |
 | Self-eval not run / skipped | This skill | [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) |
+| Missing Files used / Context load in handoff | This skill §7 | [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) |
+| [AGENTS.md](../../AGENTS.md) routing drift | [agent-triage](../agent-triage/SKILL.md) | [agent-routing.mdc](../../rules/agent-routing.mdc); update AGENTS.md |
+| Edit `agent-*` / `kanban-*` skills | Read AGENTS.md § Maintaining before handoff | — | [agent-agents-md-maintenance.mdc](../../rules/agent-agents-md-maintenance.mdc) |
 
 Prefer **`reference.md`** for examples, path→test rows, and failure-pattern tables.  
 Prefer **`SKILL.md`** for procedures; prefer **`.mdc`** when the learning is a hard constraint on future edits in a file glob.
 
 ### 6c. What to add
 
+**Recurring failures:** add a row to [reference.md](reference.md) § Common failure patterns per **§6f** — do not duplicate **Fix pattern** prose in this skill or in rules.
+
 Good additions (durable, generalizable):
 
 - "When X fails, check Y first"
 - Path → test row missing from pre-commit map
-- Wrong mental model ("not `stage1/structure.yaml`, use `stage.yaml`")
+- New cross-cutting failure row (grep **Signature** first — §6f)
 - Sandbox/permission note for a test class
 - Hook-specific fix order
 - New kanban label type → scoped rule or row in existing kanban rule
@@ -143,7 +163,7 @@ Good additions (durable, generalizable):
 Bad additions (skip):
 
 - Restating code that changes every week
-- Long prose or duplicate of an existing row
+- Long prose or duplicate of an existing reference row
 - Task-specific variable names with no reuse
 - Entire conversation summaries
 - Same bullet in both a skill and a rule
@@ -165,15 +185,56 @@ Bad additions (skip):
 | User forbids skill/rule changes | `none (user requested)` | `none (user requested)` |
 | Learning uncertain | Rare on implementation — prefer a small rule reminder over skipping | Same |
 
+### 6f. Failure pattern row schema
+
+Canonical table: [reference.md](reference.md) § Common failure patterns. One row per cross-cutting mistake that recurs across areas.
+
+| Column | Content |
+| ------ | ------- |
+| **Signature** | Stable lowercase kebab-case grep key; optional area prefix (e.g. `palette-hardcoded-count`, `yaml-stage1-structure-yaml`) |
+| **Trigger snippet** | Short grep-friendly symptom (path, log line, handoff field) |
+| **Fix pattern** | One-line what to do instead — **only** here and in the owning skill workflow, not copied into `.mdc` |
+| **Skill** | Owning skill slug for procedure detail |
+| **Rule** | Owning `.mdc` if a path-scoped constraint applies; `—` if skill-only |
+
+**Lookup:** `Grep` **Signature** or **Trigger snippet** per [agent-triage/SKILL.md](../agent-triage/SKILL.md) §1b and [reference.md](../agent-triage/reference.md) § Failure pattern routing (on failure signals only). Churn review: self-eval §6 when no row matches but failure recurs.
+
 **Do not skip the handoff block or the §6 questions** — only skip file writes on read-only turns or explicit user opt-out.
 
 ## 7. Handoff format (required every turn)
 
-**Last section of every response.** Compact; do not repeat the full diff.
+**Last sections of every response** — in this order:
+
+1. **`### Files used`** — ordered list of paths/skills loaded or edited (see below)
+2. **`### Self-evaluation`** — compact checklist; do not repeat the full diff
+
+### Files used (required)
+
+List **in load order** (discovery → implementation → verify). One line per entry; tag the role.
+
+```markdown
+### Files used
+1. `AGENTS.md` — routing / classify
+2. `.cursor/skills/agent-triage/SKILL.md` — mode selection
+3. `ui/document.py` (grep) — locate dirty-flag helper
+4. `ui/document.py` (read) — implement fix
+5. `tests/test_ui_document.py` — verify
+```
+
+| Include | Omit |
+| ------- | ---- |
+| Skills/rules read for decisions | Every grep hit path — only paths where content drove the turn |
+| Files read, edited, or created | Terminal/log paths unless user needs them |
+| Primary test files run | Duplicate listing of unchanged siblings |
+
+Use `(grep)`, `(read)`, `(edit)`, `(write)` tags when the same path appears more than once.
+
+### Self-evaluation block
 
 ```markdown
 ### Self-evaluation
 - **Scope:** <on-target | read-only | note drift>
+- **Context load:** <ok | note: excess/wrong order/missing triage> — AGENTS.md <current | updated | stale: …>
 - **Tests:** <paths run + result | n/a + why>
 - **Docs:** <paths updated | n/a + why>
 - **Skills used:** <e.g. ui-change, targeted-testing | none>
@@ -185,8 +246,13 @@ Bad additions (skip):
 Read-only example:
 
 ```markdown
+### Files used
+1. `AGENTS.md` — routing entry
+2. `registries/loader.py` (read) — explain palette load
+
 ### Self-evaluation
 - **Scope:** read-only — explained registry layout
+- **Context load:** ok — classify then single read; AGENTS.md current
 - **Tests:** n/a (no code changes)
 - **Docs:** n/a (read-only, no edits)
 - **Skills used:** repo-map

@@ -531,3 +531,17 @@ areas:
       - scripts/resolve_feature_areas.py
     docs:
       - .cursor/skills/kanban-markdown/SKILL.md
+
+  Agent Workflow:
+    summary: Cursor agent routing, skills, rules, kanban process, failure memory
+    paths:
+      - AGENTS.md
+      - .cursor/skills/agent-triage/
+      - .cursor/skills/agent-self-evaluation/
+      - .cursor/skills/kanban-markdown/
+      - .cursor/skills/pre-commit-workflow/
+      - .cursor/rules/agent-routing.mdc
+      - .cursor/rules/agent-self-evaluation.mdc
+      - .cursor/rules/kanban-inquiry-cards.mdc
+    docs:
+      - docs/development.md

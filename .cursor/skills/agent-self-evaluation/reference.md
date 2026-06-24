@@ -5,11 +5,13 @@
 ```text
 START → agent-triage (classify, pick tools, pick skills/rules)
 WORK  → minimal edits + targeted tests
-END   → agent-self-evaluation
+END   → agent-self-evaluation/SKILL.md
+          ├─ ### Files used (load order)
+          ├─ context load audit (4 checks incl. AGENTS.md)
           ├─ checks (scope, process, correctness, verification)
           ├─ churn review
           ├─ update skill(s) and/or rule(s) if durable learning  ← required when applicable
-          └─ compact handoff to user
+          └─ ### Self-evaluation handoff
 ```
 
 The feedback loop is the **main deliverable** of self-evaluation. **Implementation turns** must leave **both** a skill and a rule smarter; checklist-only handoffs waste the next session's tokens.
@@ -76,8 +78,15 @@ Copying the full kanban lifecycle into a rule when kanban-markdown/SKILL.md alre
 ### Implementation handoff (both required)
 
 ```markdown
+### Files used
+1. `AGENTS.md` — routing entry
+2. `.cursor/skills/ui-change/SKILL.md` — checklist
+3. `ui/document.py` (edit) — dirty-flag fix
+4. `tests/test_ui_document.py` — verify
+
 ### Self-evaluation
 - **Scope:** on-target — preview dirty-flag fix
+- **Context load:** ok — triage then targeted edit; AGENTS.md current
 - **Tests:** `tests/test_ui_document.py` — 3 passed
 - **Docs:** `docs/ui.md` — undo section
 - **Skills used:** ui-change, targeted-testing
@@ -119,7 +128,7 @@ Copying the full kanban lifecycle into a rule when kanban-markdown/SKILL.md alre
 - **Scope:** on-target but 12 files touched for palette count fix
 - **Tests:** `tests/test_palette_panel.py` — passed (after unnecessary full suite)
 - **Skills used:** agent-triage (late)
-- **Skills updated:** agent-triage/reference — row: hard-coded terrain counts → use tests/palette_helpers.py
+- **Skills updated:** agent-triage/reference — row: signature `palette-hardcoded-count` → tests/palette_helpers.py
 - **Rules updated:** none (skill reference was sufficient)
 - **Commit-ready:** needs pre-commit
 ```
@@ -129,7 +138,7 @@ Copying the full kanban lifecycle into a rule when kanban-markdown/SKILL.md alre
 | Triage step | Self-eval question | Skill to update if gap found | Rule to update if gap found |
 | ----------- | ------------------ | ---------------------------- | --------------------------- |
 | §1 Classify | Did mode match actual work? | agent-triage | — |
-| §2 Discovery | Too many reads/explores? | agent-triage | agent-self-evaluation.mdc if handoff skipped |
+| §2 Discovery | Too many reads/explores? Files used listed? | agent-triage | agent-self-evaluation.mdc if handoff skipped |
 | §3 Area rules | Skipped ui-change or worldgen rule? | ui-change | `.cursor/rules/ui-*.mdc`, worldgen.mdc |
 | §4 Testing | Claimed pass without run? | targeted-testing | testing.mdc |
 | §5 Pre-commit | Hook order followed on failure? | pre-commit-workflow | — |
@@ -139,18 +148,25 @@ Copying the full kanban lifecycle into a rule when kanban-markdown/SKILL.md alre
 
 ## Common failure patterns in this repo
 
-| Pattern | Prevention | Skill | Rule (if constraint) |
-| ------- | ---------- | ----- | -------------------- |
-| `stage1/structure.yaml` in docs/code | Use manifest + `stage.yaml` | repo-map | — |
-| `assert count == 32` in palette tests | `tests/palette_helpers.py` | targeted-testing | — |
-| Dialog OK without `_persist_dialog_changes` | ui-change checklist | ui-change | ui-dialogs.mdc |
-| Self-eval skipped / missing handoff block | Required every turn | agent-self-evaluation | agent-self-evaluation.mdc |
-| Self-eval missing `Rules updated:` line | Handoff template | agent-self-evaluation | agent-self-evaluation.mdc |
-| Agent skipped kanban / read roadmap for queue | Use [AGENTS.md](../../AGENTS.md) + agent-routing.mdc | agent-triage | agent-routing.mdc |
-| Implementation handoff with `Skills updated: none` or `Rules updated: none` | §6 requires both on implementation turns | agent-self-evaluation | agent-self-evaluation.mdc |
-| Shipped feature without `docs/` sync | docs-maintenance before Review | docs-maintenance | — |
+Canonical cross-cutting table. Row schema: [SKILL.md](SKILL.md) §6f. Pre-commit hook patterns: [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns. Retrieval at task start: [agent-triage/SKILL.md](../agent-triage/SKILL.md) §1b.
 
-Add rows here **and** to the owning skill or rule when a new pattern appears twice.
+| Signature | Trigger snippet | Fix pattern | Skill | Rule |
+| --------- | --------------- | ----------- | ----- | ---- |
+| `yaml-stage1-structure-yaml` | `stage1/structure.yaml` | Use manifest + `stage.yaml` | repo-map | — |
+| `palette-hardcoded-count` | `assert count == 32` | Use `tests/palette_helpers.py` | targeted-testing | — |
+| `ui-dialog-no-persist` | dialog OK without `_persist_dialog_changes` | ui-change checklist on accept | ui-change | ui-dialogs.mdc |
+| `self-eval-skipped` | missing `### Self-evaluation` | Required every turn — §7 handoff | agent-self-evaluation | agent-self-evaluation.mdc |
+| `self-eval-missing-rules-updated` | handoff missing `Rules updated:` | Handoff template §7 | agent-self-evaluation | agent-self-evaluation.mdc |
+| `kanban-roadmap-queue` | `docs/roadmap.md` as task queue | Use [AGENTS.md](../../AGENTS.md) + agent-routing.mdc | agent-triage | agent-routing.mdc |
+| `handoff-missing-files-context` | missing `### Files used` or **Context load** | §7 two-section end | agent-self-evaluation | agent-self-evaluation.mdc |
+| `agents-md-stale` | workflow change without AGENTS.md update | §2b check 4 — update routing guide | agent-triage | agent-routing.mdc |
+| `agent-skill-edit-no-agents-read` | edit under `.cursor/skills/agent-*/` or `kanban-*/` | Read AGENTS.md § Maintaining same turn | agent-self-evaluation | agent-agents-md-maintenance.mdc |
+| `implementation-handoff-none-updates` | `Skills updated: none` or `Rules updated: none` on implementation | §6 requires both on implementation turns | agent-self-evaluation | agent-self-evaluation.mdc |
+| `docs-not-synced-on-ship` | feature shipped without `docs/` sync | docs-maintenance before Review | docs-maintenance | — |
+
+**Signature** = lowercase kebab-case grep key (optional area prefix). Rules cite **Signature** + this row — do not duplicate **Fix pattern** prose in `.mdc` files.
+
+Add a row here when a pattern appears twice; link owning skill/rule by name only (workflow detail stays in those artifacts).
 
 ## Read-only / Ask mode
 

@@ -2,6 +2,8 @@
 
 Mirrors `scripts/pre-commit-pytest.sh`. When in doubt, grep that script for the path you changed.
 
+**Hook/pytest failure patterns** (stash, scope mismatch, no card): [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns — signatures `precommit-*`. Path→test map below.
+
 ## Full-suite triggers (always)
 
 These staged paths force **entire suite**:
@@ -82,7 +84,7 @@ Agents often run a narrow test set during development, then commit fails because
 | Palette YAML moved blocks between tabs | `test_palette_integrity`, `test_block_picker`, `test_sprite_baker_simple`, `test_registry_phase_b` |
 | `helpers/terrain_tokens.py` | `test_terrain_tokens`, `test_sprite_baker_simple` |
 | `structures/**` layer cells changed | `test_worldgen_functional_blocks`, `test_structure_loader` |
-| Fixed one failing test | Re-run `scripts/pre-commit-pytest.sh` — same scope as hook |
+| Fixed one failing test | Re-run `scripts/pre-commit-pytest.sh` — see `precommit-pytest-scope-mismatch` in [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) |
 
 ## structures/ and scripts/
 

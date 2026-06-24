@@ -21,7 +21,14 @@ if ((${#STAGED_PY[@]} == 0)); then
   exit 0
 fi
 
-"$RUFF" check --fix "${STAGED_PY[@]}"
-"$RUFF" format "${STAGED_PY[@]}"
+LOG="$(mktemp)"
+trap 'rm -f "$LOG"' EXIT
+if ! {
+  "$RUFF" check --fix "${STAGED_PY[@]}" && "$RUFF" format "${STAGED_PY[@]}"
+} >"$LOG" 2>&1; then
+  cat "$LOG"
+  "$ROOT/scripts/on_pre_commit_failure.sh" ruff "$LOG" || true
+  exit 1
+fi
 
 git add -- "${STAGED_PY[@]}"

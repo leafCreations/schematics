@@ -61,6 +61,8 @@ pre-commit install
 2. **`validate_palettes()`** — registry/palette integrity
 3. **Targeted pytest** — `scripts/pre-commit-pytest.sh` maps staged paths to related tests (see the `case` branches in that script). Unmapped or core changes (e.g. `registries/loader.py`, `conftest.py`) run the **full** suite.
 
+When any hook fails, a **`commit-issue`** kanban card may be written under `.devtool/features/` (label `commit-issue`) with hook output and failed test files. Disable with `SKIP_COMMIT_ISSUE_CARD=1`. Cards are local (`.devtool/` is gitignored). Durable hook patterns: `.cursor/skills/pre-commit-workflow/reference.md` § Failure patterns.
+
 **Full test suite** (before a PR or after a large refactor):
 
 ```bash

@@ -17,7 +17,7 @@ Hooks run **in order** on every commit (see `.pre-commit-config.yaml`):
 
 Fix failures **top to bottom**. Do not skip hooks unless the user explicitly asks.
 
-Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
+Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection. Hook failure memory: [reference.md](reference.md) § Failure patterns.
 
 ## Before committing (mandatory)
 
@@ -93,9 +93,11 @@ Requires `assets/minecraft/textures/block/` with PNGs for strict texture checks;
 | `skipped (recent pass for same staged files)` | `record-pytest-pass.sh` worked |
 | `skipped (no mapped code changes)` | Docs-only or non-code — OK |
 
-See [targeted-testing/reference.md](../targeted-testing/reference.md) for path→test map.
+See [targeted-testing/reference.md](../targeted-testing/reference.md) for path→test map. Failure patterns: [reference.md](reference.md) § Failure patterns (`precommit-pytest-scope-mismatch`).
 
-On pytest failure: fix code → rerun **failed test file** → retry commit.
+On pytest failure: fix code → rerun `scripts/pre-commit-pytest.sh` (or full suite if hook chose that) → retry commit.
+
+**Commit-issue card:** when a hook fails, `scripts/on_pre_commit_failure.sh` writes a **`commit-issue`** card under `.devtool/features/` with **`## Problem`** and **`## Failed Tests`**. User asks agent to **review** → agent adds **Root Cause** and **Corrective Action**; user approves → asks to **implement**. Disable capture: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`. See [kanban-commit-issue-cards.mdc](../rules/kanban-commit-issue-cards.mdc).
 
 ## Retry commit loop
 
@@ -151,4 +153,4 @@ pre-commit run pytest                   # hook 3
 - [ ] Pre-commit pytest green or justified full suite
 ```
 
-Related: [agent-triage](../agent-triage/SKILL.md), [development.md](../../docs/development.md).
+Related: [reference.md](reference.md), [agent-triage](../agent-triage/SKILL.md), [development.md](../../docs/development.md).

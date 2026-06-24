@@ -31,7 +31,7 @@ description: >-
 | Column | Agent |
 | ------ | ----- |
 | **To Do** (`todo`) | **Read** — this is the work queue |
-| **In Progress** (`in-progress`) | **Update** — feature/bug: after card review **and** **`## Decisions`** or **`## Corrective Action`**; inquiry: while researching |
+| **In Progress** (`in-progress`) | **Update** — feature/bug/commit-issue: after card review **and** **`## Decisions`** or **`## Corrective Action`**; inquiry: while researching |
 | **Review** (`review`) | **Update** — move here when implementation is complete (`in-progress` → `review`); implement **`## QA Review`** when the user asks |
 | **Done** (`done`) | **Do not move** — user moves here after manual app review **and** any **`## QA Review`** are implemented |
 | **Backlog** (`backlog`) | **Ignore** — user-managed; do not list, prioritize, or create cards here unless the user explicitly asks |
@@ -210,6 +210,50 @@ Example **Corrective Action** (agent, before coding):
 - Tests in `tests/test_render_preview.py`; update `docs/ui.md` Viewer section.
 ```
 
+## Commit-issue cards (`labels` includes `commit-issue`)
+
+When frontmatter `labels` contains **`commit-issue`**, the card was **auto-created** by `scripts/on_pre_commit_failure.sh` after a failed `git commit`. Rule: [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc).
+
+### Who writes what
+
+| Section | Who | When |
+| ------- | --- | ---- |
+| **`## Problem`** | **Capture script** | On failed commit (hook log excerpt) |
+| **`## Failed Tests`** | **Capture script** | On failed commit (pytest test **file** paths) |
+| **`## Staged files`** | **Capture script** | On failed commit |
+| **`## Root Cause (current code)`** | **Agent** | When user asks to **review** the card |
+| **`## Corrective Action`** | **Agent** | When user asks to **review** the card |
+| **`## Label Paths`** | **Agent** | Optional during review (from failed tests / staged paths) |
+
+### Reusable pattern? (on review)
+
+After **Root Cause** and **Corrective Action**, ask whether the failure is a **reusable hook/pytest pattern**. If yes:
+
+1. Add a row to [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns ([agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §6f)
+2. Cite **Signature** in [testing.mdc](../../rules/testing.mdc) when a hook constraint applies — no duplicate **Fix pattern** prose
+3. Note promoted **Signature** in **Corrective Action**
+
+### Workflow
+
+```text
+git commit fails
+  → scripts/create_commit_issue_card.py writes todo card (labels: commit-issue)
+User: review commit-issue card
+  → agent reads Problem / Failed Tests / code → Root Cause + Corrective Action (no code yet)
+User approves → asks to implement
+  → todo → in-progress → fix per Corrective Action → review → user: done
+```
+
+### Gates
+
+| Gate | Requirement |
+| ---- | ----------- |
+| **Review** (user asks) | Agent fills **Root Cause** and **Corrective Action** — **do not implement** until user approves |
+| Before `todo` → `in-progress` | User explicitly approved **Corrective Action** and asked to implement |
+| Before `in-progress` → `review` | Fix applied; `scripts/pre-commit-pytest.sh` green on staged paths; commit would pass |
+
+Skip card creation: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`
+
 ## Inquiry cards (`labels` includes `inquiry`)
 
 When frontmatter `labels` contains **`inquiry`** (case-insensitive), the card is a **research / Q&A** item — not an implementation task. Do **not** use **`## Decisions`**, **`## Corrective Action`**, or **`## Acceptance Criteria`** unless the user later converts the inquiry into a feature or bug card.
@@ -242,8 +286,39 @@ User assigns inquiry card (path or title)
   → agent writes ## Response on the card
   → in-progress → review
   → user reads Response; may create new feature/bug cards from suggested follow-ups
+  → user asks to spawn / implement recommendations → agent creates feature cards (§ Spawn from inquiry) → `todo`
   → user: review → done
 ```
+
+### Spawn feature cards from inquiry
+
+When the user asks to **implement recommendations**, **spawn follow-ups**, or **create cards from inquiry** (or equivalent):
+
+1. Read **`## Response`** → **Suggested follow-up cards** (or phased recommendations in the Description).
+2. For each recommended **feature** (or **bug** if specified):
+   - Create `.devtool/features/{id}.md` with `status: "todo"` — **never Backlog**
+   - Set `epic: "{EpicName}"` — PascalCase theme from inquiry title or user (e.g. `DesignFailureMemorySystem`)
+   - Set `labels: []` for features or `labels: ["bug"]` for bugs
+   - `order` — append after existing **todo** cards (`a0`, `a1`, …)
+3. **Feature card body** (review-ready — agent fills agent sections at spawn time):
+
+   | Section | Content |
+   | ------- | ------- |
+   | `# Title` | From recommendation |
+   | `## Acceptance Criteria` | Draft bullets `[ ]` from inquiry AC/scope |
+   | `## Out of Scope` | From inquiry boundaries |
+   | `## Feature Areas` | Backtick-quoted labels; resolve registry if new area needed |
+   | `## Label Paths` | Resolved via `docs/feature-areas.yaml` + inquiry evidence |
+   | `## Decisions` | Concrete plan for pre-implementation review |
+   | `## Context` | Link to parent inquiry id; phase number if phased |
+
+4. On the **parent inquiry** card:
+   - Add **`## Spawned feature cards`** table (path, phase, status)
+   - Set matching `epic` on parent when spawning a series
+   - Bump `modified`
+5. **Do not** move spawned cards to `in-progress` until user assigns implementation (same as any feature card review gate).
+
+**Phased epics:** use consistent `epic` across parent inquiry + all child feature cards; note **Phase N of M** in title or `## Context`; implement in order unless user re-prioritizes.
 
 ### Inquiry card gates
 
@@ -569,7 +644,7 @@ Description and acceptance criteria.
 - Order: `"double-quoted"` fractional index
 - Field order: `id`, `status`, `priority`, `assignee`, `dueDate`, `created`, `modified`, `completedAt`, `labels`, `order`
 
-**Existing cards** may include optional `epic: null` between `assignee` and `dueDate`. Preserve that field and its position when editing those files; omit `epic` on new cards unless the user asks for it.
+**Existing cards** may include optional `epic: null` between `assignee` and `dueDate`. **Use `epic`** when spawning a series from an inquiry (e.g. `epic: "DesignFailureMemorySystem"`). Preserve field position when editing.
 
 ## Fractional index ordering
 
@@ -643,7 +718,8 @@ Update `status` and `modified`. File stays in `.devtool/features/` until moved t
 | User assigns an **inquiry** card | Resolve card → research → write **`## Response`** (+ **Label Paths** if Feature Areas set) → `review` |
 | User asks what to work on | Read **To Do** only; summarize title, path, type, **Feature Areas** |
 | Feature/bug card review complete | Resolve **Feature Areas** → **Label Paths** → **Decisions** (feature) or **Corrective Action** (bug) → `todo` → `in-progress` → implement |
-| Inquiry card complete | **`## Response`** on card → `in-progress` → `review` (no code by default) |
+| Inquiry card complete | **`## Response`** on card → `review` (no code by default) |
+| User spawns inquiry recommendations | § Spawn from inquiry → create **todo** feature/bug cards with `epic`, AC, Label Paths, Decisions |
 | Finishing implementation | Staged pytests green → **update feature-areas.yaml** → **review/update docs/** ([docs-maintenance](../docs-maintenance/SKILL.md)) → **check off AC `[x]`** → `in-progress` → `review` |
 | User assigns QA Review on a Review card | Read **`## QA Review`** → implement → check off QA bullets (+ AC if satisfied) → staged pytests green → **update feature-areas.yaml** → **review/update docs/**; stay in **Review** |
 | User verified in app | **User** moves `review` → `done` only when **`## QA Review`** are done (or waived) — agents do not |

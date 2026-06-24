@@ -1,0 +1,46 @@
+---
+description: Kanban commit-issue cards — auto-captured pre-commit failures, review then implement
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban commit-issue cards
+
+When frontmatter `labels` includes **`commit-issue`**, the card was created automatically by `scripts/on_pre_commit_failure.sh` after a failed `git commit`.
+
+Full workflow: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Commit-issue cards.
+
+## Who writes what
+
+| Section | Who | When |
+| ------- | --- | ---- |
+| **`## Problem`** | **Capture script** | On failed commit (hook log excerpt) |
+| **`## Failed Tests`** | **Capture script** | On failed commit (pytest test file paths) |
+| **`## Staged files`** | **Capture script** | On failed commit |
+| **`## Root Cause (current code)`** | **Agent** | When user asks to **review** the card |
+| **`## Corrective Action`** | **Agent** | When user asks to **review** the card |
+| **`## Label Paths`** | **Agent** | Optional during review (from failed tests / staged paths) |
+
+## Reusable pattern? (on review)
+
+After **Root Cause** and **Corrective Action**, ask whether the failure is a **reusable hook/pytest pattern**. If yes:
+
+1. Add a row to [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md) § Failure patterns ([agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §6f schema)
+2. If a hook-level constraint applies, cite **Signature** in [testing.mdc](testing.mdc) — do not duplicate **Fix pattern** prose
+3. Note the promoted **Signature** in **Corrective Action** (or a short bullet below it)
+
+## Workflow gates
+
+| Step | Requirement |
+| ---- | ----------- |
+| Card created | `status: todo`, `labels: ["commit-issue"]` — user fixes commit or assigns review |
+| User: **review** | Agent reads code + card; fills **Root Cause** and **Corrective Action** — **no implementation yet** |
+| User approves plan | User explicitly asks to **implement** |
+| `todo` → `in-progress` | Only after user approval; follow **Corrective Action** |
+| `in-progress` → `review` | Fix applied; staged `scripts/pre-commit-pytest.sh` green; commit succeeds |
+
+## Do not
+
+- Implement on first read — wait for user review approval unless they say **review and implement**
+- Use **`## Decisions`** — use **Corrective Action**
+- Delete auto-captured **Problem** / **Failed Tests** — append agent sections below them

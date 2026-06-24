@@ -1,0 +1,17 @@
+---
+description: When editing agent or kanban skills, read AGENTS.md Maintaining section before handoff
+globs: .cursor/skills/agent-*/**,.cursor/skills/kanban-*/**
+alwaysApply: false
+---
+
+# AGENTS.md maintenance (agent / kanban skills)
+
+When you **edit** any file under `.cursor/skills/agent-*/` or `.cursor/skills/kanban-*/`:
+
+1. **Read** [AGENTS.md](../../AGENTS.md) § **Maintaining AGENTS.md (routing guide)** in the same turn (before handoff).
+2. If the skill edit changes routing, card types, turn lifecycle, handoff format, or area→skill mapping → **update AGENTS.md** per that table in the same turn.
+3. Handoff **Context load** must say `AGENTS.md current`, `AGENTS.md updated`, or `AGENTS.md stale: …` — not omit the check.
+
+**Files used** must include `AGENTS.md` with `(read)` or `(edit)` when this rule applied.
+
+Does **not** replace [agent-self-evaluation.mdc](agent-self-evaluation.mdc) §2b check 4 on other turns — it **adds** a hard read when these skill paths change.

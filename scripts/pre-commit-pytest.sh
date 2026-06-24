@@ -43,6 +43,18 @@ else
   exit 1
 fi
 
+_run_pytest() {
+  local log
+  log="$(mktemp)"
+  if ! "$PYTEST" -q "$@" 2>&1 | tee "$log"; then
+    "$ROOT/scripts/on_pre_commit_failure.sh" pytest "$log" || true
+    rm -f "$log"
+    return 1
+  fi
+  rm -f "$log"
+  return 0
+}
+
 mapfile -t STAGED < <(git diff --cached --name-only --diff-filter=ACM)
 
 if ((${#STAGED[@]} == 0)); then
@@ -261,18 +273,21 @@ done
 
 if ((RUN_FULL)); then
   echo "pre-commit pytest: full suite (core or global change detected)"
-  exec "$PYTEST" -q
+  _run_pytest || exit 1
+  exit 0
 fi
 
 if ((${#TESTS[@]} > MAX_TARGETED)); then
   echo "pre-commit pytest: full suite (${#TESTS[@]} targeted files > ${MAX_TARGETED})"
-  exec "$PYTEST" -q
+  _run_pytest || exit 1
+  exit 0
 fi
 
 if ((${#TESTS[@]} == 0)); then
   if ((CODE_TOUCHED)); then
     echo "pre-commit pytest: full suite (unmapped code changes)"
-    exec "$PYTEST" -q
+    _run_pytest || exit 1
+    exit 0
   fi
 
   echo "pre-commit pytest: skipped (no mapped code changes)"
@@ -282,4 +297,4 @@ fi
 mapfile -t TEST_LIST < <(printf '%s\n' "${!TESTS[@]}" | sort)
 
 echo "pre-commit pytest: ${#TEST_LIST[@]} file(s) — ${TEST_LIST[*]}"
-exec "$PYTEST" -q "${TEST_LIST[@]}"
+_run_pytest "${TEST_LIST[@]}" || exit 1

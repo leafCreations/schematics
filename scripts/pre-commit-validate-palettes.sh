@@ -13,4 +13,10 @@ else
   exit 1
 fi
 
-exec "$PYTHON" -c "from registries.validate import validate_palettes; validate_palettes()"
+LOG="$(mktemp)"
+trap 'rm -f "$LOG"' EXIT
+if ! "$PYTHON" -c "from registries.validate import validate_palettes; validate_palettes()" >"$LOG" 2>&1; then
+  cat "$LOG"
+  "$ROOT/scripts/on_pre_commit_failure.sh" validate-palettes "$LOG" || true
+  exit 1
+fi

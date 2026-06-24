@@ -17,6 +17,35 @@ Quick lookup for path→test mapping and entry points. Source of truth for hooks
 
 Ad-hoc bugs → **Surgical**. Named **To Do** card → [kanban-markdown](../kanban-markdown/SKILL.md). **Bug** cards: [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc). **Inquiry** cards: research + **Response** — [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc).
 
+## Failure pattern routing (grep on signals only)
+
+Run after §1 classifies a **failure** — not on every turn. Grep **Trigger snippet** or **Signature** in the listed `reference.md` § Failure patterns table; apply **Fix pattern** before deep exploration. Schema: [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §6f. Procedure: [agent-triage/SKILL.md](SKILL.md) §1b.
+
+| Failure signal (§1 classify) | Grep in | Example signatures / trigger snippets |
+| ---------------------------- | ------- | --------------------------------------- |
+| Pre-commit / hook / ruff / palette validate | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | `precommit-stash-old-hooks`, `precommit-pytest-scope-mismatch`, `validate-palettes`, `ruff` |
+| Pytest scope / hook surprise / hardcoded counts | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) + [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `precommit-pytest-scope-mismatch`, `palette-hardcoded-count`, `FAILED tests/` |
+| UI wiring / dialog / persist | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `ui-dialog-no-persist`, `_persist_dialog_changes` |
+| Worldgen / placement / functional blocks | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) + `.cursor/rules/worldgen.mdc` | `residence` stage 1 for chest NBT tests (see worldgen rule) |
+| Agent handoff / kanban / AGENTS.md / self-eval | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `self-eval-skipped`, `kanban-roadmap-queue`, `agents-md-stale`, `handoff-missing-files-context` |
+| Structure YAML paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `yaml-stage1-structure-yaml`, `stage1/structure.yaml` |
+
+**No match:** proceed with normal discovery; note recurring failures for self-eval §6 churn.
+
+### Example — pre-commit failure
+
+```text
+User: commit failed on pytest; no commit-issue card in .devtool/features/
+
+1. Classify → Unblock / pre-commit failed
+2. Grep:
+     rg "commit-issue|precommit-stash|FAILED" .cursor/skills/pre-commit-workflow/reference.md
+     rg "precommit-" .cursor/skills/agent-self-evaluation/reference.md
+3. Match precommit-stash-old-hooks → stage hook scripts + pre-commit install
+4. Else match precommit-pytest-scope-mismatch → scripts/pre-commit-pytest.sh on staged paths
+5. Open pre-commit-workflow/SKILL.md for hook order; commit-issue card rule if capture expected
+```
+
 ## Entry points
 
 | Concern | Module / doc |
@@ -81,18 +110,21 @@ PySide6 tests may segfault in sandboxed shells. If pytest dies with SIGSEGV on U
 flowchart TD
   A[New request] --> B{Question only?}
   B -->|yes| C[Read-only tools]
-  B -->|no| D{Known path/symbol?}
-  D -->|yes| E[Grep + Read 1-3 files]
-  D -->|no| F{Broad scope?}
-  F -->|narrow| E
-  F -->|broad| G[One explore OR semantic search]
-  E --> H{Area}
-  H -->|ui| I[ui-panels / ui-dialogs rules]
-  H -->|registry| J[palette_integrity tests]
-  H -->|docs| K[Edit docs only]
-  I --> L[Targeted pytest]
-  J --> L
-  K --> M[Done if no code]
-  L --> N{Commit?}
-  N -->|yes| O[ruff → palettes → pytest]
+  B -->|no| D{Failure signal?}
+  D -->|yes| P[§1b grep reference.md tables]
+  P --> E
+  D -->|no| E{Known path/symbol?}
+  E -->|yes| F[Grep + Read 1-3 files]
+  E -->|no| G{Broad scope?}
+  G -->|narrow| F
+  G -->|broad| H[One explore OR semantic search]
+  F --> I{Area}
+  I -->|ui| J[ui-panels / ui-dialogs rules]
+  I -->|registry| K[palette_integrity tests]
+  I -->|docs| L[Edit docs only]
+  J --> M[Targeted pytest]
+  K --> M
+  L --> N[Done if no code]
+  M --> O{Commit?}
+  O -->|yes| Q[ruff → palettes → pytest]
 ```
