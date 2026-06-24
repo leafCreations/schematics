@@ -24,6 +24,7 @@ Prefer:
 - small focused helpers
 - dataclasses for configuration/data objects
 - explicit type hints
+- lines ≤ **100** characters in Python (Ruff E501)
 - clear separation of concerns
 - reusable builders over repeated raw constants
 

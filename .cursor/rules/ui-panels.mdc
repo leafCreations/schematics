@@ -48,6 +48,7 @@ All three call `add_panel_title_row`, which sets the title `QLabel` font to **bo
 - `palette_panel.py` — `create_simple_titled_panel_layout(self, "Palettes")`
 - `layer_list_panel.py` / `groups_panel.py` — `create_titled_panel_layout` + four actions
 - `properties_panel.py` — nested `create_nested_group_layout` for Selected Block / Grid cell
+- `preview_toolbar.py` — compact `QWidget` row (not a `QGroupBox`); Previous/Next + trailing zoom label for Viewer preview
 
 ## Structure tab right column (no gaps when hiding)
 

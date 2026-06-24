@@ -7,13 +7,17 @@ description: >-
   frontmatter, or any project management tasks involving markdown-based kanban
   workflows. Agent fills ## Decisions after pre-implementation card review (feature cards)
   or ## Corrective Action (bug cards with labels including bug); user writes ## Feature
-  Areas on cards; agent resolves to ## Label Paths via docs/feature-areas.yaml and
-  MUST update that registry after every implementation; MUST mark ## Acceptance Criteria [x]
-  when moving to review; MUST review and update docs/ per docs-maintenance (no exceptions).
-  Bug cards: user provides Steps to Reproduce, Current/Expected Behavior, Feature Areas,
-  QA Review; agent provides Root Cause, Acceptance Criteria, Out of Scope, Label Paths,
-  Corrective Action. Inquiry cards: user provides Description and optional Feature Areas;
-  agent provides Response (actionable for future cards) and Label Paths when Feature Areas set.
+  Areas on cards; agent resolves to ## Label Paths and ## Label Methods via
+  docs/feature-areas.yaml and MUST update that registry after every implementation;
+  MUST mark ## Acceptance Criteria [x] when moving to review; MUST review and update
+  docs/ per docs-maintenance (no exceptions). Bug cards: user provides Steps to
+  Reproduce, Current/Expected Behavior, Feature Areas, QA Review; agent provides
+  Root Cause, Acceptance Criteria, Out of Scope, Label Paths, Label Methods,
+  Corrective Action. Inquiry cards: user provides Description and optional Feature
+  Areas; agent provides Response and Label Paths + Label Methods when Feature Areas set.
+  Agent cards (labels includes agent): user provides Description and Feature Area
+  (default Agent Workflow); agent provides Label Paths, Label Methods, Acceptance
+  Criteria, and Decisions.
 ---
 
 # Kanban Markdown
@@ -31,7 +35,7 @@ description: >-
 | Column | Agent |
 | ------ | ----- |
 | **To Do** (`todo`) | **Read** — this is the work queue |
-| **In Progress** (`in-progress`) | **Update** — feature/bug/commit-issue: after card review **and** **`## Decisions`** or **`## Corrective Action`**; inquiry: while researching |
+| **In Progress** (`in-progress`) | **Update** — feature/bug/agent/commit-issue: after card review **and** **`## Decisions`** or **`## Corrective Action`**; inquiry: while researching |
 | **Review** (`review`) | **Update** — move here when implementation is complete (`in-progress` → `review`); implement **`## QA Review`** when the user asks |
 | **Done** (`done`) | **Do not move** — user moves here after manual app review **and** any **`## QA Review`** are implemented |
 | **Backlog** (`backlog`) | **Ignore** — user-managed; do not list, prioritize, or create cards here unless the user explicitly asks |
@@ -93,9 +97,9 @@ If multiple To Do cards match, list titles + paths and ask the user to pick one.
 User assigns card (path or title)
   → pre-implementation card review (no code)
   → user resolves clarifications / approves card edits
-  → agent resolves ## Feature Areas → ## Label Paths (docs/feature-areas.yaml)
+  → agent resolves ## Feature Areas → ## Label Paths + ## Label Methods (docs/feature-areas.yaml)
   → agent fills ## Decisions on the card
-  → todo → in-progress → implement (Label Paths)
+  → todo → in-progress → implement (read Label Methods first; grep only for gaps)
   → staged pytests green
   → agent updates docs/feature-areas.yaml (mandatory)
   → agent reviews and updates docs/ per docs-maintenance (mandatory, no exceptions)
@@ -111,6 +115,8 @@ User assigns card (path or title)
 **Bug cards** (`labels` includes `bug` — see § Bug cards): use **`## Corrective Action`** instead of **`## Decisions`**; agent also writes **`## Root Cause (current code)`** and **`## Acceptance Criteria`** during card review.
 
 **Inquiry cards** (`labels` includes `inquiry` — see § Inquiry cards): research-only — agent writes **`## Response`**; no code unless the user explicitly asks; move to **Review** when **Response** is complete.
+
+**Agent cards** (`labels` includes `agent` — see § Agent cards): governance / skills / rules / agent workflow — user writes **`## Description`** and **`## Feature Area`**; agent writes **`## Label Paths`**, **`## Label Methods`**, **`## Acceptance Criteria`**, and **`## Decisions`** before `in-progress`.
 
 ## Board location
 
@@ -133,27 +139,63 @@ Configurable via VS Code `kanban-markdown.featuresDirectory` (default `.devtool/
 
 **priority:** `critical` | `high` | `medium` | `low`
 
-## Feature Areas (user) vs Label Paths (agent)
+## Feature Areas (user) vs Label Paths + Label Methods (agent)
 
-Users tag cards with **product areas** they understand. Agents resolve those labels to **repo file paths** before coding.
+Users tag cards with **product areas** they understand. Agents resolve those labels to **repo file paths** and **methods/symbols** before coding — so implementation turns need fewer broad greps.
 
 | Section | Who writes | Content |
 | ------- | ---------- | ------- |
 | **`## Feature Areas`** | **User** (when creating or editing the card) | Stable labels: `Render Tab`, `Render Preview`, `Paint Brush Panel`, … |
+| **`## Feature Area`** | **User** (**agent** cards only) | Single label; default `` `Agent Workflow` `` |
 | **`## Label Paths`** | **Agent** (during pre-implementation card review) | Resolved paths from [docs/feature-areas.yaml](../../docs/feature-areas.yaml) plus any new files discovered in review |
+| **`## Label Methods`** | **Agent** (same review step, when Feature Areas present) | Functions, methods, Qt slots, and test names the implementation will touch — keyed by path |
 
-**Canonical registry:** [docs/feature-areas.yaml](../../docs/feature-areas.yaml) — maps each label → `paths`, `wiring`, `tests`, `related`, `docs`.
+**Canonical registry:** [docs/feature-areas.yaml](../../docs/feature-areas.yaml) — maps each label → `paths`, `wiring`, `tests`, `related`, optional `handlers` (stable entry points), `docs`.
 
 Resolve labels before coding:
 
 ```bash
 python scripts/resolve_feature_areas.py "Render Preview" "Render Selection"
+python scripts/resolve_feature_areas.py --handlers "Open Structures Workflow"
 python scripts/resolve_feature_areas.py --list
 ```
 
-**During pre-implementation card review:** read **`## Feature Areas`** → resolve via registry → write **`## Label Paths`** on the card (dedupe paths; include tests).
+### Pre-implementation card review (paths + methods)
 
-**Unknown label:** ask the user or propose a new registry entry; do not guess file paths.
+When **`## Feature Areas`** or an agent card **`## Feature Area`** is present:
+
+1. Resolve paths: `python scripts/resolve_feature_areas.py "<label>" …` (dedupe; include `tests`)
+2. Seed methods: `python scripts/resolve_feature_areas.py --handlers "<label>" …` (registry `handlers` only — refine per card)
+3. Read card **AC**, repro, **Root Cause**, **Corrective Action** / **Decisions**; one **surgical grep per path** (especially `ui/main_window.py` wiring) to name handlers the fix will touch
+4. Write **`## Label Paths`** (files only) and **`## Label Methods`** on the card before `todo` → `in-progress`
+
+**Label Methods rules:**
+
+- List only symbols this card’s plan implies changing — not whole-file indexes
+- Format: `` `path/to/file.py` — `symbol_one`, `symbol_two` `` (one bullet per file)
+- Include private handlers (`_on_*`), public API, widget methods, and planned `(new) ClassName` symbols from Corrective Action
+- Cap: ≤8 methods per file, ≤20 total unless card is explicitly cross-cutting
+- Implementation: open **Label Methods** first; grep only when a symbol is missing or plan shifts
+
+**Unknown label:** ask the user or propose a new registry entry; do not guess file paths or methods.
+
+**No Feature Areas:** surgical/ad-hoc work — grep-first; no Label Methods required on card.
+
+### Example (agent after card review)
+
+```markdown
+## Label Paths
+
+- `ui/main_window.py`
+- `ui/reload.py`
+- `tests/test_main_window.py`
+
+## Label Methods
+
+- `ui/main_window.py` — `MainWindow._on_open_structure`, `MainWindow._restart_editor_for_structure`, `MainWindow._block_if_render_in_progress`
+- `ui/reload.py` — `open_structure_in_editor_process`
+- `tests/test_main_window.py` — `test_pick_structure_stage_*` (add: open while preview render active)
+```
 
 ## Bug cards (`labels` includes `bug`)
 
@@ -172,6 +214,7 @@ When frontmatter `labels` contains **`bug`** (case-insensitive), the card follow
 | **`## Acceptance Criteria`** | **Agent** | Pre-implementation card review (testable fix bullets) |
 | **`## Out of Scope`** | **Agent** | Pre-implementation card review (optional) |
 | **`## Label Paths`** | **Agent** | Pre-implementation card review (resolved from Feature Areas) |
+| **`## Label Methods`** | **Agent** | Pre-implementation card review (symbols to edit — see § Feature Areas) |
 | **`## Corrective Action`** | **Agent** | Pre-implementation card review (concrete fix plan before `in-progress`) |
 
 **Legacy headings:** treat **`## What happens`** as **`## Current Behavior`** on older bug cards; rename when editing the card.
@@ -187,15 +230,16 @@ When frontmatter `labels` contains **`bug`** (case-insensitive), the card follow
 7. `## Out of Scope` (agent, optional)
 8. `## Feature Areas` (user)
 9. `## Label Paths` (agent)
-10. `## Corrective Action` (agent)
-11. `## Verify` (optional — user manual checks)
-12. `## QA Review` (user, during review)
+10. `## Label Methods` (agent, when Feature Areas present)
+11. `## Corrective Action` (agent)
+12. `## Verify` (optional — user manual checks)
+13. `## QA Review` (user, during review)
 
 ### Bug card workflow gates
 
 | Gate | Requirement |
 | ---- | ----------- |
-| Before `todo` → `in-progress` | User sections present (or user explicitly waives); agent sections filled: **Root Cause**, **Acceptance Criteria**, **Label Paths**, **Corrective Action** |
+| Before `todo` → `in-progress` | User sections present (or user explicitly waives); agent sections filled: **Root Cause**, **Acceptance Criteria**, **Label Paths**, **Label Methods** (when Feature Areas set), **Corrective Action** |
 | Before implementation | **`## Corrective Action`** is concrete — not `TBD` or disputed |
 | Before `in-progress` → `review` | All **Acceptance Criteria** `[x]`; staged pytests green; `docs/feature-areas.yaml` + `docs/` updated |
 
@@ -224,6 +268,7 @@ When frontmatter `labels` contains **`commit-issue`**, the card was **auto-creat
 | **`## Root Cause (current code)`** | **Agent** | When user asks to **review** the card |
 | **`## Corrective Action`** | **Agent** | When user asks to **review** the card |
 | **`## Label Paths`** | **Agent** | Optional during review (from failed tests / staged paths) |
+| **`## Label Methods`** | **Agent** | Optional during review (from traceback, test names, staged paths) |
 
 ### Reusable pattern? (on review)
 
@@ -254,6 +299,86 @@ User approves → asks to implement
 
 Skip card creation: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`
 
+## Agent cards (`labels` includes `agent`)
+
+When frontmatter `labels` contains **`agent`** (case-insensitive), the card is **agent / governance work** — skills, rules, `AGENTS.md`, kanban process, scripts under `scripts/` that support agents. Rule: [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc).
+
+Use **`## Feature Area`** (singular) — one registry label per card. Default when the user omits it: `` `Agent Workflow` ``.
+
+### Who writes what
+
+| Section | Who | When |
+| ------- | --- | ---- |
+| **`## Description`** | **User** | Card creation / before agent pickup — instructions for the agent |
+| **`## Feature Area`** | **User** | Card creation — one backtick-quoted label; default `` `Agent Workflow` `` |
+| **`## Label Paths`** | **Agent** | Pre-implementation card review (resolved from Feature Area) |
+| **`## Label Methods`** | **Agent** | Pre-implementation card review — scripts, symbols, doc sections |
+| **`## Acceptance Criteria`** | **Agent** | Pre-implementation card review (testable bullets) |
+| **`## Decisions`** | **Agent** | Pre-implementation card review (concrete plan before `in-progress`) |
+| **`## QA Review`** | **User** | During **Review** (optional follow-ups) |
+
+Do **not** use **`## Corrective Action`**, **`## Root Cause (current code)`**, or **`## Response`** on agent cards.
+
+### Label Methods (agent / governance work)
+
+Same bullet format as § Feature Areas (`path` — `symbol`, …). Include what this card will edit:
+
+- **Scripts** — `scripts/foo.py` — `function_name`, `main`
+- **Skills / rules** — `.cursor/skills/kanban-markdown/SKILL.md` — `§ Agent cards`; `.cursor/rules/agent-routing.mdc` — lifecycle block
+- **Registry docs** — `AGENTS.md` — `### Card types`; `docs/feature-areas.yaml` — `Agent Workflow` entry
+- **Tests** — `tests/test_foo.py` — `test_bar`
+
+Cap: ≤8 methods per file, ≤20 total unless the card is explicitly cross-cutting.
+
+### Recommended agent card section order
+
+1. `# Title` + one-line summary (optional)
+2. `## Description` (user)
+3. `## Feature Area` (user — default `` `Agent Workflow` ``)
+4. `## Label Paths` (agent)
+5. `## Label Methods` (agent)
+6. `## Acceptance Criteria` (agent)
+7. `## Decisions` (agent)
+8. `## Verify` (optional — user manual checks)
+9. `## QA Review` (user, during review)
+
+### Agent card workflow
+
+```text
+User creates todo card (labels: agent) with ## Description + ## Feature Area
+  → agent pre-implementation card review
+  → resolve Feature Area → ## Label Paths + ## Label Methods
+  → agent fills ## Acceptance Criteria + ## Decisions
+  → todo → in-progress → implement (Python lines ≤ 100 chars)
+  → staged pytests green; docs/feature-areas.yaml + docs/ updated when needed
+  → mark AC [x] → review → user: done
+```
+
+### Gates
+
+| Gate | Requirement |
+| ---- | ----------- |
+| Before `todo` → `in-progress` | **Description** present; **Feature Area** set or defaulted; agent sections filled: **Label Paths**, **Label Methods**, **Acceptance Criteria**, **Decisions** |
+| Before implementation | **Decisions** concrete — not `TBD` |
+| Before `in-progress` → `review` | All **Acceptance Criteria** `[x]`; staged pytests green; registry + `docs/` updated when behavior or paths changed |
+
+Example **Description** (user):
+
+```markdown
+## Description
+
+Add a kanban label `agent` for governance cards. Agents must keep Python lines ≤ 100
+characters on edits. Document the workflow in skills and rules.
+```
+
+Example **Feature Area** (user):
+
+```markdown
+## Feature Area
+
+- `Agent Workflow`
+```
+
 ## Inquiry cards (`labels` includes `inquiry`)
 
 When frontmatter `labels` contains **`inquiry`** (case-insensitive), the card is a **research / Q&A** item — not an implementation task. Do **not** use **`## Decisions`**, **`## Corrective Action`**, or **`## Acceptance Criteria`** unless the user later converts the inquiry into a feature or bug card.
@@ -265,6 +390,7 @@ When frontmatter `labels` contains **`inquiry`** (case-insensitive), the card is
 | **`## Description`** | **User** | Card creation / before agent pickup |
 | **`## Feature Areas`** | **User** | Optional — omit when the question is not about an existing product area |
 | **`## Label Paths`** | **Agent** | When **`## Feature Areas`** is present — resolve via `docs/feature-areas.yaml` |
+| **`## Label Methods`** | **Agent** | When **`## Feature Areas`** is present — symbols from research + registry `handlers` |
 | **`## Response`** | **Agent** | After researching the question (code, docs, registry as needed) |
 
 ### Recommended inquiry card section order
@@ -273,14 +399,15 @@ When frontmatter `labels` contains **`inquiry`** (case-insensitive), the card is
 2. `## Description` (user)
 3. `## Feature Areas` (user, optional)
 4. `## Label Paths` (agent, when Feature Areas present)
-5. `## Response` (agent)
+5. `## Label Methods` (agent, when Feature Areas present)
+6. `## Response` (agent)
 
 ### Inquiry card workflow
 
 ```text
 User assigns inquiry card (path or title)
   → agent confirms ## Description (ask user if missing)
-  → optional: resolve ## Feature Areas → ## Label Paths
+  → optional: resolve ## Feature Areas → ## Label Paths + ## Label Methods
   → todo → in-progress
   → agent researches (read-only; grep/read docs and code)
   → agent writes ## Response on the card
@@ -309,6 +436,7 @@ When the user asks to **implement recommendations**, **spawn follow-ups**, or **
    | `## Out of Scope` | From inquiry boundaries |
    | `## Feature Areas` | Backtick-quoted labels; resolve registry if new area needed |
    | `## Label Paths` | Resolved via `docs/feature-areas.yaml` + inquiry evidence |
+   | `## Label Methods` | Registry `handlers` + inquiry evidence; refine per card |
    | `## Decisions` | Concrete plan for pre-implementation review |
    | `## Context` | Link to parent inquiry id; phase number if phased |
 
@@ -318,7 +446,7 @@ When the user asks to **implement recommendations**, **spawn follow-ups**, or **
    - Bump `modified`
 5. **Do not** move spawned cards to `in-progress` until user assigns implementation (same as any feature card review gate).
 
-**Phased epics:** use consistent `epic` across parent inquiry + all child feature cards; note **Phase N of M** in title or `## Context`; implement in order unless user re-prioritizes.
+**Phased epics:** use consistent `epic` across parent inquiry + all child feature cards; note **Phase N of M** in title or `## Context`; implement in order unless user re-prioritizes. Examples: `DesignFailureMemorySystem` (3 phases); `GovernanceDriftAlerts` (4 phases, phase 4 optional).
 
 ### Inquiry card gates
 
@@ -367,9 +495,9 @@ Preview PNGs are session-scoped under `output/schematics/_preview/{session}/`. T
 - AC draft: Show loading state on Viewer while background preview render runs.
 ```
 
-## Label Paths
+## Label Paths and Label Methods
 
-Repo-relative paths (files or directories) live in a **`## Label Paths`** section in the card body — **not** in frontmatter `labels`.
+Repo-relative paths live in **`## Label Paths`**; symbols to edit live in **`## Label Methods`** — both in the card body, **not** in frontmatter `labels`.
 
 Recommended **feature** card sections (in order):
 
@@ -378,11 +506,12 @@ Recommended **feature** card sections (in order):
 3. `## Out of Scope` (optional)
 4. `## Feature Areas` (user — product labels; see § Feature Areas)
 5. `## Label Paths` (agent — resolved repo paths after card review)
-6. `## Decisions` (agent work only — **not** on bug cards; use § Bug cards)
-7. `## Verify` (optional — user manual checks only; see § Verify)
-8. `## QA Review` (optional — user fills during review; see § QA Review)
+6. `## Label Methods` (agent — when Feature Areas present)
+7. `## Decisions` (agent work only — **not** on bug cards; use § Bug cards)
+8. `## Verify` (optional — user manual checks only; see § Verify)
+9. `## QA Review` (optional — user fills during review; see § QA Review)
 
-For **bug** cards, use the section order in § Bug cards instead. For **inquiry** cards, use § Inquiry cards.
+For **bug** cards, use the section order in § Bug cards instead. For **inquiry** cards, use § Inquiry cards. For **agent** cards, use § Agent cards.
 
 | Role | Example line |
 | ---- | ------------- |
@@ -394,10 +523,10 @@ For **bug** cards, use the section order in § Bug cards instead. For **inquiry*
 **Agents picking up a To Do card:**
 
 1. Read **`## Feature Areas`** (user labels) and resolve via [docs/feature-areas.yaml](../../docs/feature-areas.yaml)
-2. Write or refresh **`## Label Paths`** on the card before `in-progress` (deduped union of resolved paths + tests)
-3. Open listed paths first (files directly; for directories, grep then read targets)
+2. Write or refresh **`## Label Paths`** and **`## Label Methods`** on the card before `in-progress` (paths deduped; methods scoped to Corrective Action / Decisions)
+3. At implementation: jump to symbols in **Label Methods** first; grep only for gaps
 4. Map paths to tests via [targeted-testing](../targeted-testing/SKILL.md) or `scripts/pre-commit-pytest.sh`
-5. If **Feature Areas** and **Label Paths** are both missing, fall back to [repo-map](../repo-map/SKILL.md) — do not invent paths
+5. If **Feature Areas**, **Label Paths**, and **Label Methods** are all missing, fall back to [repo-map](../repo-map/SKILL.md) — do not invent paths
 6. Ignore frontmatter `labels` for navigation (legacy badge values like `["ui"]` may remain)
 
 **When creating or updating cards (user):**
@@ -405,14 +534,16 @@ For **bug** cards, use the section order in § Bug cards instead. For **inquiry*
 - **Feature cards:** add **`## Feature Areas`** with 1–5 backtick-quoted labels; optional **`## Acceptance Criteria`** if you write AC yourself (otherwise agent fills during review)
 - **Bug cards** (`labels: ["bug"]`): provide **`## Steps to Reproduce`**, **`## Current Behavior`**, **`## Expected Behavior`**, **`## Feature Areas`**; leave agent sections empty
 - **Inquiry cards** (`labels: ["inquiry"]`): provide **`## Description`**; **`## Feature Areas`** optional; leave **`## Response`** for the agent
-- Leave **`## Label Paths`**, **`## Root Cause (current code)`**, **`## Corrective Action`** (bugs), **`## Decisions`** (features), or **`## Response`** (inquiries) for the agent
-- Set frontmatter `labels: ["bug"]` or `labels: ["inquiry"]` for typed cards (board badge)
+- **Agent cards** (`labels: ["agent"]`): provide **`## Description`** and **`## Feature Area`** (default `` `Agent Workflow` ``); leave agent sections empty
+- Leave **`## Label Paths`**, **`## Label Methods`**, **`## Root Cause (current code)`**, **`## Corrective Action`** (bugs), **`## Decisions`** (features and agent cards), or **`## Response`** (inquiries) for the agent
+- Set frontmatter `labels: ["bug"]`, `labels: ["inquiry"]`, or `labels: ["agent"]` for typed cards (board badge)
 - Optional sections: `## Verify` (user manual checks only — no pytest lines), `## QA Review` (user fills during review), `## Out of Scope` (agent may add on bugs)
 - **`## Decisions`** / **`## Corrective Action`** — agent fills after pre-implementation card review; not optional once review is complete
 
 **When creating or updating cards (agent after review):**
 
 - Add **`## Label Paths`** with resolved repo paths (2–10 bullets); include test paths when known
+- Add **`## Label Methods`** when **`## Feature Areas`** is set (path-keyed symbol lists; see § Feature Areas)
 - Paths: repo root, forward slashes, no leading `/`
 
 Example body (user creates card):
@@ -433,6 +564,12 @@ Example body (agent after card review):
 - `ui/widgets/preview_panel.py`
 - `ui/main_window.py`
 - `tests/test_preview_panel.py`
+
+## Label Methods
+
+- `ui/widgets/preview_panel.py` — `PreviewPanel._set_zoom_factor`, `PreviewPanel.reset_zoom_to_default`
+- `ui/main_window.py` — `MainWindow._on_tab_changed`
+- `tests/test_preview_panel.py` — `test_preview_panel_zoom_scales_pixmap`
 ```
 
 ## Verify
@@ -536,7 +673,7 @@ Cards may include **`## QA Review`** for follow-up fixes and polish found during
 
 **Agent responsibility when the user asks to implement QA Review** (or assigns a **Review** card with open items in this section):
 
-1. Read the full card — especially **`## QA Review`**, **`## Feature Areas`**, **`## Label Paths`**, and **`## Out of Scope`**
+1. Read the full card — especially **`## QA Review`**, **`## Feature Areas`**, **`## Label Paths`**, **`## Label Methods`**, and **`## Out of Scope`**
 2. **Pre-QA review** — confirm each item is clear and in scope; ask the user about ambiguities before coding
 3. Implement all open **`## QA Review`** bullets (or the subset the user names)
 4. Run `scripts/pre-commit-pytest.sh` on staged paths — same gate as before **Review**
@@ -573,10 +710,10 @@ After agent implements:
 
 1. `Grep` for `status: "todo"` under `.devtool/features/`
 2. Sort matches by `order` (lexicographic fractional index)
-3. Read each card’s type (`labels`: feature / **bug** / **inquiry**), **`## Feature Areas`**, **`## Label Paths`**, then other sections
+3. Read each card’s type (`labels`: feature / **bug** / **inquiry** / **agent** / **commit-issue**), **`## Feature Areas`** or **`## Feature Area`**, **`## Label Paths`**, **`## Label Methods`**, then other sections
 4. **Feature / bug:** run **pre-implementation card review** (see below) — do **not** implement yet
 5. **Inquiry:** run **inquiry card review** (see § Inquiry cards) — research and **`## Response`** only
-6. After review, move `todo` → `in-progress` and work the card (implement for feature/bug; research for inquiry)
+6. After review, move `todo` → `in-progress` and work the card (implement for feature/bug/agent; research for inquiry)
 
 Only read **Backlog** when the user explicitly asks about backlog cards.
 
@@ -591,8 +728,8 @@ For a card already in progress, grep `status: "in-progress"` or `status: "review
 1. Read the full card — determine **bug** (`labels` includes `bug`) vs **feature** card (default)
 2. **Bug cards:** confirm user sections (**Steps to Reproduce**, **Current Behavior**, **Expected Behavior**, **Feature Areas**); ask user to fill gaps
 3. **Feature cards:** read acceptance criteria, feature areas, out of scope, verify
-4. **Resolve `## Feature Areas`** via [docs/feature-areas.yaml](../../docs/feature-areas.yaml) → write **`## Label Paths`** on the card
-5. **Check against the codebase** — skim resolved paths; for bugs, document findings in **`## Root Cause (current code)`**
+4. **Resolve `## Feature Areas`** via [docs/feature-areas.yaml](../../docs/feature-areas.yaml) → write **`## Label Paths`** and **`## Label Methods`** on the card
+5. **Check against the codebase** — use Label Methods targets; one surgical grep per path for bugs/features; document findings in **`## Root Cause (current code)`** (bugs)
 6. **Bug cards:** write **`## Acceptance Criteria`** (testable), optional **`## Out of Scope`**, and **`## Corrective Action`**
 7. **Report to the user:**
    - **Clarifications** — ambiguities, missing scope, or criteria that need a user answer
@@ -665,9 +802,10 @@ When the user requests a new tracked item:
 2. **ID:** lowercase title → keep `a-z 0-9 - space` → spaces to `-` → collapse/trim hyphens → truncate 50 chars → append `-YYYY-MM-DD` (or `feature-YYYY-MM-DD` if empty)
 3. **Timestamps:** `created` and `modified` = now (ISO 8601); `order` = after last in target column
 4. **Body:**
-   - **Feature:** `# Title`, optional user AC, **`## Feature Areas`**; agent fills **Label Paths** + **Decisions**
-   - **Bug:** `# Title`, user **Steps to Reproduce** / **Current Behavior** / **Expected Behavior** / **Feature Areas**; `labels: ["bug"]`; agent fills **Root Cause**, **AC**, **Label Paths**, **Corrective Action**
-   - **Inquiry:** `# Title`, user **`## Description`**; optional **`## Feature Areas`**; `labels: ["inquiry"]`; agent fills **Label Paths** (if areas set) and **Response**
+   - **Feature:** `# Title`, optional user AC, **`## Feature Areas`**; agent fills **Label Paths**, **Label Methods**, **Decisions**
+   - **Bug:** `# Title`, user **Steps to Reproduce** / **Current Behavior** / **Expected Behavior** / **Feature Areas**; `labels: ["bug"]`; agent fills **Root Cause**, **AC**, **Label Paths**, **Label Methods**, **Corrective Action**
+   - **Inquiry:** `# Title`, user **`## Description`**; optional **`## Feature Areas`**; `labels: ["inquiry"]`; agent fills **Label Paths**, **Label Methods** (if areas set), and **Response**
+   - **Agent:** `# Title`, user **`## Description`** + **`## Feature Area`** (default `Agent Workflow`); `labels: ["agent"]`; agent fills **Label Paths**, **Label Methods**, **Acceptance Criteria**, **Decisions**
    - Optional `## Verify` (user manual checks only — no pytest lines)
 5. **Done on create:** set `completedAt`, write under `done/`
 
@@ -681,7 +819,7 @@ When the user requests a new tracked item:
 
 Update `status` and `modified`. File stays in `.devtool/features/` until moved to **Done**.
 
-**Agent completes implementation** (`in-progress` → `review`) — **feature and bug cards**:
+**Agent completes implementation** (`in-progress` → `review`) — **feature, bug, and agent cards**:
 
 - Run `scripts/pre-commit-pytest.sh` on staged paths (agent verify — see § Verify)
 - **Update [docs/feature-areas.yaml](../../docs/feature-areas.yaml)** — mandatory (see § Feature area registry)
@@ -695,7 +833,7 @@ Update `status` and `modified`. File stays in `.devtool/features/` until moved t
 **Agent completes inquiry** (`in-progress` → `review`):
 
 - **`## Response`** written on the card (see § Inquiry cards)
-- **`## Label Paths`** written when **`## Feature Areas`** was provided
+- **`## Label Paths`** and **`## Label Methods`** written when **`## Feature Areas`** was provided
 - No pytest / docs / registry updates unless application code also changed
 - Set `status: "review"`; bump `modified`
 
@@ -710,21 +848,52 @@ Update `status` and `modified`. File stays in `.devtool/features/` until moved t
 - Set `completedAt` to `null`
 - Move `done/{id}.md` → `{id}.md`
 
+## Periodic AGENTS.md governance audit
+
+**Cadence:** quarterly (suggested) or after a large agent/kanban governance epic. Complements in-band [agent-consistency.mdc](../../rules/agent-consistency.mdc) + [Consistency matrix](../agent-triage/reference.md).
+
+**Template card:** run `python3 scripts/create_governance_audit_card.py` (writes `.devtool/features/agents-md-governance-audit-YYYY-MM-DD.md` with a fresh checklist). Archive completed audits under `done/`; do not hunt in `archived/`.
+
+### Who does what
+
+| Step | Who |
+| ---- | --- |
+| Create **todo** audit card | **User** — `python3 scripts/create_governance_audit_card.py` (or `--date YYYY-MM-DD`, `--force` to reset) |
+| Compare artifacts, fill **## Audit findings** | **Agent** (read-only — no fixes unless user asks) |
+| Spawn fix cards from drift bullets | **User** assigns follow-up feature/bug cards |
+| Move audit → **done** | **User** after findings addressed or waived |
+
+### Audit checklist (grep / compare — do not paste full prose)
+
+- [ ] **Routing:** [AGENTS.md](../../AGENTS.md) Every turn (steps 1–5, 1b) ↔ [agent-triage/SKILL.md](../agent-triage/SKILL.md) §1/§1b ↔ [agent-routing.mdc](../../rules/agent-routing.mdc) lifecycle
+- [ ] **Classify:** AGENTS.md Classify quickly ↔ agent-triage §1 table
+- [ ] **Card types:** AGENTS.md card types table ↔ each `kanban-*.mdc` ↔ [kanban-markdown](SKILL.md) § Bug / Inquiry / Commit-issue / Agent cards
+- [ ] **Handoff:** AGENTS.md End handoff ↔ [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 ↔ [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc)
+- [ ] **Area table:** AGENTS.md area → skills & rules includes current scoped rules (`agent-consistency`, `kanban-*`, …) and **Agent Workflow** yaml skills (`agent-triage`, `agent-self-evaluation`, `kanban-markdown`, `pre-commit-workflow`, …) on Agent/Kanban rows
+- [ ] **Failure patterns:** Signatures in rules/triage exist in [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) or [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md); [Consistency matrix](../agent-triage/reference.md) rows still accurate
+- [ ] **Docs:** [docs/development.md](../../docs/development.md) Cursor agent workflow ↔ AGENTS.md + consistency links
+- [ ] **Kanban cards:** cards with **`## Feature Areas`** also have **`## Label Paths`** + **`## Label Methods`** before `in-progress` ([kanban-markdown](SKILL.md) § Feature Areas)
+
+**Output:** drift bullets under **## Audit findings** on the audit card; link spawned fix cards. **Do not** silently fix drift during the audit turn.
+
 ## Agent workflow
 
 | Situation | Action |
 | --------- | ------ |
 | User assigns a **feature/bug** card | Resolve card → **pre-implementation card review** — no code yet |
-| User assigns an **inquiry** card | Resolve card → research → write **`## Response`** (+ **Label Paths** if Feature Areas set) → `review` |
+| User assigns an **inquiry** card | Resolve card → research → write **`## Response`** (+ **Label Paths** + **Label Methods** if Feature Areas set) → `review` |
 | User asks what to work on | Read **To Do** only; summarize title, path, type, **Feature Areas** |
-| Feature/bug card review complete | Resolve **Feature Areas** → **Label Paths** → **Decisions** (feature) or **Corrective Action** (bug) → `todo` → `in-progress` → implement |
+| User assigns **AGENTS.md governance audit** card | Read-only compare per § Periodic AGENTS.md governance audit → **## Audit findings** → `review` (no fixes unless asked) |
+| Feature/bug card review complete | Resolve **Feature Areas** → **Label Paths** + **Label Methods** → **Decisions** (feature) or **Corrective Action** (bug) → `todo` → `in-progress` → implement |
 | Inquiry card complete | **`## Response`** on card → `review` (no code by default) |
-| User spawns inquiry recommendations | § Spawn from inquiry → create **todo** feature/bug cards with `epic`, AC, Label Paths, Decisions |
+| User spawns inquiry recommendations | § Spawn from inquiry → create **todo** feature/bug cards with `epic`, AC, Label Paths, Label Methods, Decisions |
+| `check_governance_parity.py` finds drift | Script auto-spawns **todo** cards (epic `GovernanceDriftAlert`; priority from severity) with **## Alert**, **## Feature Areas**, **## Label Paths**, **## Corrective Action** — agent refines on pickup; `--no-spawn-cards` to disable |
 | Finishing implementation | Staged pytests green → **update feature-areas.yaml** → **review/update docs/** ([docs-maintenance](../docs-maintenance/SKILL.md)) → **check off AC `[x]`** → `in-progress` → `review` |
 | User assigns QA Review on a Review card | Read **`## QA Review`** → implement → check off QA bullets (+ AC if satisfied) → staged pytests green → **update feature-areas.yaml** → **review/update docs/**; stay in **Review** |
 | User verified in app | **User** moves `review` → `done` only when **`## QA Review`** are done (or waived) — agents do not |
 | New feature request | Create in **`todo`** with **`## Feature Areas`**; never Backlog unless asked |
 | New inquiry | Create in **`todo`** with **`## Description`**, `labels: ["inquiry"]`; Feature Areas optional |
+| New agent / governance task | Create in **`todo`** with **`## Description`**, **`## Feature Area`** (default `Agent Workflow`), `labels: ["agent"]` |
 | Backlog / prioritization | **Do not** — user manages Backlog |
 | Ambiguous card reference | List matching To Do cards; ask user to pick |
 
@@ -747,7 +916,8 @@ Implementation often creates new files, splits modules, or adds tests — the re
 | New user-facing surface (panel, tab, pipeline) | Add a new area entry with `summary`, paths, `related` |
 | File renamed or removed | Update or remove stale paths |
 | New test file | Add under `tests` for the relevant area |
-| Card introduced a new label | Add area entry or map label → existing area |
+| New handler stable across cards | Add under feature area `handlers` in `docs/feature-areas.yaml` |
+| New scoped **agent/kanban rule** (`.cursor/rules/agent-*.mdc`, `kanban-*.mdc`) | Add path under **Agent Workflow** `paths` in `docs/feature-areas.yaml`; keep [AGENTS.md](../../AGENTS.md) area → skills & rules table in sync |
 
 **How to update:**
 
@@ -770,6 +940,6 @@ python scripts/resolve_feature_areas.py "Render Preview"
 | ----- | ---- |
 | [agent-triage](../agent-triage/SKILL.md) | Start every task; classify before board edits |
 | [repo-map](../repo-map/SKILL.md) | Fallback when **Feature Areas** / **Label Paths** are missing or unclear |
-| [targeted-testing](../targeted-testing/SKILL.md) | Staged pytest scope for **Label Paths**; required before **Review** |
+| [targeted-testing](../targeted-testing/SKILL.md) | Staged pytest scope for **Label Paths**; map **Label Methods** test symbols when listed |
 | [docs-maintenance](../docs-maintenance/SKILL.md) | Mandatory `docs/` review/update — no exceptions |
 | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) | `scripts/pre-commit-pytest.sh` hook order and fixes |

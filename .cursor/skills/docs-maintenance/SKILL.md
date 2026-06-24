@@ -32,7 +32,7 @@ Pair with [kanban-markdown](../kanban-markdown/SKILL.md) (`docs/feature-areas.ya
 
 ## Process (every mandatory pass)
 
-1. **List changed paths** (from card Label Paths, diff, or task scope).
+1. **List changed paths** (from card **Label Paths**, **Label Methods** test symbols, diff, or task scope).
 2. **Map** changed areas → doc files (table below). Include **`docs/feature-areas.yaml`** for kanban/feature work (see kanban skill).
 3. **Grep** `docs/` for stale terms tied to the change (old tab names, removed controls, wrong output paths, “not yet implemented”, obsolete workflows).
 4. **Update every affected file** — minimal accurate diffs; match existing doc tone.

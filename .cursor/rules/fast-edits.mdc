@@ -26,6 +26,7 @@ Use for:
 - Keep changes minimal.
 - Preserve existing behavior.
 - Touch the fewest files possible.
+- Keep Python lines ≤ **100** characters (Ruff E501; `pyproject.toml` `line-length = 100`).
 - Prefer existing helpers and patterns.
 - Do not redesign architecture.
 - Do not perform broad refactors.
@@ -46,6 +47,7 @@ Use for:
 Before finishing:
 
 - Confirm the requested edit was made.
+- Confirm no touched `.py` line exceeds **100** characters.
 - Confirm unrelated files were not changed.
 - Mention the targeted test that should be run.
 - Run or suggest the smallest relevant test.

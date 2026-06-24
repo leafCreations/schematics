@@ -11,7 +11,10 @@ if [[ -x "$ROOT/.venv/bin/ruff" ]]; then
 elif command -v ruff >/dev/null 2>&1; then
   RUFF=ruff
 else
-  echo "ruff not found. Run: pip install -e \".[dev]\" in the project venv." >&2
+  LOG="$(mktemp)"
+  echo "ruff not found. Run: pip install -e \".[dev]\" in the project venv." | tee "$LOG" >&2
+  "$ROOT/scripts/on_pre_commit_failure.sh" ruff "$LOG" || true
+  rm -f "$LOG"
   exit 1
 fi
 

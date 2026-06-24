@@ -15,5 +15,9 @@ panels:
   materials: true
   structure_settings: true
 
+viewer:
+  # Viewer tab preview zoom (25–400); persisted to user editor_settings.yaml
+  preview_zoom_percent: 100
+
 recent:
   opened: []

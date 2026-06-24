@@ -166,7 +166,7 @@ from ui.widgets.layer_tools_panel import LayerToolsPanel
 from ui.widgets.materials_panel import MaterialsPanel
 from ui.widgets.new_structure_dialog import NewStructureDialog
 from ui.widgets.palette_panel import PalettePanel
-from ui.widgets.preview_panel import PreviewPanel
+from ui.widgets.preview_panel import PreviewPanel, zoom_percent
 from ui.widgets.properties_panel import PropertiesPanel
 from ui.widgets.render_panel import RenderPanel, worldgen_dependencies_available
 from ui.widgets.site_grid import SiteGridView
@@ -271,6 +271,14 @@ def _pick_structure_stage(parent: QWidget | None) -> tuple[str, int] | None:
 
     structure = selected_dir.name.lower()
     choices = _structure_stage_choices(selected_dir)
+    if not choices:
+        QMessageBox.warning(
+            parent,
+            "Open Structure",
+            f"No valid stages found in:\n{selected_dir}\n\n"
+            "Choose a structure folder that contains stageN/ folders with stage.yaml.",
+        )
+        return None
     return _select_stage_for_structure(parent, structure, choices)
 
 
@@ -777,7 +785,44 @@ class MainWindow(QMainWindow):
         self._init_edit_menu()
         self._init_view_menu()
         self._init_structure_menu()
+        self._init_viewer_menu()
         self._init_help_menu()
+
+    def _init_viewer_menu(self) -> None:
+        viewer_menu = self.menuBar().addMenu("&Viewer")
+
+        self._viewer_zoom_in_action = QAction("Zoom &In", self)
+        self._viewer_zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
+        self._viewer_zoom_in_action.triggered.connect(self._on_viewer_zoom_in)
+        viewer_menu.addAction(self._viewer_zoom_in_action)
+
+        self._viewer_zoom_out_action = QAction("Zoom &Out", self)
+        self._viewer_zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
+        self._viewer_zoom_out_action.triggered.connect(self._on_viewer_zoom_out)
+        viewer_menu.addAction(self._viewer_zoom_out_action)
+
+        self._viewer_zoom_reset_action = QAction("Zoom &Reset", self)
+        self._viewer_zoom_reset_action.setShortcut(QKeySequence("Ctrl+0"))
+        self._viewer_zoom_reset_action.triggered.connect(self._on_viewer_zoom_reset)
+        viewer_menu.addAction(self._viewer_zoom_reset_action)
+
+        self._sync_viewer_zoom_actions(enabled=False)
+
+    def _sync_viewer_zoom_actions(self, *, enabled: bool | None = None) -> None:
+        if enabled is None:
+            enabled = self._tabs.currentIndex() == 2
+        self._viewer_zoom_in_action.setEnabled(enabled)
+        self._viewer_zoom_out_action.setEnabled(enabled)
+        self._viewer_zoom_reset_action.setEnabled(enabled)
+
+    def _on_viewer_zoom_in(self) -> None:
+        self._preview_panel.zoom_in()
+
+    def _on_viewer_zoom_out(self) -> None:
+        self._preview_panel.zoom_out()
+
+    def _on_viewer_zoom_reset(self) -> None:
+        self._preview_panel.reset_zoom_to_default()
 
     def _init_structure_menu(self) -> None:
         structure_menu = self.menuBar().addMenu("&Structure")
@@ -903,6 +948,10 @@ class MainWindow(QMainWindow):
         current_stage = int(self._document.metadata.get("stage", self._stage))
 
         if structure == current_structure and int(stage) == current_stage:
+            self._status.showMessage(
+                f"Already editing {structure} stage {stage}.",
+                3000,
+            )
             return
 
         if self._dirty_layers or self._dirty_structure:
@@ -945,6 +994,10 @@ class MainWindow(QMainWindow):
         current_stage = int(self._document.metadata.get("stage", self._stage))
 
         if structure == current_structure and stage == current_stage:
+            self._status.showMessage(
+                f"Already editing {structure} stage {stage}.",
+                3000,
+            )
             return
 
         if self._dirty_layers or self._dirty_structure:
@@ -2301,8 +2354,10 @@ class MainWindow(QMainWindow):
             else:
                 self._site_grid_view.set_structure_selected(True)
         elif index == 2:
+            self._preview_panel.restore_saved_zoom()
             self._ensure_preview_render()
 
+        self._sync_viewer_zoom_actions()
         self._update_save_actions()
 
     def _on_palette_entry_selected(self, entry) -> None:
@@ -3666,11 +3721,24 @@ class MainWindow(QMainWindow):
             return None
         return structure_config_from_document(self._document)
 
-    def _block_if_render_in_progress(self, *, closing: bool = False) -> bool:
+    def _block_if_render_in_progress(
+        self,
+        *,
+        closing: bool = False,
+        opening_structure: bool = False,
+    ) -> bool:
         if self._render_thread is None:
             return False
 
-        action = "closing." if closing else "continuing."
+        if opening_structure and self._render_is_preview:
+            return False
+
+        if closing:
+            action = "closing."
+        elif opening_structure:
+            action = "opening another structure."
+        else:
+            action = "continuing."
         QMessageBox.warning(
             self,
             "Render in progress",
@@ -3679,7 +3747,7 @@ class MainWindow(QMainWindow):
         return True
 
     def _restart_editor_for_structure(self, structure: str, stage: int) -> None:
-        if self._block_if_render_in_progress():
+        if self._block_if_render_in_progress(opening_structure=True):
             return
 
         self._clear_preview_session()
@@ -3717,11 +3785,7 @@ class MainWindow(QMainWindow):
             template_available = False
 
         self._last_schematics_dir = OUTPUT_SCHEMATICS_FOLDER / output_folder
-        self._render_panel.set_output_hint(
-            output_folder,
-            minecraft_version=minecraft_version,
-            worldgen_template_available=template_available,
-        )
+        self._render_panel.set_worldgen_template_available(template_available)
         self._sync_render_panel_preview_selection()
         self._sync_preview_groups()
         if self._viewer_tab_active():
@@ -4043,6 +4107,7 @@ class MainWindow(QMainWindow):
             panel_compass=self._compass_panel.isVisible(),
             panel_materials=self._materials_panel.isVisible(),
             panel_structure_settings=self._structure_settings_panel.isVisible(),
+            preview_zoom_percent=zoom_percent(self._preview_panel.zoom_factor()),
         )
 
     def _add_render_menu_action(

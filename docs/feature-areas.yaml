@@ -7,6 +7,7 @@
 #   tab: optional parent tab (Structure Tab | Site Tab | Render Tab)
 #   paths: primary implementation files
 #   wiring: orchestration / integration (often main_window.py)
+#   handlers: optional stable methods/symbols for kanban ## Label Methods seeding
 #   tests: pytest files
 #   related: other feature area labels to consider
 #   docs: optional user/developer docs
@@ -16,6 +17,51 @@ areas:
     summary: Open, save, reload, new structure, exit
     paths:
       - ui/main_window.py
+    handlers:
+      - MainWindow._init_file_menu
+      - NoStructureLoadedWindow._init_file_menu
+    related:
+      - Open Structures Workflow
+      - Open Recent Workflow
+    docs:
+      - docs/ui.md
+
+  Open Structures Workflow:
+    summary: File > Open Structure folder picker, stage resolution, editor process restart
+    paths:
+      - ui/main_window.py
+    handlers:
+      - MainWindow._on_open_structure
+      - NoStructureLoadedWindow._on_open_structure
+      - MainWindow._restart_editor_for_structure
+      - MainWindow._block_if_render_in_progress
+      - _pick_structure_stage
+    wiring:
+      - ui/reload.py
+      - helpers/structure_metadata.py
+    tests:
+      - tests/test_main_window.py
+    related:
+      - File Menu
+    docs:
+      - docs/ui.md
+
+  Open Recent Workflow:
+    summary: File > Open Recent menu and recent-structure list persistence
+    paths:
+      - ui/app_settings.py
+    handlers:
+      - load_recent_structures
+      - add_recent_structure
+      - MainWindow._open_recent_entry
+      - NoStructureLoadedWindow._open_recent_entry
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_main_window.py
+    related:
+      - File Menu
+      - Open Structures Workflow
     docs:
       - docs/ui.md
 
@@ -25,8 +71,30 @@ areas:
       - ui/main_window.py
       - config/editor_settings.yaml
       - ui/app_settings.py
+    related:
+      - Editor Settings
     docs:
       - docs/ui.md
+
+  Editor Settings:
+    summary: Application preferences YAML (panels, viewer zoom, recent structures)
+    paths:
+      - config/editor_settings.yaml
+      - ui/app_settings.py
+      - ui/editor_prefs.py
+    handlers:
+      - load_editor_settings
+      - save_user_editor_settings
+      - set_preview_zoom_percent
+      - preview_zoom_percent
+    tests:
+      - tests/test_app_settings.py
+    related:
+      - View Menu
+      - Preview Toolbar
+    docs:
+      - docs/ui.md
+      - docs/editor-properties.md
 
   Structure Menu:
     summary: Structure tab menus including render shortcuts
@@ -68,6 +136,51 @@ areas:
     related:
       - Render Panel
       - Render Preview
+      - Preview Toolbar
+    docs:
+      - docs/ui.md
+
+  Preview Toolbar:
+    summary: Viewer preview navigation (Previous/Next), zoom slider, Reset, and zoom level display
+    tab: Render Tab
+    paths:
+      - ui/widgets/preview_toolbar.py
+    handlers:
+      - PreviewToolbar.set_zoom_percent
+      - PreviewToolbar.zoom_changed
+      - PreviewToolbar.reset_clicked
+      - PreviewToolbar.previous_clicked
+      - PreviewToolbar.next_clicked
+    wiring:
+      - ui/widgets/preview_panel.py
+    tests:
+      - tests/test_preview_panel.py
+    related:
+      - Render Preview
+      - Render Tab
+      - Viewer Menu
+    docs:
+      - docs/ui.md
+
+  Viewer Menu:
+    summary: Viewer tab menu — preview zoom in, out, and reset
+    tab: Render Tab
+    paths:
+      - ui/main_window.py
+    handlers:
+      - MainWindow._init_viewer_menu
+      - MainWindow._on_viewer_zoom_in
+      - MainWindow._on_viewer_zoom_out
+      - MainWindow._on_viewer_zoom_reset
+      - MainWindow._sync_viewer_zoom_actions
+    wiring:
+      - ui/widgets/preview_panel.py
+    tests:
+      - tests/test_preview_panel.py
+    related:
+      - Render Tab
+      - Render Preview
+      - Preview Toolbar
     docs:
       - docs/ui.md
 
@@ -287,10 +400,14 @@ areas:
       - docs/ui.md
 
   Render Panel:
-    summary: Export Render split button, Generate World, output folder hint
+    summary: Export Render split button, Generate World, Open Output Folder
     tab: Render Tab
     paths:
       - ui/widgets/render_panel.py
+    handlers:
+      - RenderPanel.set_preview_render
+      - RenderPanel.set_worldgen_template_available
+      - RenderPanel.set_busy
     wiring:
       - ui/main_window.py
       - ui/widgets/preview_panel.py
@@ -360,6 +477,15 @@ areas:
       - ui/main_window.py
       - ui/render_worker.py
       - render_main.py
+    handlers:
+      - PreviewPanel.set_gallery
+      - PreviewPanel.restore_saved_zoom
+      - PreviewPanel.set_zoom_percent
+      - PreviewPanel.zoom_in
+      - PreviewPanel.zoom_out
+      - PreviewPanel.reset_zoom_to_default
+      - MainWindow._ensure_preview_render
+      - MainWindow._on_tab_changed
     tests:
       - tests/test_preview_panel.py
       - tests/test_render_preview.py
@@ -372,6 +498,7 @@ areas:
       - Render Tab
       - Render Selection
       - Render Pipeline
+      - Preview Toolbar
     docs:
       - docs/ui.md
 
@@ -529,6 +656,8 @@ areas:
       - docs/feature-areas.yaml
     wiring:
       - scripts/resolve_feature_areas.py
+      - scripts/create_governance_audit_card.py
+      - scripts/check_governance_parity.py
     docs:
       - .cursor/skills/kanban-markdown/SKILL.md
 
@@ -542,6 +671,11 @@ areas:
       - .cursor/skills/pre-commit-workflow/
       - .cursor/rules/agent-routing.mdc
       - .cursor/rules/agent-self-evaluation.mdc
+      - .cursor/rules/agent-agents-md-maintenance.mdc
+      - .cursor/rules/agent-consistency.mdc
+      - .cursor/rules/kanban-bug-cards.mdc
+      - .cursor/rules/kanban-commit-issue-cards.mdc
       - .cursor/rules/kanban-inquiry-cards.mdc
+      - .cursor/rules/kanban-agent-cards.mdc
     docs:
       - docs/development.md

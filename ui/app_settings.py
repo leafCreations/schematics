@@ -23,7 +23,19 @@ _LEGACY_BLOCK_TOOLTIPS_KEY = "editor/block_tooltips"
 _LEGACY_SITE_BLOCK_TOOLTIPS_KEY = "site/block_tooltips"
 _LEGACY_GRID_AXIS_LABELS_KEY = "editor/grid_axis_labels"
 
+_PREVIEW_ZOOM_MIN = 25
+_PREVIEW_ZOOM_MAX = 400
+_DEFAULT_PREVIEW_ZOOM_PERCENT = 100
+
 _cached: EditorSettings | None = None
+
+
+def clamp_preview_zoom_percent(percent: object) -> int:
+    try:
+        value = int(percent)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return _DEFAULT_PREVIEW_ZOOM_PERCENT
+    return max(_PREVIEW_ZOOM_MIN, min(_PREVIEW_ZOOM_MAX, value))
 
 
 @dataclass
@@ -33,6 +45,7 @@ class EditorSettings:
     panel_compass: bool = True
     panel_materials: bool = True
     panel_structure_settings: bool = True
+    preview_zoom_percent: int = _DEFAULT_PREVIEW_ZOOM_PERCENT
     recent_structures: list[tuple[str, int]] = field(default_factory=list)
 
 
@@ -68,6 +81,7 @@ def _coerce_bool(value: object, default: bool) -> bool:
 def _settings_from_mapping(data: dict[str, Any]) -> EditorSettings:
     display = data.get("display") if isinstance(data.get("display"), dict) else {}
     panels = data.get("panels") if isinstance(data.get("panels"), dict) else {}
+    viewer = data.get("viewer") if isinstance(data.get("viewer"), dict) else {}
     recent = data.get("recent") if isinstance(data.get("recent"), dict) else {}
     opened = recent.get("opened") if isinstance(recent.get("opened"), list) else []
 
@@ -98,6 +112,9 @@ def _settings_from_mapping(data: dict[str, Any]) -> EditorSettings:
         panel_compass=_coerce_bool(panels.get("compass"), True),
         panel_materials=_coerce_bool(panels.get("materials"), True),
         panel_structure_settings=_coerce_bool(panels.get("structure_settings"), True),
+        preview_zoom_percent=clamp_preview_zoom_percent(
+            viewer.get("preview_zoom_percent", _DEFAULT_PREVIEW_ZOOM_PERCENT)
+        ),
         recent_structures=parsed_recent,
     )
 
@@ -127,6 +144,9 @@ def settings_to_mapping(settings: EditorSettings) -> dict[str, Any]:
             "compass": settings.panel_compass,
             "materials": settings.panel_materials,
             "structure_settings": settings.panel_structure_settings,
+        },
+        "viewer": {
+            "preview_zoom_percent": settings.preview_zoom_percent,
         },
         "recent": {
             "opened": [
@@ -225,15 +245,22 @@ def sync_editor_settings_from_ui(
     panel_compass: bool,
     panel_materials: bool,
     panel_structure_settings: bool,
+    preview_zoom_percent: int | None = None,
 ) -> None:
     """Write the current UI state to the user settings file."""
     current = load_editor_settings()
+    zoom = (
+        clamp_preview_zoom_percent(preview_zoom_percent)
+        if preview_zoom_percent is not None
+        else current.preview_zoom_percent
+    )
     settings = EditorSettings(
         block_tooltips=block_tooltips,
         grid_axis_labels=grid_axis_labels,
         panel_compass=panel_compass,
         panel_materials=panel_materials,
         panel_structure_settings=panel_structure_settings,
+        preview_zoom_percent=zoom,
         recent_structures=list(current.recent_structures),
     )
     save_user_editor_settings(settings)

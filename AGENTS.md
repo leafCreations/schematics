@@ -20,15 +20,17 @@ Do **not** use [docs/roadmap.md](docs/roadmap.md) as the task queue.
 
 | Label | User provides | Agent provides before `in-progress` |
 | ----- | ------------- | ------------------------------------- |
-| *(feature)* | Feature Areas, story | Label Paths, **Decisions**, Acceptance Criteria |
-| `bug` | Steps to Reproduce, Current/Expected Behavior, Feature Areas | Root Cause, AC, Label Paths, **Corrective Action** — [kanban-bug-cards.mdc](.cursor/rules/kanban-bug-cards.mdc) |
-| `commit-issue` | _(auto)_ Problem + Failed Tests | **Review:** Root Cause + Corrective Action; implement after user approval — [kanban-commit-issue-cards.mdc](.cursor/rules/kanban-commit-issue-cards.mdc) |
-| `inquiry` | Description; Feature Areas optional | **Response**, Label Paths; **spawn:** todo feature cards + `epic` when user approves recommendations — [kanban-inquiry-cards.mdc](.cursor/rules/kanban-inquiry-cards.mdc) |
+| *(feature)* | Feature Areas, story | Label Paths, **Label Methods**, **Decisions**, Acceptance Criteria |
+| `bug` | Steps to Reproduce, Current/Expected Behavior, Feature Areas | Root Cause, AC, Label Paths, **Label Methods**, **Corrective Action** — [kanban-bug-cards.mdc](.cursor/rules/kanban-bug-cards.mdc) |
+| `commit-issue` | _(auto)_ Problem + Failed Tests | **Review:** Root Cause + Corrective Action; optional Label Paths / Label Methods; implement after user approval — [kanban-commit-issue-cards.mdc](.cursor/rules/kanban-commit-issue-cards.mdc) |
+| `inquiry` | Description; Feature Areas optional | **Response**, Label Paths, **Label Methods** (when Feature Areas set); **spawn:** todo feature cards + `epic` when user approves recommendations — [kanban-inquiry-cards.mdc](.cursor/rules/kanban-inquiry-cards.mdc) |
+| `agent` | **Description**, **Feature Area** (default `Agent Workflow`) | Label Paths, **Label Methods**, **Acceptance Criteria**, **Decisions** — [kanban-agent-cards.mdc](.cursor/rules/kanban-agent-cards.mdc) |
 
-Resolve **Feature Areas** → **Label Paths** via [docs/feature-areas.yaml](docs/feature-areas.yaml):
+Resolve **Feature Areas** → **Label Paths** + **Label Methods** via [docs/feature-areas.yaml](docs/feature-areas.yaml):
 
 ```bash
 python scripts/resolve_feature_areas.py "Render Preview"
+python scripts/resolve_feature_areas.py --handlers "Open Structures Workflow"
 ```
 
 ## Every turn (non–Ask mode)
@@ -37,9 +39,9 @@ python scripts/resolve_feature_areas.py "Render Preview"
 1. Classify     → agent-triage §1 (kanban card vs surgical vs read-only)
 1b. On failure  → agent-triage §1b grep reference.md tables (signals only — not every turn)
 2. Discover     → grep first; ≤3 file reads then grep/semantic search
-3. Work         → Label Paths on card, or minimal surgical diff
+3. Work         → Label Paths + Label Methods on card (when Feature Areas set), or surgical grep
 4. Verify       → targeted pytest (scripts/pre-commit-pytest.sh on staged paths)
-5. Self-eval    → Files used (load order) + handoff; implementation: ≥1 skill + ≥1 rule updated; audit AGENTS.md freshness
+5. Self-eval    → Files used (load order) + handoff; implementation: ≥1 skill + ≥1 rule updated; audit AGENTS.md freshness; governance edits → self-eval §6g
 ```
 
 ## Maintaining AGENTS.md (routing guide)
@@ -48,16 +50,29 @@ python scripts/resolve_feature_areas.py "Render Preview"
 
 | Change in repo | Update in AGENTS.md |
 | -------------- | ------------------- |
+| Feature Areas → Label Paths + Label Methods workflow | Every turn step 3; card types table; `resolve_feature_areas.py --handlers` example |
 | New kanban label type (`commit-issue`, …) | Card types table + area→rules row |
 | New area skill or scoped rule | Area → skills & rules table |
 | New turn step, gate, or script workflow | Every turn / Classify quickly / Implementation gates |
 | Failure-pattern routing (triage §1b) | Every turn step 1b + Classify quickly + [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) |
+| Classify quickly parity | Classify quickly ↔ triage §1 ↔ [reference.md](.cursor/skills/agent-triage/reference.md) § Classify — update all three when adding a signal row (including **Verify**: `run tests` / `commit-ready`) |
+| Governance audit Classify row | Classify quickly + agent-triage §1 + [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit |
+| Kanban Label Methods gate | Card types table + [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Feature Areas |
 | Handoff format fields | End handoff section |
 | Failure pattern schema or new cross-cutting row | Classify quickly (failure-pattern lookup) + [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md) |
+| New scoped **agent/kanban rule** | Area → skills & rules table + [agent-consistency.mdc](.cursor/rules/agent-consistency.mdc) checklist if governance paths |
+| Governance artifact parity (any agent/kanban edit) | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Consistency matrix |
+| Drift alert vocabulary (prefix lines) | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Drift alert examples |
+| Drift severity + KNOWN_DRIFT format | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Drift severity, § KNOWN_DRIFT |
+| Drift alert surfacing (Context load / §6g / handoff) | [agent-self-evaluation/SKILL.md](.cursor/skills/agent-self-evaluation/SKILL.md) §2b check 5 + §6g; [agent-triage/SKILL.md](.cursor/skills/agent-triage/SKILL.md) § Governance drift detection |
 
 If behavior changed but **AGENTS.md** still describes the old flow → handoff **Context load:** `AGENTS.md stale: …` and fix before closing the task when possible.
 
-**Scoped rule:** editing `.cursor/skills/agent-*/` or `.cursor/skills/kanban-*/` → read this section in the same turn — [agent-agents-md-maintenance.mdc](.cursor/rules/agent-agents-md-maintenance.mdc).
+**Scoped rules:** editing `.cursor/skills/agent-*/` or `.cursor/skills/kanban-*/` → [agent-agents-md-maintenance.mdc](.cursor/rules/agent-agents-md-maintenance.mdc). Any governance path in [agent-consistency.mdc](.cursor/rules/agent-consistency.mdc) `globs` → [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § **Consistency matrix** + four check types + self-eval §6g.
+
+**Periodic audit:** quarterly suggested — `python3 scripts/create_governance_audit_card.py` then [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit. **On-demand:** `python3 scripts/check_governance_parity.py` between audits (spawns **todo** fix cards per new drift issue, epic `GovernanceDriftAlert`, unless `--no-spawn-cards`).
+
+**Drift alerts (governance edits):** when this turn edits [agent-consistency.mdc](.cursor/rules/agent-consistency.mdc) `globs` and parity is not fixed same turn, surface lines in **Context load**, **§6g**, and handoff `- **Drift alerts:**` — prefixes in [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § **Drift alert examples**; optional `[info|warn|critical]` (default `warn`); temporary waiver: `KNOWN_DRIFT: <pair> — <reason>[; expires: …]` per reference § KNOWN_DRIFT. Not on every turn.
 
 ## Files used + self-evaluation (every turn)
 
@@ -71,6 +86,7 @@ End every response with two sections (see [agent-self-evaluation](.cursor/skills
 | Signal | Mode | First read |
 | ------ | ---- | ---------- |
 | Kanban card assigned | **Review first** → implement | Card + [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) |
+| AGENTS.md governance audit card | **Read-only** | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit; card from `scripts/create_governance_audit_card.py` → **## Audit findings** → `review` (no fixes unless asked) |
 | Explain / audit / “is this correct?” | **Read-only** | Grep + read only |
 | One error, lint, typo, ad-hoc bug | **Surgical** | Grep → 1–3 files — no card unless user assigns one |
 | Multi-file feature (no card) | **Implementation** | [repo-map](.cursor/skills/repo-map/SKILL.md) |
@@ -79,13 +95,14 @@ End every response with two sections (see [agent-self-evaluation](.cursor/skills
 | UI wiring / dialog not persisting | **Surgical** | §1b grep `ui-dialog-no-persist` → [ui-change](.cursor/skills/ui-change/SKILL.md) |
 | Agent handoff / kanban / process mistake | **Surgical** | §1b grep → [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md) § Common failure patterns |
 | Repeated mistake / familiar churn | **Grep** | Same tables as §1b — [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Failure pattern routing |
+| "Run tests" / verify / commit-ready | **Verify** | [targeted-testing](.cursor/skills/targeted-testing/SKILL.md); `scripts/pre-commit-pytest.sh` on staged files → optional `record-pytest-pass.sh` |
 
 ## Area → skills & rules (load when touching)
 
 | Area | Skill | Rule(s) |
 | ---- | ----- | ------- |
-| Agent / routing / self-eval | [agent-triage](.cursor/skills/agent-triage/SKILL.md), [agent-self-evaluation](.cursor/skills/agent-self-evaluation/SKILL.md) | [agent-routing](.cursor/rules/agent-routing.mdc), [agent-self-evaluation](.cursor/rules/agent-self-evaluation.mdc), [agent-agents-md-maintenance](.cursor/rules/agent-agents-md-maintenance.mdc) |
-| Kanban / `.devtool/features/` | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) | [kanban-bug-cards](.cursor/rules/kanban-bug-cards.mdc), [kanban-commit-issue-cards](.cursor/rules/kanban-commit-issue-cards.mdc), [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc) |
+| Agent / routing / self-eval | [agent-triage](.cursor/skills/agent-triage/SKILL.md), [agent-self-evaluation](.cursor/skills/agent-self-evaluation/SKILL.md), [pre-commit-workflow](.cursor/skills/pre-commit-workflow/SKILL.md) | [agent-routing](.cursor/rules/agent-routing.mdc), [agent-self-evaluation](.cursor/rules/agent-self-evaluation.mdc), [agent-agents-md-maintenance](.cursor/rules/agent-agents-md-maintenance.mdc), [agent-consistency](.cursor/rules/agent-consistency.mdc) |
+| Kanban / `.devtool/features/` | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) | [kanban-bug-cards](.cursor/rules/kanban-bug-cards.mdc), [kanban-commit-issue-cards](.cursor/rules/kanban-commit-issue-cards.mdc), [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc), [kanban-agent-cards](.cursor/rules/kanban-agent-cards.mdc) |
 | UI panels / dialogs | [ui-change](.cursor/skills/ui-change/SKILL.md) | [ui-panels](.cursor/rules/ui-panels.mdc), [ui-dialogs](.cursor/rules/ui-dialogs.mdc), [ui-general](.cursor/rules/ui-general.mdc) |
 | Registry / palettes | [repo-map](.cursor/skills/repo-map/SKILL.md) | — |
 | Structure YAML / loader | [repo-map](.cursor/skills/repo-map/SKILL.md) § Structure packages | — |
@@ -114,7 +131,7 @@ Obsolete: `structures/{name}/stage{N}/structure.yaml`.
 
 ## Implementation gates (kanban)
 
-Before `in-progress` → `review` on **feature/bug** cards:
+Before `in-progress` → `review` on **feature/bug/agent** cards:
 
 - Staged `scripts/pre-commit-pytest.sh` green
 - [docs/feature-areas.yaml](docs/feature-areas.yaml) updated
@@ -123,7 +140,7 @@ Before `in-progress` → `review` on **feature/bug** cards:
 
 **Inquiry** cards: **Response** on card → `review`; no pytest unless code also changed.
 
-**Inquiry → feature spawn:** when the user asks to implement inquiry recommendations, create **todo** feature cards per [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Spawn from inquiry — `epic: "{EpicName}"`, **Acceptance Criteria**, **Label Paths**, **Decisions**, **Context**; link from parent **`## Spawned feature cards`**. Example epic: `DesignFailureMemorySystem` (three phase cards from `design-failure-memory-system-2026-06-23.md`).
+**Inquiry → feature spawn:** when the user asks to implement inquiry recommendations, create **todo** feature cards per [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Spawn from inquiry — `epic: "{EpicName}"`, **Acceptance Criteria**, **Label Paths**, **Label Methods**, **Decisions**, **Context**; link from parent **`## Spawned feature cards`**. Example epics: `DesignFailureMemorySystem` (three phases from `design-failure-memory-system-2026-06-23.md`); `GovernanceDriftAlerts` (four phases from `done/design-governance-drift-alerts-2026-06-23.md`).
 
 ## End handoff (required every turn)
 
@@ -152,3 +169,4 @@ Before `in-progress` → `review` on **feature/bug** cards:
 - Read all of `ui/main_window.py` — grep handlers first
 - Web-search Minecraft 1.x facts — use [project-context](.cursor/skills/project-context/SKILL.md) (26.x)
 - Skip self-evaluation, **Files used**, or dual skill+rule updates on implementation
+- Write Python lines longer than **100** characters (Ruff E501; wrap strings and split long expressions)

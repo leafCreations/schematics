@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ui.app_settings import (
     EditorSettings,
+    clamp_preview_zoom_percent,
     load_editor_settings,
     reset_editor_settings_cache,
     save_user_editor_settings,
@@ -72,6 +73,21 @@ def panel_structure_settings_visible() -> bool:
 
 def set_panel_structure_settings_visible(visible: bool) -> None:
     _set_panel("panel_structure_settings", visible)
+
+
+def preview_zoom_percent() -> int:
+    return _settings().preview_zoom_percent
+
+
+def set_preview_zoom_percent(percent: int) -> None:
+    settings = _settings()
+    clamped = clamp_preview_zoom_percent(percent)
+
+    if settings.preview_zoom_percent == clamped:
+        return
+
+    settings.preview_zoom_percent = clamped
+    save_user_editor_settings(settings)
 
 
 def _set_panel(field: str, visible: bool) -> None:

@@ -18,10 +18,11 @@ When a feature file has frontmatter `labels` including **`bug`** (case-insensiti
 
 ## Agent provides (pre-implementation card review, before `in-progress`)
 
-- `## Root Cause (current code)` — after reading Label Paths / codebase
+- `## Root Cause (current code)` — after reading Label Paths / Label Methods / codebase
 - `## Acceptance Criteria` — testable fix bullets
 - `## Out of Scope` — optional
 - `## Label Paths` — resolved from Feature Areas via `docs/feature-areas.yaml`
+- `## Label Methods` — symbols to edit (when Feature Areas set; see kanban-markdown § Feature Areas)
 - `## Corrective Action` — concrete fix plan (**not** `## Decisions`)
 
 ## Do not
@@ -29,6 +30,7 @@ When a feature file has frontmatter `labels` including **`bug`** (case-insensiti
 - Use `## Decisions` on bug cards — use `## Corrective Action`
 - Start implementation with empty or disputed **Corrective Action**
 - Move to **Review** without all **Acceptance Criteria** marked `[x]`
+- Put method names only in **Label Paths** — use **Label Methods** (files-only paths in Label Paths)
 
 ## Full workflow
 

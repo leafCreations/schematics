@@ -203,6 +203,131 @@ def test_pick_structure_stage_selects_stage_when_structure_folder_chosen(
     assert _pick_structure_stage(None) == ("well", 2)
 
 
+def test_pick_structure_stage_warns_when_no_valid_stages(monkeypatch, tmp_path: Path):
+    from ui.main_window import _pick_structure_stage
+
+    empty_dir = tmp_path / "structures" / "orphan"
+    empty_dir.mkdir(parents=True)
+    warnings: list[str] = []
+
+    monkeypatch.setattr("ui.main_window.STRUCTURES_FOLDER", tmp_path / "structures")
+    monkeypatch.setattr(
+        "ui.main_window.QFileDialog.getExistingDirectory",
+        lambda *_a, **_k: str(empty_dir),
+    )
+    monkeypatch.setattr(
+        "ui.main_window.QMessageBox.warning",
+        lambda _parent, _title, text: warnings.append(text),
+    )
+
+    assert _pick_structure_stage(None) is None
+    assert warnings
+    assert "No valid stages found" in warnings[0]
+
+
+def test_restart_editor_allows_open_during_preview_render(monkeypatch):
+    from ui.main_window import MainWindow
+
+    calls: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        "ui.main_window.open_structure_in_editor_process",
+        lambda structure, stage: calls.append((structure, stage)),
+    )
+    monkeypatch.setattr("ui.main_window.clear_preview_session_dir", lambda *_a, **_k: None)
+
+    window = MainWindow.__new__(MainWindow)
+    window._render_thread = object()
+    window._render_is_preview = True
+    window._preview_session_id = "test-session"
+    window._preview_stale = False
+
+    MainWindow._restart_editor_for_structure(window, "well", 2)
+    assert calls == [("well", 2)]
+
+
+def test_restart_editor_blocks_open_during_export_render(monkeypatch):
+    from ui.main_window import MainWindow
+
+    calls: list[tuple[str, int]] = []
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "ui.main_window.open_structure_in_editor_process",
+        lambda structure, stage: calls.append((structure, stage)),
+    )
+    monkeypatch.setattr(
+        "ui.main_window.QMessageBox.warning",
+        lambda _parent, _title, text: warnings.append(text),
+    )
+
+    window = MainWindow.__new__(MainWindow)
+    window._render_thread = object()
+    window._render_is_preview = False
+
+    MainWindow._restart_editor_for_structure(window, "well", 2)
+    assert calls == []
+    assert warnings
+    assert "opening another structure" in warnings[0]
+
+
+def test_on_open_structure_informs_when_already_editing_target(monkeypatch):
+    from ui.main_window import MainWindow
+
+    messages: list[str] = []
+    restart_calls: list[tuple[str, int]] = []
+
+    monkeypatch.setattr("ui.main_window._pick_structure_stage", lambda _parent: ("residence", 1))
+    monkeypatch.setattr("ui.main_window.add_recent_structure", lambda *_a, **_k: None)
+
+    window = MainWindow.__new__(MainWindow)
+    window._structure = "residence"
+    window._stage = 1
+    window._document = type("_Doc", (), {"metadata": {"structure": "residence", "stage": 1}})()
+    window._dirty_layers = set()
+    window._dirty_structure = False
+    window._status = type(
+        "_Status",
+        (),
+        {"showMessage": lambda self, message, *_args, **_kwargs: messages.append(message)},
+    )()
+    window._restart_editor_for_structure = lambda structure, stage: restart_calls.append(
+        (structure, stage)
+    )
+
+    MainWindow._on_open_structure(window)
+    assert restart_calls == []
+    assert messages
+    assert "Already editing residence stage 1" in messages[0]
+
+
+def test_open_recent_entry_informs_when_already_editing_target(monkeypatch):
+    from ui.main_window import MainWindow
+
+    messages: list[str] = []
+    restart_calls: list[tuple[str, int]] = []
+
+    monkeypatch.setattr("ui.main_window.add_recent_structure", lambda *_a, **_k: None)
+
+    window = MainWindow.__new__(MainWindow)
+    window._structure = "residence"
+    window._stage = 1
+    window._document = type("_Doc", (), {"metadata": {"structure": "residence", "stage": 1}})()
+    window._dirty_layers = set()
+    window._dirty_structure = False
+    window._status = type(
+        "_Status",
+        (),
+        {"showMessage": lambda self, message, *_args, **_kwargs: messages.append(message)},
+    )()
+    window._restart_editor_for_structure = lambda structure, stage: restart_calls.append(
+        (structure, stage)
+    )
+
+    MainWindow._open_recent_entry(window, "residence", 1)
+    assert restart_calls == []
+    assert messages
+    assert "Already editing residence stage 1" in messages[0]
+
+
 @pytest.mark.skipif(
     os.environ.get("STRUCTURE_SCRIPTS_UI_TESTS", "") != "1",
     reason="Set STRUCTURE_SCRIPTS_UI_TESTS=1 for full Qt window smoke test",

@@ -1,0 +1,45 @@
+---
+description: Kanban agent cards — governance/skills/rules work from user Description + Feature Area
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban agent cards
+
+When a feature file has frontmatter `labels` including **`agent`** (case-insensitive), follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Agent cards.
+
+## User provides
+
+- `## Description` — instructions for the agent (required)
+- `## Feature Area` — one backtick-quoted registry label (default: `` `Agent Workflow` ``)
+
+## Agent provides (pre-implementation card review)
+
+- `## Label Paths` — resolved from **Feature Area** via `docs/feature-areas.yaml`
+- `## Label Methods` — scripts, symbols, and doc sections the work will touch (see skill § Label Methods for agent work)
+- `## Acceptance Criteria` — testable bullets `[ ]`
+- `## Decisions` — concrete plan before `in-progress`
+
+## Workflow
+
+1. Confirm **Description** and **Feature Area** present (default Feature Area if omitted: `Agent Workflow`)
+2. Resolve **Feature Area** → **Label Paths** + **Label Methods**
+3. Fill **Acceptance Criteria** and **Decisions** on the card
+4. `todo` → `in-progress` → implement per **Decisions**
+5. Staged pytests green; update `docs/feature-areas.yaml` and `docs/` when registry or user docs change
+6. Mark **Acceptance Criteria** `[x]` → `review` → user: `done`
+
+## Code edits on agent cards
+
+Python touched by the card must keep lines ≤ **100** characters (`pyproject.toml` `line-length = 100`; pre-commit ruff E501). Wrap strings and split long markdown-in-Python before commit.
+
+## Do not
+
+- Use **Corrective Action** or **Root Cause** (bug/commit-issue sections) on agent cards
+- Use **Response** (inquiry section) on agent cards
+- Skip **Label Methods** when **Feature Area** is set
+- Leave **Decisions** as `TBD` before `in-progress`
+
+## Full workflow
+
+See `.cursor/skills/kanban-markdown/SKILL.md` for lifecycle, **Label Methods** format, and implementation gates.

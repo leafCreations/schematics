@@ -88,9 +88,9 @@ scripts/record-pytest-pass.sh
 
 to allow the hook to skip pytest for 30 minutes.
 
-Ruff and palette checks still run.
+Ruff and palette checks still run. Python line length: **100** characters (E501).
 
-On hook failure, a **`commit-issue`** kanban card may be created under `.devtool/features/` (`SKIP_COMMIT_ISSUE_CARD=1` to disable). Agent **review** workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc). Durable hook patterns: [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md) § Failure patterns (e.g. signature `precommit-stash-old-hooks`).
+On hook failure, a **`commit-issue`** kanban card may be created under `.devtool/features/` (hook prints `commit-issue card created: …`; `SKIP_COMMIT_ISSUE_CARD=1` to disable). No card → stage hook infra — signature `precommit-stash-old-hooks` in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). Agent **review** workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc).
 
 ## Before PRs or Large Changes
 

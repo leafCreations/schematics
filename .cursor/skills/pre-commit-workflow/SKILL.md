@@ -48,7 +48,7 @@ Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
 
 | Failure | Fix |
 | ------- | --- |
-| E501 line too long | Wrap strings/signatures; extract type aliases |
+| E501 line too long | Wrap strings/signatures; keep lines ≤ **100** chars (`pyproject.toml`); split long markdown-in-Python |
 | B007 unused loop var | Prefix with `_` |
 | Import sort | Usually auto-fixed |
 | Hook passed but commit still dirty | Hook re-staged files — `git add` any you changed after, or commit again |
@@ -97,7 +97,7 @@ See [targeted-testing/reference.md](../targeted-testing/reference.md) for path�
 
 On pytest failure: fix code → rerun `scripts/pre-commit-pytest.sh` (or full suite if hook chose that) → retry commit.
 
-**Commit-issue card:** when a hook fails, `scripts/on_pre_commit_failure.sh` writes a **`commit-issue`** card under `.devtool/features/` with **`## Problem`** and **`## Failed Tests`**. User asks agent to **review** → agent adds **Root Cause** and **Corrective Action**; user approves → asks to **implement**. Disable capture: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`. See [kanban-commit-issue-cards.mdc](../rules/kanban-commit-issue-cards.mdc).
+**Commit-issue card:** when a hook fails, `scripts/on_pre_commit_failure.sh` writes a **`commit-issue`** card under `.devtool/features/` with **`## Problem`** and **`## Failed Tests`**. Look for `commit-issue card created: .devtool/features/commit-issue-<hook>-<timestamp>.md` in hook output (cards are gitignored). User asks agent to **review** → agent adds **Root Cause** and **Corrective Action**; user approves → asks to **implement**. Disable capture: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`. No card after failure → grep `precommit-stash-old-hooks` in [reference.md](reference.md) and stage hook infra. See [kanban-commit-issue-cards.mdc](../rules/kanban-commit-issue-cards.mdc).
 
 ## Retry commit loop
 

@@ -143,6 +143,7 @@ Copying the full kanban lifecycle into a rule when kanban-markdown/SKILL.md alre
 | §4 Testing | Claimed pass without run? | targeted-testing | testing.mdc |
 | §5 Pre-commit | Hook order followed on failure? | pre-commit-workflow | — |
 | §6 Scope | Unrelated edits? | agent-triage | — |
+| §6g Governance | Edited agent-consistency `globs`? | agent-self-evaluation §6g; [agent-triage/reference.md](../agent-triage/reference.md) § Consistency matrix | agent-consistency.mdc |
 | §8 Checklist | Docs pass when code changed? | docs-maintenance | — |
 | Kanban label type | Wrong section split on card? | kanban-markdown | kanban-bug-cards.mdc, kanban-inquiry-cards.mdc |
 
@@ -163,6 +164,7 @@ Canonical cross-cutting table. Row schema: [SKILL.md](SKILL.md) §6f. Pre-commit
 | `agent-skill-edit-no-agents-read` | edit under `.cursor/skills/agent-*/` or `kanban-*/` | Read AGENTS.md § Maintaining same turn | agent-self-evaluation | agent-agents-md-maintenance.mdc |
 | `implementation-handoff-none-updates` | `Skills updated: none` or `Rules updated: none` on implementation | §6 requires both on implementation turns | agent-self-evaluation | agent-self-evaluation.mdc |
 | `docs-not-synced-on-ship` | feature shipped without `docs/` sync | docs-maintenance before Review | docs-maintenance | — |
+| `ruff-e501-line-length` | `E501 Line too long` on commit | Wrap strings; split lines ≤ 100 chars | pre-commit-workflow | agent-routing.mdc |
 
 **Signature** = lowercase kebab-case grep key (optional area prefix). Rules cite **Signature** + this row — do not duplicate **Fix pattern** prose in `.mdc` files.
 

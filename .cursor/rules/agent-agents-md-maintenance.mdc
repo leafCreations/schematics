@@ -15,3 +15,5 @@ When you **edit** any file under `.cursor/skills/agent-*/` or `.cursor/skills/ka
 **Files used** must include `AGENTS.md` with `(read)` or `(edit)` when this rule applied.
 
 Does **not** replace [agent-self-evaluation.mdc](agent-self-evaluation.mdc) §2b check 4 on other turns — it **adds** a hard read when these skill paths change.
+
+**Broader parity:** same-turn updates to triage, rules, and reference tables → [agent-consistency.mdc](agent-consistency.mdc).

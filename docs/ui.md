@@ -98,7 +98,8 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 
 | Control | Role |
 | ------- | ---- |
-| **Preview** | In-app preview: render-type dropdown, optional floor **group** selector (Top Down only), thumbnail gallery, Previous/Next, and scrollable main image |
+| **Preview** | In-app preview: render-type dropdown, optional floor **group** selector (Top Down only), thumbnail gallery, **Preview toolbar** (Previous/Next + zoom %), and scrollable main image |
+| **Preview toolbar** | **Previous** / **Next** gallery navigation; **zoom slider** (25%–400%), **Reset** (100%), and **zoom level** label. Mouse wheel over the main image zooms in/out. Zoom level is saved to `editor_settings.yaml` and restored when you open the **Viewer** tab |
 | **Preview** dropdown | **Top Down** (per-Y PNGs for the selected floor group), **Structure Facades**, **Site Facades**, **Site Top Down** (per site Y), **Materials List** — selecting a type auto-renders into the session folder when needed |
 | **Export Render** | Split button — exports the preview dropdown selection to `output/schematics/{output_folder}/`; menu **All Renders** runs all blueprint types |
 | **Generate World** | Runs worldgen only using the structure manifest **Minecraft version** (`26.1.2` or `26.2`); disabled when no matching template exists under `worldgen_templates/` |
@@ -162,8 +163,8 @@ Open the **Site** tab. The **Site settings** panel edits the structure **manifes
 | Item | Shortcut | Action |
 | ---- | -------- | ------ |
 | New Structure | `Ctrl+N` | Create a new structure package (`structure.yaml` manifest + `stage{N}/stage.yaml` + first layer) and open it |
-| Open Structure… | — | Pick an existing structure and stage to open |
-| Open Recent | — | Reopen recently used structure/stage pairs |
+| Open Structure… | — | Pick an existing structure and stage to open; in-flight **preview** renders do not block (process restarts). Export/worldgen renders still block until complete. |
+| Open Recent | — | Reopen recently used structure/stage pairs (same render rules as Open Structure) |
 | Save | `Ctrl+S` | Structure tab: active layer. Site tab: site settings (manifest + `stage.yaml`). |
 | Save All | `Ctrl+Shift+S` | Saves every unsaved layer and site settings |
 | Exit | `Ctrl+Q` | Close the editor (unsaved-changes prompt) |
@@ -187,6 +188,14 @@ Open the **Site** tab. The **Site settings** panel edits the structure **manifes
 | Structure settings | — | Show or hide the Structure panel (identity, grid size) on the Structure tab left column |
 | Block tooltips | — | Show block tokens when hovering structure and site grid cells; saved in application settings |
 | Grid axis labels | — | Column numbers along the top and row letters (A, B, …) along the left; on by default, saved in application settings |
+
+**Viewer** (menu bar — after **Structure**)
+
+| Item | Shortcut | Action |
+| ---- | -------- | ------ |
+| Zoom In | `Ctrl+=` (`Ctrl++`) | Increase preview zoom one step (×1.1, max 400%); enabled on the **Viewer** tab only |
+| Zoom Out | `Ctrl+-` | Decrease preview zoom one step (÷1.1, min 25%) |
+| Zoom Reset | `Ctrl+0` | Reset preview zoom to 100% and save to application settings |
 
 **Help**
 

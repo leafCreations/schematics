@@ -33,6 +33,22 @@ def test_export_renders_for_preview_top_down():
     assert export_renders_for_preview(constants.RENDER_TOP_VIEW) == [constants.RENDER_TOP_VIEW]
 
 
+def test_render_panel_disables_generate_world_without_template(qapp, monkeypatch):
+    from ui.widgets.render_panel import RenderPanel
+
+    monkeypatch.setattr(
+        "ui.widgets.render_panel.worldgen_dependencies_available",
+        lambda: True,
+    )
+    panel = RenderPanel()
+    panel.set_worldgen_template_available(False)
+    assert panel._generate_world_button.isEnabled() is False
+    assert "worldgen template" in panel._generate_world_button.toolTip().lower()
+
+    panel.set_worldgen_template_available(True)
+    assert panel._generate_world_button.isEnabled() is True
+
+
 def test_render_panel_has_export_and_world_buttons(qapp):
     from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QToolButton
 

@@ -26,6 +26,7 @@ def test_defaults_when_no_user_file():
     assert settings.panel_compass is True
     assert settings.panel_materials is True
     assert settings.panel_structure_settings is True
+    assert settings.preview_zoom_percent == 100
     assert settings.recent_structures == []
     assert user_settings_path().is_file()
 
@@ -76,7 +77,54 @@ def test_save_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         panel_compass=False,
         panel_materials=True,
         panel_structure_settings=False,
+        preview_zoom_percent=100,
     )
+
+
+def test_preview_zoom_percent_defaults_and_clamp():
+    from ui.app_settings import clamp_preview_zoom_percent
+
+    assert clamp_preview_zoom_percent(100) == 100
+    assert clamp_preview_zoom_percent(10) == 25
+    assert clamp_preview_zoom_percent(500) == 400
+    assert clamp_preview_zoom_percent("bad") == 100
+
+
+def test_preview_zoom_percent_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    user_file = tmp_path / "editor_settings.yaml"
+    monkeypatch.setenv(app_settings._ENV_OVERRIDE, str(user_file))
+    app_settings.reset_editor_settings_cache()
+
+    user_file.write_text(
+        yaml.safe_dump({"viewer": {"preview_zoom_percent": 175}}),
+        encoding="utf-8",
+    )
+
+    settings = load_editor_settings(force_reload=True)
+    assert settings.preview_zoom_percent == 175
+
+    from ui.editor_prefs import set_preview_zoom_percent
+
+    set_preview_zoom_percent(200)
+    app_settings.reset_editor_settings_cache()
+    assert load_editor_settings(force_reload=True).preview_zoom_percent == 200
+
+
+def test_sync_preserves_preview_zoom_percent():
+    from ui.editor_prefs import set_preview_zoom_percent
+
+    set_preview_zoom_percent(150)
+    app_settings.sync_editor_settings_from_ui(
+        block_tooltips=True,
+        grid_axis_labels=False,
+        panel_compass=True,
+        panel_materials=False,
+        panel_structure_settings=True,
+    )
+
+    app_settings.reset_editor_settings_cache()
+    settings = load_editor_settings(force_reload=True)
+    assert settings.preview_zoom_percent == 150
 
 
 def test_recent_structures_round_trip_and_clear():

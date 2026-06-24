@@ -50,6 +50,19 @@ Start with [agent-triage](../agent-triage/SKILL.md) and [repo-map](../repo-map/S
 - Toolbar icons: 22px — `toolbar_icon_size()`.
 - Split buttons: menu pops from **container** bottom-left (see ui-split-buttons.mdc).
 
+## Viewer tab (preview)
+
+- **Preview** panel: `ui/widgets/preview_panel.py`; gallery nav + zoom: `ui/widgets/preview_toolbar.py` (**Preview Toolbar** feature area).
+- Zoom resets to 100% on Viewer tab open — wire in `main_window._on_tab_changed` if adding tab-level preview behavior.
+- **Open Structure / Open Recent:** `_restart_editor_for_structure` bypasses `_block_if_render_in_progress` when `_render_is_preview` (process `execve` replaces the editor); export/worldgen renders still block with “opening another structure.”
+- **Viewer preview zoom:** persisted in `viewer.preview_zoom_percent` (`editor_settings.yaml`); restored on **Viewer** tab open via `PreviewPanel.restore_saved_zoom()`. Toolbar **slider** + **Reset** + wheel; **Viewer** menu (after **Structure** in menu bar; Zoom In/Out/Reset) enabled on Viewer tab only.
+- Update `docs/ui.md` Viewer table and `docs/feature-areas.yaml` when adding preview controls.
+
+## Render panel (Viewer tab actions)
+
+- `ui/widgets/render_panel.py` — export/worldgen buttons only (no schematic path label).
+- Worldgen enablement: `RenderPanel.set_worldgen_template_available` from `main_window._sync_render_output_hint` after `resolve_worldgen_template_dir`.
+
 ## Persistence — what saves where
 
 | UI surface | Saves to |

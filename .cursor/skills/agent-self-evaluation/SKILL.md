@@ -51,7 +51,7 @@ Also enforced in `.cursor/rules/agent-self-evaluation.mdc` (`alwaysApply: true`)
 
 ## 2b. Context load audit (feeds §7)
 
-Before handoff, score the turn against these four checks:
+Before handoff, score the turn against these checks:
 
 | # | Check | Pass if |
 | - | ----- | ------- |
@@ -59,14 +59,15 @@ Before handoff, score the turn against these four checks:
 | 2 | **No excess load** | No whole-file reads that grep would replace; no explore/Task for a single needle; stayed within triage read budget (≤3 full reads before grep/search) unless justified |
 | 3 | **Proper order** | **Classify before deep read** — [AGENTS.md](../../AGENTS.md) or [agent-triage](../agent-triage/SKILL.md) → area skill/rule → grep → targeted reads → edits → tests |
 | 4 | **[AGENTS.md](../../AGENTS.md) not stale** | Routing guide still matches what you used: card types, area→skill table, turn lifecycle, handoff format. If this turn added a workflow (new label, skill, gate, script), **update AGENTS.md** in the same turn or flag **stale** in handoff |
+| 5 | **Governance drift surfaced** (governance glob edits only) | After §6g matrix compare: parity fixed in the **same turn**, **or** Context load / handoff lists drift lines (`[severity]` optional — default `warn`) from [agent-triage/reference.md](../agent-triage/reference.md) § Drift alert examples, **or** `KNOWN_DRIFT: <artifact pair> — <reason>[; expires: …]` when user approved temporary drift. **N/A** when no governance paths edited |
 
-**Fail any check →** note in **Context load** line; fix AGENTS.md or add a skill/rule row in §6 when durable.
+**Fail any check →** note in **Context load** line (include drift alert prefix lines when check 5 fails); fix AGENTS.md or add a skill/rule row in §6 when durable.
 
 ## 3. Correctness check
 
 | Area touched | Verify |
 | ------------ | ------ |
-| Kanban / card implementation | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) updated; **`docs/`** reviewed per [docs-maintenance](../docs-maintenance/SKILL.md); **`## Acceptance Criteria`** marked `[x]` before **Review** (feature/bug); bug → **Corrective Action**; inquiry → **Response** only; **§6:** ≥1 skill + ≥1 rule updated |
+| Kanban / card implementation | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) updated; **`docs/`** reviewed per [docs-maintenance](../docs-maintenance/SKILL.md); **`## Acceptance Criteria`** marked `[x]` before **Review** (feature/bug/agent); bug → **Corrective Action**; inquiry → **Response** only; agent card → **Decisions**; **§6:** ≥1 skill + ≥1 rule updated; governance edits → **§6g** |
 | Structure YAML / editor save | Manifest vs `stage.yaml` split correct ([repo-map](../repo-map/SKILL.md)) |
 | UI panel/dialog | [ui-change](../ui-change/SKILL.md) checklist |
 | Registry/palette | `validate_palettes()` if behavior/palette changed; **templated families** use one token + materials, not raw catalog ids in `blocks:` ([repo-map](../repo-map/SKILL.md) § Templated block families) |
@@ -80,7 +81,7 @@ Read-only turns: mark N/A for rows that do not apply.
 | Done? | Evidence |
 | ----- | -------- |
 | Tests run | Name which files ran and result (pass/fail/not run + why) |
-| Ruff clean on touched `.py` | Or pre-commit ruff hook would pass |
+| Ruff clean on touched `.py` | Lines ≤ **100** chars (E501); or pre-commit ruff hook would pass |
 | Pre-commit path | If user will commit: hooks order known ([pre-commit-workflow](../pre-commit-workflow/SKILL.md)) |
 
 **Never claim tests passed if they were not executed.** Read-only: `Tests: n/a (no code changes)`.
@@ -133,13 +134,14 @@ Do **not** paste the same bullet into skill and rule — pair a workflow tip (sk
 | ------------- | ----- | --------------------------- |
 | Wrong Minecraft version (1.x vs 26.x), bad web lookup | [project-context](../project-context/SKILL.md) | — |
 | Tool choice, read budget, when to explore | [agent-triage](../agent-triage/SKILL.md) | [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) if always-on |
-| Kanban card types / sections | [kanban-markdown](../kanban-markdown/SKILL.md) | [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc), [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc) |
+| Kanban card types / sections | [kanban-markdown](../kanban-markdown/SKILL.md) | [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc), [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc), [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc) |
 | Where code lives, save targets, layout | [repo-map](../repo-map/SKILL.md) | — |
 | Which tests to run, catalog counts, Qt sandbox | [targeted-testing](../targeted-testing/SKILL.md) | [testing.mdc](../../rules/testing.mdc) if hook-level |
 | Ruff / palette / pytest hook order | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) | — |
 | Panel/dialog/grid wiring | [ui-change](../ui-change/SKILL.md) | [ui-dialogs.mdc](../../rules/ui-dialogs.mdc), [ui-panels.mdc](../../rules/ui-panels.mdc), etc. |
 | Cross-cutting failure pattern | [reference.md](reference.md) § Common failure patterns (§6f row) | Owning area `.mdc` — cite **Signature** only; no duplicate fix prose |
 | Self-eval not run / skipped | This skill | [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) |
+| Governance artifact drift (AGENTS.md, triage, reference, rules) | [agent-triage](../agent-triage/SKILL.md) | [agent-consistency.mdc](../../rules/agent-consistency.mdc); self-eval **§6g** on governance edits |
 | Missing Files used / Context load in handoff | This skill §7 | [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) |
 | [AGENTS.md](../../AGENTS.md) routing drift | [agent-triage](../agent-triage/SKILL.md) | [agent-routing.mdc](../../rules/agent-routing.mdc); update AGENTS.md |
 | Edit `agent-*` / `kanban-*` skills | Read AGENTS.md § Maintaining before handoff | — | [agent-agents-md-maintenance.mdc](../../rules/agent-agents-md-maintenance.mdc) |
@@ -199,6 +201,29 @@ Canonical table: [reference.md](reference.md) § Common failure patterns. One ro
 
 **Lookup:** `Grep` **Signature** or **Trigger snippet** per [agent-triage/SKILL.md](../agent-triage/SKILL.md) §1b and [reference.md](../agent-triage/reference.md) § Failure pattern routing (on failure signals only). Churn review: self-eval §6 when no row matches but failure recurs.
 
+### 6g. Consistency checks (governance paths only)
+
+**Not every turn.** Run before handoff when this turn **edited** any path in [agent-consistency.mdc](../../rules/agent-consistency.mdc) `globs` (`AGENTS.md`, `.cursor/skills/agent-*/`, `.cursor/skills/kanban-*/`, `.cursor/rules/agent-*.mdc`, `.cursor/rules/kanban-*.mdc`).
+
+Ask yes/no; any **yes** → update in the **same turn** or flag **AGENTS.md stale** / **Context load** note:
+
+| Question | If yes, update |
+| -------- | -------------- |
+| Did routing or turn lifecycle change? | [AGENTS.md](../../AGENTS.md) Every turn / Classify + [agent-routing.mdc](../../rules/agent-routing.mdc) + [agent-triage/SKILL.md](../agent-triage/SKILL.md) |
+| Did triage classify, §1b, or failure routing change? | [agent-triage/SKILL.md](../agent-triage/SKILL.md) + [agent-triage/reference.md](../agent-triage/reference.md) + AGENTS.md as needed |
+| Did a failure **Signature** or reference row change? | Owning `reference.md` + triage failure routing + rules (Signature cite only) |
+| Did a kanban **label** or card workflow change? | AGENTS.md card types + `kanban-*.mdc` + [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) |
+| Did agent/kanban **rules** change? | AGENTS.md area table + peer rules per [agent-consistency.mdc](../../rules/agent-consistency.mdc) |
+| Did user-facing agent workflow in **docs** change? | [docs/development.md](../../docs/development.md) (and other `docs/` per [docs-maintenance](../docs-maintenance/SKILL.md)) |
+
+**Detail checklist** (four check types + registry): [agent-consistency.mdc](../../rules/agent-consistency.mdc) — do not duplicate that prose here. **Artifact parity:** [agent-triage/reference.md](../agent-triage/reference.md) § Consistency matrix.
+
+**Drift alerts (required when governance edited):** After the yes/no table, compare matrix rows for artifacts you touched. If parity is **not** fixed in the same turn, list one line per mismatch using prefixes from [agent-triage/reference.md](../agent-triage/reference.md) § **Drift alert examples** — optional `[info|warn|critical]` prefix (default **`warn`** when omitted) — in **Context load**, §6g notes, and handoff `- **Drift alerts:**`. **Or** when the user approved temporary drift: `KNOWN_DRIFT: <artifact pair> — <reason>[; expires: <date or note>]` (see reference § KNOWN_DRIFT).
+
+**Manual compare:** grep matrix anchors or run `python3 scripts/check_governance_parity.py` — paste stdout into Context load / §6g / `- **Drift alerts:**`.
+
+**Read-only / no governance edits:** §6g and drift alerts → N/A.
+
 **Do not skip the handoff block or the §6 questions** — only skip file writes on read-only turns or explicit user opt-out.
 
 ## 7. Handoff format (required every turn)
@@ -234,7 +259,8 @@ Use `(grep)`, `(read)`, `(edit)`, `(write)` tags when the same path appears more
 ```markdown
 ### Self-evaluation
 - **Scope:** <on-target | read-only | note drift>
-- **Context load:** <ok | note: excess/wrong order/missing triage> — AGENTS.md <current | updated | stale: …>
+- **Context load:** <ok | note: excess/wrong order/missing triage | drift alert lines> — AGENTS.md <current | updated | stale: …>
+- **Drift alerts:** <none (N/A) | `[severity]` + prefix line(s) from reference § Drift alert examples | `KNOWN_DRIFT: <pair> — <reason>[; expires: …]`>
 - **Tests:** <paths run + result | n/a + why>
 - **Docs:** <paths updated | n/a + why>
 - **Skills used:** <e.g. ui-change, targeted-testing | none>
@@ -253,6 +279,7 @@ Read-only example:
 ### Self-evaluation
 - **Scope:** read-only — explained registry layout
 - **Context load:** ok — classify then single read; AGENTS.md current
+- **Drift alerts:** none (N/A — no governance edits)
 - **Tests:** n/a (no code changes)
 - **Docs:** n/a (read-only, no edits)
 - **Skills used:** repo-map

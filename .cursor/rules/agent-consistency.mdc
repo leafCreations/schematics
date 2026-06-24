@@ -1,0 +1,65 @@
+---
+description: Cross-artifact consistency gate when editing governance skills, rules, or AGENTS.md
+globs: AGENTS.md,.cursor/skills/agent-*/**,.cursor/skills/kanban-*/**,.cursor/rules/agent-*.mdc,.cursor/rules/kanban-*.mdc
+alwaysApply: false
+---
+
+# Agent consistency (governance artifacts)
+
+When you **edit** paths matched by this rule's `globs`, keep workflow artifacts aligned in the **same turn**. Pair with [agent-agents-md-maintenance.mdc](agent-agents-md-maintenance.mdc) for agent/kanban **skills**; this rule covers **rules**, **reference tables**, and **AGENTS.md** parity. End-of-turn prompts: [agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §6g. **Artifact parity table:** [agent-triage/reference.md](../skills/agent-triage/reference.md) § Consistency matrix.
+
+## Before handoff — four check types
+
+### 1. Schema consistency
+
+- [ ] Reference § Failure patterns tables use five columns (Signature, Trigger snippet, Fix pattern, Skill, Rule) — [agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §6f
+- [ ] Rules cite **Signature** only — **no Fix pattern prose** copied from reference rows
+
+### 2. Routing consistency
+
+- [ ] [AGENTS.md](../../AGENTS.md) **Every turn** steps match [agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) (incl. §1b when present)
+- [ ] [agent-routing.mdc](agent-routing.mdc) turn lifecycle matches AGENTS.md
+- [ ] No artifact still references deprecated steps (grep stale lifecycle labels in governance docs)
+
+### 3. Card-type consistency
+
+- [ ] Every kanban label in [AGENTS.md](../../AGENTS.md) card types table has a matching `kanban-*.mdc` and section in [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md)
+- [ ] New label type → update all three in the same turn
+
+### 4. Failure-pattern consistency
+
+- [ ] New **Signature** → row in owning `reference.md` (cross-cutting: [agent-self-evaluation/reference.md](../skills/agent-self-evaluation/reference.md); hooks: [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md))
+- [ ] New **Signature** → [agent-triage/reference.md](../skills/agent-triage/reference.md) § Failure pattern routing (or §1b examples)
+- [ ] Rules that mention a pattern cite **Signature** — grep signature exists in a reference table
+
+## Change → must update (same turn)
+
+| Change | Update |
+| ------ | ------ |
+| New **Signature** / failure row | Owning `reference.md` + triage failure routing + AGENTS.md Classify/Maintaining if lookup changes |
+| New kanban **label** type | AGENTS.md card types + new/updated `kanban-*.mdc` + kanban-markdown/SKILL.md |
+| New routing **step** (e.g. 1b) | AGENTS.md Every turn + agent-routing.mdc + agent-triage/SKILL.md |
+| New scoped **agent/kanban rule** | AGENTS.md area → skills & rules table + `docs/feature-areas.yaml` **Agent Workflow** `paths` |
+| New skill under **Agent Workflow** in yaml (e.g. `pre-commit-workflow`) | AGENTS.md **Agent** or **Kanban** area row skill link; extend `check_governance_parity.py` `_AGENTS_SKILL_LINK_RE` if skill name is not `agent*` / `kanban*` |
+| New / changed `handlers:` in `feature-areas.yaml` | Keep symbols unique across areas; run `check_governance_parity.py`; align kanban **Label Methods** on open cards |
+
+## Do not
+
+- Duplicate Fix pattern prose from reference tables into `.mdc` files
+- Add a Signature to a rule without a reference row
+- Change triage lifecycle without updating AGENTS.md and agent-routing.mdc
+
+**Periodic audit:** [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit — `python3 scripts/create_governance_audit_card.py`.
+
+**Drift alert format:** when reporting parity mismatches, use prefixes from [agent-triage/reference.md](../skills/agent-triage/reference.md) § Drift alert examples — cite matrix row or audit checklist item; Signature only in rules.
+
+## When to emit drift alerts
+
+| Trigger | Emit where |
+| ------- | ---------- |
+| This turn **edited** a path matching this rule's `globs` | Run matrix + four check types before handoff ([agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) § Governance drift detection) |
+| Parity fails and is **not** fixed same turn | **Context load** note, [agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §6g, handoff `- **Drift alerts:**` (one prefixed line per mismatch) |
+| User runs / pastes `check_governance_parity.py` output | Context load + §6g + handoff `- **Drift alerts:**`; script spawns **todo** fix cards (epic `GovernanceDriftAlert`) unless `--no-spawn-cards` |
+| User approved **temporary** drift | `KNOWN_DRIFT: <artifact pair> — <reason>[; expires: <date or note>]` in handoff — see reference § KNOWN_DRIFT |
+
+**Do not** emit drift alerts on every turn — only when governance globs were edited or user runs/pastes `check_governance_parity.py` output. Read-only turns → N/A.

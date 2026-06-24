@@ -40,8 +40,9 @@ On first run, legacy **QSettings** values (`block_tooltips`, `grid_axis_labels`)
 | `panels.compass` | **View → Compass** (and panel close) | `true` | Structure + Site compass |
 | `panels.materials` | **View → Materials** | `true` | Materials panel |
 | `panels.structure_settings` | **View → Structure settings** | `true` | Structure identity + size panel |
+| `viewer.preview_zoom_percent` | Viewer preview zoom (wheel / toolbar slider) | `100` | **Viewer** tab main preview (25–400); saved on change and on exit |
 
-Changes save when toggled in the UI; the full state is also flushed on exit.
+Changes save when toggled in the UI; preview zoom saves when adjusted. The full state is also flushed on exit.
 
 ---
 
@@ -246,7 +247,15 @@ Arrow buttons and keyboard arrows when the structure footprint is selected on th
 | Preview render type | Dropdown | No | Keys from `PREVIEW_RENDER_REGISTRY` in `renderers/registry.py` |
 | Floor group | Dropdown | No | Shown only for **Top Down**; hidden for facades, site top-down, materials |
 | Gallery | Thumbnails + Previous/Next | No | Multi-image types show one PNG per direction, site Y, or layer Y |
-| Main image | Scroll area | No | Loaded from session preview dir |
+| Main image | Scroll area | No | Loaded from session preview dir; mouse wheel zooms (25%–400%) |
+| Zoom level | Label (preview toolbar, far right) | No | Resets to **100%** when **Viewer** tab is opened |
+
+### Preview toolbar (`ui/widgets/preview_toolbar.py`)
+
+| Property | Control | Persisted | Notes |
+| -------- | ------- | --------- | ----- |
+| Previous / Next | Buttons | No | Gallery navigation when multiple PNGs |
+| Zoom level | Label (far right) | No | Displays current zoom percent; wheel zoom on main image |
 
 Preview PNGs are written to `output/schematics/_preview/{session}/` and removed on quit, structure switch, new structure, or window reload.
 

@@ -36,7 +36,8 @@ Use `git diff --name-only` (staged or working tree) or the files you just edited
 | 1 | [reference.md](reference.md) quick table |
 | 2 | `scripts/pre-commit-pytest.sh` `case` branches (source of truth) |
 | 3 | Convention: `helpers/foo.py` → `tests/test_foo.py` if it exists |
-| 4 | [repo-map](../repo-map/SKILL.md) entry points |
+| 4 | Kanban card **`## Label Methods`** — test function names listed there |
+| 5 | [repo-map](../repo-map/SKILL.md) entry points |
 
 **Docs-only** (`docs/**`) with no code changes → **no pytest**.
 

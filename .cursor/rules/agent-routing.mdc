@@ -18,7 +18,7 @@ alwaysApply: true
 
 ```text
 START → agent-triage/SKILL.md (classify; §1b failure-pattern grep on signals only)
-WORK  → card Label Paths OR surgical grep → minimal edit
+WORK  → card Label Paths + Label Methods (when Feature Areas set) OR surgical grep → minimal edit
 VERIFY → targeted pytest; pre-commit-pytest.sh before Review/commit
 END   → agent-self-evaluation/SKILL.md + handoff block
 ```
@@ -32,9 +32,14 @@ END   → agent-self-evaluation/SKILL.md + handoff block
 | `bug` | [kanban-bug-cards.mdc](kanban-bug-cards.mdc) | **Corrective Action** (not Decisions) |
 | `commit-issue` | [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) | **Review** → Root Cause + Corrective Action; implement only after user approval |
 | `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response**; spawn **todo** + `epic` when user approves recommendations |
+| `agent` | [kanban-agent-cards.mdc](kanban-agent-cards.mdc) | **Decisions**; user **Description** + **Feature Area** |
 | *(feature)* | — | **Decisions** |
 
-Resolve **Feature Areas** → **Label Paths** via `docs/feature-areas.yaml` before `in-progress`.
+Resolve **Feature Areas** (or agent card **Feature Area**) → **Label Paths** + **Label Methods** via `docs/feature-areas.yaml` before `in-progress`.
+
+## Code style (Python)
+
+All agent edits to `.py` / `.pyi` files must keep lines ≤ **100** characters (`pyproject.toml` `line-length = 100`). Pre-commit ruff fails on E501 — wrap strings, split imports, break call chains before commit.
 
 ## Load skills (on demand — not all every turn)
 
@@ -50,6 +55,9 @@ Resolve **Feature Areas** → **Label Paths** via `docs/feature-areas.yaml` befo
 ## Discovery budget
 
 - **Failure signals** (hook, pytest, UI wiring, handoff) → [agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) §1b grep before broad reads
+- **Governance edits** → [agent-triage/reference.md](../skills/agent-triage/reference.md) § Consistency matrix
+- **Governance audit card** → [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit ([AGENTS.md](../../AGENTS.md) Classify quickly)
+- **Classify signal rows** — keep [AGENTS.md](../../AGENTS.md) § Classify quickly, triage §1, and reference § Classify in sync (including **Verify**: `run tests` / `commit-ready`)
 - **Grep** before opening `ui/main_window.py` or other large files
 - After **3** full file reads → prefer grep or semantic search
 - Ad-hoc one-file fixes → **surgical** (no kanban) unless user assigns a card

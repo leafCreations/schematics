@@ -67,6 +67,23 @@ Avoid placing business logic directly inside UI widgets.
 
 UI components should primarily coordinate user interaction and delegate work to underlying systems.
 
+## File menu — structure open
+
+- **Open Structure** and **Open Recent** restart the editor via `open_structure_in_editor_process` (`_restart_editor_for_structure`).
+- In-flight **preview** renders must not block open — `_block_if_render_in_progress(opening_structure=True)` skips when `_render_is_preview` (process replacement ends the render thread).
+- Export/worldgen renders still block open; warning copy uses “opening another structure.”
+- Invalid folder picks and “already editing this target” must surface status or dialog feedback — no silent return after the file dialog closes.
+
+## Viewer preview zoom
+
+- Zoom slider + **Reset** + % label on `PreviewToolbar`; wheel on scroll viewport — all call `PreviewPanel._set_zoom_factor`.
+- **Viewer** menu (`_init_viewer_menu` after **Structure**): Zoom In/Out/Reset — enabled only on Viewer tab (`_sync_viewer_zoom_actions`).
+- Persist `viewer.preview_zoom_percent` (25–400) via `set_preview_zoom_percent` on change; restore with `restore_saved_zoom()` when entering **Viewer** tab (not hard 100% reset).
+
+## Render panel
+
+- `RenderPanel` — action buttons only; no on-panel schematic/world path label. Template gating via `set_worldgen_template_available` from `_sync_render_output_hint`.
+
 ## Property Management
 
 When introducing new settings:

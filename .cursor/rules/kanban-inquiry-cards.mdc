@@ -17,14 +17,15 @@ When a feature file has frontmatter `labels` including **`inquiry`** (case-insen
 
 - `## Response` — answer the question; include **Suggested follow-up cards** when applicable
 - `## Label Paths` — when user provided **Feature Areas**, or when inferred during research
+- `## Label Methods` — when **Feature Areas** set; symbols from research + registry `handlers`
 
 ## Spawn feature cards (mandatory when user asks)
 
 When the user requests implementation of inquiry recommendations, spawn **todo** feature (or bug) cards per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § **Spawn feature cards from inquiry**:
 
 - `status: "todo"`, `labels: []` (feature) or `["bug"]`
-- `epic: "{EpicName}"` — PascalCase theme (e.g. `DesignFailureMemorySystem`)
-- Body sections: **Acceptance Criteria**, **Out of Scope**, **Feature Areas**, **Label Paths**, **Decisions**, **Context**
+- `epic: "{EpicName}"` — PascalCase theme (e.g. `DesignFailureMemorySystem`, `GovernanceDriftAlerts`)
+- Body sections: **Acceptance Criteria**, **Out of Scope**, **Feature Areas**, **Label Paths**, **Label Methods**, **Decisions**, **Context**
 - Parent inquiry: **`## Spawned feature cards`** table + matching `epic`
 
 Do **not** start implementation on spawned cards until user assigns work (pre-implementation review still applies).
@@ -32,7 +33,7 @@ Do **not** start implementation on spawned cards until user assigns work (pre-im
 ## Workflow
 
 1. Confirm **Description** present
-2. Resolve **Feature Areas** → **Label Paths** when areas are set
+2. Resolve **Feature Areas** → **Label Paths** + **Label Methods** when areas are set
 3. `todo` → `in-progress` → research (read-only)
 4. Write **Response** on the card → `review`
 5. User asks to spawn → create **todo** child cards with `epic` + review-ready sections
@@ -43,7 +44,7 @@ Do **not** start implementation on spawned cards until user assigns work (pre-im
 - Use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on the **inquiry** card itself
 - Implement application code on the inquiry card unless user explicitly asks
 - Spawn cards in **Backlog** — always **todo**
-- Skip **Decisions** / **Label Paths** on spawned **feature** cards
+- Skip **Decisions** / **Label Paths** / **Label Methods** on spawned **feature** cards when Feature Areas are set
 
 ## Full workflow
 

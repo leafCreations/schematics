@@ -7,7 +7,6 @@ import importlib.util
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QLabel,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -48,16 +47,6 @@ class RenderPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(*PANEL_MARGINS)
         layout.setSpacing(8)
-
-        intro = QLabel(
-            "Export blueprint PNGs to the structure output folder using the same "
-            "pipeline as render_main.py. The preview dropdown selects which render "
-            "type is exported. Unsaved editor changes are not included unless you save first."
-        )
-        intro.setWordWrap(True)
-
-        self._output_label = QLabel()
-        self._output_label.setWordWrap(True)
 
         self._export_button = QToolButton()
         self._export_button.setText("Export Render")
@@ -101,8 +90,6 @@ class RenderPanel(QWidget):
         actions_layout.addWidget(self._open_output_button)
         actions_layout.addStretch(1)
 
-        layout.addWidget(intro)
-        layout.addWidget(self._output_label)
         layout.addWidget(actions_row)
 
     def set_preview_render(self, render_name: str) -> None:
@@ -110,23 +97,9 @@ class RenderPanel(QWidget):
         label = PREVIEW_RENDER_REGISTRY.get(render_name, render_name)
         self._export_button.setToolTip(f"Export {label} to the schematic output folder.")
 
-    def set_output_hint(
-        self,
-        output_folder: str | None,
-        *,
-        minecraft_version: str | None = None,
-        worldgen_template_available: bool = True,
-    ) -> None:
-        if not output_folder:
-            self._output_label.setText("Output folder is set in structure.yaml (output_folder).")
-        else:
-            version_label = minecraft_version or "version"
-            self._output_label.setText(
-                f"Schematics: output/schematics/{output_folder}/\n"
-                f"Worlds: output/worlds/{output_folder}/v{version_label.replace('.', '_')}/"
-            )
-
-        self._worldgen_template_available = worldgen_template_available
+    def set_worldgen_template_available(self, available: bool) -> None:
+        """Enable **Generate World** when a template exists for the structure version."""
+        self._worldgen_template_available = available
         self._update_generate_world_button()
 
     def _update_generate_world_button(self) -> None:

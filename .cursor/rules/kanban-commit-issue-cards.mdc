@@ -20,6 +20,7 @@ Full workflow: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) §
 | **`## Root Cause (current code)`** | **Agent** | When user asks to **review** the card |
 | **`## Corrective Action`** | **Agent** | When user asks to **review** the card |
 | **`## Label Paths`** | **Agent** | Optional during review (from failed tests / staged paths) |
+| **`## Label Methods`** | **Agent** | Optional during review (from traceback, test names, staged paths) |
 
 ## Reusable pattern? (on review)
 

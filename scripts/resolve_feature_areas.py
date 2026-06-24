@@ -13,6 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = REPO_ROOT / "docs/feature-areas.yaml"
 
 _PATH_KEYS = ("paths", "wiring", "tests")
+_HANDLER_KEY = "handlers"
 
 
 def load_registry() -> dict:
@@ -24,6 +25,7 @@ def resolve_areas(
     labels: list[str],
     *,
     include_related: bool = False,
+    handlers_only: bool = False,
 ) -> tuple[list[str], list[str]]:
     areas = load_registry()
     unknown: list[str] = []
@@ -38,8 +40,13 @@ def resolve_areas(
         if entry is None:
             unknown.append(label)
             return
+        if handlers_only:
+            for handler in entry.get(_HANDLER_KEY, []) or []:
+                if handler not in ordered:
+                    ordered.append(handler)
+            return
         for key in _PATH_KEYS:
-            for path in entry.get(key, []):
+            for path in entry.get(key, []) or []:
                 if path not in ordered:
                     ordered.append(path)
         if include_related:
@@ -61,6 +68,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Include paths from related feature areas",
     )
     parser.add_argument(
+        "--handlers",
+        action="store_true",
+        help="Print registry handlers (stable entry points) instead of paths",
+    )
+    parser.add_argument(
         "--list",
         action="store_true",
         help="List all registered feature area labels",
@@ -75,7 +87,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.labels:
         parser.error("labels required unless --list is set")
 
-    paths, unknown = resolve_areas(args.labels, include_related=args.related)
+    paths, unknown = resolve_areas(
+        args.labels,
+        include_related=args.related,
+        handlers_only=args.handlers,
+    )
     if unknown:
         print("Unknown labels:", ", ".join(unknown), file=sys.stderr)
     for path in paths:
