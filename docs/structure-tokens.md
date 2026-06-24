@@ -42,12 +42,13 @@ structures/residence/
 
 Shared across stages for the same structure package:
 
+* **`version`** — Minecraft Java version for this structure package (`26.1.2` or `26.2`; missing manifest values load as `26.1.2`). Drives palette filtering and worldgen template selection.
 * **`dimension`** — `overworld`, `nether`, or `end` (default terrain palette filter and worldgen dimension)
 * **`grid`** — site size, placement, offsets, path settings, group lists (see [grid fields](#grid-fields) below)
 * **`site_ground`** — 2D path/trim cell grid for the site tab and path renders
 * **`stages`** — list of stage entries, each with `stage`, `path` (e.g. `stage1/stage.yaml`), and `output_folder`
 
-The loader merges manifest `dimension`, `grid`, and `site_ground` into each stage at load time (`helpers/structure_loader.py`).
+The loader merges manifest `dimension`, `grid`, `site_ground`, and `version` into each stage at load time (`helpers/structure_loader.py`).
 
 ### Stage file (`stage{N}/stage.yaml`)
 

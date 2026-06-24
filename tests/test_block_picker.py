@@ -297,6 +297,18 @@ def test_natural_palette_includes_brick_and_nether_building_blocks():
     assert cinnabar.variants == ("chiseled", "polished")
 
 
+def test_natural_palette_hides_26_2_blocks_for_26_1_2():
+    palette = resolve_palette("natural", minecraft_version="26.1.2")
+    assert palette is not None
+
+    catalog_blocks = {entry.token for entry in palette.entries if entry.is_catalog_block}
+
+    assert "minecraft:stone_bricks" in catalog_blocks
+    assert "minecraft:cinnabar" not in catalog_blocks
+    assert "minecraft:sulfur" not in catalog_blocks
+    assert "minecraft:potent_sulfur" not in catalog_blocks
+
+
 def test_building_palette_includes_wall_token():
     palette = resolve_palette("building")
     assert palette is not None
@@ -317,6 +329,20 @@ def test_wall_materials_include_26_2_cinnabar_and_sulfur():
         "sulfur_brick",
         "polished_sulfur",
     }.issubset(materials)
+
+
+def test_wall_materials_exclude_26_2_blocks_for_26_1_2():
+    from helpers.block_picker import enumerate_token_materials
+
+    materials = set(
+        enumerate_token_materials(
+            "minecraft:{material}_wall",
+            minecraft_version="26.1.2",
+        )
+    )
+    assert "cinnabar" not in materials
+    assert "sulfur" not in materials
+    assert "cobblestone" in materials
 
 
 def test_slab_materials_include_26_2_cinnabar_and_sulfur():

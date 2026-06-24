@@ -4,7 +4,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from helpers.paths import ASSET_FOLDER, BASE_DIR
+from helpers.minecraft_versions import (
+    DEFAULT_STRUCTURE_MINECRAFT_VERSION,
+    minecraft_version_at_least,
+    normalize_minecraft_version,
+)
+from helpers.paths import ASSET_FOLDER, BASE_DIR, VERSIONS_ASSETS_FOLDER
 
 CATALOG_PATH = BASE_DIR / "registries" / "generated" / "catalog.json"
 SKIP_BLOCKSTATE_STEMS = frozenset({"_all", "_list"})
@@ -37,7 +42,58 @@ def resolve_catalog_texture(textures_dir: Path, block_name: str) -> str | None:
     return None
 
 
-def generate_block_catalog(*, assets_dir: Path = ASSET_FOLDER) -> BlockCatalog:
+def _block_stem(block_id: str) -> str:
+    return normalize_block_id(block_id).split(":", 1)[-1]
+
+
+def infer_block_introduced_in(block_id: str, *, entry: CatalogEntry | None = None) -> str:
+    """Return the Minecraft version that introduced *block_id*."""
+    if entry is not None:
+        introduced = entry.get("introduced_in")
+
+        if isinstance(introduced, str) and introduced.strip():
+            return normalize_minecraft_version(introduced)
+
+    stem = _block_stem(block_id)
+
+    if "cinnabar" in stem or "sulfur" in stem:
+        return "26.2"
+
+    return DEFAULT_STRUCTURE_MINECRAFT_VERSION
+
+
+def catalog_entry_introduced_in(
+    block_id: str,
+    *,
+    catalog: BlockCatalog | None = None,
+) -> str:
+    resolved_catalog = load_block_catalog() if catalog is None else catalog
+    entry = resolved_catalog.get(normalize_block_id(block_id))
+    return infer_block_introduced_in(block_id, entry=entry)
+
+
+def block_available_in_version(
+    block_id: str,
+    minecraft_version: str,
+    *,
+    catalog: BlockCatalog | None = None,
+) -> bool:
+    """Return whether *block_id* exists in the active catalog for *minecraft_version*."""
+    normalized = normalize_block_id(block_id)
+    resolved_catalog = load_block_catalog() if catalog is None else catalog
+    entry = resolved_catalog.get(normalized)
+
+    if entry is None:
+        return False
+
+    introduced_in = catalog_entry_introduced_in(normalized, catalog=resolved_catalog)
+    return minecraft_version_at_least(
+        structure_version=normalize_minecraft_version(minecraft_version),
+        required_version=introduced_in,
+    )
+
+
+def _generate_block_catalog_from_assets(assets_dir: Path) -> BlockCatalog:
     blockstates_dir = assets_dir / "blockstates"
     lang_path = assets_dir / "lang" / "en_us.json"
     textures_dir = assets_dir / "textures" / "block"
@@ -67,6 +123,35 @@ def generate_block_catalog(*, assets_dir: Path = ASSET_FOLDER) -> BlockCatalog:
             entry["texture"] = texture
 
         catalog[block_id] = entry
+
+    return catalog
+
+
+def _resolve_base_assets_dir() -> Path | None:
+    versioned = VERSIONS_ASSETS_FOLDER / "26_1_2" / "minecraft"
+
+    if versioned.is_dir():
+        return versioned
+
+    return None
+
+
+def generate_block_catalog(*, assets_dir: Path = ASSET_FOLDER) -> BlockCatalog:
+    base_assets_dir = _resolve_base_assets_dir()
+    catalog = _generate_block_catalog_from_assets(assets_dir)
+
+    if base_assets_dir is None or base_assets_dir.resolve() == assets_dir.resolve():
+        for block_id, entry in catalog.items():
+            entry.setdefault("introduced_in", infer_block_introduced_in(block_id, entry=entry))
+        return catalog
+
+    base_catalog = _generate_block_catalog_from_assets(base_assets_dir)
+
+    for block_id, entry in catalog.items():
+        if block_id not in base_catalog:
+            entry["introduced_in"] = "26.2"
+        else:
+            entry.setdefault("introduced_in", DEFAULT_STRUCTURE_MINECRAFT_VERSION)
 
     return catalog
 

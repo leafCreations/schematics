@@ -26,7 +26,7 @@ See also: `docs/ui.md`, `.cursor/rules/ui-panels.mdc`.
 | Structure tab, right column | Compass, Paint brush, Selector, Eraser, Properties, Materials | Mixed `QGroupBox` / `QWidget` |
 | Structure tab, grid header | `LayerToolsPanel` → `LayerActionToolbar` | `QWidget` wrapper |
 | Site tab, right column | Compass (duplicate), Path brush, Nudge, Site settings | Mixed |
-| Render tab | `RenderPanel` | `QWidget`, nested groups only |
+| Viewer tab | `RenderPanel`, `PreviewPanel` | `QWidget` / `QGroupBox`; preview gallery on Viewer tab |
 
 **Sub-panels (embedded):** `StructurePropertiesPanel`, `StructureSizePanel` inside `StructureSettingsPanel`.
 

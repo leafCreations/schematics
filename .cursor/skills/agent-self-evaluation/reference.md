@@ -67,6 +67,7 @@ Adding "use grep before reading main_window.py" when agent-triage §2 already sa
 ### Self-evaluation
 - **Scope:** on-target — `helpers/materials.py` + test only
 - **Tests:** `tests/test_materials.py` — 6 passed
+- **Docs:** n/a (no user-facing workflow change)
 - **Skills used:** targeted-testing
 - **Skills updated:** targeted-testing/reference — added `helpers/log_materials.py` → test map row
 - **Commit-ready:** yes (run pre-commit)
@@ -78,6 +79,7 @@ Adding "use grep before reading main_window.py" when agent-triage §2 already sa
 ### Self-evaluation
 - **Scope:** on-target — single doc typo
 - **Tests:** skipped (docs-only)
+- **Docs:** `docs/ui.md` (typo fix)
 - **Skills used:** repo-map
 - **Skills updated:** none
 - **Commit-ready:** yes
@@ -104,7 +106,7 @@ Adding "use grep before reading main_window.py" when agent-triage §2 already sa
 | §4 Testing | Claimed pass without run? | targeted-testing |
 | §5 Pre-commit | Hook order followed on failure? | pre-commit-workflow |
 | §6 Scope | Unrelated edits? | agent-triage |
-| §8 Checklist | All boxes honestly ticked? | agent-self-evaluation |
+| §8 Checklist | All boxes honestly ticked? Docs pass when code changed? | agent-self-evaluation, docs-maintenance |
 
 ## Common failure patterns in this repo
 
@@ -121,13 +123,14 @@ Adding "use grep before reading main_window.py" when agent-triage §2 already sa
 | Worldgen tests: `template/` not found | Use `resolve_worldgen_template_dir()` → `worldgen_templates/v26_1_2/` | repo-map, project-context |
 | Worldgen tests: Amulet `4903` interface missing | Template is 26.2 but Amulet only supports 26.1.x — default worldgen to `DEFAULT_WORLGEN_VERSION` | project-context |
 | Commit failed pytest after “tests passed” earlier | Run `scripts/pre-commit-pytest.sh` on staged files before commit; re-run same scope after fixes | targeted-testing §5–§6, pre-commit-workflow |
+| Shipped feature without `docs/` sync | Run [docs-maintenance](../docs-maintenance/SKILL.md) before Review / commit-ready | docs-maintenance |
 | Self-eval skipped / missing handoff block | Violates `.cursor/rules/agent-self-evaluation.mdc` — required every turn | agent-self-evaluation |
 
 Add rows here **and** to the owning skill when a new pattern appears twice.
 
 ## Read-only / Ask mode
 
-Self-evaluation is **still required**. Use `Scope: read-only`, `Tests: n/a`, `Commit-ready: n/a`. Skill edits only when the user asks or churn revealed a durable gap worth proposing.
+Self-evaluation is **still required**. Use `Scope: read-only`, `Tests: n/a`, `Docs: n/a (read-only)`, `Commit-ready: n/a`. Skill edits only when the user asks or churn revealed a durable gap worth proposing.
 
 ## Maintenance
 

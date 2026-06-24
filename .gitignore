@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.agents/
+.devtool/
 
 # Virtual environments
 .venv/

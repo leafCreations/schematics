@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from helpers.minecraft_versions import normalize_minecraft_version
+
 _STRUCTURE_SLUG_RE = re.compile(r"[^a-z]+")
 _STRUCTURE_SLUG_VALID = re.compile(r"^[a-z]+$")
 
@@ -87,3 +89,15 @@ def read_structure_identity(metadata: dict[str, Any]) -> tuple[str, int, str, st
     name = derive_structure_name(structure, stage)
     output_folder = derive_output_folder(structure, stage)
     return structure, stage, name, output_folder
+
+
+def resolve_structure_version(metadata: dict[str, Any]) -> str:
+    """Return the structure package Minecraft version (defaults when missing)."""
+    return normalize_minecraft_version(metadata.get("version"))
+
+
+def apply_structure_version(metadata: dict[str, Any], *, version: str) -> str:
+    """Write normalized ``version`` into *metadata* and return it."""
+    normalized = normalize_minecraft_version(version)
+    metadata["version"] = normalized
+    return normalized

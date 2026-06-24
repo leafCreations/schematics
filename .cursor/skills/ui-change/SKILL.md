@@ -4,6 +4,7 @@ description: >-
   Checklist for structure_scripts editor UI changes under ui/. Use when adding or
   modifying panels, dialogs, grid toolbar, properties brush, site tab, palette,
   main_window wiring, or user-facing editor behavior documented in docs/ui.md.
+  After changes, review and update docs/ per docs-maintenance (no exceptions).
 ---
 
 # UI Change
@@ -91,15 +92,18 @@ bash scripts/run-ui residence 1
 
 Use **View → Reload Window** (`Ctrl+Shift+Q`) after code edits instead of full restart when possible. See [run-ui](../run-ui/SKILL.md).
 
-## Docs
+## Docs (mandatory)
 
-Update when user-facing:
+After **any** user-visible or workflow change, review and update **`docs/`** in the same turn — [docs-maintenance](../docs-maintenance/SKILL.md). **No exceptions**; do not defer.
+
+Typical targets:
 
 - `docs/ui.md` — developer reference
 - `docs/structure-editor-guide.md` — user workflow
-- `docs/editor-properties.md` — new fields / save targets
+- `docs/editor-properties.md` — controls and save targets
+- `docs/render-types.md` — preview/export paths when render pipeline changes
 
-Skip doc sweep for internal refactors with no behavior change.
+Grep `docs/` for stale terms (old tab names, removed buttons, “not yet implemented”) before handoff.
 
 ## Do not
 
@@ -117,7 +121,7 @@ Skip doc sweep for internal refactors with no behavior change.
 - [ ] Column layout updated if panel show/hide changed
 - [ ] _persist_dialog_changes on dialog OK
 - [ ] Targeted UI tests run
-- [ ] docs/ui.md updated if user-visible
+- [ ] docs/ reviewed and updated per [docs-maintenance](../docs-maintenance/SKILL.md)
 ```
 
 Panel refactor backlog: `docs/ui-panel-refactor.md`.

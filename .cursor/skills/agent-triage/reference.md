@@ -2,6 +2,19 @@
 
 Quick lookup for path→test mapping and entry points. Source of truth for hooks: `scripts/pre-commit-pytest.sh`.
 
+## Classify the request (signals)
+
+| Mode | User signals (examples) |
+| ---- | ------------------------ |
+| **Read-only** | explain, review, audit, "is this correct?" |
+| **Surgical** | fix one error, rename, small doc fix; bug found / fix bug / bug reported; failing test, ruff/lint, typo, quick fix |
+| **Implementation** | feature, multi-file, refactor (no kanban card named) |
+| **Review first, then implement** | kanban, card path/title/id, "implement from card", first To Do card |
+| **Unblock** | pre-commit failed, hook error |
+| **Verify** | run tests, commit-ready, staged pytest |
+
+Ad-hoc bugs → **Surgical**. Named **To Do** card → [kanban-markdown](../kanban-markdown/SKILL.md).
+
 ## Entry points
 
 | Concern | Module / doc |

@@ -72,9 +72,9 @@ The window title shows the structure name and `(unsaved)` when something has not
 | --- | ------- |
 | **Structure** | Edit layer grids, groups, materials, and building size |
 | **Site** | Preview the full site, nudge building placement, paint paths |
-| **Render** | Generate blueprint images and worldgen from saved files |
+| **Viewer** | In-app blueprint preview, export schematics, and worldgen from saved files |
 
-Work in **Structure** to design the building, **Site** to fit it on the ground and add paths, then **Render** when you are ready for output.
+Work in **Structure** to design the building, **Site** to fit it on the ground and add paths, then **Viewer** when you are ready for output.
 
 ---
 
@@ -225,7 +225,7 @@ Structure identity (name, stage, output folder) is edited here too. Save with **
 
 The window title shows `(unsaved)` when layers or site settings need saving. Switching layers with unsaved edits asks **Save / Discard / Cancel**.
 
-**Render** always reads from **disk**. Save before generating, or the editor will offer to save first.
+**Export and preview** always read from **disk**. Save before exporting or previewing after large edits, or the editor will offer to save first.
 
 ---
 
@@ -276,14 +276,34 @@ Save paths and placement with **Save Site Settings**.
 
 ---
 
-## Render tab
+## Viewer tab
 
-1. Check the **render types** you want (top view, facades, materials, worldgen, …).
-2. Click **Generate Renders**.
-3. Progress appears in the status bar.
-4. Use **Open schematic output folder** to view files under `output/schematics/{output_folder}/`.
+The **Viewer** tab combines an in-app preview with export actions.
 
-Worldgen needs Amulet installed — see [worldgen.md](worldgen.md). Details of each render type: [render-types.md](render-types.md).
+### Preview
+
+1. Open the **Viewer** tab.
+2. Choose a render type from the **Preview** dropdown:
+   - **Top Down** — per-layer PNGs for the selected floor group (group selector appears for this type)
+   - **Structure Facades** — N / S / W / E elevation PNGs
+   - **Site Facades** — site cross-sections by direction
+   - **Site Top Down** — one PNG per site path Y level
+   - **Materials List** — inventory sheet with icons and counts
+3. The editor renders into a session folder under `output/schematics/_preview/{session}/` and shows thumbnails plus Previous/Next navigation.
+4. Session preview files are deleted when you quit, open another structure, create a new structure, or reload the window.
+
+Preview uses the same saved YAML as export. Save dirty layers and site settings first when prompted.
+
+### Export and worldgen
+
+| Control | Action |
+| ------- | ------ |
+| **Export Render** | Writes the **currently selected preview type** to `output/schematics/{output_folder}/` |
+| **Export Render → All Renders** | Runs every blueprint type (same as CLI `all`, excluding worldgen) |
+| **Generate World** | Worldgen only; uses structure manifest `version` and `worldgen_templates/v{version}/` |
+| **Open Output Folder** | Opens the schematic output folder in your file manager |
+
+Progress appears in the status bar. Worldgen needs Amulet — see [worldgen.md](worldgen.md). Output filenames: [render-types.md](render-types.md).
 
 You can also render from the command line:
 
@@ -398,5 +418,5 @@ Save all dirty layers and **Save Site Settings**, then generate again. The rende
 4. **Save** each layer (`Ctrl+S`).
 5. Open **Site** tab; set size and placement; paint paths if needed.
 6. **Save Site Settings**.
-7. Open **Render** tab; generate outputs.
-8. Open output folder and review schematics.
+7. Open **Viewer** tab; pick a preview type or **Export Render** / **Generate World**.
+8. Review in-app preview or open `output/schematics/{output_folder}/` for exported PNGs.

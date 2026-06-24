@@ -53,6 +53,17 @@ Loader merges manifest into stage at read time: `helpers/structure_loader.py`, `
 
 Details: [docs/structure-tokens.md](../../docs/structure-tokens.md#structure-packages).
 
+## Feature areas (kanban cards)
+
+Users tag kanban cards with **`## Feature Areas`** (product labels). Agents resolve labels to file paths using [docs/feature-areas.yaml](../../docs/feature-areas.yaml) during pre-implementation card review.
+
+```bash
+python scripts/resolve_feature_areas.py "Render Preview" "Render Selection"
+python scripts/resolve_feature_areas.py --list
+```
+
+After every implementation, agents **must** update `docs/feature-areas.yaml` when paths change and **review/update `docs/`** per [docs-maintenance](../docs-maintenance/SKILL.md). See [kanban-markdown](../kanban-markdown/SKILL.md) § Feature area registry.
+
 ## Subsystem entry points
 
 | Subsystem | Start here | Docs |
@@ -120,7 +131,20 @@ Use `.venv/bin/pytest … -q`. Full map: [reference.md](reference.md) and `scrip
 | [ui-change](../ui-change/SKILL.md) | Editor UI work |
 | [agent-self-evaluation](../agent-self-evaluation/SKILL.md) | End-of-task review + update skills from learnings |
 | [run-ui](../run-ui/SKILL.md) | Launch editor |
+| [kanban-markdown](../kanban-markdown/SKILL.md) | To Do queue; **Feature Areas** → **Label Paths**; `docs/feature-areas.yaml` + `docs/` |
+| [docs-maintenance](../docs-maintenance/SKILL.md) | Mandatory `docs/` review/update after implementation |
 | [optimize-test-suite](../optimize-test-suite/SKILL.md) | Suite optimization only |
+
+## Kanban (agents)
+
+| Location | Agent use |
+| -------- | --------- |
+| `.devtool/features/*.md` with `status: "todo"` | **Work queue** — read **`## Feature Areas`**; resolve via [docs/feature-areas.yaml](../../docs/feature-areas.yaml) |
+| `.devtool/features/*.md` with `status: "backlog"` | **Ignore** — user-managed |
+| `.devtool/features/done/*.md` | **Done** — user-managed after app review |
+| [kanban-markdown](../kanban-markdown/SKILL.md) | Column rules and card edits |
+
+Do **not** treat [roadmap.md](../../docs/roadmap.md) as the live task queue.
 
 ## Docs index
 
@@ -129,6 +153,6 @@ Use `.venv/bin/pytest … -q`. Full map: [reference.md](reference.md) and `scrip
 | [project-info.md](../../docs/project-info.md) | Minecraft 26.x target, deps, trusted URLs |
 | [structure-editor-guide.md](../../docs/structure-editor-guide.md) | User workflow |
 | [editor-properties.md](../../docs/editor-properties.md) | What saves where |
-| [roadmap.md](../../docs/roadmap.md) | Planned UI/features |
+| [roadmap.md](../../docs/roadmap.md) | Legacy planning notes (superseded by kanban for agents) |
 
 Extended tables: [reference.md](reference.md).

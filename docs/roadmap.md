@@ -1,5 +1,7 @@
 # Roadmap
 
+> **Agents:** use the kanban **To Do** column (`.devtool/features/`, `status: "todo"`) and [kanban-markdown](../.cursor/skills/kanban-markdown/SKILL.md). Ignore Backlog (user-managed). Not this file.
+
 ## Design goals
 
 * Registry-driven customization
@@ -20,30 +22,17 @@
 
 | Status | Item |
 | ------ | ---- |
-| Completed | Agent triage skill — [`.cursor/skills/agent-triage/SKILL.md`](../.cursor/skills/agent-triage/SKILL.md) |
-| Completed | Agent repo-map skill — [`.cursor/skills/repo-map/SKILL.md`](../.cursor/skills/repo-map/SKILL.md) |
-| Completed | Agent targeted-testing skill — [`.cursor/skills/targeted-testing/SKILL.md`](../.cursor/skills/targeted-testing/SKILL.md) |
-| Completed | Agent pre-commit workflow skill — [`.cursor/skills/pre-commit-workflow/SKILL.md`](../.cursor/skills/pre-commit-workflow/SKILL.md) |
-| Completed | Agent ui-change skill — [`.cursor/skills/ui-change/SKILL.md`](../.cursor/skills/ui-change/SKILL.md) |
-| Completed | Agent self evaluation skill — [`.cursor/skills/agent-self-evaluation/SKILL.md`](../.cursor/skills/agent-self-evaluation/SKILL.md) (exit review + skill feedback loop) |
-| Completed | User Added 26.2 assets. |
-| Completed | Slim and structure assets/minecraft — [assets.md](assets.md) (`prune`, `migrate_project_assets`, `dedupe` scripts) |
-| Completed | Add 26.2 blocks to the proper category (cinnabar/sulfur in terrain and building palettes) |
-| Completed | Worldgen version selection — modal when worldgen is included; templates from `worldgen_templates/` (`WorldgenVersionDialog`, `--worldgen-version` CLI) |
-| Completed | Colored palette category — `registries/palettes/colored.yaml` (empty; blocks added later) |
-| Completed | Natural palette category — `registries/palettes/natural.yaml` (empty; blocks added later) |
-| Completed | Redstone palette category — `registries/palettes/redstone.yaml` (empty; blocks added later) |
-| Completed | Ore palette category — `registries/palettes/ore.yaml` (empty; blocks added later) |
-| Completed | Populate Natural tab blocks — `registries/palettes/natural.yaml` (overworld / nether / end) |
-| Completed | Populate Ore tab blocks — `registries/palettes/ore.yaml` (overworld / nether) |
 | Completed | In-app schematic preview — evaluation and recommendation (see [In-app schematic preview](#in-app-schematic-preview-recommendation) below) |
-| Up Next | In-app 2D blueprint preview on the Render tab (Phase A — recommended first implementation) |
-| Up Next | Populate Colored tab blocks — `registries/palettes/colored.yaml` |
-| Up Next | Populate Redstone tab blocks — `registries/palettes/redstone.yaml` |
+| Completed | In-app 2D blueprint preview on the Viewer tab (Phase A) |
+| Completed | Preview gallery with thumbnails and navigation (Phase B — Top Down, facades, site top-down, materials) |
+| Completed | Preview session folder cleanup on quit and structure switch |
+| Next Up | Lightweight 3D orbit preview (Phase C — optional) |
 | Not Started | In-app structure metadata editing |
 | Not Started | Multiple structures per site — each selectable and nudged independently on the Site tab |
-| Not Started | Lightweight 3D orbit preview (Phase C — optional, after 2D preview) |
 | Not Started | Allow for custom mod assets |
+| Not Started | Populate Colored tab blocks — `registries/palettes/colored.yaml` |
+| Not Started | Populate Redstone tab blocks — `registries/palettes/redstone.yaml` |
+
 
 See [ui.md](ui.md) for the current editor guide.
 
@@ -60,36 +49,25 @@ The Site tab today assumes **one** structure per stage (`offset_x` / `offset_z` 
 | Not Started | Custom mod catalog entries — extend `catalog.json` generation for non-vanilla block ids |
 | Not Started | Datapack structure and loot generation |
 
-## In-app schematic preview (recommendation)
+## In-app schematic preview
 
-The editor already previews structures in **2D**: layer grids and the Site tab use the same `compile_texture_set()` / sprite-baker pipeline as blueprint renders. The Render tab runs `render_main.py` and writes PNGs to `output/schematics/`; there is no embedded preview yet.
+**Status: Phase A and B shipped.** The **Viewer** tab (`PreviewPanel` + `RenderPanel`) renders selected blueprint types into `output/schematics/_preview/{session}/`, shows a thumbnail gallery with Previous/Next, and exports via **Export Render**. Supported preview types: Top Down (per floor group), Structure Facades, Site Facades, Site Top Down, Materials List. Session preview folders are cleaned up on quit, structure switch, new structure, and window reload.
 
-Layer YAML is the source of truth in the editor — do **not** add an NBT/.schem parser path for in-app preview. Build from `SchematicContext` and existing renderers.
+Layer YAML remains the source of truth — preview builds from `SchematicContext` and existing renderers, not from exported PNGs or NBT/.schem files.
 
-### Recommended phased approach
+### Remaining preview phases
 
-| Phase | Approach | Value | Effort | New dependencies |
-| ----- | -------- | ----- | ------ | ---------------- |
-| **A** | **2D blueprint preview in the Render tab** | See floor plans, facades, and materials without leaving the app | Low | None (Pillow + PySide6 already present) |
-| **B** | **Post-render gallery + zoom/pan** | Replace “open folder” as the primary feedback loop | Low–medium | None |
-| **C** | **Lightweight 3D orbit view** (`QOpenGLWidget`) | Rotate around the structure; useful for height and roof checks | High | Optional OpenGL only |
-| **D** | **Worldgen shortcut** | Open last generated world folder or launch Minecraft | Low | None (worldgen stack optional) |
-| **E** | **Embedded WebGL** (prismarine-viewer + `QWebEngine`) | Full chunk fidelity, best for whole-world context | Very high | Qt WebEngine, Node.js subprocess |
+| Phase | Approach | Status |
+| ----- | -------- | ------ |
+| **A** | 2D blueprint preview in the Viewer tab | **Completed** |
+| **B** | Post-render gallery + navigation | **Completed** |
+| **C** | Lightweight 3D orbit view (`QOpenGLWidget`) | Not started |
+| **D** | Worldgen shortcut (open output world folder) | Partial — **Open Output Folder** on Viewer tab; dedicated “launch Minecraft” not implemented |
+| **E** | Embedded WebGL (prismarine-viewer) | Deferred |
 
-**Start with Phase A.** It reuses `build_stage_complete_schematics()` or individual renderer functions, renders to a temp file or in-memory `PIL.Image`, and displays the result in a scrollable widget on the Render tab. Unsaved edits still require save-first (same rule as today).
+Phase C notes (if pursued): build a voxel mesh from stacked layers via existing context builders; use greedy meshing and face culling; sample textures from `compile_texture_set()`; expect simplified geometry for stairs/fences/walls initially.
 
-Phase B extends A with a thumbnail strip for all selected render types and basic zoom/pan (`QScrollArea` + scale factor).
-
-Phase C is optional. If pursued:
-
-* Build a voxel mesh from stacked layers via existing context builders (not from exported schematics).
-* Use **greedy meshing** and **face culling** — one combined mesh per structure, not one cube per block.
-* Sample textures from `compile_texture_set()` / catalog fallback into a single atlas.
-* Expect extra work for partial blocks (stairs, fences, walls, doors) where 2D bakers already solve the hard cases; 3D may show simplified boxes for complex blockstates initially.
-
-Phase D complements preview: after a worldgen render, offer **Open output world** (folder) on the Render tab. True in-game validation without building a renderer.
-
-Defer Phase E unless the goal shifts to embedded chunk/world viewing. It adds Qt WebEngine and often a Node sidecar; **26.x** block-model coverage in third-party viewers should be verified before committing.
+Defer Phase E unless the goal shifts to embedded chunk/world viewing.
 
 ### Options evaluated (not recommended as first step)
 
@@ -106,14 +84,6 @@ Defer Phase E unless the goal shifts to embedded chunk/world viewing. It adds Qt
 * Structure layers in this project are typically modest (tens of thousands of cells across all layers, not full chunks).
 * 2D blueprint renders are already optimized (sprite cache, baked fences/stairs/walls).
 * Any 3D path must merge visible faces into a single draw call; never instantiate one mesh per block.
-
-### Implementation sketch (Phase A)
-
-1. Add `PreviewPanel` on the Render tab (below generate / open-folder actions).
-2. On **Generate**, optionally run `top_view` (or user-selected types) to a temp directory under `output/schematics/_preview/`.
-3. Load the primary PNG into a `QLabel` or custom zoom widget; show path and timestamp.
-4. Wire `RenderWorker` completion signal to refresh the preview (same worker as today).
-5. Tests: mock renderer output path; no GPU required.
 
 ## Planned palette content
 

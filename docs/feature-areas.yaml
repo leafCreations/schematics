@@ -1,0 +1,533 @@
+# Feature area registry — user-facing labels → repo paths.
+# Used by kanban cards (## Feature Areas) and agents during pre-implementation review.
+# See .cursor/skills/kanban-markdown/SKILL.md
+#
+# Schema per area:
+#   summary: one-line description
+#   tab: optional parent tab (Structure Tab | Site Tab | Render Tab)
+#   paths: primary implementation files
+#   wiring: orchestration / integration (often main_window.py)
+#   tests: pytest files
+#   related: other feature area labels to consider
+#   docs: optional user/developer docs
+
+areas:
+  File Menu:
+    summary: Open, save, reload, new structure, exit
+    paths:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  View Menu:
+    summary: Panel visibility, grid axis labels, block tooltips
+    paths:
+      - ui/main_window.py
+      - config/editor_settings.yaml
+      - ui/app_settings.py
+    docs:
+      - docs/ui.md
+
+  Structure Menu:
+    summary: Structure tab menus including render shortcuts
+    paths:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  Structure Tab:
+    summary: Layer editing tab shell (palettes, grid, inspector columns)
+    tab: Structure Tab
+    paths:
+      - ui/main_window.py
+    related:
+      - Palettes Panel
+      - Structure Grid
+      - Groups Panel
+      - Layers Panel
+    docs:
+      - docs/ui.md
+
+  Site Tab:
+    summary: Site footprint preview and placement tab shell
+    tab: Site Tab
+    paths:
+      - ui/main_window.py
+    related:
+      - Site Grid
+      - Site Settings Panel
+      - Path Brush Panel
+    docs:
+      - docs/ui.md
+
+  Render Tab:
+    summary: Viewer tab shell (render panel + preview panel)
+    tab: Render Tab
+    paths:
+      - ui/main_window.py
+    related:
+      - Render Panel
+      - Render Preview
+    docs:
+      - docs/ui.md
+
+  Palettes Panel:
+    summary: Block category search and palette picker (left column)
+    tab: Structure Tab
+    paths:
+      - ui/widgets/palette_panel.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_palette_panel.py
+    related:
+      - Palette Registry
+      - Block Picker
+    docs:
+      - docs/ui.md
+      - docs/registry.md
+
+  Groups Panel:
+    summary: Layer group filter, CRUD, visibility, reorder
+    tab: Structure Tab
+    paths:
+      - ui/widgets/groups_panel.py
+      - helpers/layer_groups.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_layer_groups.py
+    related:
+      - Layers Panel
+    docs:
+      - docs/ui.md
+
+  Layers Panel:
+    summary: Layer list, reorder, visibility, CRUD
+    tab: Structure Tab
+    paths:
+      - ui/widgets/layer_list_panel.py
+      - ui/widgets/list_panel_base.py
+    wiring:
+      - ui/main_window.py
+    related:
+      - Groups Panel
+      - Add Layer Dialog
+    docs:
+      - docs/ui.md
+
+  Structure Settings Panel:
+    summary: Structure identity, stage, output folder, grid size, Minecraft version
+    tab: Structure Tab
+    paths:
+      - ui/widgets/structure_settings_panel.py
+      - ui/widgets/structure_properties_panel.py
+      - ui/widgets/structure_size_panel.py
+      - helpers/minecraft_versions.py
+      - helpers/structure_metadata.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+      - docs/editor-properties.md
+
+  Structure Grid:
+    summary: Layer paint/erase/selector/move grid
+    tab: Structure Tab
+    paths:
+      - ui/widgets/grid.py
+      - helpers/grid_brush.py
+      - helpers/cells.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_cells.py
+      - tests/test_grid_scrollbars.py
+      - tests/test_layer_grid_paint.py
+    related:
+      - Layer Toolbar
+      - Paint Brush Panel
+    docs:
+      - docs/ui.md
+
+  Layer Toolbar:
+    summary: Grid header tools (selector, move, paint, eraser, rotate, save)
+    tab: Structure Tab
+    paths:
+      - ui/widgets/layer_tools_panel.py
+    wiring:
+      - ui/main_window.py
+    related:
+      - Selector Panel
+      - Paint Brush Panel
+      - Eraser Panel
+    docs:
+      - docs/ui.md
+
+  Paint Brush Panel:
+    summary: Paint mode hints and brush options (right column)
+    tab: Structure Tab
+    paths:
+      - ui/widgets/layer_paint_brush_panel.py
+    wiring:
+      - ui/main_window.py
+    related:
+      - Properties Panel
+      - Structure Grid
+    docs:
+      - docs/ui.md
+
+  Selector Panel:
+    summary: Rectangle selection mode hints
+    tab: Structure Tab
+    paths:
+      - ui/widgets/layer_selector_panel.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  Eraser Panel:
+    summary: Eraser size and mode hints
+    tab: Structure Tab
+    paths:
+      - ui/widgets/layer_eraser_panel.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  Properties Panel:
+    summary: Selected block / grid cell inspector, brush preview
+    tab: Structure Tab
+    paths:
+      - ui/widgets/properties_panel.py
+      - helpers/brush_preview.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_properties_panel.py
+      - tests/test_brush_preview.py
+    related:
+      - Block Picker
+    docs:
+      - docs/ui.md
+      - docs/editor-properties.md
+
+  Materials Panel:
+    summary: Live materials inventory for current layer or all layers
+    tab: Structure Tab
+    paths:
+      - ui/widgets/materials_panel.py
+      - ui/editor_materials.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_materials.py
+    docs:
+      - docs/ui.md
+
+  Compass Panel:
+    summary: North-up orientation rose
+    paths:
+      - ui/widgets/compass_panel.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  Site Grid:
+    summary: Site footprint preview with structure overlay
+    tab: Site Tab
+    paths:
+      - ui/widgets/site_grid.py
+      - ui/site_cells.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_site_cells.py
+    docs:
+      - docs/ui.md
+
+  Site Settings Panel:
+    summary: Site width/depth, placement anchors, offsets
+    tab: Site Tab
+    paths:
+      - ui/widgets/site_settings_panel.py
+      - helpers/site_ground.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+      - docs/editor-properties.md
+
+  Path Brush Panel:
+    summary: Site path painting controls
+    tab: Site Tab
+    paths:
+      - ui/widgets/site_path_panel.py
+      - helpers/path_geometry.py
+      - helpers/path_strip.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_path_geometry.py
+      - tests/test_path_strip.py
+    docs:
+      - docs/ui.md
+
+  Site Nudge Controls:
+    summary: Arrow nudge for structure placement on site grid
+    tab: Site Tab
+    paths:
+      - ui/widgets/site_nudge_controls.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  Render Panel:
+    summary: Export Render split button, Generate World, output folder hint
+    tab: Render Tab
+    paths:
+      - ui/widgets/render_panel.py
+    wiring:
+      - ui/main_window.py
+      - ui/widgets/preview_panel.py
+    tests:
+      - tests/test_render_panel.py
+    related:
+      - Render Pipeline
+      - Render Export Button
+      - Generate World Button
+      - Render Preview
+    docs:
+      - docs/ui.md
+      - docs/render-types.md
+
+  Render Export Button:
+    summary: Split button to export preview selection or all blueprint renders
+    tab: Render Tab
+    paths:
+      - ui/widgets/render_panel.py
+    wiring:
+      - ui/main_window.py
+      - ui/widgets/preview_panel.py
+    tests:
+      - tests/test_render_panel.py
+    related:
+      - Render Panel
+      - Render Preview
+      - Render Pipeline
+    docs:
+      - docs/ui.md
+
+  Generate World Button:
+    summary: Export Minecraft world from saved structure via worldgen pipeline
+    tab: Render Tab
+    paths:
+      - ui/widgets/render_panel.py
+    wiring:
+      - ui/main_window.py
+      - ui/render_worker.py
+    tests:
+      - tests/test_render_panel.py
+    related:
+      - Render Panel
+      - Worldgen
+      - Render Pipeline
+    docs:
+      - docs/ui.md
+      - docs/worldgen.md
+
+  Render Preview:
+    summary: In-app PNG gallery with render-type selector, thumbnails, navigation; session preview dir cleanup on close/switch
+    tab: Render Tab
+    paths:
+      - ui/widgets/preview_panel.py
+      - ui/render_preview.py
+      - renderers/preview_top_view.py
+      - renderers/preview_structure_facades.py
+      - renderers/preview_site_facades.py
+      - renderers/preview_site_topdown.py
+      - renderers/preview_materials.py
+      - renderers/structure_facades.py
+      - renderers/site_facades.py
+      - renderers/path_view.py
+      - renderers/materials.py
+      - renderers/layer_panel.py
+    wiring:
+      - ui/main_window.py
+      - ui/render_worker.py
+      - render_main.py
+    tests:
+      - tests/test_preview_panel.py
+      - tests/test_render_preview.py
+      - tests/test_structure_facades.py
+      - tests/test_preview_site_facades.py
+      - tests/test_preview_site_topdown.py
+      - tests/test_preview_materials.py
+      - tests/test_landscape_utils.py
+    related:
+      - Render Tab
+      - Render Selection
+      - Render Pipeline
+    docs:
+      - docs/ui.md
+
+  Render Selection:
+    summary: Render-type dropdown on preview panel (Top Down, Structure Facades, Site Facades, Site Top Down, Materials List)
+    tab: Render Tab
+    paths:
+      - ui/widgets/preview_panel.py
+      - renderers/registry.py
+    wiring:
+      - ui/main_window.py
+    related:
+      - Render Preview
+    docs:
+      - docs/ui.md
+
+  Render Pipeline:
+    summary: CLI and background render jobs (composite blueprint output)
+    paths:
+      - render_main.py
+      - ui/render_worker.py
+      - renderers/registry.py
+      - renderers/top_view.py
+      - renderers/layer_panel.py
+    tests:
+      - tests/test_render_panel.py
+    related:
+      - Render Panel
+      - Render Preview
+    docs:
+      - docs/render-types.md
+
+  Worldgen:
+    summary: Minecraft world generation from structures
+    paths:
+      - renderers/worldgen.py
+      - helpers/worldgen_region_patch.py
+      - ui/widgets/worldgen_version_dialog.py
+    wiring:
+      - ui/main_window.py
+    tests:
+      - tests/test_worldgen_functional_blocks.py
+    docs:
+      - docs/worldgen.md
+
+  Palette Registry:
+    summary: Palette YAML files and validation
+    paths:
+      - registries/palettes/
+      - registries/validate.py
+      - registries/loader.py
+    tests:
+      - tests/test_palette_integrity.py
+    related:
+      - Palettes Panel
+      - Block Picker
+    docs:
+      - docs/registry.md
+
+  Adding Categories:
+    summary: Add or extend palette categories and palette YAML content
+    paths:
+      - registries/palettes/
+      - registries/validate.py
+    tests:
+      - tests/test_palette_integrity.py
+    related:
+      - Palette Registry
+      - Palettes Panel
+    docs:
+      - docs/registry.md
+
+  Block Picker:
+    summary: Token grammar, picker entries, brush token building, version-filtered palettes
+    paths:
+      - helpers/block_picker.py
+      - helpers/block_catalog.py
+      - helpers/minecraft_versions.py
+      - helpers/structure_tokens.py
+    tests:
+      - tests/test_block_picker.py
+      - tests/test_block_catalog.py
+      - tests/test_minecraft_versions.py
+    related:
+      - Properties Panel
+      - Palette Registry
+    docs:
+      - docs/structure-tokens.md
+      - docs/registry.md
+
+  Sprite Baker:
+    summary: Procedural block sprites for grid and previews
+    paths:
+      - helpers/sprite_baker/
+      - scripts/bake_sprites.py
+    tests:
+      - tests/test_sprite_baker_campfire.py
+    docs:
+      - docs/sprite-baker.md
+
+  Structure Packages:
+    summary: Manifest, stage.yaml, layer YAML load/save, manifest version field
+    paths:
+      - helpers/structure_loader.py
+      - helpers/structure_metadata.py
+      - helpers/minecraft_versions.py
+      - ui/document.py
+    tests:
+      - tests/test_structure_loader.py
+      - tests/test_ui_document.py
+      - tests/test_structure_metadata.py
+    docs:
+      - docs/structure-tokens.md
+
+  Add Layer Dialog:
+    summary: Add layer with Y index and group
+    paths:
+      - ui/widgets/add_layer_dialog.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  Edit Group Dialog:
+    summary: Rename layer group
+    paths:
+      - ui/widgets/edit_group_dialog.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  New Structure Dialog:
+    summary: Create new structure package with Minecraft version
+    paths:
+      - ui/widgets/new_structure_dialog.py
+      - helpers/minecraft_versions.py
+    wiring:
+      - ui/main_window.py
+    docs:
+      - docs/ui.md
+
+  Catalog Generation:
+    summary: Generated block catalog from Minecraft assets with optional introduced_in metadata
+    paths:
+      - scripts/generate_catalog.py
+      - helpers/block_catalog.py
+      - registries/generated/catalog.json
+    docs:
+      - docs/registry.md
+
+  Feature Area Registry:
+    summary: Kanban feature labels mapped to repo paths
+    paths:
+      - docs/feature-areas.yaml
+    wiring:
+      - scripts/resolve_feature_areas.py
+    docs:
+      - .cursor/skills/kanban-markdown/SKILL.md

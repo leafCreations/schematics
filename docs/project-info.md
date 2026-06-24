@@ -10,6 +10,7 @@ Canonical facts about **structure_scripts** and its Minecraft target. Agents and
 | Supported game versions | **26.x** (year-based releases, e.g. 26.1.2, 26.2) |
 | **Not supported** | Legacy **1.x** numbering (1.20, 1.21, etc.) — different product era |
 | Template world | **Java 26.1.2** — create/copy into `template/` ([worldgen.md](worldgen.md)) |
+| Structure packages | Per-structure manifest **`version`** (`26.1.2` / `26.2`) on `structures/{name}/structure.yaml` — drives palette filtering and worldgen |
 | Forward work | **26.2** assets and block-model changes ([roadmap.md](roadmap.md)) |
 
 ### Version numbering (avoid confusion)

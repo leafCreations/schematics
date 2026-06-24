@@ -210,6 +210,7 @@ def test_create_structure_stage_document_writes_yaml_and_layer(
     assert document.metadata["structure"] == "tower"
     assert document.metadata["stage"] == 3
     assert document.metadata["dimension"] == "overworld"
+    assert document.metadata["version"] == "26.1.2"
     assert document.metadata["output_folder"] == "stage3_tower"
     assert document.metadata["grid"]["site_width"] == 40
     assert document.metadata["grid"]["site_depth"] == 32
@@ -231,9 +232,35 @@ def test_create_structure_stage_document_writes_yaml_and_layer(
     assert manifest["stages"][0]["path"] == "stage3/stage.yaml"
     assert manifest["stages"][0]["output_folder"] == "stage3_tower"
     assert manifest["dimension"] == "overworld"
+    assert manifest["version"] == "26.1.2"
     assert manifest["grid"]["site_width"] == 40
     assert manifest["grid"]["site_depth"] == 32
     assert all(cell == "GRASS" for row in manifest["site_ground"] for cell in row)
+
+
+def test_create_structure_stage_document_persists_requested_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr("ui.document.STRUCTURES_FOLDER", tmp_path / "structures")
+
+    structure_path = create_structure_stage_document(
+        structure="tower",
+        stage=1,
+        site_width=10,
+        site_depth=10,
+        structure_width=5,
+        structure_depth=5,
+        version="26.2",
+    )
+
+    document = load_structure_document(structure_path)
+    assert document.metadata["version"] == "26.2"
+
+    manifest = yaml.safe_load(
+        (tmp_path / "structures" / "tower" / "structure.yaml").read_text(encoding="utf-8")
+    )
+    assert manifest["version"] == "26.2"
 
 
 def test_create_structure_stage_document_rejects_taken_stage(

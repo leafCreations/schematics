@@ -30,7 +30,7 @@ Summarized for agent use — full pages at the URLs in [SKILL.md](SKILL.md).
 | Minimum Java | Java SE 25 |
 | Wiki | https://minecraft.wiki/w/Java_Edition_26.2 |
 
-**Project use:** target for new assets and block-model behavior (see roadmap).
+**Project use:** target for new assets and block-model behavior (see **To Do** in `.devtool/features/`).
 
 ## Wrong assumptions (do not repeat)
 

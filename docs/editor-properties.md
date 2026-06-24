@@ -108,6 +108,7 @@ Combines identity (`structure_properties_panel.py`) and footprint (`structure_si
 | Output folder | Read-only label | **Save Site Settings** | `output_folder` (derived: `stage{N}_{structure}`) |
 | Site width / depth | Spin 1–512 | **Save Site Settings** | `grid.site_width`, `grid.site_depth` |
 | Dimension | Combo | **Save Site Settings** | `dimension` (`overworld`, `nether`, `end`); also sets default **Terrain** palette filter |
+| Minecraft version | Combo | **Save Site Settings** | Manifest `version` (`26.1.2`, `26.2`); filters palettes and worldgen template. Downgrading shows a warning — placed blocks are not rewritten. |
 | Width (x) | Spin 1–512 | **Resize grid** → all layers | `cells` width (padded with `.` or trimmed east) |
 | Depth (z) | Spin 1–512 | **Resize grid** | `cells` depth (trim south) |
 | Resize grid | Button | Per-layer **Save** or bulk save | Applies size to every layer’s `cells` |
@@ -236,17 +237,40 @@ Arrow buttons and keyboard arrows when the structure footprint is selected on th
 
 ---
 
-## Render tab (`ui/widgets/render_panel.py`)
+## Viewer tab
+
+### Preview panel (`ui/widgets/preview_panel.py`)
 
 | Property | Control | Persisted | Notes |
 | -------- | ------- | --------- | ----- |
-| All render types | Checkbox | No | Selects/deselects all types |
-| Per-type checkboxes | Checkbox | No | Keys from `renderers/registry.py` |
-| Generate Renders | Button | — | Uses **saved** YAML on disk |
-| Open schematic output folder | Button | — | `output/schematics/{output_folder}/` |
+| Preview render type | Dropdown | No | Keys from `PREVIEW_RENDER_REGISTRY` in `renderers/registry.py` |
+| Floor group | Dropdown | No | Shown only for **Top Down**; hidden for facades, site top-down, materials |
+| Gallery | Thumbnails + Previous/Next | No | Multi-image types show one PNG per direction, site Y, or layer Y |
+| Main image | Scroll area | No | Loaded from session preview dir |
 
-| Render key | Label |
-| ---------- | ----- |
+Preview PNGs are written to `output/schematics/_preview/{session}/` and removed on quit, structure switch, new structure, or window reload.
+
+### Render panel (`ui/widgets/render_panel.py`)
+
+| Property | Control | Persisted | Notes |
+| -------- | ------- | --------- | ----- |
+| Export Render | Split button | No | Exports the **preview dropdown selection**; uses saved YAML on disk |
+| All Renders | Menu action | No | Runs all blueprint types (`all`) |
+| Generate World | Button | No | Worldgen only; uses structure manifest `version` and matching `worldgen_templates/v{version}/` |
+| Open Output Folder | Button | No | `output/schematics/{output_folder}/` |
+
+| Preview dropdown label | Export render key |
+| ---------------------- | ----------------- |
+| Top Down | `top_view` |
+| Structure Facades | `structure_facades` |
+| Site Facades | `site_facades` |
+| Site Top Down | `path` |
+| Materials List | `materials` |
+
+Structure menu **Render** submenu still offers direct shortcuts to individual render types and worldgen (same pipeline as CLI).
+
+| Render key | Export label |
+| ---------- | ------------ |
 | `top_view` | Top-Down Floor Blueprints |
 | `roof` | Roof Blueprints |
 | `structure_facades` | Structure Facades |
@@ -268,6 +292,7 @@ Written on **Save Site Settings** (shared grid and site data):
 | Field | Edited in UI | Notes |
 | ----- | ------------ | ----- |
 | `dimension` | Structure settings | `overworld`, `nether`, or `end` |
+| `version` | Structure settings / New Structure | `26.1.2` or `26.2`; defaults to `26.1.2` when missing |
 | `grid.site_width` / `grid.site_depth` | Site settings / Structure settings | |
 | `grid.offset_x` / `grid.offset_z` | Placement + nudge | |
 | `grid.placement` | Site settings anchors | |

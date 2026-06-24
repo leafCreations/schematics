@@ -10,6 +10,7 @@ import helpers.paths as paths
 import helpers.render_image as render_image
 import helpers.utils_schematics as schematics_utils
 from helpers.context import SchematicContext
+from helpers.layer_management import layer_worldgen_index
 from helpers.types import (
     FloorBlueprintLayout,
     FloorBlueprintPanel,
@@ -20,6 +21,10 @@ from helpers.types import (
 
 MAX_PANELS_PER_ROW = 3
 MAX_PANEL_ROWS_PER_IMAGE = 3
+
+_PREVIEW_COMPASS_WIDTH = 80
+_PREVIEW_TOP_MARGIN = 72
+_PREVIEW_BOTTOM_MARGIN = 24
 
 
 def _get_layer_width(layer: dict) -> int:
@@ -181,6 +186,66 @@ def _create_page_image(
     return render_image.create_canvas(img_w, img_h)
 
 
+def _build_preview_layout(ctx: SchematicContext, layer: dict) -> FloorBlueprintLayout:
+    layout = _build_layout(ctx, [layer])
+    return FloorBlueprintLayout(
+        block_px=layout["block_px"],
+        padding=layout["padding"],
+        layer_gap=layout["layer_gap"],
+        top_margin=_PREVIEW_TOP_MARGIN,
+        bottom_margin=_PREVIEW_BOTTOM_MARGIN,
+        inventory_w=layout["inventory_w"],
+        panel_w=layout["panel_w"],
+        panel_h=layout["panel_h"],
+        layer_panel_w=layout["layer_panel_w"],
+        columns=1,
+        layer_pages=[[layer]],
+    )
+
+
+def _create_tight_preview_page_image(
+    layout: FloorBlueprintLayout,
+    page_layers: LayerSpecList,
+) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+    rows = max(1, len(page_layers))
+    content_w = (
+        layout["padding"] * 2
+        + layout["columns"] * layout["layer_panel_w"]
+        + max(0, layout["columns"] - 1) * layout["layer_gap"]
+    )
+    img_w = content_w + _PREVIEW_COMPASS_WIDTH + layout["padding"]
+    img_h = (
+        layout["top_margin"]
+        + (rows * layout["panel_h"])
+        + (max(0, rows - 1) * layout["layer_gap"])
+        + layout["bottom_margin"]
+    )
+    return render_image.create_canvas(img_w, img_h)
+
+
+def _draw_preview_compass(draw, layout: FloorBlueprintLayout, fonts: font_utils.Fonts) -> None:
+    cx = layout["padding"] + layout["layer_panel_w"] + (_PREVIEW_COMPASS_WIDTH // 2)
+    cy = layout["top_margin"] - 24
+    size = 28
+
+    draw.line((cx, cy - size, cx, cy + size), fill="black", width=2)
+    draw.line((cx - size, cy, cx + size, cy), fill="black", width=2)
+
+    draw.polygon(
+        [
+            (cx, cy - size - 8),
+            (cx - 5, cy - size + 2),
+            (cx + 5, cy - size + 2),
+        ],
+        fill="black",
+    )
+
+    draw.text((cx - 4, cy - size - 24), "N", fill="black", font=fonts["layer"])
+    draw.text((cx - 4, cy + size + 6), "S", fill="black", font=fonts["layer"])
+    draw.text((cx + size + 6, cy - 7), "E", fill="black", font=fonts["layer"])
+    draw.text((cx - size - 16, cy - 7), "W", fill="black", font=fonts["layer"])
+
+
 def _draw_page_title(
     draw,
     ctx: SchematicContext,
@@ -301,6 +366,36 @@ def _build_output_path(
         ctx,
         f"Structure_{paths.name_slug(floor_name)}{page_suffix}.png",
     )
+
+
+def _preview_output_path(ctx: SchematicContext, group_name: str, y_index: int) -> str:
+    return paths.schematic_output_file(
+        ctx,
+        f"Structure_{paths.name_slug(group_name)}_y{y_index}.png",
+    )
+
+
+def render_single_layer_preview_blueprint(
+    ctx: SchematicContext,
+    group_name: str,
+    layer: dict,
+    list_index: int,
+) -> None:
+    """Render a single layer to its own PNG for in-app preview."""
+    y_index = layer_worldgen_index(layer, list_index)
+    layout: FloorBlueprintLayout = _build_preview_layout(ctx, layer)
+    fonts: font_utils.Fonts = font_utils.load_layer_panel_fonts()
+    page_layers = layout["layer_pages"][0]
+
+    img, draw = _create_tight_preview_page_image(layout, page_layers)
+    _draw_page_title(draw, ctx, group_name, 1, layout, fonts)
+    _draw_preview_compass(draw, layout, fonts)
+
+    panel: FloorBlueprintPanel = _get_panel_position(0, layout)
+    panel_materials = _draw_layer_panel(img, draw, ctx, layer, panel, fonts)
+    _draw_inventory_panel(img, draw, ctx, panel, panel_materials, fonts)
+
+    img.save(_preview_output_path(ctx, group_name, y_index))
 
 
 def _draw_compass(draw, img_w: int, padding: int, fonts: font_utils.Fonts):

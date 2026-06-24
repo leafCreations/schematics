@@ -7,6 +7,8 @@ alwaysApply: false
 
 Use this rule when the user asks to create or update README files, CONTINUE.md, Cursor rules, architecture docs, UI docs, or developer guides.
 
+**Agents implementing features:** follow [docs-maintenance](../skills/docs-maintenance/SKILL.md) — mandatory `docs/` review/update after code changes; no exceptions.
+
 ## When to update docs
 
 Update documentation when changes affect:

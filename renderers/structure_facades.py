@@ -17,6 +17,14 @@ from helpers.types import (
 
 Y_LABEL_WIDTH = 140
 
+FACADE_DIRECTIONS = ("N", "S", "W", "E")
+FACADE_HEADINGS = {
+    "N": "NORTH FAÇADE (Rear)",
+    "S": "SOUTH FAÇADE (Front Door)",
+    "W": "WEST FAÇADE (Left Side)",
+    "E": "EAST FAÇADE (Right Side)",
+}
+
 
 def structure_facade_row_labels(
     ctx: SchematicContext,
@@ -55,13 +63,8 @@ def _build_structure_elevation_layout(ctx: SchematicContext) -> StructureFacadeL
         img_h=img_h,
         max_layers=max_layers,
         visible_layer_indices=visible_layers,
-        view_keys=["N", "S", "W", "E"],
-        headings={
-            "N": "NORTH FAÇADE (Rear)",
-            "S": "SOUTH FAÇADE (Front Door)",
-            "W": "WEST FAÇADE (Left Side)",
-            "E": "EAST FAÇADE (Right Side)",
-        },
+        view_keys=list(FACADE_DIRECTIONS),
+        headings=dict(FACADE_HEADINGS),
     )
 
 

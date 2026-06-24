@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import uuid
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -77,6 +78,7 @@ from helpers.layer_rotation import (
     rotate_layer_cells,
 )
 from helpers.layer_visibility import is_layer_visible, set_layer_visible
+from helpers.minecraft_versions import format_version_title_suffix
 from helpers.path_strip import (
     clear_all_paths,
     erase_path_at_site,
@@ -87,11 +89,11 @@ from helpers.path_strip import (
 from helpers.paths import (
     OUTPUT_SCHEMATICS_FOLDER,
     STRUCTURES_FOLDER,
-    list_worldgen_template_versions,
+    resolve_worldgen_template_dir,
 )
 from helpers.pipeline import renders_include_worldgen
 from helpers.site_ground import resize_site_ground
-from helpers.structure_metadata import identity_from_structure_path
+from helpers.structure_metadata import identity_from_structure_path, resolve_structure_version
 from helpers.trapdoor_state import with_trapdoor_open
 from ui.app_settings import (
     add_recent_structure,
@@ -135,6 +137,13 @@ from ui.reload import (
     open_structure_in_editor_process,
     reload_editor_process,
 )
+from ui.render_preview import (
+    clear_preview_session_dir,
+    list_gallery_preview_pngs,
+    list_group_preview_pngs,
+    preview_floor_groups,
+    preview_session_dir,
+)
 from ui.render_worker import RenderJobResult, RenderWorker
 from ui.selector_mode import SelectorMode
 from ui.site_cells import build_site_display_grid, site_preview_layer_index, structure_offset
@@ -154,14 +163,14 @@ from ui.widgets.layer_tools_panel import LayerToolsPanel
 from ui.widgets.materials_panel import MaterialsPanel
 from ui.widgets.new_structure_dialog import NewStructureDialog
 from ui.widgets.palette_panel import PalettePanel
+from ui.widgets.preview_panel import PreviewPanel
 from ui.widgets.properties_panel import PropertiesPanel
-from ui.widgets.render_panel import worldgen_dependencies_available
+from ui.widgets.render_panel import RenderPanel, worldgen_dependencies_available
 from ui.widgets.site_grid import SiteGridView
 from ui.widgets.site_nudge_controls import SiteNudgeControls
 from ui.widgets.site_path_panel import SitePathPanel
 from ui.widgets.site_settings_panel import SiteSettingsPanel
 from ui.widgets.structure_settings_panel import StructureSettingsPanel
-from ui.widgets.worldgen_version_dialog import WorldgenVersionDialog
 
 _STRUCTURE_EDITOR_GUIDE_URL = (
     "https://github.com/leafCreations/schematics/blob/main/docs/structure-editor-guide.md"
@@ -456,6 +465,7 @@ class NoStructureLoadedWindow(QMainWindow):
                 structure_width,
                 structure_depth,
                 dimension,
+                minecraft_version,
             ) = dialog.values()
 
             try:
@@ -467,6 +477,7 @@ class NoStructureLoadedWindow(QMainWindow):
                     structure_width=structure_width,
                     structure_depth=structure_depth,
                     dimension=dimension,
+                    version=minecraft_version,
                 )
             except FileExistsError as exc:
                 QMessageBox.warning(self, "New Structure", str(exc))
@@ -535,8 +546,12 @@ class MainWindow(QMainWindow):
         self._site_settings_panel = SiteSettingsPanel()
         self._site_path_panel = SitePathPanel()
         self._site_nudge_controls = SiteNudgeControls()
+        self._render_panel = RenderPanel()
+        self._preview_panel = PreviewPanel()
+        self._preview_session_id = str(uuid.uuid4())
         self._render_thread: QThread | None = None
         self._render_worker: RenderWorker | None = None
+        self._render_is_preview = False
         self._last_schematics_dir: Path | None = None
         self._undo_stack: list = []
         self._redo_stack: list = []
@@ -617,6 +632,16 @@ class MainWindow(QMainWindow):
         self._structure_grid.move_selection_empty.connect(self._on_move_selection_empty)
         self._structure_grid.itemSelectionChanged.connect(self._on_grid_selection_changed)
         self._materials_panel.scope_changed.connect(self._refresh_materials_list)
+        self._render_panel.export_render_requested.connect(self._on_generate_renders_requested)
+        self._render_panel.export_all_renders_requested.connect(
+            lambda: self._on_generate_renders_requested([constants.RENDER_ALL]),
+        )
+        self._render_panel.generate_world_requested.connect(
+            lambda: self._on_generate_renders_requested([constants.RENDER_WORLDGEN]),
+        )
+        self._render_panel.open_output_requested.connect(self._open_render_output_folder)
+        self._preview_panel.preview_render_requested.connect(self._on_preview_render_requested)
+        self._preview_panel.preview_group_changed.connect(self._on_preview_group_changed)
 
         palette_column = QWidget()
         self._palette_column_layout = QVBoxLayout(palette_column)
@@ -704,9 +729,17 @@ class MainWindow(QMainWindow):
         site_splitter.setStretchFactor(0, 4)
         site_splitter.setStretchFactor(1, 1)
 
+        render_tab = QWidget()
+        render_layout = QVBoxLayout(render_tab)
+        render_layout.setContentsMargins(0, 0, 0, 0)
+        render_layout.setSpacing(0)
+        render_layout.addWidget(self._render_panel)
+        render_layout.addWidget(self._preview_panel, stretch=1)
+
         self._tabs = QTabWidget()
         self._tabs.addTab(structure_splitter, "Structure")
         self._tabs.addTab(site_splitter, "Site")
+        self._tabs.addTab(render_tab, "Viewer")
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
         self.setCentralWidget(self._tabs)
@@ -893,7 +926,7 @@ class MainWindow(QMainWindow):
         add_recent_structure(structure, stage)
 
         try:
-            open_structure_in_editor_process(structure, stage)
+            self._restart_editor_for_structure(structure, stage)
         except OSError as exc:
             QMessageBox.critical(self, "Open recent failed", str(exc))
 
@@ -935,7 +968,7 @@ class MainWindow(QMainWindow):
         add_recent_structure(structure, stage)
 
         try:
-            open_structure_in_editor_process(structure, stage)
+            self._restart_editor_for_structure(structure, stage)
         except OSError as exc:
             QMessageBox.critical(self, "Open Structure failed", str(exc))
 
@@ -1152,11 +1185,13 @@ class MainWindow(QMainWindow):
                 structure_width=structure_width,
                 structure_depth=structure_depth,
                 dimension=str(self._document.metadata.get("dimension", "overworld")),
+                minecraft_version=resolve_structure_version(self._document.metadata),
                 title="New Stage",
                 allow_structure_edit=False,
                 allow_stage_edit=False,
                 show_site_size_fields=False,
                 show_dimension_field=False,
+                show_minecraft_version_field=False,
             )
 
             if not dialog.exec():
@@ -1170,6 +1205,7 @@ class MainWindow(QMainWindow):
                 selected_structure_width,
                 selected_structure_depth,
                 _selected_dimension,
+                _selected_version,
             ) = dialog.values()
 
             if selected_structure != current_structure:
@@ -1211,6 +1247,7 @@ class MainWindow(QMainWindow):
                     structure_width=selected_structure_width,
                     structure_depth=selected_structure_depth,
                     dimension=str(self._document.metadata.get("dimension", "overworld")),
+                    version=resolve_structure_version(self._document.metadata),
                 )
             except (FileExistsError, ValueError) as exc:
                 QMessageBox.warning(self, "New Stage", str(exc))
@@ -1221,7 +1258,7 @@ class MainWindow(QMainWindow):
                 return
 
             add_recent_structure(current_structure, stage)
-            open_structure_in_editor_process(current_structure, stage)
+            self._restart_editor_for_structure(current_structure, stage)
             return
 
     def _on_delete_stage(self) -> None:
@@ -1271,10 +1308,10 @@ class MainWindow(QMainWindow):
         if remaining:
             _, next_stage = remaining[0]
             add_recent_structure(structure, next_stage)
-            open_structure_in_editor_process(structure, next_stage)
+            self._restart_editor_for_structure(structure, next_stage)
             return
 
-        open_editor_in_empty_state_process()
+        self._restart_editor_empty()
 
     def _init_help_menu(self) -> None:
         help_menu = self.menuBar().addMenu("&Help")
@@ -1315,6 +1352,7 @@ class MainWindow(QMainWindow):
                 selected_structure_width,
                 selected_structure_depth,
                 dimension,
+                minecraft_version,
             ) = dialog.values()
 
             default_structure = structure
@@ -1332,6 +1370,7 @@ class MainWindow(QMainWindow):
                     structure_width=selected_structure_width,
                     structure_depth=selected_structure_depth,
                     dimension=dimension,
+                    version=minecraft_version,
                 )
             except FileExistsError as exc:
                 QMessageBox.warning(self, "New Structure", str(exc))
@@ -1361,7 +1400,7 @@ class MainWindow(QMainWindow):
             add_recent_structure(structure, stage)
 
             try:
-                open_structure_in_editor_process(structure, stage)
+                self._restart_editor_for_structure(structure, stage)
             except OSError as exc:
                 QMessageBox.critical(
                     self,
@@ -1371,12 +1410,7 @@ class MainWindow(QMainWindow):
             return
 
     def _reload_window(self) -> None:
-        if self._render_thread is not None:
-            QMessageBox.warning(
-                self,
-                "Render in progress",
-                "Wait for the current render job to finish before reloading.",
-            )
+        if self._block_if_render_in_progress():
             return
 
         if self._dirty_layers or self._dirty_structure:
@@ -1391,7 +1425,7 @@ class MainWindow(QMainWindow):
             if answer != QMessageBox.StandardButton.Yes:
                 return
 
-        reload_editor_process()
+        self._reload_editor_process()
 
     def _push_undo_snapshot(self) -> None:
         if self._restoring_history:
@@ -1605,6 +1639,7 @@ class MainWindow(QMainWindow):
             hidden_groups=get_hidden_groups(grid),
             selected_filter=self._group_filter,
         )
+        self._sync_preview_groups()
 
     def _sync_layer_list_panel(self) -> None:
         self._layer_list_panel.load_layers(
@@ -3354,6 +3389,9 @@ class MainWindow(QMainWindow):
     def _sync_palette_from_metadata(self) -> None:
         dimension = str(self._document.metadata.get("dimension", "overworld"))
         self._palette_panel.set_site_dimension(dimension)
+        self._palette_panel.set_structure_version(
+            resolve_structure_version(self._document.metadata),
+        )
 
     def _on_path_width_changed(self, width: int) -> None:
         grid = self._document.metadata.setdefault("grid", {})
@@ -3587,9 +3625,103 @@ class MainWindow(QMainWindow):
         self._block_tooltips_action.setChecked(enabled)
         self._block_tooltips_action.blockSignals(False)
 
+    def _preview_schematics_dir(self) -> Path:
+        return preview_session_dir(self._preview_session_id)
+
+    def _clear_preview_session(self) -> None:
+        clear_preview_session_dir(self._preview_schematics_dir())
+
+    def _block_if_render_in_progress(self, *, closing: bool = False) -> bool:
+        if self._render_thread is None:
+            return False
+
+        action = "closing." if closing else "continuing."
+        QMessageBox.warning(
+            self,
+            "Render in progress",
+            f"Wait for the current render job to finish before {action}",
+        )
+        return True
+
+    def _restart_editor_for_structure(self, structure: str, stage: int) -> None:
+        if self._block_if_render_in_progress():
+            return
+
+        self._clear_preview_session()
+        open_structure_in_editor_process(structure, stage)
+
+    def _restart_editor_empty(self) -> None:
+        if self._block_if_render_in_progress():
+            return
+
+        self._clear_preview_session()
+        open_editor_in_empty_state_process()
+
+    def _reload_editor_process(self) -> None:
+        if self._block_if_render_in_progress():
+            return
+
+        self._clear_preview_session()
+        reload_editor_process()
+
+    def _sync_preview_groups(self) -> None:
+        groups = preview_floor_groups(
+            self._document.layers,
+            self._document.metadata.get("grid", {}),
+        )
+        self._preview_panel.set_groups(groups)
+
     def _sync_render_output_hint(self) -> None:
         output_folder = self._structure_settings_panel.current_output_folder()
+        minecraft_version = resolve_structure_version(self._document.metadata)
+        template_available = True
+
+        try:
+            resolve_worldgen_template_dir(version=minecraft_version)
+        except FileNotFoundError:
+            template_available = False
+
         self._last_schematics_dir = OUTPUT_SCHEMATICS_FOLDER / output_folder
+        self._render_panel.set_output_hint(
+            output_folder,
+            minecraft_version=minecraft_version,
+            worldgen_template_available=template_available,
+        )
+        self._sync_render_panel_preview_selection()
+        self._sync_preview_groups()
+        self._ensure_preview_render()
+
+    def _sync_render_panel_preview_selection(self) -> None:
+        self._render_panel.set_preview_render(self._preview_panel.selected_render())
+
+    def _ensure_preview_render(self) -> None:
+        if self._render_thread is not None:
+            return
+
+        render_name = self._preview_panel.selected_render()
+
+        if render_name != constants.RENDER_TOP_VIEW:
+            preview_paths = list_gallery_preview_pngs(
+                self._preview_schematics_dir(),
+                render_name,
+            )
+            if preview_paths:
+                self._preview_panel.set_gallery(preview_paths, select_index=0)
+                return
+            self._start_preview_facades_render(render_name)
+            return
+
+        group_name = self._preview_panel.selected_group()
+        if group_name is None:
+            self._preview_panel.clear("No floor groups available for preview.")
+            return
+
+        preview_paths = list_group_preview_pngs(self._preview_schematics_dir(), group_name)
+        if preview_paths:
+            self._preview_panel.set_gallery(preview_paths, select_index=0)
+            return
+
+        self._start_preview_top_down_render(group_name)
 
     def _on_structure_properties_changed(self) -> bool:
         previous_metadata = {
@@ -3743,7 +3875,10 @@ class MainWindow(QMainWindow):
     def _update_window_title(self) -> None:
         dirty_marker = " (unsaved)" if self._dirty_layers or self._dirty_structure else ""
         title_name = self._document.metadata.get("name", self._structure_name)
-        self.setWindowTitle(f"Structure Editor — {title_name}{dirty_marker}")
+        version_suffix = format_version_title_suffix(
+            resolve_structure_version(self._document.metadata),
+        )
+        self.setWindowTitle(f"Structure Editor — {title_name}{version_suffix}{dirty_marker}")
 
     def _on_save(self) -> None:
         if self._structure_tab_active():
@@ -3820,12 +3955,7 @@ class MainWindow(QMainWindow):
         return True
 
     def closeEvent(self, event) -> None:
-        if self._render_thread is not None:
-            QMessageBox.warning(
-                self,
-                "Render in progress",
-                "Wait for the current render job to finish before closing.",
-            )
+        if self._block_if_render_in_progress(closing=True):
             event.ignore()
             return
 
@@ -3854,6 +3984,7 @@ class MainWindow(QMainWindow):
                         event.ignore()
                         return
 
+        self._clear_preview_session()
         self._persist_editor_settings()
         event.accept()
 
@@ -3892,7 +4023,63 @@ class MainWindow(QMainWindow):
         )
         menu.addAction(action)
 
+    def _on_preview_group_changed(self, group_name: str) -> None:
+        if not self._preview_panel.uses_group_selector():
+            return
+        self._start_preview_top_down_render(group_name)
+
+    def _on_preview_render_requested(self, render_name: str) -> None:
+        self._render_panel.set_preview_render(render_name)
+
+        if render_name != constants.RENDER_TOP_VIEW:
+            preview_paths = list_gallery_preview_pngs(
+                self._preview_schematics_dir(),
+                render_name,
+            )
+            if preview_paths:
+                self._preview_panel.set_gallery(preview_paths, select_index=0)
+                return
+            self._start_preview_facades_render(render_name)
+            return
+
+        group_name = self._preview_panel.selected_group()
+        if group_name is None:
+            self._preview_panel.clear("No floor groups available for preview.")
+            return
+
+        preview_paths = list_group_preview_pngs(self._preview_schematics_dir(), group_name)
+        if preview_paths:
+            self._preview_panel.set_gallery(preview_paths, select_index=0)
+            return
+
+        self._start_preview_top_down_render(group_name)
+
+    def _start_preview_top_down_render(self, group_name: str) -> None:
+        self._start_render_job(
+            [constants.RENDER_TOP_VIEW],
+            preview=True,
+            preview_render=constants.RENDER_TOP_VIEW,
+            preview_group=group_name,
+        )
+
+    def _start_preview_facades_render(self, render_name: str) -> None:
+        self._start_render_job(
+            [render_name],
+            preview=True,
+            preview_render=render_name,
+        )
+
     def _on_generate_renders_requested(self, renders: list[str]) -> None:
+        self._start_render_job(renders, preview=False)
+
+    def _start_render_job(
+        self,
+        renders: list[str],
+        *,
+        preview: bool,
+        preview_render: str | None = None,
+        preview_group: str | None = None,
+    ) -> None:
         if self._render_thread is not None:
             self._status.showMessage("A render is already in progress.", 3000)
             return
@@ -3901,22 +4088,42 @@ class MainWindow(QMainWindow):
             return
 
         worldgen_version: str | None = None
-        if worldgen_dependencies_available() and renders_include_worldgen(renders):
-            worldgen_version = self._prompt_worldgen_version()
-            if worldgen_version is None:
+        if not preview and worldgen_dependencies_available() and renders_include_worldgen(renders):
+            worldgen_version = resolve_structure_version(self._document.metadata)
+            try:
+                resolve_worldgen_template_dir(version=worldgen_version)
+            except FileNotFoundError:
+                QMessageBox.warning(
+                    self,
+                    "Generate World",
+                    f"No worldgen template found for Minecraft {worldgen_version}. "
+                    f"Add worldgen_templates/v{worldgen_version.replace('.', '_')}/ "
+                    "(see docs/worldgen.md) before generating worlds.",
+                )
                 return
 
-        self._status.showMessage("Starting renders…")
+        self._render_is_preview = preview
+        if preview:
+            self._status.showMessage("Generating preview…")
+            self._preview_panel.set_loading()
+            self._preview_panel.set_render_busy(True)
+        else:
+            self._status.showMessage("Starting renders…")
+            self._render_panel.set_busy(True)
 
         self._render_thread = QThread(self)
         structure = str(self._document.metadata.get("structure", self._structure))
         stage = int(self._document.metadata.get("stage", self._stage))
+        output_dir = self._preview_schematics_dir() if preview else None
         self._render_worker = RenderWorker(
             structure,
             stage,
             renders,
             structure_path=self._document.structure_path,
             worldgen_version=worldgen_version,
+            output_schematics_dir=output_dir,
+            preview_render=preview_render if preview else None,
+            preview_group=preview_group if preview else None,
         )
         self._render_worker.moveToThread(self._render_thread)
         self._render_thread.started.connect(self._render_worker.run)
@@ -3928,27 +4135,30 @@ class MainWindow(QMainWindow):
         self._render_thread.finished.connect(self._finish_render_thread)
         self._render_thread.start()
 
-    def _prompt_worldgen_version(self) -> str | None:
-        versions = list_worldgen_template_versions()
-        if not versions:
-            QMessageBox.warning(
-                self,
-                "Worldgen version",
-                "No worldgen templates found under worldgen_templates/. "
-                "Add a versioned world folder (see docs/worldgen.md) before generating worlds.",
-            )
-            return None
-
-        dialog = WorldgenVersionDialog(self, versions=versions)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return None
-
-        return dialog.selected_version()
-
     def _on_render_progress(self, label: str) -> None:
         self._status.showMessage(f"Rendering {label}…")
 
     def _on_render_finished(self, result: RenderJobResult) -> None:
+        if self._render_is_preview:
+            self._preview_panel.set_render_busy(False)
+            render_name = result.preview_render or self._preview_panel.selected_render()
+            group_name = result.preview_group or self._preview_panel.selected_group()
+            preview_paths = list_gallery_preview_pngs(
+                self._preview_schematics_dir(),
+                render_name,
+                group_name=group_name,
+            )
+            if preview_paths:
+                self._preview_panel.set_gallery(preview_paths, select_index=0)
+            else:
+                self._preview_panel.clear("Preview render complete, but no PNG was found.")
+            self._status.showMessage(
+                f"Preview ready — {self._preview_schematics_dir()}",
+                8000,
+            )
+            return
+
+        self._render_panel.set_busy(False)
         self._last_schematics_dir = result.schematics_dir
         self._status.showMessage(
             f"Renders complete — {result.schematics_dir}",
@@ -3962,10 +4172,19 @@ class MainWindow(QMainWindow):
         )
 
     def _on_render_failed(self, message: str) -> None:
+        if self._render_is_preview:
+            self._preview_panel.set_render_busy(False)
+            self._preview_panel.clear("Preview render failed.")
+            self._status.showMessage("Preview render failed.", 5000)
+            QMessageBox.critical(self, "Preview render failed", message)
+            return
+
+        self._render_panel.set_busy(False)
         self._status.showMessage("Render failed.", 5000)
         QMessageBox.critical(self, "Render failed", message)
 
     def _finish_render_thread(self) -> None:
+        self._render_is_preview = False
         if self._render_thread is not None:
             self._render_thread.deleteLater()
             self._render_thread = None

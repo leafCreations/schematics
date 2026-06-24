@@ -36,6 +36,15 @@ def _render_worldgen(ctx: SchematicContext) -> None:
     worldgen.generate_minecraft_world(ctx)
 
 
+# In-app preview dropdown (top-down per group; facades per direction; site top-down per Y).
+PREVIEW_RENDER_REGISTRY: dict[str, str] = {
+    constants.RENDER_TOP_VIEW: "Top Down",
+    constants.RENDER_STRUCTURE_FACADES: "Structure Facades",
+    constants.RENDER_SITE_FACADES: "Site Facades",
+    constants.RENDER_PATH: "Site Top Down",
+    constants.RENDER_MATERIALS: "Materials List",
+}
+
 RENDER_REGISTRY: dict[str, tuple[str, RenderFn]] = {
     constants.RENDER_TOP_VIEW: (
         "Top-Down Floor Blueprints",

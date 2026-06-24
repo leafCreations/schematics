@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import helpers.constants as constants
 import helpers.fonts as font_utils
 import helpers.materials as material_utils
@@ -138,7 +140,7 @@ def _draw_material_footer(draw, layout: MaterialsLayout, fonts: font_utils.Fonts
     )
 
 
-def render_materials_inventory_blueprint(ctx: SchematicContext):
+def render_materials_inventory_to_path(ctx: SchematicContext, output_path: Path) -> None:
     parsed_tokens = material_utils.collect_material_tokens(ctx)
 
     materials, material_icons, material_icon_tokens = material_utils.build_material_inventory(
@@ -159,6 +161,10 @@ def render_materials_inventory_blueprint(ctx: SchematicContext):
 
     _draw_material_footer(draw, layout, fonts)
 
-    output_path = paths.schematic_output_path(ctx, "materials_list.png")
-
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path)
+
+
+def render_materials_inventory_blueprint(ctx: SchematicContext) -> None:
+    output_path = paths.schematic_output_path(ctx, "materials_list.png")
+    render_materials_inventory_to_path(ctx, output_path)

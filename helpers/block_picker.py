@@ -12,8 +12,14 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from helpers.block_catalog import catalog_display_name, load_block_catalog, normalize_block_id
+from helpers.block_catalog import (
+    block_available_in_version,
+    catalog_display_name,
+    load_block_catalog,
+    normalize_block_id,
+)
 from helpers.campfire_state import is_campfire_block_id
+from helpers.minecraft_versions import normalize_minecraft_version
 from helpers.palette_sections import normalize_palette_section_keys
 from helpers.registry_lookup import is_minecraft_block_token, minecraft_block_id
 from helpers.structure_tokens import BlockStates, format_block_states, parse_structure_token
@@ -83,6 +89,7 @@ def enumerate_token_materials(
     block_template: str | None,
     *,
     catalog: dict[str, Any] | None = None,
+    minecraft_version: str | None = None,
 ) -> tuple[str, ...]:
     """Return materials/colors that produce a real catalog block for a template.
 
@@ -109,7 +116,21 @@ def enumerate_token_materials(
         if material:
             materials.add(material)
 
-    return tuple(sorted(materials))
+    resolved = tuple(sorted(materials))
+
+    if minecraft_version is None:
+        return resolved
+
+    version = normalize_minecraft_version(minecraft_version)
+    filtered: list[str] = []
+
+    for material in resolved:
+        block_id = block_template.format(material=material, color=material)
+
+        if block_available_in_version(block_id, version, catalog=resolved_catalog):
+            filtered.append(material)
+
+    return tuple(filtered)
 
 
 def _resolve_list_label(token: str, entry: dict[str, Any]) -> str:
@@ -154,6 +175,7 @@ def picker_entry_for_token(
     token: str,
     *,
     catalog: dict[str, Any] | None = None,
+    minecraft_version: str | None = None,
 ) -> PickerEntry | None:
     """Build a :class:`PickerEntry` for a semantic registry token."""
     entry = BLOCK_REGISTRY.get(token)
@@ -176,7 +198,11 @@ def picker_entry_for_token(
 
             materials = enumerate_log_materials(catalog=catalog)
         else:
-            materials = enumerate_token_materials(block_template, catalog=catalog)
+            materials = enumerate_token_materials(
+                block_template,
+                catalog=catalog,
+                minecraft_version=minecraft_version,
+            )
 
     return PickerEntry(
         token=token,
@@ -535,7 +561,36 @@ def format_entry_label(
     return display or f"{material} {entry.label}".strip()
 
 
-def resolve_palette(name: str, *, catalog: dict[str, Any] | None = None) -> PickerPalette | None:
+def _picker_entry_available_for_version(
+    entry: PickerEntry,
+    *,
+    catalog: dict[str, Any] | None,
+    minecraft_version: str | None,
+) -> bool:
+    if minecraft_version is None:
+        return True
+
+    version = normalize_minecraft_version(minecraft_version)
+    resolved_catalog = load_block_catalog() if catalog is None else catalog
+
+    if entry.is_catalog_block:
+        return any(
+            block_available_in_version(block_id, version, catalog=resolved_catalog)
+            for block_id in catalog_block_ids(entry)
+        )
+
+    if entry.requires_material:
+        return bool(entry.materials)
+
+    return True
+
+
+def resolve_palette(
+    name: str,
+    *,
+    catalog: dict[str, Any] | None = None,
+    minecraft_version: str | None = None,
+) -> PickerPalette | None:
     """Resolve a single palette tab into structured picker entries."""
     palette = BLOCK_PALETTES.get(name)
 
@@ -546,9 +601,17 @@ def resolve_palette(name: str, *, catalog: dict[str, Any] | None = None) -> Pick
     section_keys: tuple[str, ...] = ()
 
     for token in palette.get("tokens", []) or ():
-        token_entry = picker_entry_for_token(token, catalog=catalog)
+        token_entry = picker_entry_for_token(
+            token,
+            catalog=catalog,
+            minecraft_version=minecraft_version,
+        )
 
-        if token_entry is not None:
+        if token_entry is not None and _picker_entry_available_for_version(
+            token_entry,
+            catalog=catalog,
+            minecraft_version=minecraft_version,
+        ):
             entries.append(token_entry)
 
     sections = palette.get("sections")
@@ -556,14 +619,19 @@ def resolve_palette(name: str, *, catalog: dict[str, Any] | None = None) -> Pick
         section_keys = normalize_palette_section_keys(sections)
 
     for section_key, block_spec in _collect_palette_block_specs(palette):
-        entries.append(
-            picker_entry_for_palette_block(
-                block_spec,
-                palette=name,
-                catalog=catalog,
-                section=section_key,
-            ),
+        block_entry = picker_entry_for_palette_block(
+            block_spec,
+            palette=name,
+            catalog=catalog,
+            section=section_key,
         )
+
+        if _picker_entry_available_for_version(
+            block_entry,
+            catalog=catalog,
+            minecraft_version=minecraft_version,
+        ):
+            entries.append(block_entry)
 
     return PickerPalette(
         name=name,
@@ -643,12 +711,16 @@ def search_picker_entries(
     return results
 
 
-def list_palettes(*, catalog: dict[str, Any] | None = None) -> list[PickerPalette]:
+def list_palettes(
+    *,
+    catalog: dict[str, Any] | None = None,
+    minecraft_version: str | None = None,
+) -> list[PickerPalette]:
     """Resolve every palette tab into structured picker entries."""
     resolved: list[PickerPalette] = []
 
     for name in sorted(BLOCK_PALETTES):
-        palette = resolve_palette(name, catalog=catalog)
+        palette = resolve_palette(name, catalog=catalog, minecraft_version=minecraft_version)
 
         if palette is not None:
             resolved.append(palette)

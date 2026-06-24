@@ -24,6 +24,7 @@ def run_stage_renders(
     *,
     structure_path: Path | None = None,
     worldgen_version: str | None = None,
+    output_schematics_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Load structure from disk and run the selected render handlers."""
@@ -42,6 +43,8 @@ def run_stage_renders(
         )
     else:
         ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+    if output_schematics_dir is not None:
+        ctx.output_schematics_dir = output_schematics_dir
     ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
 
     if progress is None:
@@ -65,6 +68,187 @@ def run_stage_renders(
         print("🎉 ENGINE COMPLETE!")
         print("=" * 70 + "\n")
 
+    return ctx
+
+
+def run_preview_top_down(
+    structure: str,
+    stage: int,
+    group_name: str,
+    *,
+    structure_path: Path | None = None,
+    worldgen_version: str | None = None,
+    output_schematics_dir: Path | None = None,
+    progress: ProgressCallback | None = None,
+) -> SchematicContext:
+    """Render per-Y top-down PNGs for one editor group into the preview session dir."""
+    if structure_path is not None:
+        from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+        ctx = build_schematic_context(
+            load_structure_yaml(structure_path.resolve()),
+            worldgen_version=worldgen_version,
+        )
+    else:
+        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+
+    if output_schematics_dir is not None:
+        ctx.output_schematics_dir = output_schematics_dir
+
+    ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
+
+    if progress is not None:
+        progress(constants.RENDER_TOP_VIEW, f"Top-Down preview ({group_name})")
+    else:
+        print(f"\n[Preview] Generating top-down layers for {group_name}...")
+
+    from renderers.preview_top_view import render_preview_group_blueprints
+
+    render_preview_group_blueprints(ctx, group_name)
+    return ctx
+
+
+def run_preview_structure_facades(
+    structure: str,
+    stage: int,
+    *,
+    structure_path: Path | None = None,
+    worldgen_version: str | None = None,
+    output_schematics_dir: Path | None = None,
+    progress: ProgressCallback | None = None,
+) -> SchematicContext:
+    """Render per-direction structure facade PNGs into the preview session dir."""
+    if structure_path is not None:
+        from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+        ctx = build_schematic_context(
+            load_structure_yaml(structure_path.resolve()),
+            worldgen_version=worldgen_version,
+        )
+    else:
+        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+
+    if output_schematics_dir is not None:
+        ctx.output_schematics_dir = output_schematics_dir
+
+    ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
+
+    if progress is not None:
+        progress(constants.RENDER_STRUCTURE_FACADES, "Structure Facades preview")
+    else:
+        print("\n[Preview] Generating structure facade directions...")
+
+    from renderers.preview_structure_facades import render_preview_structure_facades
+
+    render_preview_structure_facades(ctx)
+    return ctx
+
+
+def run_preview_site_facades(
+    structure: str,
+    stage: int,
+    *,
+    structure_path: Path | None = None,
+    worldgen_version: str | None = None,
+    output_schematics_dir: Path | None = None,
+    progress: ProgressCallback | None = None,
+) -> SchematicContext:
+    """Render per-direction site facade PNGs into the preview session dir."""
+    if structure_path is not None:
+        from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+        ctx = build_schematic_context(
+            load_structure_yaml(structure_path.resolve()),
+            worldgen_version=worldgen_version,
+        )
+    else:
+        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+
+    if output_schematics_dir is not None:
+        ctx.output_schematics_dir = output_schematics_dir
+
+    ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
+
+    if progress is not None:
+        progress(constants.RENDER_SITE_FACADES, "Site Facades preview")
+    else:
+        print("\n[Preview] Generating site facade directions...")
+
+    from renderers.preview_site_facades import render_preview_site_facades
+
+    render_preview_site_facades(ctx)
+    return ctx
+
+
+def run_preview_site_top_down(
+    structure: str,
+    stage: int,
+    *,
+    structure_path: Path | None = None,
+    worldgen_version: str | None = None,
+    output_schematics_dir: Path | None = None,
+    progress: ProgressCallback | None = None,
+) -> SchematicContext:
+    """Render per-Y site top-down PNGs into the preview session dir."""
+    if structure_path is not None:
+        from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+        ctx = build_schematic_context(
+            load_structure_yaml(structure_path.resolve()),
+            worldgen_version=worldgen_version,
+        )
+    else:
+        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+
+    if output_schematics_dir is not None:
+        ctx.output_schematics_dir = output_schematics_dir
+
+    ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
+
+    if progress is not None:
+        progress(constants.RENDER_PATH, "Site Top Down preview")
+    else:
+        print("\n[Preview] Generating site top-down layers...")
+
+    from renderers.preview_site_topdown import render_preview_site_topdown
+
+    render_preview_site_topdown(ctx)
+    return ctx
+
+
+def run_preview_materials(
+    structure: str,
+    stage: int,
+    *,
+    structure_path: Path | None = None,
+    worldgen_version: str | None = None,
+    output_schematics_dir: Path | None = None,
+    progress: ProgressCallback | None = None,
+) -> SchematicContext:
+    """Render materials list PNG into the preview session dir."""
+    if structure_path is not None:
+        from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+        ctx = build_schematic_context(
+            load_structure_yaml(structure_path.resolve()),
+            worldgen_version=worldgen_version,
+        )
+    else:
+        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+
+    if output_schematics_dir is not None:
+        ctx.output_schematics_dir = output_schematics_dir
+
+    ctx.output_schematics_dir.mkdir(parents=True, exist_ok=True)
+
+    if progress is not None:
+        progress(constants.RENDER_MATERIALS, "Materials List preview")
+    else:
+        print("\n[Preview] Generating materials list...")
+
+    from renderers.preview_materials import render_preview_materials
+
+    render_preview_materials(ctx)
     return ctx
 
 

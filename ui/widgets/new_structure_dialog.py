@@ -8,6 +8,10 @@ from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QLineEdit, QSpinBox
 
+from helpers.minecraft_versions import (
+    DEFAULT_STRUCTURE_MINECRAFT_VERSION,
+    SUPPORTED_MINECRAFT_VERSIONS,
+)
 from helpers.structure_metadata import derive_output_folder, normalize_structure_slug
 from ui.dialog_layout import (
     DIALOG_FIELD_MIN_WIDTH,
@@ -36,11 +40,13 @@ class NewStructureDialog(QDialog):
         structure_width: int = 9,
         structure_depth: int = 9,
         dimension: str = "overworld",
+        minecraft_version: str = DEFAULT_STRUCTURE_MINECRAFT_VERSION,
         title: str = "New Structure",
         allow_structure_edit: bool = True,
         allow_stage_edit: bool = True,
         show_site_size_fields: bool = True,
         show_dimension_field: bool = True,
+        show_minecraft_version_field: bool = True,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)
@@ -86,6 +92,15 @@ class NewStructureDialog(QDialog):
         self._dimension.setCurrentIndex(max(0, self._dimension.findData(str(dimension).lower())))
         apply_dialog_field_style(self._dimension, min_width=DIALOG_FIELD_MIN_WIDTH)
 
+        self._minecraft_version = QComboBox()
+        for supported_version in SUPPORTED_MINECRAFT_VERSIONS:
+            self._minecraft_version.addItem(supported_version, supported_version)
+        version_index = self._minecraft_version.findData(
+            str(minecraft_version or DEFAULT_STRUCTURE_MINECRAFT_VERSION)
+        )
+        self._minecraft_version.setCurrentIndex(max(0, version_index))
+        apply_dialog_field_style(self._minecraft_version, min_width=DIALOG_FIELD_MIN_WIDTH)
+
         self._name_label = QLabel("")
         self._name_label.setWordWrap(True)
 
@@ -109,6 +124,8 @@ class NewStructureDialog(QDialog):
         form.addRow("Structure", self._structure)
         if show_dimension_field:
             form.addRow("Dimension", self._dimension)
+        if show_minecraft_version_field:
+            form.addRow("Minecraft version", self._minecraft_version)
         if self._allow_stage_edit:
             form.addRow("Stage", self._stage)
         if show_site_size_fields:
@@ -152,7 +169,7 @@ class NewStructureDialog(QDialog):
         self._name_label.setText(f"{identity_slug.title()} Stage {stage}")
         self._output_folder_label.setText(derive_output_folder(identity_slug, stage))
 
-    def values(self) -> tuple[str, int, int, int, int, int, str]:
+    def values(self) -> tuple[str, int, int, int, int, int, str, str]:
         stage_value = self._stage.value() if self._allow_stage_edit else self._fixed_stage
         return (
             normalize_structure_slug(self._structure.text()),
@@ -162,4 +179,5 @@ class NewStructureDialog(QDialog):
             int(self._structure_width.value()),
             int(self._structure_depth.value()),
             str(self._dimension.currentData()),
+            str(self._minecraft_version.currentData()),
         )

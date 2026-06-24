@@ -15,18 +15,23 @@ Decide **how** to work before reading files or running commands. Follow this ski
 
 **Version / Minecraft facts:** read [project-context](../project-context/SKILL.md) before web search or assuming 1.x vs 26.x.
 
+**Planned work:** read [kanban-markdown](../kanban-markdown/SKILL.md) — **To Do** only; **ignore Backlog**; **pre-implementation card review** before any code; resolve **`## Feature Areas`** → **`## Label Paths`** via `docs/feature-areas.yaml`; agent writes **`## Decisions`** before `in-progress`; **MUST** update `docs/feature-areas.yaml` after every implementation; **MUST** review and update **`docs/`** per [docs-maintenance](../docs-maintenance/SKILL.md) (no exceptions); **MUST** mark **`## Acceptance Criteria` `[x]`** before `in-progress` → `review`; do **not** use `docs/roadmap.md`.
+
 ## 1. Classify the request
 
 | Signal | Mode | First action |
 | ------ | ---- | ------------ |
 | Explain, review, audit, "is this correct?" | **Read-only** | No edits. Grep/Read only. |
-| Fix one error, rename, small doc fix | **Surgical** | Grep → Read 1–3 files → minimal edit |
-| Feature, multi-file, refactor | **Implementation** | Read [repo-map](../repo-map/SKILL.md) + [reference.md](reference.md) area map → targeted reads |
+| Fix one error, rename, small doc fix; bug found, fix bug, bug reported; failing test, ruff/lint, typo, quick fix | **Surgical** | Grep → Read 1–3 files → minimal edit |
+| Feature, multi-file, refactor | **Implementation** | Read [repo-map](../repo-map/SKILL.md) + [reference.md](reference.md) area map → targeted reads → [docs-maintenance](../docs-maintenance/SKILL.md) before Review |
+| Planned work / implement from card; "kanban", card path or title | **Review first, then implement** | [kanban-markdown](../kanban-markdown/SKILL.md) — resolve **`## Feature Areas`** → **`## Label Paths`** → review → code → [docs-maintenance](../docs-maintenance/SKILL.md) |
 | Commit / pre-commit failed | **Unblock** | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) → fix reported hook |
 | "Run tests" / verify | **Verify** | [targeted-testing](../targeted-testing/SKILL.md) — smallest test set |
-| User will commit / "commit-ready" | **Verify** | `scripts/pre-commit-pytest.sh` on staged files → green → optional `record-pytest-pass.sh` |
+| User will commit / "commit-ready" | **Verify** | `scripts/pre-commit-pytest.sh` on staged files → green → optional `record-pytest-pass.sh` (also required before kanban **Review**) |
 
 If the user is in **Ask mode**, stop at read-only even when they say "fix".
+
+**Surgical vs kanban:** Ad-hoc bugs and one-file fixes are **Surgical** — no card review, no column moves. Use the kanban row only when the user assigns a **To Do** card (path, id, title) or asks to implement planned board work.
 
 ## 2. Choose discovery tools (token budget)
 
@@ -118,6 +123,8 @@ Save targets: layers → layer files; site settings → manifest + `stage.yaml`.
 - [ ] After test fix: re-ran hook scope, not only the single failed file
 - [ ] Pre-commit failures addressed in hook order
 - [ ] No unrelated files changed
+- [ ] Kanban implementation: `docs/feature-areas.yaml` updated (mandatory after every implementation)
+- [ ] Code changes: `docs/` reviewed and updated per [docs-maintenance](../docs-maintenance/SKILL.md) (no exceptions)
 - [ ] §6 skill question answered; skills updated or "none" stated
 - [ ] ### Self-evaluation block present as last section of response
 ```
@@ -133,6 +140,8 @@ Save targets: layers → layer files; site settings → manifest + `stage.yaml`.
 | [ui-change](../ui-change/SKILL.md) | Editor UI panels, dialogs, wiring |
 | [agent-self-evaluation](../agent-self-evaluation/SKILL.md) | End-of-task review + skill feedback loop |
 | [run-ui](../run-ui/SKILL.md) | Launch editor after UI changes |
+| [kanban-markdown](../kanban-markdown/SKILL.md) | To Do queue; **Feature Areas** → **Label Paths**; `docs/feature-areas.yaml` + `docs/` maintenance |
+| [docs-maintenance](../docs-maintenance/SKILL.md) | Mandatory `docs/` review/update after implementation — no exceptions |
 | [optimize-test-suite](../optimize-test-suite/SKILL.md) | Suite-wide speed/consolidation — **not** normal commits |
 
 Extended tables: [reference.md](reference.md).

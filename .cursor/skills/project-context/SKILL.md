@@ -41,7 +41,7 @@ Human doc: [docs/project-info.md](../../docs/project-info.md).
 | Worldgen, beds, block entities | Read §26.1 vs 26.2 below + `docs/worldgen.md` |
 | Sprite baker / `assets/minecraft/` | Confirm game version for models/textures |
 | "What Minecraft version?" | Answer from this skill — **no web search** |
-| Adding 26.2 assets (roadmap) | Wiki 26.2 page + repo; do not assume 1.x asset paths |
+| Adding 26.2 assets (kanban) | Wiki 26.2 page + repo; check **To Do** in `.devtool/features/` |
 | Dependency / pip questions | `requirements.txt` + `pyproject.toml` |
 
 ## 26.1 vs 26.2 (repo-relevant)
@@ -50,7 +50,7 @@ Human doc: [docs/project-info.md](../../docs/project-info.md).
 | - | ----------------------- | -------------- |
 | Template | **26.1.2** in `worldgen_templates/v26_1_2/` | `worldgen_templates/v26_2/` (Amulet may not support yet) |
 | Beds | Special renderer; per-color `minecraft:{color}_bed`; block-entity patch | Standard block models; unified bed properties |
-| Code | `helpers/worldgen_block_entities.py`, `docs/worldgen.md` | Roadmap + incremental asset work |
+| Code | `helpers/worldgen_block_entities.py`, `docs/worldgen.md` | Kanban + incremental asset work |
 
 Version numbers (data/protocol/pack format): [reference.md](reference.md).
 

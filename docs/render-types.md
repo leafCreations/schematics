@@ -78,3 +78,23 @@ Example schematic outputs:
 * `{name}_materials_list.png` — materials inventory
 
 Before rendering blocks that use the sprite baker, run the relevant bake commands in [sprite-baker.md](sprite-baker.md).
+
+## In-app preview (editor Viewer tab)
+
+The editor preview uses a **separate session directory** from export output:
+
+```text
+output/schematics/_preview/{session_uuid}/
+```
+
+Each editor process gets one UUID. Preview files use fixed names (not the `{name}_` export prefix), for example:
+
+| Preview dropdown | Session PNG examples |
+| ---------------- | -------------------- |
+| Top Down | `Structure_{group_slug}_y{N}.png` per visible layer in the group |
+| Structure Facades | `Structure_facades_{N\|S\|W\|E}.png` |
+| Site Facades | `Site_facades_{N\|S\|W\|E}.png` |
+| Site Top Down | `Site_topdown_y{layer_y}.png` (e.g. `y-1`, `y0`, `y1`) |
+| Materials List | `Materials_list.png` |
+
+**Export Render** on the Viewer tab writes the matching export file(s) under `output/schematics/{output_folder}/` (see table above). Preview session folders are deleted when the app closes, when you open a different structure/stage, when you open a newly created structure, or when you reload the window.

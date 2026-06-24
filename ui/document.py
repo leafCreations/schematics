@@ -26,8 +26,10 @@ from helpers.structure_loader import (
 )
 from helpers.structure_metadata import (
     apply_structure_identity,
+    apply_structure_version,
     identity_from_structure_path,
     normalize_structure_slug,
+    resolve_structure_version,
 )
 
 
@@ -81,6 +83,7 @@ def _upsert_manifest_stage(
     grid: dict[str, Any],
     output_folder: str,
     shared_site_ground: list[list[str]] | None = None,
+    version: str | None = None,
 ) -> None:
     manifest = _load_structure_manifest(structure_slug)
     stage_value = int(stage)
@@ -118,6 +121,9 @@ def _upsert_manifest_stage(
 
     if shared_site_ground is not None:
         manifest["site_ground"] = shared_site_ground
+
+    if version is not None:
+        manifest["version"] = resolve_structure_version({"version": version})
 
     _save_structure_manifest(structure_slug, manifest)
 
@@ -234,6 +240,7 @@ def load_structure_document(path: Path) -> StructureDocument:
             metadata["dimension"] = manifest.get("dimension")
         if "grid" in manifest:
             metadata["grid"] = manifest.get("grid")
+        metadata["version"] = resolve_structure_version(manifest)
 
     if manifest_entry is not None:
         if "dimension" in manifest_entry and "dimension" not in metadata:
@@ -244,6 +251,7 @@ def load_structure_document(path: Path) -> StructureDocument:
             metadata["output_folder"] = manifest_entry.get("output_folder")
 
     metadata["dimension"] = _normalize_dimension(metadata.get("dimension"))
+    metadata["version"] = resolve_structure_version(metadata)
 
     grid = metadata.get("grid", {})
     site_width, site_depth = resolve_site_dimensions(grid)
@@ -336,6 +344,7 @@ def save_structure_metadata(
             grid=grid_value,
             output_folder=str(metadata.get("output_folder", "")),
             shared_site_ground=site_ground,
+            version=str(metadata.get("version", "")),
         )
 
 
@@ -352,6 +361,7 @@ def create_structure_stage_document(
     structure_width: int,
     structure_depth: int,
     dimension: str = "overworld",
+    version: str | None = None,
 ) -> Path:
     """Create a new structure stage folder with ``stage.yaml`` and one layer file."""
     structure_slug = normalize_structure_slug(structure)
@@ -393,8 +403,11 @@ def create_structure_stage_document(
             f"Stage {stage_value} already exists for structure '{structure_slug}'.",
         )
 
+    manifest = _load_structure_manifest(structure_slug)
+
     metadata: dict[str, Any] = {}
     apply_structure_identity(metadata, structure=structure_slug, stage=stage_value)
+    apply_structure_version(metadata, version=version or resolve_structure_version(manifest))
     metadata["grid"] = apply_placement_to_grid(
         {
             "site_structure_layers": [0],
@@ -416,7 +429,6 @@ def create_structure_stage_document(
         worldgen_index=0,
         group="Main",
     )
-    manifest = _load_structure_manifest(structure_slug)
     shared_site_ground = manifest.get("site_ground")
 
     if isinstance(shared_site_ground, list):
@@ -459,6 +471,7 @@ def create_structure_stage_document(
             grid=metadata["grid"],
             output_folder=str(metadata.get("output_folder", "")),
             shared_site_ground=site_ground,
+            version=str(metadata.get("version", "")),
         )
     except Exception:
         shutil.rmtree(stage_dir, ignore_errors=True)

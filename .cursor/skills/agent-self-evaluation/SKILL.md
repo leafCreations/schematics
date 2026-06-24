@@ -51,11 +51,12 @@ Also enforced in `.cursor/rules/agent-self-evaluation.mdc` (`alwaysApply: true`)
 
 | Area touched | Verify |
 | ------------ | ------ |
+| Kanban / card implementation | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) updated; **`docs/`** reviewed per [docs-maintenance](../docs-maintenance/SKILL.md); **`## Acceptance Criteria`** marked `[x]` before **Review** |
 | Structure YAML / editor save | Manifest vs `stage.yaml` split correct ([repo-map](../repo-map/SKILL.md)) |
 | UI panel/dialog | [ui-change](../ui-change/SKILL.md) checklist |
 | Registry/palette | `validate_palettes()` if behavior/palette changed; **templated families** use one token + materials, not raw catalog ids in `blocks:` ([repo-map](../repo-map/SKILL.md) § Templated block families) |
 | Tests added/changed | No hard-coded catalog block counts ([targeted-testing](../targeted-testing/SKILL.md)) |
-| Docs updated | Only if user-facing or user asked; paths match manifest layout |
+| Docs updated | Mandatory per [docs-maintenance](../docs-maintenance/SKILL.md) when code/behavior changed; handoff lists paths or `n/a` + why |
 
 Read-only turns: mark N/A for rows that do not apply.
 
@@ -99,6 +100,7 @@ If no → handoff must still say `Skills updated: none` (not omit the line).
 | ------------- | ------ |
 | Wrong Minecraft version (1.x vs 26.x), bad web lookup | [project-context/SKILL.md](../project-context/SKILL.md) or [reference.md](../project-context/reference.md) |
 | Tool choice, read budget, when to explore | [agent-triage/SKILL.md](../agent-triage/SKILL.md) or [reference.md](../agent-triage/reference.md) |
+| Kanban card work, new UI surface, new file from feature | [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Feature area registry + [docs-maintenance/SKILL.md](../docs-maintenance/SKILL.md) |
 | Where code lives, save targets, layout | [repo-map/SKILL.md](../repo-map/SKILL.md) or [reference.md](../repo-map/reference.md) |
 | Which tests to run, catalog counts, Qt sandbox | [targeted-testing/SKILL.md](../targeted-testing/SKILL.md) or [reference.md](../targeted-testing/reference.md) |
 | Ruff / palette / pytest hook order | [pre-commit-workflow/SKILL.md](../pre-commit-workflow/SKILL.md) |
@@ -150,6 +152,7 @@ Only skip **editing skill files** when:
 ### Self-evaluation
 - **Scope:** <on-target | read-only | note drift>
 - **Tests:** <paths run + result | n/a + why>
+- **Docs:** <paths updated | n/a + why>
 - **Skills used:** <e.g. ui-change, targeted-testing | none>
 - **Skills updated:** <skill name + one-line what added | none>
 - **Commit-ready:** <yes | needs pre-commit | n/a>
@@ -161,6 +164,7 @@ Read-only example:
 ### Self-evaluation
 - **Scope:** read-only — explained registry layout
 - **Tests:** n/a (no code changes)
+- **Docs:** n/a (read-only, no edits)
 - **Skills used:** repo-map
 - **Skills updated:** none
 - **Commit-ready:** n/a
@@ -199,5 +203,6 @@ Escalation does **not** exempt you from §7 handoff.
 | [targeted-testing](../targeted-testing/SKILL.md) | Test discipline |
 | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) | Hook order |
 | [ui-change](../ui-change/SKILL.md) | UI checklist |
+| [docs-maintenance](../docs-maintenance/SKILL.md) | Mandatory `docs/` sync after code changes |
 
 Rubrics, examples, and update templates: [reference.md](reference.md).

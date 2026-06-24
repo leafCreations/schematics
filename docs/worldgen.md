@@ -26,7 +26,7 @@ from render_main import build_stage_complete_schematics
 build_stage_complete_schematics(structure="residence", stage=1, renders="worldgen")
 ```
 
-**Version:** pass `worldgen_version` to `build_stage_complete_schematics` / `run_stage_renders`, or use `--worldgen-version 26.2` on the CLI. The editor shows a version picker when worldgen is included in a render job. Templates resolve under `worldgen_templates/v{version}/` via `resolve_worldgen_template_dir()`.
+**Version:** pass `worldgen_version` to `build_stage_complete_schematics` / `run_stage_renders`, or use `--worldgen-version 26.2` on the CLI. The editor reads **`version`** from the structure manifest (`structures/{name}/structure.yaml`) when worldgen runs. Templates resolve under `worldgen_templates/v{version}/` via `resolve_worldgen_template_dir()`.
 
 Output is written to `output/worlds/{output_folder}/v{version}/` (for example `output/worlds/residence/v26_2/`), matching the template folder naming under `worldgen_templates/`.
 

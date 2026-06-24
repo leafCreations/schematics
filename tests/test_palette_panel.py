@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from helpers.block_picker import picker_entry_for_token, resolve_palette
+from helpers.block_picker import picker_entry_for_token
 from tests.palette_helpers import palette_section_entry_counts, terrain_section_entry_counts
 from ui.widgets.palette_panel import PalettePanel
 
@@ -18,10 +18,14 @@ def qapp():
     return app
 
 
+def _panel_entry(panel: PalettePanel, palette_name: str, token: str):
+    palette = panel._palettes_by_name[palette_name]
+    return next(entry for entry in palette.entries if entry.token == token)
+
+
 def test_select_entry_does_not_emit_entry_selected(qapp):
     panel = PalettePanel()
-    entry = picker_entry_for_token("SLAB")
-    assert entry is not None
+    entry = _panel_entry(panel, "building", "SLAB")
 
     emissions: list[object] = []
     panel.entry_selected.connect(emissions.append)
@@ -178,8 +182,7 @@ def test_clearing_search_restores_category_browsing(qapp):
 
 def test_select_entry_clears_search_when_filtered_out(qapp):
     panel = PalettePanel()
-    entry = picker_entry_for_token("SLAB")
-    assert entry is not None
+    entry = _panel_entry(panel, "building", "SLAB")
 
     panel._search_edit.setText("zzznomatch")
     panel.select_entry(entry)
@@ -190,10 +193,7 @@ def test_select_entry_clears_search_when_filtered_out(qapp):
 
 def test_select_entry_highlights_match_during_search(qapp):
     panel = PalettePanel()
-    palette = resolve_palette("natural")
-    assert palette is not None
-
-    cobblestone = next(entry for entry in palette.entries if entry.token == "minecraft:cobblestone")
+    cobblestone = _panel_entry(panel, "natural", "minecraft:cobblestone")
     panel._search_edit.setText("cobblestone")
 
     panel.select_entry(cobblestone)
@@ -201,3 +201,15 @@ def test_select_entry_highlights_match_during_search(qapp):
     assert panel._search_edit.text() == "cobblestone"
     assert panel._block_list.currentItem() is not None
     assert panel._block_list.currentItem().data(256) == cobblestone
+
+
+def test_palette_panel_filters_26_2_blocks_for_26_1_2(qapp):
+    panel = PalettePanel()
+    panel.set_structure_version("26.1.2")
+
+    palette = panel._palettes_by_name["natural"]
+    catalog_blocks = {entry.token for entry in palette.entries if entry.is_catalog_block}
+
+    assert "minecraft:cinnabar" not in catalog_blocks
+    assert "minecraft:sulfur" not in catalog_blocks
+    assert "minecraft:stone_bricks" in catalog_blocks

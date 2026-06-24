@@ -390,6 +390,9 @@ def load_structure_yaml(path: Path) -> StructureConfig:
                 if "grid" in manifest and "grid" not in data:
                     data["grid"] = manifest.get("grid")
 
+                if "version" in manifest and "version" not in data:
+                    data["version"] = manifest.get("version")
+
                 for entry in manifest.get("stages", []):
                     if not isinstance(entry, dict):
                         continue

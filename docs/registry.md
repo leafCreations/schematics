@@ -113,4 +113,6 @@ The script reads:
 * `assets/minecraft/lang/en_us.json` → display names (`block.minecraft.stone` → `"Stone"`)
 * `assets/minecraft/textures/block/` → default texture filenames when present
 
+Catalog entries may include optional **`introduced_in`** (e.g. `"26.2"`) when generated from version overlays under `assets/versions/`. The palette panel filters blocks by the structure manifest **`version`** (`helpers/block_picker.py`, `helpers/block_catalog.py`).
+
 Semantic tokens resolve to Minecraft block ids via the behavior registry; `minecraft:` cells use the catalog directly for names and textures. Regenerate the catalog when assets are updated.

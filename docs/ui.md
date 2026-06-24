@@ -41,7 +41,7 @@ python -m ui.main_window --structure residence --stage 1
 
 ## Window layout
 
-Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview and placement), and **Render** (generate blueprint outputs).
+Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview and placement), and **Viewer** (generate blueprint outputs).
 
 ### Structure tab
 
@@ -94,20 +94,23 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 
 **Precise placement:** click any block in the structure footprint on the site grid (highlighted), then use **arrow keys** or **↑↓←→** nudge buttons to move it one block at a time. Offsets update live; anchor presets stay in sync when close.
 
-### Render tab
+### Viewer tab
 
 | Control | Role |
 | ------- | ---- |
-| **Render types** | Checkboxes for each renderer in `render_main.py` (top view, roof, facades, path, materials, worldgen) |
-| **All render types** | Same as `renders all` on the CLI |
-| **Generate Renders** | Runs the pipeline in a background thread; status bar shows progress |
-| **Open schematic output folder** | Opens `output/schematics/{output_folder}/` in the file manager |
+| **Preview** | In-app preview: render-type dropdown, optional floor **group** selector (Top Down only), thumbnail gallery, Previous/Next, and scrollable main image |
+| **Preview** dropdown | **Top Down** (per-Y PNGs for the selected floor group), **Structure Facades**, **Site Facades**, **Site Top Down** (per site Y), **Materials List** — selecting a type auto-renders into the session folder when needed |
+| **Export Render** | Split button — exports the preview dropdown selection to `output/schematics/{output_folder}/`; menu **All Renders** runs all blueprint types |
+| **Generate World** | Runs worldgen only using the structure manifest **Minecraft version** (`26.1.2` or `26.2`); disabled when no matching template exists under `worldgen_templates/` |
+| **Open Output Folder** | Opens `output/schematics/{output_folder}/` in the file manager |
 
-Renders always load from **saved** YAML on disk. If you have unsaved layers or site settings, the editor prompts to save before generating (or you can render the last saved version).
+Preview PNGs for the current editor session are written under `output/schematics/_preview/{session}/` (one UUID per process). That folder is removed when you quit, open a different structure/stage, create a new structure in the editor, or reload the window.
 
-Worldgen is only available when `amulet` is installed; see [worldgen.md](worldgen.md).
+Renders always load from **saved** YAML on disk. If you have unsaved layers or site settings, the editor prompts to save before exporting (or you can export the last saved version).
 
-When worldgen is included (worldgen checkbox, **All**, or **Structure → Render → Worldgen**), the editor prompts for a **Minecraft version** and copies the matching template from `worldgen_templates/` (for example `v26_1_2/` or `v26_2/`).
+Worldgen requires `amulet`; see [worldgen.md](worldgen.md).
+
+**Generate World** (and **Structure → Render → Worldgen**) uses the structure manifest **`version`** field and copies the matching template from `worldgen_templates/` (for example `v26_1_2/` or `v26_2/`). Set version in **Structure settings** or when creating a new structure. The window title shows the active version (e.g. `Residence Stage 2 (v26.1.2)`).
 
 ## Editing workflow
 
@@ -208,7 +211,7 @@ Open the **Site** tab. The **Site settings** panel edits the structure **manifes
 
 ### Generate renders
 
-**From the editor:** open the **Render** tab, choose render types, and click **Generate Renders**. Save layers and site settings first so disk matches your edits.
+**From the editor:** open the **Viewer** tab, choose a preview render type, and click **Export Render** (or **All Renders** from the split menu). Use **Generate World** for worldgen. Save layers and site settings first so disk matches your edits.
 
 **From the CLI** (same pipeline):
 
@@ -304,6 +307,7 @@ ui/
   toolbar_icons.py          # Grid header and panel icons
   selector_mode.py          # Selector rectangle / same-block modes
   render_worker.py          # Background QThread render jobs
+  render_preview.py         # Preview session paths and gallery PNG resolution
   reload.py                 # Editor process reload
   site_cells.py             # Site ↔ structure coordinate mapping
   widgets/
@@ -312,7 +316,8 @@ ui/
     layer_tools_panel.py    # Grid header toolbar (selector, move, paint, eraser, …)
     structure_settings_panel.py  # Structure identity + footprint size
     site_grid.py            # Scaled read-only site footprint preview
-    render_panel.py         # Render type checkboxes and generate action
+    preview_panel.py        # In-app preview dropdown, gallery, navigation
+    render_panel.py         # Export Render split button and Generate World action
     materials_panel.py      # Live all-layer materials table
     properties_panel.py     # Brush + cell inspector
     groups_panel.py         # Layer group list
@@ -382,14 +387,14 @@ The editor runs `ui/platform.py` preflight on Linux and prints install hints whe
 * Direction, material, and variant in placed tokens
 * **Selector** (rectangle and same-block modes), **Move**, **Copy** / **Paste**, paint **Fill** / **Outline**, and **Rotate** (all layers)
 * **New Structure** (`Ctrl+N`), **Open Structure…**, and **Open Recent**
-* **Render** tab — generate schematics/worldgen from the editor (background job)
+* **Viewer** tab — in-app blueprint preview (dropdown + gallery) and export/worldgen actions
 * Live **Materials** list on the Structure tab (current layer or all layers)
 * Undo/redo for paint/erase, structure resize, site grid, placement nudge, and paths
 
 **Not yet:**
 
-* Live render preview pane (embedded thumbnails in the editor)
 * Multi-stage wizard (add stage to existing structure from the UI)
 * Multiple structures per site (independent placement per structure)
+* Lightweight 3D orbit preview (see [roadmap.md](roadmap.md))
 
 See [roadmap.md](roadmap.md) for longer-term plans.

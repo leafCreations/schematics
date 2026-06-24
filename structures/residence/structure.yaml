@@ -19,6 +19,10 @@ grid:
   - minecraft:dirt
   - minecraft:cobblestone
   - minecraft:mossy_cobblestone
+  groups:
+  - Floor 1
+  - Roof
+  - Floor 2
 stages:
 - stage: 1
   path: stage1/stage.yaml

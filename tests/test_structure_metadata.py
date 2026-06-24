@@ -4,10 +4,12 @@ import pytest
 
 from helpers.structure_metadata import (
     apply_structure_identity,
+    apply_structure_version,
     derive_output_folder,
     derive_structure_name,
     identity_from_structure_path,
     normalize_structure_slug,
+    resolve_structure_version,
     validate_structure_slug,
 )
 
@@ -48,6 +50,17 @@ def test_validate_structure_slug_rejects_uppercase():
 
 def test_validate_structure_slug_accepts_letters_only():
     validate_structure_slug("residence")
+
+
+def test_resolve_structure_version_defaults_to_26_1_2():
+    assert resolve_structure_version({}) == "26.1.2"
+    assert resolve_structure_version({"version": "26.2"}) == "26.2"
+
+
+def test_apply_structure_version_normalizes_value():
+    metadata: dict[str, str] = {}
+    assert apply_structure_version(metadata, version="26.2") == "26.2"
+    assert metadata["version"] == "26.2"
 
 
 def test_validate_structure_slug_rejects_digits_and_underscores():

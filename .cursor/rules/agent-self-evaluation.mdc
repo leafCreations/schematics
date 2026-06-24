@@ -22,6 +22,7 @@ Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
 ### Self-evaluation
 - **Scope:** <on-target | read-only | note drift>
 - **Tests:** <paths + result | n/a + why>
+- **Docs:** <paths updated | n/a + why>
 - **Skills used:** <names | none>
 - **Skills updated:** <skill + one-line change | none>
 - **Commit-ready:** <yes | no | n/a>

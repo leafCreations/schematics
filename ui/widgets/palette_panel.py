@@ -14,9 +14,14 @@ from PySide6.QtWidgets import (
 from helpers.block_picker import (
     PickerEntry,
     PickerPalette,
+    clear_picker_entry_cache,
     entry_matches_search,
     list_palettes,
     search_picker_entries,
+)
+from helpers.minecraft_versions import (
+    DEFAULT_STRUCTURE_MINECRAFT_VERSION,
+    normalize_minecraft_version,
 )
 from helpers.palette_sections import PALETTE_SECTION_ALL, palette_section_label
 from ui.widgets.panel_header import create_simple_titled_panel_layout
@@ -29,7 +34,10 @@ class PalettePanel(QGroupBox):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self._palettes: list[PickerPalette] = list_palettes()
+        self._structure_version = DEFAULT_STRUCTURE_MINECRAFT_VERSION
+        self._palettes: list[PickerPalette] = list_palettes(
+            minecraft_version=self._structure_version,
+        )
         self._palettes_by_name = {palette.name: palette for palette in self._palettes}
         self._site_dimension = "overworld"
 
@@ -144,6 +152,36 @@ class PalettePanel(QGroupBox):
 
         self._site_dimension = normalized
         self._apply_site_dimension_to_filter()
+
+    def set_structure_version(self, version: str | None) -> None:
+        normalized = normalize_minecraft_version(version)
+
+        if normalized == self._structure_version:
+            return
+
+        self._structure_version = normalized
+        clear_picker_entry_cache()
+        self._reload_palettes()
+
+    def _reload_palettes(self) -> None:
+        current_palette = self._current_palette_name()
+        self._palettes = list_palettes(minecraft_version=self._structure_version)
+        self._palettes_by_name = {palette.name: palette for palette in self._palettes}
+
+        self._category_combo.blockSignals(True)
+        self._category_combo.clear()
+        for palette in self._palettes:
+            self._category_combo.addItem(palette.label, palette.name)
+
+        if current_palette is not None:
+            restore_index = self._category_combo.findData(current_palette)
+            if restore_index >= 0:
+                self._category_combo.setCurrentIndex(restore_index)
+            elif self._palettes:
+                self._category_combo.setCurrentIndex(0)
+
+        self._category_combo.blockSignals(False)
+        self._refresh_block_list()
 
     def _apply_site_dimension_to_filter(self) -> None:
         if self._is_searching():

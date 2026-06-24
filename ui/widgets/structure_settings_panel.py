@@ -42,5 +42,8 @@ class StructureSettingsPanel(QGroupBox):
     def current_output_folder(self) -> str:
         return self._properties.current_output_folder()
 
+    def current_minecraft_version(self) -> str:
+        return self._properties.current_minecraft_version()
+
     def set_site_grid_size(self, site_width: int, site_depth: int) -> None:
         self._properties.set_site_grid_size(site_width, site_depth)

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "kanban-markdown": {
+      "source": "LachyFS/kanban-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "b23e5fa2d6fd9ff1fc12af718a86e6e5aa0ce6c1ee835a09ebfa470d0f1b894e"
+    }
+  }
+}
