@@ -16,6 +16,10 @@ The project uses flat-world structure generation.
 - Slope detection is not used.
 - Terrain leveling and terraforming are not used.
 
+## Worldgen functional tests
+
+- Chest block-entity NBT: `tests/test_worldgen_functional_blocks.py` uses **`residence` stage 1** (has `CHEST` tokens); do not point that test at `well`.
+
 Prefer architecture that still keeps future expansion possible by separating:
 - structure placement
 - structure builders

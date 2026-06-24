@@ -77,4 +77,4 @@ If fetch fails, say so and use repo docs — do not substitute 1.x knowledge.
 
 ## Skill feedback
 
-If version confusion caused churn, update this skill or [reference.md](reference.md) per [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6.
+If version confusion caused churn, update this skill, [reference.md](reference.md), or a relevant `.cursor/rules/*.mdc` per [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6.

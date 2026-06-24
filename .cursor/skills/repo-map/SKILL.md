@@ -9,7 +9,7 @@ description: >-
 
 # Repo Map
 
-Compact index for **structure_scripts**. Pair with [agent-triage](../agent-triage/SKILL.md) for *how* to work; this skill is *where* things live.
+Compact index for **structure_scripts**. **Routing:** [AGENTS.md](../../AGENTS.md). Pair with [agent-triage](../agent-triage/SKILL.md) for *how* to work; this skill is *where* things live.
 
 ## Top-level layout
 

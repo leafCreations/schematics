@@ -28,6 +28,16 @@ def clear_preview_session_dir(path: Path) -> None:
         shutil.rmtree(path, ignore_errors=True)
 
 
+def cached_preview_gallery_available(
+    preview_paths: list[Path],
+    *,
+    preview_stale: bool,
+    document_dirty: bool = False,
+) -> bool:
+    """Return whether existing session PNGs can be shown without re-rendering."""
+    return bool(preview_paths) and not preview_stale and not document_dirty
+
+
 def preview_floor_groups(layers: list[dict], grid: dict) -> list[str]:
     """Floor group names for the in-app preview selector (editor groups, no roofs)."""
     groups = collect_layer_groups(layers, grid)

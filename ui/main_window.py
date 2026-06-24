@@ -111,9 +111,11 @@ from ui.document import (
     StructureDocument,
     create_structure_stage_document,
     delete_structure_stage_document,
+    document_dirty_flags_from_disk,
     open_structure,
     save_layer,
     save_structure_metadata,
+    structure_config_from_document,
     validate_structure_document,
 )
 from ui.editor_history import apply_history_state, capture_history_state
@@ -138,6 +140,7 @@ from ui.reload import (
     reload_editor_process,
 )
 from ui.render_preview import (
+    cached_preview_gallery_available,
     clear_preview_session_dir,
     list_gallery_preview_pngs,
     list_group_preview_pngs,
@@ -549,6 +552,7 @@ class MainWindow(QMainWindow):
         self._render_panel = RenderPanel()
         self._preview_panel = PreviewPanel()
         self._preview_session_id = str(uuid.uuid4())
+        self._preview_stale = False
         self._render_thread: QThread | None = None
         self._render_worker: RenderWorker | None = None
         self._render_is_preview = False
@@ -1497,7 +1501,9 @@ class MainWindow(QMainWindow):
                 dirty_structure_holder=dirty_flag,
                 group_filter_holder=group_filter_flag,
             )
-            self._dirty_structure = dirty_flag[0]
+            self._dirty_layers, self._dirty_structure = document_dirty_flags_from_disk(
+                self._document,
+            )
             self._group_filter = group_filter_flag[0]
             self._grid_texture_cache.clear_cache()
             self._layer_clipboard = None
@@ -1523,6 +1529,8 @@ class MainWindow(QMainWindow):
             self._update_save_layer_button()
             self._update_save_site_button()
             self._update_window_title()
+            self._mark_preview_stale()
+            self._refresh_preview_if_stale()
         finally:
             self._restoring_history = False
             self._update_undo_actions()
@@ -2292,6 +2300,8 @@ class MainWindow(QMainWindow):
                 self._site_grid_view.set_path_eraser_active(True)
             else:
                 self._site_grid_view.set_structure_selected(True)
+        elif index == 2:
+            self._ensure_preview_render()
 
         self._update_save_actions()
 
@@ -2981,6 +2991,9 @@ class MainWindow(QMainWindow):
     def _site_tab_active(self) -> bool:
         return self._tabs.currentIndex() == 1
 
+    def _viewer_tab_active(self) -> bool:
+        return self._tabs.currentIndex() == 2
+
     def _update_cell_clipboard_actions(self) -> None:
         on_structure = self._structure_tab_active()
         has_selection = bool(self._structure_grid.selected_cell_positions())
@@ -3630,6 +3643,28 @@ class MainWindow(QMainWindow):
 
     def _clear_preview_session(self) -> None:
         clear_preview_session_dir(self._preview_schematics_dir())
+        self._preview_stale = False
+
+    def _mark_preview_stale(self) -> None:
+        self._preview_stale = True
+
+    def _clear_preview_stale(self) -> None:
+        self._preview_stale = False
+
+    def _refresh_preview_if_stale(self) -> None:
+        if self._preview_needs_refresh() and self._viewer_tab_active():
+            self._ensure_preview_render()
+
+    def _document_has_unsaved_changes(self) -> bool:
+        return bool(self._dirty_layers or self._dirty_structure)
+
+    def _preview_needs_refresh(self) -> bool:
+        return self._preview_stale or self._document_has_unsaved_changes()
+
+    def _preview_structure_config(self) -> dict | None:
+        if not self._document_has_unsaved_changes():
+            return None
+        return structure_config_from_document(self._document)
 
     def _block_if_render_in_progress(self, *, closing: bool = False) -> bool:
         if self._render_thread is None:
@@ -3689,7 +3724,8 @@ class MainWindow(QMainWindow):
         )
         self._sync_render_panel_preview_selection()
         self._sync_preview_groups()
-        self._ensure_preview_render()
+        if self._viewer_tab_active():
+            self._ensure_preview_render()
 
     def _sync_render_panel_preview_selection(self) -> None:
         self._render_panel.set_preview_render(self._preview_panel.selected_render())
@@ -3705,7 +3741,11 @@ class MainWindow(QMainWindow):
                 self._preview_schematics_dir(),
                 render_name,
             )
-            if preview_paths:
+            if cached_preview_gallery_available(
+                preview_paths,
+                preview_stale=self._preview_stale,
+                document_dirty=self._document_has_unsaved_changes(),
+            ):
                 self._preview_panel.set_gallery(preview_paths, select_index=0)
                 return
             self._start_preview_facades_render(render_name)
@@ -3717,7 +3757,11 @@ class MainWindow(QMainWindow):
             return
 
         preview_paths = list_group_preview_pngs(self._preview_schematics_dir(), group_name)
-        if preview_paths:
+        if cached_preview_gallery_available(
+            preview_paths,
+            preview_stale=self._preview_stale,
+            document_dirty=self._document_has_unsaved_changes(),
+        ):
             self._preview_panel.set_gallery(preview_paths, select_index=0)
             return
 
@@ -3870,6 +3914,8 @@ class MainWindow(QMainWindow):
         self._update_save_site_button()
         self._update_save_layer_button()
         self._update_window_title()
+        self._mark_preview_stale()
+        self._refresh_preview_if_stale()
         return True
 
     def _update_window_title(self) -> None:
@@ -3952,6 +3998,8 @@ class MainWindow(QMainWindow):
             return False
 
         self._mark_layer_clean(layer_index)
+        self._mark_preview_stale()
+        self._refresh_preview_if_stale()
         return True
 
     def closeEvent(self, event) -> None:
@@ -4084,7 +4132,10 @@ class MainWindow(QMainWindow):
             self._status.showMessage("A render is already in progress.", 3000)
             return
 
-        if not self._confirm_render_save():
+        if not preview:
+            if not self._confirm_render_save():
+                return
+        elif not self._document_has_unsaved_changes() and not self._confirm_render_save():
             return
 
         worldgen_version: str | None = None
@@ -4115,11 +4166,13 @@ class MainWindow(QMainWindow):
         structure = str(self._document.metadata.get("structure", self._structure))
         stage = int(self._document.metadata.get("stage", self._stage))
         output_dir = self._preview_schematics_dir() if preview else None
+        preview_structure_config = self._preview_structure_config() if preview else None
         self._render_worker = RenderWorker(
             structure,
             stage,
             renders,
             structure_path=self._document.structure_path,
+            structure_config=preview_structure_config,
             worldgen_version=worldgen_version,
             output_schematics_dir=output_dir,
             preview_render=preview_render if preview else None,
@@ -4152,6 +4205,7 @@ class MainWindow(QMainWindow):
                 self._preview_panel.set_gallery(preview_paths, select_index=0)
             else:
                 self._preview_panel.clear("Preview render complete, but no PNG was found.")
+            self._clear_preview_stale()
             self._status.showMessage(
                 f"Preview ready — {self._preview_schematics_dir()}",
                 8000,

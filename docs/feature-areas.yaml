@@ -341,7 +341,7 @@ areas:
       - docs/worldgen.md
 
   Render Preview:
-    summary: In-app PNG gallery with render-type selector, thumbnails, navigation; session preview dir cleanup on close/switch
+    summary: In-app PNG gallery with render-type selector; session preview dir; stale refresh after save
     tab: Render Tab
     paths:
       - ui/widgets/preview_panel.py

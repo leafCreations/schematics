@@ -1,0 +1,57 @@
+---
+description: System prompt wrapper — kanban-first routing, skill/rule load order, turn lifecycle
+alwaysApply: true
+---
+
+# Agent routing (system wrapper)
+
+**Repo entry:** [AGENTS.md](../../AGENTS.md). **Do not** treat [docs/roadmap.md](../../docs/roadmap.md) as the queue.
+
+## User mode
+
+| Mode | Work source | Code / cards |
+| ---- | ----------- | ------------ |
+| **Agent** (default) | **Kanban** `.devtool/features/` — To Do card path, id, or title | Follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); ignore Backlog |
+| **Ask** | User question | Read-only — no card moves, no edits unless user leaves Ask mode |
+
+## Turn lifecycle
+
+```text
+START → agent-triage/SKILL.md (classify + tools)
+WORK  → card Label Paths OR surgical grep → minimal edit
+VERIFY → targeted pytest; pre-commit-pytest.sh before Review/commit
+END   → agent-self-evaluation/SKILL.md + handoff block
+```
+
+**Implementation / fix / refactor:** edit **≥1** `.cursor/skills/*` and **≥1** `.cursor/rules/*.mdc` before handoff (different learnings — skill = workflow, rule = constraint).
+
+## Kanban card type (read `labels` in frontmatter)
+
+| Label | Rule | Agent plan section |
+| ----- | ---- | ------------------ |
+| `bug` | [kanban-bug-cards.mdc](kanban-bug-cards.mdc) | **Corrective Action** (not Decisions) |
+| `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response** only — no code by default |
+| *(feature)* | — | **Decisions** |
+
+Resolve **Feature Areas** → **Label Paths** via `docs/feature-areas.yaml` before `in-progress`.
+
+## Load skills (on demand — not all every turn)
+
+| Touching | Read first |
+| -------- | ---------- |
+| Unfamiliar layout | [repo-map/SKILL.md](../skills/repo-map/SKILL.md) |
+| Kanban card | [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) |
+| UI | [ui-change/SKILL.md](../skills/ui-change/SKILL.md) + matching `ui-*.mdc` |
+| Tests / commit | [targeted-testing/SKILL.md](../skills/targeted-testing/SKILL.md) |
+| Docs after code | [docs-maintenance/SKILL.md](../skills/docs-maintenance/SKILL.md) |
+| Minecraft / versions | [project-context/SKILL.md](../skills/project-context/SKILL.md) |
+
+## Discovery budget
+
+- **Grep** before opening `ui/main_window.py` or other large files
+- After **3** full file reads → prefer grep or semantic search
+- Ad-hoc one-file fixes → **surgical** (no kanban) unless user assigns a card
+
+## Handoff (last section — every response)
+
+Include `Skills updated:` and `Rules updated:` — both required on implementation turns. See [agent-self-evaluation.mdc](agent-self-evaluation.mdc).

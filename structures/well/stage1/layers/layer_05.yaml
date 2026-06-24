@@ -7,14 +7,14 @@ cells:
   - minecraft:dirt_path
   - minecraft:dirt_path
   - minecraft:dirt_path
-  - CHEST@east#left
+  - minecraft:dirt_path
 - - minecraft:dirt_path
   - minecraft:cobblestone
   - minecraft:cobblestone
   - minecraft:mossy_cobblestone
   - minecraft:mossy_cobblestone
   - minecraft:cobblestone
-  - CHEST@east#right
+  - minecraft:dirt_path
 - - minecraft:dirt_path
   - minecraft:mossy_cobblestone
   - minecraft:water

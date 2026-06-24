@@ -49,6 +49,8 @@ Also: unmapped `*.py` changes, or >20 targeted test files accumulated.
 | Staged path | Tests |
 | ----------- | ----- |
 | `renderers/worldgen.py`, `helpers/worldgen_*.py` | `test_worldgen_chest`, `test_worldgen_tokens`, `test_worldgen_site`, `test_worldgen_bed`, `test_worldgen_region_patch`, `test_worldgen_functional_blocks`, `test_lantern_placement`, `test_fence_adjacency` |
+
+`test_worldgen_functional_blocks` chest NBT case uses **`residence` stage 1** (double chest in `layer_01.yaml`); `well` has no chest tokens.
 | `renderers/*` (other) | `test_facade_projection`, `test_layers`, `test_pipeline`, `test_render_panel` |
 
 ## ui/

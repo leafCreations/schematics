@@ -177,6 +177,26 @@ def structure_config_from_document(document: StructureDocument) -> dict[str, Any
     return config
 
 
+def document_dirty_flags_from_disk(document: StructureDocument) -> tuple[set[int], bool]:
+    """Compare the in-memory document to saved YAML and return dirty layer indices
+    and structure flag."""
+    saved = load_structure_document(document.structure_path)
+    dirty_layers: set[int] = set()
+
+    for index, layer in enumerate(document.layers):
+        if index >= len(saved.layers) or layer != saved.layers[index]:
+            dirty_layers.add(index)
+
+    dirty_structure = (
+        document.metadata != saved.metadata
+        or document.site_ground != saved.site_ground
+        or document.layer_files != saved.layer_files
+        or len(document.layers) != len(saved.layers)
+    )
+
+    return dirty_layers, dirty_structure
+
+
 def validate_structure_document(document: StructureDocument) -> None:
     """Run the same validation as render/worldgen on the editor document."""
     validate_structure_config(structure_config_from_document(document))

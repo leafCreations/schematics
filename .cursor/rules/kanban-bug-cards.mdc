@@ -1,0 +1,35 @@
+---
+description: Kanban bug cards — user vs agent sections, Corrective Action workflow
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban bug cards
+
+When a feature file has frontmatter `labels` including **`bug`** (case-insensitive), follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Bug cards.
+
+## User provides
+
+- `## Steps to Reproduce`
+- `## Current Behavior` (legacy: `## What happens`)
+- `## Expected Behavior`
+- `## Feature Areas`
+- `## QA Review` (during Review, if follow-up issues found)
+
+## Agent provides (pre-implementation card review, before `in-progress`)
+
+- `## Root Cause (current code)` — after reading Label Paths / codebase
+- `## Acceptance Criteria` — testable fix bullets
+- `## Out of Scope` — optional
+- `## Label Paths` — resolved from Feature Areas via `docs/feature-areas.yaml`
+- `## Corrective Action` — concrete fix plan (**not** `## Decisions`)
+
+## Do not
+
+- Use `## Decisions` on bug cards — use `## Corrective Action`
+- Start implementation with empty or disputed **Corrective Action**
+- Move to **Review** without all **Acceptance Criteria** marked `[x]`
+
+## Full workflow
+
+See `.cursor/skills/kanban-markdown/SKILL.md` for lifecycle, registry updates, and pytest gates.

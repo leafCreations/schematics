@@ -1,5 +1,5 @@
 ---
-description: Mandatory end-of-turn self-evaluation and skill feedback loop for every agent response
+description: Mandatory end-of-turn self-evaluation and skill/rule feedback loop for every agent response
 alwaysApply: true
 ---
 
@@ -12,9 +12,9 @@ Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
 ## Hard requirements
 
 1. **Run before sending the final message** — not optional, not deferred to a follow-up.
-2. **Include the handoff block** (≤6 lines) as the **last section** of the response.
-3. **§6 skill feedback loop** — always ask whether a skill update would have prevented churn; edit skills in the same turn when yes; otherwise state `Skills updated: none`.
-4. **Never skip** because the task was "trivial", "docs-only", "question-only", or "no code changed".
+2. **Include the handoff block** as the **last section** of the response.
+3. **§6 skill & rule feedback loop** — every turn: ask what to improve in skills and rules. **Implementation / fix / refactor turns:** edit **at least one skill and at least one rule** (`.cursor/rules/*.mdc`) in the same turn; handoff must name both — not `none` for either.
+4. **Never skip** because the task was "trivial", "docs-only", "question-only", or "no code changed" (implementation still requires both updates).
 
 ## Handoff block (required format)
 
@@ -24,10 +24,11 @@ Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
 - **Tests:** <paths + result | n/a + why>
 - **Docs:** <paths updated | n/a + why>
 - **Skills used:** <names | none>
-- **Skills updated:** <skill + one-line change | none>
+- **Skills updated:** <skill + one-line change | none + why — implementation turns must not be none>
+- **Rules updated:** <rule path + one-line change | none + why — implementation turns must not be none>
 - **Commit-ready:** <yes | no | n/a>
 ```
 
 ## Pair with agent-triage
 
-Start every task with [agent-triage](../skills/agent-triage/SKILL.md). End every task with self-evaluation. A response without the handoff block is **incomplete**.
+Start every task with [agent-triage](../skills/agent-triage/SKILL.md). **Repo index:** [AGENTS.md](../../AGENTS.md). End every task with self-evaluation. A response without the handoff block is **incomplete**.

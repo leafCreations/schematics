@@ -1,5 +1,7 @@
 # Agent Triage — Reference
 
+**Repo routing index:** [AGENTS.md](../../AGENTS.md). **Always-on wrapper:** [agent-routing.mdc](../../rules/agent-routing.mdc).
+
 Quick lookup for path→test mapping and entry points. Source of truth for hooks: `scripts/pre-commit-pytest.sh`.
 
 ## Classify the request (signals)
@@ -13,7 +15,7 @@ Quick lookup for path→test mapping and entry points. Source of truth for hooks
 | **Unblock** | pre-commit failed, hook error |
 | **Verify** | run tests, commit-ready, staged pytest |
 
-Ad-hoc bugs → **Surgical**. Named **To Do** card → [kanban-markdown](../kanban-markdown/SKILL.md).
+Ad-hoc bugs → **Surgical**. Named **To Do** card → [kanban-markdown](../kanban-markdown/SKILL.md). **Bug** cards: [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc). **Inquiry** cards: research + **Response** — [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc).
 
 ## Entry points
 

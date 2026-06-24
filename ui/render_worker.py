@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 
@@ -41,6 +42,7 @@ class RenderWorker(QObject):
         renders: RenderList | str,
         *,
         structure_path: Path | None = None,
+        structure_config: dict[str, Any] | None = None,
         worldgen_version: str | None = None,
         output_schematics_dir: Path | None = None,
         preview_render: str | None = None,
@@ -52,6 +54,7 @@ class RenderWorker(QObject):
         self._stage = stage
         self._renders = renders
         self._structure_path = structure_path
+        self._structure_config = structure_config
         self._worldgen_version = worldgen_version
         self._output_schematics_dir = output_schematics_dir
         self._preview_render = preview_render
@@ -64,6 +67,7 @@ class RenderWorker(QObject):
                     self._structure,
                     self._stage,
                     structure_path=self._structure_path,
+                    structure_config=self._structure_config,
                     worldgen_version=self._worldgen_version,
                     output_schematics_dir=self._output_schematics_dir,
                     progress=self._emit_progress,
@@ -73,6 +77,7 @@ class RenderWorker(QObject):
                     self._structure,
                     self._stage,
                     structure_path=self._structure_path,
+                    structure_config=self._structure_config,
                     worldgen_version=self._worldgen_version,
                     output_schematics_dir=self._output_schematics_dir,
                     progress=self._emit_progress,
@@ -82,6 +87,7 @@ class RenderWorker(QObject):
                     self._structure,
                     self._stage,
                     structure_path=self._structure_path,
+                    structure_config=self._structure_config,
                     worldgen_version=self._worldgen_version,
                     output_schematics_dir=self._output_schematics_dir,
                     progress=self._emit_progress,
@@ -91,6 +97,7 @@ class RenderWorker(QObject):
                     self._structure,
                     self._stage,
                     structure_path=self._structure_path,
+                    structure_config=self._structure_config,
                     worldgen_version=self._worldgen_version,
                     output_schematics_dir=self._output_schematics_dir,
                     progress=self._emit_progress,
@@ -101,6 +108,7 @@ class RenderWorker(QObject):
                     self._stage,
                     self._preview_group,
                     structure_path=self._structure_path,
+                    structure_config=self._structure_config,
                     worldgen_version=self._worldgen_version,
                     output_schematics_dir=self._output_schematics_dir,
                     progress=self._emit_progress,

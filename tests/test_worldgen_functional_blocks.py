@@ -35,15 +35,18 @@ def _palette_names(root, section_y: int) -> list[str]:
 def test_worldgen_writes_chest_block_entities_to_chunk_nbt():
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "world"
-        ctx = load_structure_config("well", 1)
+        ctx = load_structure_config("residence", 1)
         ctx = ctx.__class__(**{**ctx.__dict__, "output_worldgen_dir": out})
         worldgen.generate_minecraft_world(ctx)
 
         root = _load_chunk_root(out)
-        block_entities = list(root.get("block_entities", []))
+        block_entities = [
+            entity
+            for entity in root.get("block_entities", [])
+            if "chest" in str(entity.get("id", ""))
+        ]
 
         assert len(block_entities) >= 2
-        assert all("chest" in str(entity.get("id", "")) for entity in block_entities)
 
 
 def test_worldgen_writes_bed_blocks_to_chunk_palette():

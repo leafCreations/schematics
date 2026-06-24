@@ -106,7 +106,11 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 
 Preview PNGs for the current editor session are written under `output/schematics/_preview/{session}/` (one UUID per process). That folder is removed when you quit, open a different structure/stage, create a new structure in the editor, or reload the window.
 
-Renders always load from **saved** YAML on disk. If you have unsaved layers or site settings, the editor prompts to save before exporting (or you can export the last saved version).
+After you **save** a layer or site settings, session previews are marked stale. Opening the **Viewer** tab (or saving while already on **Viewer**) re-runs the preview for the current dropdown selection so the gallery matches saved YAML on disk. If nothing changed since the last preview, existing session PNGs are reused without a redundant render.
+
+While you have **unsaved** edits (including after **Undo** / **Redo**), preview renders use the in-memory document so the gallery matches the grid without requiring a save first. Export and **Generate World** still prompt to save because they write to the permanent output folders.
+
+Renders always load from **saved** YAML on disk for export and worldgen. If you have unsaved layers or site settings, the editor prompts to save before exporting (or you can export the last saved version).
 
 Worldgen requires `amulet`; see [worldgen.md](worldgen.md).
 
@@ -208,6 +212,8 @@ Open the **Site** tab. The **Site settings** panel edits the structure **manifes
 * **Site** width, depth, and placement anchor
 * Structure **nudge** on the site preview (offsets)
 * **Path brush**, path **erase**, and **clear all paths** on the site ground layer
+
+After undo or redo, unsaved indicators are recomputed by comparing the in-memory document to saved YAML on disk (not from the history snapshot alone). Session previews are marked stale so the **Viewer** tab can refresh when you switch back.
 
 ### Generate renders
 

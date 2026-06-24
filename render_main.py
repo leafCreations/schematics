@@ -17,6 +17,28 @@ random.seed(42)
 ProgressCallback = Callable[[str, str], None]
 
 
+def _build_preview_context(
+    structure: str,
+    stage: int,
+    *,
+    structure_path: Path | None = None,
+    structure_config: dict | None = None,
+    worldgen_version: str | None = None,
+) -> SchematicContext:
+    from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+    if structure_config is not None:
+        return build_schematic_context(structure_config, worldgen_version=worldgen_version)
+
+    if structure_path is not None:
+        return build_schematic_context(
+            load_structure_yaml(structure_path.resolve()),
+            worldgen_version=worldgen_version,
+        )
+
+    return utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+
+
 def run_stage_renders(
     structure: str,
     stage: int,
@@ -77,20 +99,19 @@ def run_preview_top_down(
     group_name: str,
     *,
     structure_path: Path | None = None,
+    structure_config: dict | None = None,
     worldgen_version: str | None = None,
     output_schematics_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Render per-Y top-down PNGs for one editor group into the preview session dir."""
-    if structure_path is not None:
-        from helpers.structure_loader import build_schematic_context, load_structure_yaml
-
-        ctx = build_schematic_context(
-            load_structure_yaml(structure_path.resolve()),
-            worldgen_version=worldgen_version,
-        )
-    else:
-        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+    ctx = _build_preview_context(
+        structure,
+        stage,
+        structure_path=structure_path,
+        structure_config=structure_config,
+        worldgen_version=worldgen_version,
+    )
 
     if output_schematics_dir is not None:
         ctx.output_schematics_dir = output_schematics_dir
@@ -113,20 +134,19 @@ def run_preview_structure_facades(
     stage: int,
     *,
     structure_path: Path | None = None,
+    structure_config: dict | None = None,
     worldgen_version: str | None = None,
     output_schematics_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Render per-direction structure facade PNGs into the preview session dir."""
-    if structure_path is not None:
-        from helpers.structure_loader import build_schematic_context, load_structure_yaml
-
-        ctx = build_schematic_context(
-            load_structure_yaml(structure_path.resolve()),
-            worldgen_version=worldgen_version,
-        )
-    else:
-        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+    ctx = _build_preview_context(
+        structure,
+        stage,
+        structure_path=structure_path,
+        structure_config=structure_config,
+        worldgen_version=worldgen_version,
+    )
 
     if output_schematics_dir is not None:
         ctx.output_schematics_dir = output_schematics_dir
@@ -149,20 +169,19 @@ def run_preview_site_facades(
     stage: int,
     *,
     structure_path: Path | None = None,
+    structure_config: dict | None = None,
     worldgen_version: str | None = None,
     output_schematics_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Render per-direction site facade PNGs into the preview session dir."""
-    if structure_path is not None:
-        from helpers.structure_loader import build_schematic_context, load_structure_yaml
-
-        ctx = build_schematic_context(
-            load_structure_yaml(structure_path.resolve()),
-            worldgen_version=worldgen_version,
-        )
-    else:
-        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+    ctx = _build_preview_context(
+        structure,
+        stage,
+        structure_path=structure_path,
+        structure_config=structure_config,
+        worldgen_version=worldgen_version,
+    )
 
     if output_schematics_dir is not None:
         ctx.output_schematics_dir = output_schematics_dir
@@ -185,20 +204,19 @@ def run_preview_site_top_down(
     stage: int,
     *,
     structure_path: Path | None = None,
+    structure_config: dict | None = None,
     worldgen_version: str | None = None,
     output_schematics_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Render per-Y site top-down PNGs into the preview session dir."""
-    if structure_path is not None:
-        from helpers.structure_loader import build_schematic_context, load_structure_yaml
-
-        ctx = build_schematic_context(
-            load_structure_yaml(structure_path.resolve()),
-            worldgen_version=worldgen_version,
-        )
-    else:
-        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+    ctx = _build_preview_context(
+        structure,
+        stage,
+        structure_path=structure_path,
+        structure_config=structure_config,
+        worldgen_version=worldgen_version,
+    )
 
     if output_schematics_dir is not None:
         ctx.output_schematics_dir = output_schematics_dir
@@ -221,20 +239,19 @@ def run_preview_materials(
     stage: int,
     *,
     structure_path: Path | None = None,
+    structure_config: dict | None = None,
     worldgen_version: str | None = None,
     output_schematics_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> SchematicContext:
     """Render materials list PNG into the preview session dir."""
-    if structure_path is not None:
-        from helpers.structure_loader import build_schematic_context, load_structure_yaml
-
-        ctx = build_schematic_context(
-            load_structure_yaml(structure_path.resolve()),
-            worldgen_version=worldgen_version,
-        )
-    else:
-        ctx = utils.load_structure_config(structure, stage, worldgen_version=worldgen_version)
+    ctx = _build_preview_context(
+        structure,
+        stage,
+        structure_path=structure_path,
+        structure_config=structure_config,
+        worldgen_version=worldgen_version,
+    )
 
     if output_schematics_dir is not None:
         ctx.output_schematics_dir = output_schematics_dir

@@ -1,0 +1,37 @@
+---
+description: Kanban inquiry cards — research-only Response workflow
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban inquiry cards
+
+When a feature file has frontmatter `labels` including **`inquiry`** (case-insensitive), follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Inquiry cards.
+
+## User provides
+
+- `## Description` (required)
+- `## Feature Areas` (optional — omit when not about an existing product area)
+
+## Agent provides
+
+- `## Response` — answer the question; include content usable to create follow-up feature/bug cards later
+- `## Label Paths` — when user provided **Feature Areas**, resolve via `docs/feature-areas.yaml`
+
+## Workflow
+
+1. Confirm **Description** present
+2. Resolve **Feature Areas** → **Label Paths** when areas are set
+3. `todo` → `in-progress` → research (read-only)
+4. Write **Response** on the card → `review`
+5. User may spawn new cards from **Suggested follow-up cards** in Response
+
+## Do not
+
+- Use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on inquiry cards
+- Implement code unless the user explicitly asks on the same card
+- Require pytest before **Review** (no code changes by default)
+
+## Full workflow
+
+See `.cursor/skills/kanban-markdown/SKILL.md` for lifecycle and **Response** content guidelines.

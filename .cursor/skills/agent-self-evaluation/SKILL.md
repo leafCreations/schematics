@@ -2,8 +2,8 @@
 name: agent-self-evaluation
 description: >-
   Mandatory end-of-turn review for every agent response in structure_scripts.
-  Always run before handing off to the user — no exceptions. Includes skill
-  feedback loop. Pairs with agent-triage at task start. Enforced by
+  Always run before handing off to the user — no exceptions. Includes skill and
+  rule feedback loop. Implementation turns must update ≥1 skill and ≥1 rule. Pairs with agent-triage at task start. Enforced by
   .cursor/rules/agent-self-evaluation.mdc (alwaysApply).
 ---
 
@@ -45,13 +45,13 @@ Also enforced in `.cursor/rules/agent-self-evaluation.mdc` (`alwaysApply: true`)
 - [ ] Did not run full pytest without justification
 ```
 
-**Fail →** run missing step if cheap; capture gap in §6 skill feedback.
+**Fail →** run missing step if cheap; capture gap in §6 skill & rule feedback.
 
 ## 3. Correctness check
 
 | Area touched | Verify |
 | ------------ | ------ |
-| Kanban / card implementation | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) updated; **`docs/`** reviewed per [docs-maintenance](../docs-maintenance/SKILL.md); **`## Acceptance Criteria`** marked `[x]` before **Review** |
+| Kanban / card implementation | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) updated; **`docs/`** reviewed per [docs-maintenance](../docs-maintenance/SKILL.md); **`## Acceptance Criteria`** marked `[x]` before **Review** (feature/bug); bug → **Corrective Action**; inquiry → **Response** only; **§6:** ≥1 skill + ≥1 rule updated |
 | Structure YAML / editor save | Manifest vs `stage.yaml` split correct ([repo-map](../repo-map/SKILL.md)) |
 | UI panel/dialog | [ui-change](../ui-change/SKILL.md) checklist |
 | Registry/palette | `validate_palettes()` if behavior/palette changed; **templated families** use one token + materials, not raw catalog ids in `blocks:` ([repo-map](../repo-map/SKILL.md) § Templated block families) |
@@ -79,39 +79,57 @@ Note anything that cost extra turns, tokens, or user corrections:
 | Wrong file/path assumption | Yes — if likely to recur |
 | Missing test mapping | Yes — add to targeted-testing or repo-map |
 | Hook failure with non-obvious fix | Yes — pre-commit-workflow |
-| UI wiring trap | Yes — ui-change |
-| User had to repeat a process expectation | Yes — update skill or this rule |
+| UI wiring trap | Yes — ui-change or `.cursor/rules/ui-*.mdc` |
+| User had to repeat a process expectation | Yes — update skill and/or rule |
 | One-off typo or bad local edit | No |
-| Task-specific business logic only | No — belongs in code/docs, not skills |
+| Task-specific business logic only | No — belongs in code/docs, not skills/rules |
 
-If **any** churn signal fired, §6 skill edit is **strongly preferred**. If **two or more**, §6 edit is **required** before handoff.
+**Implementation / fix / refactor turns** (any turn that changed application code, tests for behavior, or `docs/` / kanban / registry workflow):
 
-## 6. Skill feedback loop (core)
+- **Mandatory:** identify and apply **at least one improvement in a skill** and **at least one improvement in a rule** before handoff.
+- Improvements may cover different aspects (skill = how-to/workflow; rule = constraint for matching paths) — do not duplicate the same bullet in both.
+- If no obvious rule target exists, add a minimal `globs`-scoped reminder to the closest area `.mdc` (e.g. `ui-change` area → `ui-general.mdc` or the specific `ui-*.mdc` touched).
 
-**Every turn:** ask *Would a one-line addition to a skill have prevented this churn or mistake?*
+## 6. Skill & rule feedback loop (core)
 
-If yes → **edit the skill in the same turn** before handoff. Do not only promise to update later.
+**Every turn**, ask both:
 
-If no → handoff must still say `Skills updated: none` (not omit the line).
+1. *What **skill** improvement would make the next similar task faster or safer?*
+2. *What **rule** improvement would prevent a repeat mistake on the paths we touched?*
 
-### 6a. Pick the target
+**Implementation / fix / refactor turns:** you **must** edit **at least one skill file and at least one rule file** (`.cursor/rules/*.mdc`) in the same turn. Handoff `Skills updated:` and `Rules updated:` must each name a concrete change — not `none`.
 
-| Learning type | Update |
-| ------------- | ------ |
-| Wrong Minecraft version (1.x vs 26.x), bad web lookup | [project-context/SKILL.md](../project-context/SKILL.md) or [reference.md](../project-context/reference.md) |
-| Tool choice, read budget, when to explore | [agent-triage/SKILL.md](../agent-triage/SKILL.md) or [reference.md](../agent-triage/reference.md) |
-| Kanban card work, new UI surface, new file from feature | [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Feature area registry + [docs-maintenance/SKILL.md](../docs-maintenance/SKILL.md) |
-| Where code lives, save targets, layout | [repo-map/SKILL.md](../repo-map/SKILL.md) or [reference.md](../repo-map/reference.md) |
-| Which tests to run, catalog counts, Qt sandbox | [targeted-testing/SKILL.md](../targeted-testing/SKILL.md) or [reference.md](../targeted-testing/reference.md) |
-| Ruff / palette / pytest hook order | [pre-commit-workflow/SKILL.md](../pre-commit-workflow/SKILL.md) |
-| Panel/dialog/grid wiring | [ui-change/SKILL.md](../ui-change/SKILL.md) |
-| Cross-cutting failure pattern | [reference.md](reference.md) § Common failure patterns |
-| Self-eval not run / skipped | This skill + `.cursor/rules/agent-self-evaluation.mdc` |
+**Read-only / Ask turns:** edits optional; handoff may use `none (read-only)` for either line.
+
+If a learning applies → **edit in the same turn** before handoff. Do not only promise to update later.
+
+Do **not** paste the same bullet into skill and rule — pair a workflow tip (skill) with a path-scoped constraint (rule).
+
+### 6a. Skill vs rule — where to write
+
+| Artifact | Use for |
+| -------- | ------- |
+| **Skill** (`.cursor/skills/*/SKILL.md`, `reference.md`) | Workflows, checklists, path→test maps, how-to, kanban lifecycle |
+| **Rule** (`.cursor/rules/*.mdc`) | Mandatory constraints, `alwaysApply` behavior, `globs`-scoped reminders when editing matching paths |
+
+### 6b. Pick the target
+
+| Learning type | Skill | Rule (when constraint fits) |
+| ------------- | ----- | --------------------------- |
+| Wrong Minecraft version (1.x vs 26.x), bad web lookup | [project-context](../project-context/SKILL.md) | — |
+| Tool choice, read budget, when to explore | [agent-triage](../agent-triage/SKILL.md) | [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) if always-on |
+| Kanban card types / sections | [kanban-markdown](../kanban-markdown/SKILL.md) | [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc), [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc) |
+| Where code lives, save targets, layout | [repo-map](../repo-map/SKILL.md) | — |
+| Which tests to run, catalog counts, Qt sandbox | [targeted-testing](../targeted-testing/SKILL.md) | [testing.mdc](../../rules/testing.mdc) if hook-level |
+| Ruff / palette / pytest hook order | [pre-commit-workflow](../pre-commit-workflow/SKILL.md) | — |
+| Panel/dialog/grid wiring | [ui-change](../ui-change/SKILL.md) | [ui-dialogs.mdc](../../rules/ui-dialogs.mdc), [ui-panels.mdc](../../rules/ui-panels.mdc), etc. |
+| Cross-cutting failure pattern | [reference.md](reference.md) § Common failure patterns | Owning area `.mdc` if editing that path should always trigger check |
+| Self-eval not run / skipped | This skill | [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) |
 
 Prefer **`reference.md`** for examples, path→test rows, and failure-pattern tables.  
-Prefer **`SKILL.md`** for a single actionable rule an agent reads every time.
+Prefer **`SKILL.md`** for procedures; prefer **`.mdc`** when the learning is a hard constraint on future edits in a file glob.
 
-### 6b. What to add
+### 6c. What to add
 
 Good additions (durable, generalizable):
 
@@ -120,6 +138,7 @@ Good additions (durable, generalizable):
 - Wrong mental model ("not `stage1/structure.yaml`, use `stage.yaml`")
 - Sandbox/permission note for a test class
 - Hook-specific fix order
+- New kanban label type → scoped rule or row in existing kanban rule
 
 Bad additions (skip):
 
@@ -127,26 +146,30 @@ Bad additions (skip):
 - Long prose or duplicate of an existing row
 - Task-specific variable names with no reuse
 - Entire conversation summaries
+- Same bullet in both a skill and a rule
 
-### 6c. How to edit
+### 6d. How to edit
 
-1. **Grep** the target skill — do not duplicate an existing row or bullet.
+1. **Grep** the target skill or rule — do not duplicate an existing row or bullet.
 2. **Minimal diff** — one table row, one bullet, or one short subsection.
-3. **Concrete** — name files, tests, or commands; avoid vague advice.
+3. **Concrete** — name files, tests, commands, or rule paths; avoid vague advice.
 4. If a skill section grows past ~15 lines of accumulated tips, **consolidate** or move detail to `reference.md`.
+5. Rules: keep `description` and `globs` accurate; use `alwaysApply: true` only for cross-cutting mandates.
 
-### 6d. When to skip skill file edits
+### 6e. When to skip file edits
 
-Only skip **editing skill files** when:
+| Turn type | Skills | Rules |
+| --------- | ------ | ----- |
+| **Implementation / fix / refactor** | **Required** — ≥1 edit | **Required** — ≥1 edit |
+| Read-only / Ask | Optional — `none (read-only)` | Optional — `none (read-only)` |
+| User forbids skill/rule changes | `none (user requested)` | `none (user requested)` |
+| Learning uncertain | Rare on implementation — prefer a small rule reminder over skipping | Same |
 
-- User explicitly asked for no skill changes
-- Learning is uncertain — handoff: `Skills updated: none (uncertain)`
-
-**Do not skip the handoff block or the §6 question** — only skip writing to skill files.
+**Do not skip the handoff block or the §6 questions** — only skip file writes on read-only turns or explicit user opt-out.
 
 ## 7. Handoff format (required every turn)
 
-**Last section of every response.** ≤6 lines. Do not repeat the full diff.
+**Last section of every response.** Compact; do not repeat the full diff.
 
 ```markdown
 ### Self-evaluation
@@ -154,7 +177,8 @@ Only skip **editing skill files** when:
 - **Tests:** <paths run + result | n/a + why>
 - **Docs:** <paths updated | n/a + why>
 - **Skills used:** <e.g. ui-change, targeted-testing | none>
-- **Skills updated:** <skill name + one-line what added | none>
+- **Skills updated:** <skill name + one-line what added | none + why — not allowed on implementation turns>
+- **Rules updated:** <rule path + one-line what added | none + why — not allowed on implementation turns>
 - **Commit-ready:** <yes | needs pre-commit | n/a>
 ```
 
@@ -166,7 +190,8 @@ Read-only example:
 - **Tests:** n/a (no code changes)
 - **Docs:** n/a (read-only, no edits)
 - **Skills used:** repo-map
-- **Skills updated:** none
+- **Skills updated:** none (read-only)
+- **Rules updated:** none (read-only)
 - **Commit-ready:** n/a
 ```
 
@@ -179,7 +204,7 @@ If the user asked to commit or pre-commit failed:
 - [ ] record-pytest-pass.sh run if pytest was manual and green
 - [ ] No --no-verify unless user requested
 - [ ] Commit message reflects why, not only what
-- [ ] If pre-commit taught something new → pre-commit-workflow skill updated (§6)
+- [ ] If pre-commit taught something new → pre-commit-workflow skill or testing rule updated (§6)
 ```
 
 ## 9. When to escalate to the user
@@ -190,7 +215,7 @@ Ask instead of guessing when:
 - Manifest vs stage save behavior is ambiguous for the feature
 - UI change needs manual visual check and UI was not launched
 - Two valid architectures (user decision)
-- Skill update would change team workflow (new mandatory step) — propose first
+- Skill or rule update would change team workflow (new mandatory step) — propose first
 
 Escalation does **not** exempt you from §7 handoff.
 

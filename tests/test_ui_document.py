@@ -8,6 +8,7 @@ from ui.document import (
     StructureDocument,
     create_structure_stage_document,
     delete_structure_stage_document,
+    document_dirty_flags_from_disk,
     load_structure_document,
     save_layer,
     save_structure_metadata,
@@ -175,6 +176,89 @@ def test_editor_save_layer_roundtrip_passes_validation(tmp_path: Path):
 
     reloaded = load_structure_document(structure_path)
     assert reloaded.layers[0]["cells"][0][0] == "GRASS"
+
+
+def test_document_dirty_flags_from_disk_detects_unsaved_layer(tmp_path: Path):
+    structure_path = tmp_path / "structure.yaml"
+    layers_dir = tmp_path / "layers"
+    layers_dir.mkdir()
+    layer_path = layers_dir / "layer_00.yaml"
+    layer_path.write_text(
+        "index: 0\ngroup: Floor\ncells:\n- - COBBLESTONE\n",
+        encoding="utf-8",
+    )
+    structure_path.write_text(
+        "structure: test\nstage: 1\nname: Test\noutput_folder: test_out\n"
+        "grid:\n  site_width: 10\n  site_depth: 10\n  offset_x: 0\n  offset_z: 0\n"
+        "  site_structure_layers:\n  - 0\n"
+        "layer_files:\n- layers/layer_00.yaml\n",
+        encoding="utf-8",
+    )
+
+    document = load_structure_document(structure_path)
+    document.layers[0]["cells"][0][0] = "GRASS"
+
+    dirty_layers, dirty_structure = document_dirty_flags_from_disk(document)
+
+    assert dirty_layers == {0}
+    assert dirty_structure is False
+
+
+def test_document_dirty_flags_from_disk_detects_undo_past_save(tmp_path: Path):
+    structure_path = tmp_path / "structure.yaml"
+    layers_dir = tmp_path / "layers"
+    layers_dir.mkdir()
+    layer_path = layers_dir / "layer_00.yaml"
+    layer_path.write_text(
+        "index: 0\ngroup: Floor\ncells:\n- - COBBLESTONE\n",
+        encoding="utf-8",
+    )
+    structure_path.write_text(
+        "structure: test\nstage: 1\nname: Test\noutput_folder: test_out\n"
+        "grid:\n  site_width: 10\n  site_depth: 10\n  offset_x: 0\n  offset_z: 0\n"
+        "  site_structure_layers:\n  - 0\n"
+        "layer_files:\n- layers/layer_00.yaml\n",
+        encoding="utf-8",
+    )
+
+    document = load_structure_document(structure_path)
+    document.layers[0]["cells"][0][0] = "GRASS"
+    save_layer(layer_path, document.layers[0], document=document)
+
+    document.layers[0]["cells"][0][0] = "STONE"
+    dirty_layers, dirty_structure = document_dirty_flags_from_disk(document)
+    assert dirty_layers == {0}
+    assert dirty_structure is False
+
+    document.layers[0]["cells"][0][0] = "COBBLESTONE"
+    dirty_layers, dirty_structure = document_dirty_flags_from_disk(document)
+    assert dirty_layers == {0}
+    assert dirty_structure is False
+
+
+def test_document_dirty_flags_from_disk_clean_when_matching_disk(tmp_path: Path):
+    structure_path = tmp_path / "structure.yaml"
+    layers_dir = tmp_path / "layers"
+    layers_dir.mkdir()
+    layer_path = layers_dir / "layer_00.yaml"
+    layer_path.write_text(
+        "index: 0\ngroup: Floor\ncells:\n- - COBBLESTONE\n",
+        encoding="utf-8",
+    )
+    structure_path.write_text(
+        "structure: test\nstage: 1\nname: Test\noutput_folder: test_out\n"
+        "grid:\n  site_width: 10\n  site_depth: 10\n  offset_x: 0\n  offset_z: 0\n"
+        "  site_structure_layers:\n  - 0\n"
+        "layer_files:\n- layers/layer_00.yaml\n",
+        encoding="utf-8",
+    )
+
+    document = load_structure_document(structure_path)
+
+    dirty_layers, dirty_structure = document_dirty_flags_from_disk(document)
+
+    assert dirty_layers == set()
+    assert dirty_structure is False
 
 
 def test_open_residence_stage2_structure():

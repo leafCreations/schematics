@@ -3,30 +3,43 @@
 ## Loop (start → work → improve → handoff)
 
 ```text
-START → agent-triage (classify, pick tools, pick skills)
+START → agent-triage (classify, pick tools, pick skills/rules)
 WORK  → minimal edits + targeted tests
 END   → agent-self-evaluation
           ├─ checks (scope, process, correctness, verification)
           ├─ churn review
-          ├─ update skill(s) if durable learning  ← required when applicable
+          ├─ update skill(s) and/or rule(s) if durable learning  ← required when applicable
           └─ compact handoff to user
 ```
 
-The feedback loop is the **main deliverable** of self-evaluation. A checklist-only pass without skill updates wastes the next session's tokens.
+The feedback loop is the **main deliverable** of self-evaluation. **Implementation turns** must leave **both** a skill and a rule smarter; checklist-only handoffs waste the next session's tokens.
+
+## Skill vs rule
+
+| Write to | When |
+| -------- | ---- |
+| **Skill** | Procedure, workflow, path→test map, kanban lifecycle, "how to" |
+| **Rule** (`.cursor/rules/*.mdc`) | Mandatory constraint, `globs` reminder for a path class, `alwaysApply` behavior |
+
+One learning per artifact — skill (workflow) + rule (constraint); do not duplicate the same bullet in both.
+
+**Implementation turns:** both columns below must be **Yes** with an edit in the same turn.
 
 ## Update decision matrix
 
-| Situation | Update skill? | Target |
-| --------- | ------------- | ------ |
-| User corrected wrong save target (manifest vs stage) | Yes | repo-map |
-| Agent used 1.x Minecraft info from web search | Yes | project-context |
-| Ran full pytest for one helper change | Yes | targeted-testing or agent-triage §4 |
-| Pre-commit palette error: missing `top` texture exception | Yes | pre-commit-workflow |
-| Discovered `test_foo.py` maps to changed path but missing from skill | Yes | targeted-testing/reference.md |
+| Situation | Update? | Target |
+| --------- | ------- | ------ |
+| User corrected wrong save target (manifest vs stage) | Skill | repo-map |
+| Agent used 1.x Minecraft info from web search | Skill | project-context |
+| Ran full pytest for one helper change | Skill | targeted-testing or agent-triage §4 |
+| Pre-commit palette error: missing `top` texture exception | Skill | pre-commit-workflow |
+| Discovered `test_foo.py` maps to changed path but missing from skill | Skill | targeted-testing/reference.md |
 | Fixed typo in one string | No | — |
-| New feature with no reusable pattern yet | No | — |
-| Qt test segfault without `all` permissions | Yes | targeted-testing |
-| Repeated grep for same symbol across tasks | Yes | repo-map reference (Where is X?) |
+| New kanban card label type (bug, inquiry, …) | Rule (+ skill) | `kanban-*.mdc` + kanban-markdown |
+| Dialog OK without `_persist_dialog_changes` repeated | Rule | ui-dialogs.mdc |
+| Qt test segfault without `all` permissions | Skill | targeted-testing |
+| Repeated grep for same symbol across tasks | Skill | repo-map reference (Where is X?) |
+| Self-eval handoff missing `Rules updated:` | Rule | agent-self-evaluation.mdc |
 
 ## Example skill updates
 
@@ -42,47 +55,61 @@ The feedback loop is the **main deliverable** of self-evaluation. A checklist-on
 - **Palette `top` missing:** if behavior has no `render.textures.top`, validate skips top check — do not add fake `top` keys.
 ```
 
-### Good — failure pattern row (this reference)
+## Example rule updates
+
+### Good — one bullet (ui-dialogs.mdc)
 
 ```markdown
-| Bed display name wrong color | materials.py uses `minecraft:{color}_bed` catalog id, not token alias |
+- After dialog OK on layer delete: call `_persist_dialog_changes`, not only `_mark_layer_dirty`.
 ```
 
-### Bad — too vague
+### Good — new scoped rule (kanban-inquiry-cards.mdc)
 
-```markdown
-- Be careful with tests
-- Remember to read the code before editing
-```
+Short rule file with `globs: .devtool/features/**/*.md` when a new kanban label type needs always-on section split.
 
-### Bad — duplicates existing guidance
+### Bad — duplicate skill content in rule
 
-Adding "use grep before reading main_window.py" when agent-triage §2 already says it.
+Copying the full kanban lifecycle into a rule when kanban-markdown/SKILL.md already has it.
 
 ## Example handoffs
 
-### With skill update
+### Implementation handoff (both required)
 
 ```markdown
 ### Self-evaluation
-- **Scope:** on-target — `helpers/materials.py` + test only
-- **Tests:** `tests/test_materials.py` — 6 passed
-- **Docs:** n/a (no user-facing workflow change)
-- **Skills used:** targeted-testing
-- **Skills updated:** targeted-testing/reference — added `helpers/log_materials.py` → test map row
-- **Commit-ready:** yes (run pre-commit)
+- **Scope:** on-target — preview dirty-flag fix
+- **Tests:** `tests/test_ui_document.py` — 3 passed
+- **Docs:** `docs/ui.md` — undo section
+- **Skills used:** ui-change, targeted-testing
+- **Skills updated:** targeted-testing/reference — `ui/document.py` → `tests/test_ui_document.py` row
+- **Rules updated:** testing.mdc — reminder to run test_ui_document after `ui/document.py` edits
+- **Commit-ready:** yes
+```
+
+### With rule update
+
+```markdown
+### Self-evaluation
+- **Scope:** on-target — kanban inquiry workflow docs
+- **Tests:** n/a (skills/rules only)
+- **Docs:** n/a
+- **Skills used:** kanban-markdown, agent-self-evaluation
+- **Skills updated:** kanban-markdown — § Inquiry cards
+- **Rules updated:** kanban-inquiry-cards.mdc — new scoped rule
+- **Commit-ready:** yes
 ```
 
 ### No update needed
 
 ```markdown
 ### Self-evaluation
-- **Scope:** on-target — single doc typo
-- **Tests:** skipped (docs-only)
-- **Docs:** `docs/ui.md` (typo fix)
+- **Scope:** read-only — single doc typo explanation
+- **Tests:** n/a
+- **Docs:** n/a (read-only)
 - **Skills used:** repo-map
-- **Skills updated:** none
-- **Commit-ready:** yes
+- **Skills updated:** none (read-only)
+- **Rules updated:** none (read-only)
+- **Commit-ready:** n/a
 ```
 
 ### Churn captured
@@ -93,47 +120,45 @@ Adding "use grep before reading main_window.py" when agent-triage §2 already sa
 - **Tests:** `tests/test_palette_panel.py` — passed (after unnecessary full suite)
 - **Skills used:** agent-triage (late)
 - **Skills updated:** agent-triage/reference — row: hard-coded terrain counts → use tests/palette_helpers.py
+- **Rules updated:** none (skill reference was sufficient)
 - **Commit-ready:** needs pre-commit
 ```
 
-## Process ↔ skill map
+## Process ↔ skill & rule map
 
-| Triage step | Self-eval question | Skill to update if gap found |
-| ----------- | ------------------ | ---------------------------- |
-| §1 Classify | Did mode match actual work? | agent-triage |
-| §2 Discovery | Too many reads/explores? | agent-triage |
-| §3 Area rules | Skipped ui-change or worldgen rule? | ui-change or `.cursor/rules/` |
-| §4 Testing | Claimed pass without run? | targeted-testing |
-| §5 Pre-commit | Hook order followed on failure? | pre-commit-workflow |
-| §6 Scope | Unrelated edits? | agent-triage |
-| §8 Checklist | All boxes honestly ticked? Docs pass when code changed? | agent-self-evaluation, docs-maintenance |
+| Triage step | Self-eval question | Skill to update if gap found | Rule to update if gap found |
+| ----------- | ------------------ | ---------------------------- | --------------------------- |
+| §1 Classify | Did mode match actual work? | agent-triage | — |
+| §2 Discovery | Too many reads/explores? | agent-triage | agent-self-evaluation.mdc if handoff skipped |
+| §3 Area rules | Skipped ui-change or worldgen rule? | ui-change | `.cursor/rules/ui-*.mdc`, worldgen.mdc |
+| §4 Testing | Claimed pass without run? | targeted-testing | testing.mdc |
+| §5 Pre-commit | Hook order followed on failure? | pre-commit-workflow | — |
+| §6 Scope | Unrelated edits? | agent-triage | — |
+| §8 Checklist | Docs pass when code changed? | docs-maintenance | — |
+| Kanban label type | Wrong section split on card? | kanban-markdown | kanban-bug-cards.mdc, kanban-inquiry-cards.mdc |
 
 ## Common failure patterns in this repo
 
-| Pattern | Prevention | Skill |
-| ------- | ---------- | ----- |
-| `stage1/structure.yaml` in docs/code | Use manifest + `stage.yaml` | repo-map |
-| `assert count == 32` in palette tests | `tests/palette_helpers.py` | targeted-testing |
-| Full pytest after `helpers/foo.py` tweak | pre-commit map first | targeted-testing |
-| Dialog OK without `_persist_dialog_changes` | ui-change checklist | ui-change |
-| `--no-verify` on hook failure | Fix hooks in order | pre-commit-workflow |
-| Reading all of `main_window.py` | Grep first | agent-triage |
-| Web search “minecraft 1.21” for repo task | project-context + docs/project-info.md | project-context |
-| Added new blocks to palette as `minecraft:*` ids | One semantic token + `enumerate_token_materials`; mirror FENCE/SLAB wiring | repo-map |
-| Worldgen tests: `template/` not found | Use `resolve_worldgen_template_dir()` → `worldgen_templates/v26_1_2/` | repo-map, project-context |
-| Worldgen tests: Amulet `4903` interface missing | Template is 26.2 but Amulet only supports 26.1.x — default worldgen to `DEFAULT_WORLGEN_VERSION` | project-context |
-| Commit failed pytest after “tests passed” earlier | Run `scripts/pre-commit-pytest.sh` on staged files before commit; re-run same scope after fixes | targeted-testing §5–§6, pre-commit-workflow |
-| Shipped feature without `docs/` sync | Run [docs-maintenance](../docs-maintenance/SKILL.md) before Review / commit-ready | docs-maintenance |
-| Self-eval skipped / missing handoff block | Violates `.cursor/rules/agent-self-evaluation.mdc` — required every turn | agent-self-evaluation |
+| Pattern | Prevention | Skill | Rule (if constraint) |
+| ------- | ---------- | ----- | -------------------- |
+| `stage1/structure.yaml` in docs/code | Use manifest + `stage.yaml` | repo-map | — |
+| `assert count == 32` in palette tests | `tests/palette_helpers.py` | targeted-testing | — |
+| Dialog OK without `_persist_dialog_changes` | ui-change checklist | ui-change | ui-dialogs.mdc |
+| Self-eval skipped / missing handoff block | Required every turn | agent-self-evaluation | agent-self-evaluation.mdc |
+| Self-eval missing `Rules updated:` line | Handoff template | agent-self-evaluation | agent-self-evaluation.mdc |
+| Agent skipped kanban / read roadmap for queue | Use [AGENTS.md](../../AGENTS.md) + agent-routing.mdc | agent-triage | agent-routing.mdc |
+| Implementation handoff with `Skills updated: none` or `Rules updated: none` | §6 requires both on implementation turns | agent-self-evaluation | agent-self-evaluation.mdc |
+| Shipped feature without `docs/` sync | docs-maintenance before Review | docs-maintenance | — |
 
-Add rows here **and** to the owning skill when a new pattern appears twice.
+Add rows here **and** to the owning skill or rule when a new pattern appears twice.
 
 ## Read-only / Ask mode
 
-Self-evaluation is **still required**. Use `Scope: read-only`, `Tests: n/a`, `Docs: n/a (read-only)`, `Commit-ready: n/a`. Skill edits only when the user asks or churn revealed a durable gap worth proposing.
+Self-evaluation is **still required**. Use `Scope: read-only`, `Tests: n/a`, `Docs: n/a (read-only)`, `Commit-ready: n/a`, `Skills updated: none (read-only)`, `Rules updated: none (read-only)`. Edit skills/rules only when the user asks or churn revealed a durable gap.
 
 ## Maintenance
 
-- **Consolidate** quarterly: merge duplicate rows across skills
+- **Consolidate** quarterly: merge duplicate rows across skills and rules
 - **Prune** tips that no longer match the codebase (stale paths, removed modules)
 - Keep each `SKILL.md` under ~130 lines; overflow goes to `reference.md`
+- Keep rules short; link to skills for long workflows

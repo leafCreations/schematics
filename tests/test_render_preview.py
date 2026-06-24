@@ -2,6 +2,7 @@ from pathlib import Path
 
 import helpers.constants as constants
 from ui.render_preview import (
+    cached_preview_gallery_available,
     clear_preview_session_dir,
     direction_from_facade_preview_png,
     list_direction_facade_preview_pngs,
@@ -43,6 +44,15 @@ def test_clear_preview_session_dir_noop_when_missing(tmp_path: Path):
     clear_preview_session_dir(missing)
 
     assert not missing.exists()
+
+
+def test_cached_preview_gallery_available():
+    path = Path("preview.png")
+
+    assert cached_preview_gallery_available([path], preview_stale=False)
+    assert not cached_preview_gallery_available([path], preview_stale=True)
+    assert not cached_preview_gallery_available([], preview_stale=False)
+    assert not cached_preview_gallery_available([path], preview_stale=False, document_dirty=True)
 
 
 def _touch(path: Path) -> None:
