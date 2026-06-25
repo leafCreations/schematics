@@ -66,10 +66,11 @@ FURNACE:
 SMOKER:
   behavior: facing_block
   # same facing + lit blockstates; render.top = smoker_front.png, render.side = smoker_side.png
+  # ;lit=true → smoker_front_on.png (vertical strip + .mcmeta); previews use frame 0 only
 
 BLAST_FURNACE:
   behavior: facing_block
-  # blast_furnace_front.png / blast_furnace_side.png
+  # blast_furnace_front.png / blast_furnace_side.png; lit _on strip same as smoker
 ```
 
 Legacy layer cells `minecraft:smoker` and `minecraft:blast_furnace` alias to `SMOKER` / `BLAST_FURNACE` via `helpers/registry_lookup.py`.

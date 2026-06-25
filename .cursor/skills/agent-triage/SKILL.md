@@ -27,7 +27,7 @@ Mirrors [AGENTS.md](../../AGENTS.md) § **Classify quickly** (canonical). On dri
 
 | Signal | Mode | First action |
 | ------ | ---- | ------------ |
-| Kanban card assigned | **Review first** → implement | Card + [kanban-markdown](../kanban-markdown/SKILL.md) |
+| Kanban card assigned | **Review first** → implement | Card + [kanban-markdown](../kanban-markdown/SKILL.md) § Prior lessons gate |
 | Review QA issue / screenshot fix | **Surgical** or **Review** | Fix + **QA follow-up** + refresh card **Feature Areas** / **Label Paths** / **Label Methods** when scope changes ([kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc)) |
 | User says card **Done** / closed | **Governance** | [kanban-markdown](../kanban-markdown/SKILL.md) § Card Done — lessons learned; ≥1 skill + ≥1 rule |
 | AGENTS.md governance audit card | **Read-only** | `python3 scripts/create_governance_audit_card.py` (user) → [kanban-markdown](../kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit → **## Audit findings** → `review` |
@@ -39,9 +39,11 @@ Mirrors [AGENTS.md](../../AGENTS.md) § **Classify quickly** (canonical). On dri
 | UI wiring / dialog not persisting | **Surgical** | §1b `ui-dialog-no-persist` → [ui-change](../ui-change/SKILL.md) |
 | Orbit 3D holes / transparent partial blocks | **Surgical** | §1b `orbit-stair-mask-transparency` → [ui-change](../ui-change/SKILL.md) § Orbit lessons; `test_orbit_stair_face_textures_are_opaque` |
 | Agent handoff / kanban / process mistake | **Surgical** | §1b → [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns |
+| Agent created `.tmp-venv` / pytest without `.venv` | **Surgical** | §1b `agent-no-tmp-venv` → [targeted-testing](../targeted-testing/SKILL.md) |
 | Repeated mistake / familiar churn | **Grep** | §1b — [reference.md](reference.md) § Failure pattern routing |
 | "Run tests" / verify | **Verify** | [targeted-testing](../targeted-testing/SKILL.md) — smallest test set |
 | User will commit / "commit-ready" | **Verify** | `scripts/pre-commit-pytest.sh` on staged files → green → optional `record-pytest-pass.sh` |
+| Area lesson lookup (kanban + Feature Areas) | **Review first** | `docs/lessons-index.yaml` area block + [reference.md](reference.md) § Lessons by area → `resolve_prior_lessons.py` |
 
 If the user is in **Ask mode**, stop at read-only even when they say "fix".
 
@@ -90,6 +92,8 @@ Match → ui-change checklist + ui-dialogs.mdc
 
 ## 2. Choose discovery tools (token budget)
 
+**Kanban + Feature Areas:** after resolving labels via `docs/feature-areas.yaml`, read the matching block in `docs/lessons-index.yaml` and the row in [reference.md](reference.md) § **Lessons by area** **before** broad `grep` under `.devtool/features/done/`. Then run `scripts/resolve_prior_lessons.py`; open full done cards only when the index + routing row are insufficient ([kanban-prior-lessons-gate.mdc](../../rules/kanban-prior-lessons-gate.mdc)). **Not** the same as §1b **Failure pattern routing** — that table is for failure symptoms only; § Lessons by area is proactive prior-lessons lookup (Signature: `lessons-by-area-routing`).
+
 **Default cap:** after **3** file reads, prefer `Grep` or `SemanticSearch` instead of opening more whole files.
 
 | Situation | Use | Avoid |
@@ -115,7 +119,7 @@ Match → ui-change checklist + ui-dialogs.mdc
 | `docs/*` only | — | No pytest unless code also changed |
 | Worldgen | `.cursor/rules/worldgen.mdc`, [project-context](../project-context/SKILL.md) | `tests/test_worldgen_*.py` subset; template via `resolve_worldgen_template_dir()` not `template/` |
 | Version / assets / dependencies | [project-context](../project-context/SKILL.md), `docs/project-info.md` | As area touched |
-| Agent governance (`AGENTS.md`, agent/kanban skills/rules) | [agent-consistency.mdc](../../rules/agent-consistency.mdc), [reference.md](reference.md) § Consistency matrix, [agent-agents-md-maintenance.mdc](../../rules/agent-agents-md-maintenance.mdc) | — |
+| Agent governance (`AGENTS.md`, agent/kanban skills/rules) | [agent-consistency.mdc](../../rules/agent-consistency.mdc), [reference.md](reference.md) § Consistency matrix, [agent-agents-md-maintenance.mdc](../../rules/agent-agents-md-maintenance.mdc); skim `docs/lessons-index.yaml` **or** `docs/feature-areas.yaml` `lesson_signatures` / `lesson_docs` before grepping all `done/` cards; `resolve_feature_areas.py --lessons "<Area>"` for pointer-only review; Card Done captures should add optional ``artifacts:`` tail per [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:` schema | `pytest tests/test_build_lessons_index.py tests/test_resolve_prior_lessons.py tests/test_resolve_feature_areas.py -q` when lesson/index/registry parsers change |
 
 Full path→test map: `scripts/pre-commit-pytest.sh` (source of truth).
 

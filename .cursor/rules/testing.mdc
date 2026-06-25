@@ -35,9 +35,14 @@ Use these mappings as the default starting point:
 | Slab deck / partial occlusion (`orbit_partial_mesh`, `orbit_greedy_mesh` strip faces) | `pytest tests/test_orbit_partial_mesh.py -q -k slab` |
 | `helpers/block_picker.py`, `ui/widgets/properties_panel.py` (brush/direction) | `pytest tests/test_block_picker.py tests/test_properties_panel.py -q` |
 | `helpers/orbit_greedy_mesh.py` (solid shell culling) | `pytest tests/test_orbit_greedy_mesh.py::test_solid_face_visible_at_material_boundary tests/test_orbit_greedy_mesh.py::test_embedded_crafting_table_has_vertical_faces -q` |
-| `registries/behaviors/functional.yaml` (SMOKER, BLAST_FURNACE facing_block) | `pytest tests/test_orbit_greedy_mesh.py -k 'smoker or blast_furnace or minecraft_smoker' -q` |
+| `registries/behaviors/functional.yaml` (SMOKER, BLAST_FURNACE facing_block) | `pytest tests/test_orbit_greedy_mesh.py -k 'smoker or blast_furnace or minecraft_smoker or furnace_lit' -q` |
+| `helpers/block_texture_load.py`, `helpers/facing_block_textures.py` (animated lit front) | `pytest tests/test_block_texture_load.py tests/test_orbit_greedy_mesh.py -k 'block_texture or furnace_lit or smoker_lit' -q` |
+
+**Animated strip assertions:** golden images for `_on` lit fronts must use `load_block_texture_image` (frame 0), not `Image.open(...).resize(...)` on the full PNG — otherwise tests pass while the app tiles multiple openings (Signature: `orbit-animated-texture-strip`).
 | `structures/`      | Run tests covering the affected structures or builders          |
 | `scripts/`         | Run tests covering the affected workflow or utility             |
+| `scripts/build_lessons_index.py`, `scripts/resolve_prior_lessons.py` | `pytest tests/test_build_lessons_index.py tests/test_resolve_prior_lessons.py -q` |
+| `parse_artifacts_line`, `artifacts:` on Card Done bullets | same + grep `artifacts:` in `docs/development.md` and kanban-markdown § Card Done; `doc:` yaml paths need explicit `.yaml`/`.yml` (Signature: `artifacts-doc-yaml-normalize`) |
 
 For uncommon cases, consult:
 
@@ -99,7 +104,7 @@ to allow the hook to skip pytest for 30 minutes.
 
 Ruff and palette checks still run. Python line length: **100** characters (E501).
 
-On hook failure, a **`commit-issue`** kanban card may be created under `.devtool/features/` (hook prints `commit-issue card created: …`; `SKIP_COMMIT_ISSUE_CARD=1` to disable). No card → stage hook infra — signature `precommit-stash-old-hooks` in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). Agent **review** workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc).
+On hook failure, a **`commit-issue`** kanban card may be created under `.devtool/features/` (hook prints `commit-issue card created: …`; `SKIP_COMMIT_ISSUE_CARD=1` to disable). No card → stage hook infra — signature `precommit-stash-old-hooks` in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). Mass ruff in `site-packages` / `.tmp-venv/` → `precommit-ruff-staged-venv`. Agents: never create `.tmp-venv` — signature `agent-no-tmp-venv`. Agent **review** workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc).
 
 ## Before PRs or Large Changes
 

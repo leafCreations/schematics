@@ -493,7 +493,9 @@ def _load_token_texture(
     if path is None:
         return None
 
-    return Image.open(path).convert("RGBA").resize((block_px, block_px), Image.Resampling.NEAREST)
+    from helpers.block_texture_load import load_block_texture_image
+
+    return load_block_texture_image(Path(path), block_px)
 
 
 def compile_texture_set(

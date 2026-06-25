@@ -38,8 +38,10 @@ When you **edit** paths matched by this rule's `globs`, keep workflow artifacts 
 | ------ | ------ |
 | New **Signature** / failure row | Owning `reference.md` + triage failure routing + AGENTS.md Classify/Maintaining if lookup changes |
 | New kanban **label** type | AGENTS.md card types + new/updated `kanban-*.mdc` + kanban-markdown/SKILL.md |
-| New routing **step** (e.g. 1b, Review QA, Done lessons) | AGENTS.md Every turn + agent-routing.mdc + agent-triage/SKILL.md + reference § Classify |
+| New routing **step** (e.g. 1b, Review QA, Done lessons, prior lessons gate) | AGENTS.md Every turn + agent-routing.mdc + agent-triage/SKILL.md + reference § Classify |
 | New scoped **agent/kanban rule** | AGENTS.md area → skills & rules table + `docs/feature-areas.yaml` **Agent Workflow** `paths` |
+| Kanban **prior lessons gate** | [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Prior lessons gate + [kanban-prior-lessons-gate.mdc](kanban-prior-lessons-gate.mdc) + `scripts/resolve_prior_lessons.py` |
+| Lessons-by-area routing table | [agent-triage/reference.md](../skills/agent-triage/reference.md) § Lessons by area + AGENTS Classify **Area lesson lookup** + triage §2 discovery |
 | New skill under **Agent Workflow** in yaml (e.g. `pre-commit-workflow`) | AGENTS.md **Agent** or **Kanban** area row skill link; extend `check_governance_parity.py` `_AGENTS_SKILL_LINK_RE` if skill name is not `agent*` / `kanban*` |
 | New / changed `handlers:` in `feature-areas.yaml` | Keep symbols unique across areas; run `check_governance_parity.py`; align kanban **Label Methods** on open cards |
 

@@ -42,7 +42,7 @@ Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
 
 **Script:** `scripts/pre-commit-ruff.sh`
 
-- Runs on **staged** `*.py` / `*.pyi` only
+- Runs on **staged** `*.py` / `*.pyi` only (skips `.venv/`, `.tmp-venv/`, `site-packages/`)
 - `ruff check --fix` then `ruff format`
 - **Re-stages** fixed files automatically
 
@@ -52,6 +52,7 @@ Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
 | B007 unused loop var | Prefix with `_` |
 | Import sort | Usually auto-fixed |
 | Hook passed but commit still dirty | Hook re-staged files — `git add` any you changed after, or commit again |
+| Mass errors in `site-packages` / `.tmp-venv/` | Signature: `precommit-ruff-staged-venv` — unstage venv, `.gitignore`, hook filter |
 
 Manual fix:
 

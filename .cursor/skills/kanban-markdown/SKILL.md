@@ -9,6 +9,7 @@ description: >-
   or ## Corrective Action (bug cards with labels including bug); user writes ## Feature
   Areas on cards; agent resolves to ## Label Paths and ## Label Methods via
   docs/feature-areas.yaml and MUST update that registry after every implementation;
+  MUST run ## Prior lessons gate (scripts/resolve_prior_lessons.py) before Decisions/CA;
   MUST mark ## Acceptance Criteria [x] when moving to review; MUST review and update
   docs/ per docs-maintenance (no exceptions). Review QA fixes: append **QA follow-up**
   on card and refresh **Feature Areas** / **Label Paths** / **Label Methods** when scope
@@ -129,6 +130,7 @@ User assigns card (path or title)
 | ---- | ---- |
 | `.devtool/features/*.md` | Active cards (`backlog`, `todo`, `in-progress`, `review`) |
 | `.devtool/features/done/*.md` | Completed cards (`done`) |
+| `.devtool/features/archived/*.md` | Archived completed cards — **prior lessons gate** scans with `done/` |
 
 Configurable via VS Code `kanban-markdown.featuresDirectory` (default `.devtool/features`).
 
@@ -155,7 +157,7 @@ Users tag cards with **product areas** they understand. Agents resolve those lab
 | **`## Label Paths`** | **Agent** (during pre-implementation card review) | Resolved paths from [docs/feature-areas.yaml](../../docs/feature-areas.yaml) plus any new files discovered in review |
 | **`## Label Methods`** | **Agent** (same review step, when Feature Areas present) | Functions, methods, Qt slots, and test names the implementation will touch — keyed by path |
 
-**Canonical registry:** [docs/feature-areas.yaml](../../docs/feature-areas.yaml) — maps each label → `paths`, `wiring`, `tests`, `related`, optional `handlers` (stable entry points), `docs`.
+**Canonical registry:** [docs/feature-areas.yaml](../../docs/feature-areas.yaml) — maps each label → `paths`, `wiring`, `tests`, `related`, optional `handlers` (stable entry points), `docs`, optional `lesson_signatures` / `lesson_docs` (curated highlights; li2).
 
 Resolve labels before coding:
 
@@ -171,8 +173,9 @@ When **`## Feature Areas`** or an agent card **`## Feature Area`** is present:
 
 1. Resolve paths: `python scripts/resolve_feature_areas.py "<label>" …` (dedupe; include `tests`)
 2. Seed methods: `python scripts/resolve_feature_areas.py --handlers "<label>" …` (registry `handlers` only — refine per card)
-3. Read card **AC**, repro, **Root Cause**, **Corrective Action** / **Decisions**; one **surgical grep per path** (especially `ui/main_window.py` wiring) to name handlers the fix will touch
-4. Write **`## Label Paths`** (files only) and **`## Label Methods`** on the card before `todo` → `in-progress`
+3. Write draft **`## Label Paths`** and **`## Label Methods`**
+4. **Prior lessons gate:** `python3 scripts/resolve_prior_lessons.py --epic "<epic>" "<labels…>" --paths …` — see § Prior lessons gate
+5. Read card **AC**, repro; one **surgical grep per path**; finalize **Label Methods**; write **Decisions** / **Corrective Action**
 
 **Label Methods rules:**
 
@@ -374,6 +377,19 @@ User creates todo card (labels: agent) with ## Description + ## Feature Area
 | Before `todo` → `in-progress` | **Description** present; **Feature Area** set or defaulted; agent sections filled: **Label Paths**, **Label Methods**, **Acceptance Criteria**, **Decisions** |
 | Before implementation | **Decisions** concrete — not `TBD` |
 | Before `in-progress` → `review` | All **Acceptance Criteria** `[x]`; staged pytests green; registry + `docs/` updated when behavior or paths changed |
+
+### Spawn phased agent card series
+
+When the user asks for **`labels: ["agent"]`** cards for a multi-step governance epic (metric, audit, CI):
+
+1. Create one **todo** card per phase under `.devtool/features/` — **never Backlog**.
+2. Shared frontmatter: `labels: ["agent"]`, `epic: "{PascalCaseEpic}"` (e.g. `LessonsCoverageMetric`), `order` prefix per series (`lc0`, `lc1`, …).
+3. **User sections on every card:** `## Description`, `## Feature Area` (default `` `Agent Workflow` ``).
+4. **Agent sections at spawn** (review-ready): `## Label Paths`, `## Label Methods`, `## Acceptance Criteria`, `## Decisions`; optional `## Context` with phase table linking sibling paths.
+5. First card `## Context` may list the full series; later cards note **Depends on** / **Blocked by** prior `order`.
+6. Implement in `order` sequence unless user re-prioritizes.
+
+**Example epics:** `LessonsCoverageMetric` — lc0 spec (`docs/development.md`), lc1 audit script (`check_lessons_coverage.py`), lc2 C2/C3 heuristics, lc3 CI + drift alerts. `LessonsReferenceIndex` — li0 index builder (`docs/lessons-index.yaml`), li1 `artifacts:` schema, li2 feature-areas pointers, li3 triage routing table. `GovernanceAreaSchema` — gs0 yaml keys spec, gs1 seed areas, gs2 parity script, gs3 pytest + `--agents-parity` (AGENTS table layout deferred). `ArtifactsDocYaml` — ap0 `_normalize_doc_ref` yaml fix, ap1 docs + index refresh.
 
 Example **Description** (user):
 
@@ -796,10 +812,23 @@ The **user** moves cards to **Done** (`done/{id}.md`). When the user says the ca
 | New symbols / paths | **`docs/feature-areas.yaml`** `handlers:` + card **Label Methods** if missing |
 | Registry / palette policy | **`registries/`** + docs as needed |
 | Cross-cutting failure | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns (**Signature** only in rules) |
+| Agent prior-lessons discovery (kanban + Feature Areas) | [agent-triage/reference.md](../agent-triage/reference.md) § **Lessons by area** — add a row when a Feature Area gains a promoted Signature; keep ≤15 rows (exhaustive list stays in `docs/lessons-index.yaml`) |
 
 4. **Minimum:** edit **≥1 skill** and **≥1 rule** (different learnings) — same bar as implementation turns ([agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6).
 5. **Card** — add **`## Lessons captured (YYYY-MM-DD)`** with links to updated skill/rule/doc paths (user may already have moved file to `done/` — edit `done/{id}.md` if present, else active card).
-6. **Handoff** — `Skills updated:` / `Rules updated:` must list paths; `Docs:` lists lesson doc updates.
+
+   **Optional structured tail** — one `artifacts:` sub-bullet per lesson (comma-separated). Parsers prefer this over **Governance** link heuristics; see [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:` schema.
+
+   ```markdown
+   - **Symptom:** …
+   - **Fix:** …
+     - artifacts: skill:project-context, rule:testing.mdc#orbit-animated-texture-strip, doc:render-types.md, sig:orbit-animated-texture-strip, test:tests/test_block_texture_load.py
+   ```
+
+   Prefixes: `skill:`, `rule:`, `doc:`, `sig:`, `test:` — `rule:` may include `#signature` anchor; `sig:` feeds the lessons index Signature list. For registry YAML under `docs/`, use an explicit extension on `doc:` (e.g. `doc:lessons-index.yaml`, not `doc:lessons-index`); extensionless registry stems are skipped by the parser.
+
+6. **Index** — run `python3 scripts/build_lessons_index.py` so `docs/lessons-index.yaml` stays current (or `--check` before commit when index is staged). When the lesson applies to a **Feature Area**, curate `lesson_signatures` / `lesson_docs` in `docs/feature-areas.yaml` (manual first; `build_lessons_index.py --sync-registry` dry-run suggests diffs — trim to ≤8 / ≤5 before `--write`). **Commit-issue** cards with `artifacts:` → index picks up `done/{id}.md` on rebuild.
+7. **Handoff** — `Skills updated:` / `Rules updated:` must list paths; `Docs:` lists lesson doc updates.
 
 **Do not** move the card to **Done** for the user. **Do not** skip lessons capture because AC were already `[x]` — QA follow-ups are the primary source.
 
@@ -816,35 +845,89 @@ The **user** moves cards to **Done** (`done/{id}.md`). When the user says the ca
 5. **Inquiry:** run **inquiry card review** (see § Inquiry cards) — research and **`## Response`** only
 6. After review, move `todo` → `in-progress` and work the card (implement for feature/bug/agent; research for inquiry)
 
-Only read **Backlog** when the user explicitly asks about backlog cards.
+**Governance lessons queue (`ArtifactsDocYaml`, `LessonsCoverageMetric`, `GovernanceAreaSchema`):** read **To Do** and **Backlog** when the user assigns an epic name, asks for cross-epic order, or re-prioritizes governance work. Sort matching cards by frontmatter `order` (`a0`–`a9` for the current ten-card queue); phase ids (`ap0`, `lc0`, `gs0`, …) live in **Context** tables, not in `order`.
+
+Only read other **Backlog** cards when the user explicitly asks about backlog cards.
 
 For a card already in progress, grep `status: "in-progress"` or `status: "review"` if the user names that card or asks to continue/finish it. For **Review** cards, also read **`## QA Review`** — the user may assign implementation of those items next.
 
 ## Pre-implementation card review (required)
 
-**Feature and bug cards only.** Inquiry cards use § Inquiry cards instead.
+**Feature, bug, and agent cards.** Inquiry cards use § Inquiry cards instead. **`commit-issue`:** run § Prior lessons gate during **review** (with **Problem** / **Failed Tests** paths) before **Root Cause** / **Corrective Action**.
 
 **Before any code changes**, review the To Do card for clarifications and improvements. **Implementation is not allowed** until this step is complete.
 
-1. Read the full card — determine **bug** (`labels` includes `bug`) vs **feature** card (default)
+1. Read the full card — determine **bug** (`labels` includes `bug`) vs **feature** / **agent** card
 2. **Bug cards:** confirm user sections (**Steps to Reproduce**, **Current Behavior**, **Expected Behavior**, **Feature Areas**); ask user to fill gaps
-3. **Feature cards:** read acceptance criteria, feature areas, out of scope, verify
-4. **Resolve `## Feature Areas`** via [docs/feature-areas.yaml](../../docs/feature-areas.yaml) → write **`## Label Paths`** and **`## Label Methods`** on the card
-5. **Check against the codebase** — use Label Methods targets; one surgical grep per path for bugs/features; document findings in **`## Root Cause (current code)`** (bugs)
-6. **Bug cards:** write **`## Acceptance Criteria`** (testable), optional **`## Out of Scope`**, and **`## Corrective Action`**
-7. **Report to the user:**
+3. **Feature / agent cards:** read acceptance criteria, feature areas, out of scope, verify
+4. **Resolve `## Feature Areas`** (or agent **`## Feature Area`**) via [docs/feature-areas.yaml](../../docs/feature-areas.yaml) → write **`## Label Paths`** and **`## Label Methods`**
+5. **Prior lessons gate** (§ below) — mandatory before **Decisions** / **Corrective Action**
+6. **Check against the codebase** — use Label Methods targets; one surgical grep per path; document **`## Root Cause (current code)`** (bugs / commit-issue review)
+7. **Bug / commit-issue cards:** write **`## Acceptance Criteria`** (testable), optional **`## Out of Scope`**, and **`## Corrective Action`**
+8. **Report to the user:**
    - **Clarifications** — ambiguities, missing scope, or criteria that need a user answer
    - **Improvements** — suggested edits to the card (wording, scope, feature areas)
-8. **Resolve before implementing:**
+9. **Resolve before implementing:**
    - Apply agreed card improvements to the `.md` file (bump `modified`)
    - Get explicit user answers for clarifications, or explicit user approval to proceed when none remain
-   - **Feature cards:** write **`## Decisions`** (see § Decisions)
-   - **Bug cards:** write **`## Corrective Action`** (see § Corrective Action)
-9. **Then** move the card `todo` → `in-progress` and start implementation
+   - **Feature / agent cards:** write **`## Decisions`** (see § Decisions)
+   - **Bug / commit-issue cards:** write **`## Corrective Action`**
+10. **Then** move the card `todo` → `in-progress` and start implementation
 
 **Do not** move to **In Progress**, edit application code, or run implementation work while clarifications are open or card improvements are still pending user agreement.
 
 If the user only asked to review the card (no implementation), stay in **To Do** and do not move the card.
+
+## Prior lessons gate (pre-implementation)
+
+**Mandatory** after **Label Paths** / **Label Methods** are drafted and **before** **Decisions** or **Corrective Action**. Rule: [kanban-prior-lessons-gate.mdc](../../rules/kanban-prior-lessons-gate.mdc).
+
+Bridge **Card Done** lessons (in **`done/`** or **`archived/`**) and **commit-issue** failures into the current card plan.
+
+**Read order:** (1) `docs/lessons-index.yaml` area block + [agent-triage/reference.md](../agent-triage/reference.md) § **Lessons by area**, (2) optional `resolve_feature_areas.py --lessons`, (3) `resolve_prior_lessons.py`, (4) full done card only when still ambiguous.
+
+### 1. Index + routing table
+
+Skim **`docs/lessons-index.yaml`** for each resolved area label and the matching row in [agent-triage/reference.md](../agent-triage/reference.md) § **Lessons by area** before broad done-card grep.
+
+Optional registry pointers:
+
+```bash
+python3 scripts/resolve_feature_areas.py --lessons "Render Preview"
+```
+
+### 2. Run the resolver
+
+```bash
+python3 scripts/resolve_prior_lessons.py --epic "RenderEngine" "Render Preview" \
+  --paths helpers/orbit_face_textures.py
+```
+
+| Argument | Source on card |
+| -------- | -------------- |
+| `--epic` | Frontmatter `epic` (omit when unset) |
+| Positional labels | **`## Feature Areas`** or agent **`## Feature Area`** |
+| `--paths` | Prefixes from draft **`## Label Paths`** (optional) |
+
+### 3. Read matched artifacts (when index + resolver insufficient)
+
+| Resolver section | Agent action |
+| ---------------- | ------------ |
+| **Registry lesson pointers** | Grep listed **Signatures** in reference tables; skim **`lesson_docs`** — no need to open done cards for highlights |
+| **Done and archived cards — Lessons captured** | Read full `done/{id}.md` or `archived/{id}.md` when index + resolver are still ambiguous |
+| **Open commit-issue cards** | Read **Problem** / **Failed Tests**; grep **Signatures** in pre-commit-workflow + agent-self-evaluation `reference.md` |
+| **Feature area docs** | Skim listed `docs/` before **Decisions** |
+| **Grep Signatures** | When symptoms match [agent-triage/reference.md](../agent-triage/reference.md) § Failure pattern routing |
+
+Load **area skills & rules** from [AGENTS.md](../../AGENTS.md) § Area → skills & rules.
+
+### 4. Record on the card
+
+Under **Decisions** (feature/agent) or **Corrective Action** (bug/commit-issue):
+
+`**Prior lessons (YYYY-MM-DD):**` — done/archived card path or **Signature**; one bullet per lesson (or `none`).
+
+**Skip:** inquiry research-only; surgical ad-hoc fixes without a card (use triage §1b on failures only).
 
 ## File format
 
@@ -892,6 +975,8 @@ When **creating** a card in a column:
 - Append after last item → increment trailing char: `"a0"` → `"a1"` … `"a9"` → `"aA"` (base-62: `0-9`, `A-Z`, `a-z`)
 
 Drag-and-drop reordering is handled by the extension; agents only need append logic for new cards.
+
+**Multi-epic governance queue:** when a phased series spans epics (`ArtifactsDocYaml` + `LessonsCoverageMetric` + `GovernanceAreaSchema`), use contiguous fractional `order` values in **To Do** (`a0`…`a9`) so lexicographic sort matches cross-epic implementation order. Keep phase labels (`ap0`, `lc0`, `gs0`) in **Context** tables only — not in `order`.
 
 ## Creating features
 

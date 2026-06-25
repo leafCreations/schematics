@@ -10,6 +10,12 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+**Virtualenv for agents:** use **`.venv` only** — never create `.tmp-venv` or other
+throwaway venvs in the repo (Signature: `agent-no-tmp-venv`). If `.venv` is
+missing, run the commands above or ask the user to set it up before running
+pytest. Staging a venv tree breaks the ruff hook (Signature:
+`precommit-ruff-staged-venv`).
+
 For world generation, also install the optional Amulet stack:
 
 ```bash
@@ -109,8 +115,81 @@ While editing, run only the tests you care about, e.g. `pytest tests/test_ui_doc
 Agent routing and kanban process live outside application code:
 
 - [AGENTS.md](../AGENTS.md) — entry point; card types (`agent`, `bug`, `inquiry`, `commit-issue`); **Feature Areas** / **Feature Area** → **Label Paths** + **Label Methods**
-- [kanban-markdown/SKILL.md](../.cursor/skills/kanban-markdown/SKILL.md) — card lifecycle; registry maintenance
-- `python scripts/resolve_feature_areas.py "<label>"` — paths; `--handlers` for registry entry-point symbols
+- [kanban-markdown/SKILL.md](../.cursor/skills/kanban-markdown/SKILL.md) — card lifecycle; **prior lessons gate** before Decisions/CA; registry maintenance
+- `python scripts/resolve_feature_areas.py "<label>"` — paths; `--handlers` for registry entry-point symbols; `--lessons` for curated `lesson_signatures` / `lesson_docs`
+- `python3 scripts/resolve_prior_lessons.py --epic "<Epic>" "<Feature Area>" --paths …` — done/archived-card lessons + open commit-issue overlap + **Registry lesson pointers** when present
+- `python3 scripts/build_lessons_index.py` — regenerate `docs/lessons-index.yaml` from Card Done captures; `--check` for stale index; `--dry-run` to stdout; `--sync-registry` proposes `lesson_*` keys in `docs/feature-areas.yaml` (dry-run; add `--write` to apply)
+
+### Lessons reference index
+
+Committed registry of promoted lessons grouped by feature area (paths + Signatures only — not full card prose).
+
+| Field | Meaning |
+| ----- | ------- |
+| `version` | Schema version (`1`) |
+| `generated_at` | ISO-8601 UTC timestamp from last generator run |
+| `areas.<label>.signatures` | Promotion Signatures grep'd from done/archived cards |
+| `areas.<label>.done_cards` | Relative paths to cards with `## Lessons captured` |
+| `areas.<label>.artifacts` | Governance links (skills, rules, docs) from lesson bullets |
+
+Refresh after **Card Done** lessons capture or before a quarterly governance audit:
+
+```bash
+python3 scripts/build_lessons_index.py
+python3 scripts/build_lessons_index.py --check   # exit 1 when stale
+```
+
+**Agent read order (kanban pre-implementation):** skim the card's area block in `docs/lessons-index.yaml`, then [agent-triage/reference.md](../.cursor/skills/agent-triage/reference.md) § **Lessons by area**, then `resolve_prior_lessons.py` — open full done cards only when still ambiguous ([kanban-prior-lessons-gate.mdc](../.cursor/rules/kanban-prior-lessons-gate.mdc)).
+
+When `.devtool/features/` is absent (CI clone without kanban), the generator skips writing; tests use `tmp_path` fixtures.
+
+Epic `LessonsReferenceIndex` (li0–li3) — index build (this section), structured `artifacts:` on cards, registry pointers, triage routing.
+
+### Feature area lesson pointers (li2)
+
+Optional per-area keys in `docs/feature-areas.yaml`:
+
+| Key | Meaning |
+| --- | ------- |
+| `lesson_signatures` | Curated promotion Signatures (≤8) — grep targets without opening done cards |
+| `lesson_docs` | Developer doc paths (≤5) — highlights from lesson captures |
+
+**Manual curation first:** seed and trim lists when closing cards; keep highlights small, not full index dumps.
+
+**Automation suggests only:** `python3 scripts/build_lessons_index.py --sync-registry` prints proposed `lesson_*` diffs from `docs/lessons-index.yaml` (dry-run). Add `--write` to apply when you accept the proposal.
+
+```bash
+python3 scripts/resolve_feature_areas.py --lessons "Render Preview"
+python3 scripts/resolve_prior_lessons.py "Render Preview" --paths helpers/orbit_face_textures.py
+```
+
+Dual **Feature Area** labels on a card union pointers from each resolved area.
+
+### Lessons captured `artifacts:` schema
+
+Optional **machine-readable tail** on each `## Lessons captured` lesson bullet. When present, `build_lessons_index.py` and `resolve_prior_lessons.py` prefer `artifacts:` over free-form **Governance** link heuristics.
+
+**Per-lesson template:**
+
+```markdown
+- **Symptom:** animated furnace front tiles multiple openings in orbit preview.
+- **Fix:** load frame 0 via `load_block_texture_image`; golden tests use same helper.
+  - artifacts: skill:project-context, rule:testing.mdc#orbit-animated-texture-strip, doc:render-types.md, sig:orbit-animated-texture-strip, test:tests/test_block_texture_load.py
+```
+
+| Prefix | Value | Indexed as |
+| ------ | ----- | ---------- |
+| `skill:` | skill folder name (e.g. `project-context`) or full `.cursor/skills/…/SKILL.md` | skill path under `.cursor/skills/` |
+| `rule:` | `filename.mdc` or `filename.mdc#signature` anchor | `.cursor/rules/filename.mdc` (anchor for humans) |
+| `doc:` | doc basename or `docs/…` path (`.md`, `.yaml`, `.yml`) | path under `docs/` |
+| `sig:` | promotion Signature slug | `areas.<label>.signatures` (not an artifact path) |
+| `test:` | pytest file path | `tests/…` path in `areas.<label>.artifacts` |
+
+One `artifacts:` sub-bullet per lesson (comma-separated entries). Cards without `artifacts:` still work — parsers fall back to **Governance** markdown links.
+
+**`doc:` notes:** Markdown basenames may omit `.md` (`doc:render-types` → `docs/render-types.md`). Registry YAML under `docs/` **must** include the extension (`doc:lessons-index.yaml`, `doc:feature-areas.yaml`) — extensionless registry stems such as `doc:lessons-index` are skipped (Signature: `artifacts-doc-yaml-normalize`). Use `rule:` for `.mdc` files, not `doc:`.
+
+**Overlap with `LessonsCoverageMetric` lc2:** lc2 scores **C2 promotion quality** on done cards (heuristic). This schema defines **authoring** for new captures; lc2 can treat structured `artifacts:` as higher-confidence C2 evidence in a later card.
 
 * [AGENTS.md](../AGENTS.md) — entry index for Cursor agents
 * [Consistency matrix](../.cursor/skills/agent-triage/reference.md#consistency-matrix) — governance artifact parity lookup

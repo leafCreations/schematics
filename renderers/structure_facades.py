@@ -173,6 +173,7 @@ def _draw_structure_elevation_panel(
                 bx,
                 by,
                 block_px,
+                facade_direction=view_key,
             )
 
 

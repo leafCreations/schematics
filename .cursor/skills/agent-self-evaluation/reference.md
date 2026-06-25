@@ -162,10 +162,12 @@ Canonical cross-cutting table. Row schema: [SKILL.md](SKILL.md) §6f. Pre-commit
 | `handoff-missing-files-context` | missing `### Files used` or **Context load** | §7 two-section end | agent-self-evaluation | agent-self-evaluation.mdc |
 | `agents-md-stale` | workflow change without AGENTS.md update | §2b check 4 — update routing guide | agent-triage | agent-routing.mdc |
 | `agent-skill-edit-no-agents-read` | edit under `.cursor/skills/agent-*/` or `kanban-*/` | Read AGENTS.md § Maintaining same turn | agent-self-evaluation | agent-agents-md-maintenance.mdc |
+| `agent-no-tmp-venv` | `python3 -m venv .tmp-venv` or agent-created `.tmp-venv` for pytest | Use `.venv`: `pip install -e ".[dev]"` then `.venv/bin/pytest`; ask user to create `.venv` if missing — never stage throwaway venvs | targeted-testing | testing.mdc |
 | `implementation-handoff-none-updates` | `Skills updated: none` or `Rules updated: none` on implementation | §6 requires both on implementation turns | agent-self-evaluation | agent-self-evaluation.mdc |
 | `docs-not-synced-on-ship` | feature shipped without `docs/` sync | docs-maintenance before Review | docs-maintenance | — |
 | `ruff-e501-line-length` | `E501 Line too long` on commit | Wrap strings; split lines ≤ 100 chars | pre-commit-workflow | agent-routing.mdc |
 | `orbit-stair-mask-transparency` | orbit 3D holes / transparent treads / missing bottom; flat color on stone stairs | Solid tiles in `orbit_face_textures` (`PLANKS:*` or `minecraft:*`); no alpha discard; corner-probe `±Y`; see `docs/render-types.md` lessons | ui-change | kanban-bug-cards.mdc |
+| `artifacts-doc-yaml-normalize` | `lessons-index.yaml.md` in index; `doc:lessons-index` skipped | `_normalize_doc_ref` keeps `.yaml`/`.yml`; Card Done uses explicit `doc:…yaml` for registry paths | targeted-testing | testing.mdc |
 
 **Signature** = lowercase kebab-case grep key (optional area prefix). Rules cite **Signature** + this row — do not duplicate **Fix pattern** prose in `.mdc` files.
 

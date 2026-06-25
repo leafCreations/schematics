@@ -8,7 +8,8 @@ from typing import Literal
 import helpers.constants as constants
 import helpers.utils_schematics as schematics_utils
 from helpers import utils
-from helpers.facing_block_state import resolve_facing_block_lit
+from helpers.block_texture_load import load_block_texture_image
+from helpers.facing_block_textures import load_facing_block_front_texture
 from helpers.registry_blocks import get_block_behavior, resolve_minecraft_block_id
 from helpers.registry_lookup import get_block_entry, load_catalog_texture_image
 from helpers.sprite_baker.plank_materials import list_plank_materials
@@ -347,36 +348,12 @@ def _resolve_facing_block_catalog_cap(raw_token: RawToken, entry: dict):
     return _resolve_orbit_catalog_block_face(raw_token, entry, "top")
 
 
-def _facing_block_front_texture_filename(raw_token: RawToken, entry: dict) -> str | None:
-    render_textures = get_render_textures(entry)
-    front = render_textures.get("top")
-    if not isinstance(front, str):
-        return None
-
-    parsed = parse_structure_token(raw_token)
-    if parsed is None:
-        return front
-
-    if resolve_facing_block_lit(parsed, entry):
-        lit_name = front.replace(".png", "_on.png")
-        if find_block_texture_path(BLOCK_TEXTURES_FOLDER, lit_name) is not None:
-            return lit_name
-
-    return front
-
-
 def _load_orbit_texture_file(filename: str):
-    from PIL import Image
-
     texture_path = find_block_texture_path(BLOCK_TEXTURES_FOLDER, filename)
     if texture_path is None:
         return None
 
-    image = Image.open(texture_path).convert("RGBA")
-    return image.resize(
-        (constants.BLOCK_PX, constants.BLOCK_PX),
-        Image.Resampling.NEAREST,
-    )
+    return load_block_texture_image(texture_path, constants.BLOCK_PX)
 
 
 def _facing_block_orbit_front_texture(
@@ -389,13 +366,9 @@ def _facing_block_orbit_front_texture(
         return None
 
     entry = get_block_entry(parsed) or {}
-    front_file = _facing_block_front_texture_filename(raw_token, entry)
-    if front_file is not None:
-        tex = _load_orbit_texture_file(front_file)
-        if tex is not None:
-            if parsed.rotation:
-                tex = utils.rotate_texture_by_degrees(tex, parsed.rotation)
-            return tex
+    tex = load_facing_block_front_texture(raw_token, entry, constants.BLOCK_PX)
+    if tex is not None:
+        return tex
 
     base_token, _ = schematics_utils.resolve_token_for_render(raw_token)
     texture_key = next(

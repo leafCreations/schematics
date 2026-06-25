@@ -30,6 +30,7 @@ Human doc: [docs/project-info.md](../../docs/project-info.md).
 | Edition | Java only (not Bedrock) |
 | Template / worldgen | **26.1.2** → `worldgen_templates/v26_1_2/` via `resolve_worldgen_template_dir()` |
 | Asset catalog default | **26.2** → `assets/minecraft/` (`DEFAULT_MINECRAFT_VERSION`) |
+| Animated block PNGs | Vertical strips with companion `{name}.png.mcmeta` (`animation` key) — previews use **frame 0** (`width×width` top crop) via `helpers/block_texture_load.py`; do not resize the full strip to one face |
 | Python | 3.11+ |
 | Dependencies | `requirements.txt` (pins); `pyproject.toml` (optional groups) |
 | Worldgen deps | `pip install -e ".[worldgen]"` |

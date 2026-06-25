@@ -179,13 +179,11 @@ def test_furnace_orbit_front_vertical_face_upright_for_all_directions():
 
 
 def _catalog_face_image(filename: str):
-    from PIL import Image
-
+    from helpers.block_texture_load import load_block_texture_image
     from registries.loader import BLOCK_TEXTURES_FOLDER
 
     path = BLOCK_TEXTURES_FOLDER / filename
-    image = Image.open(path).convert("RGBA")
-    return image.resize((constants.BLOCK_PX, constants.BLOCK_PX), Image.Resampling.NEAREST)
+    return load_block_texture_image(path, constants.BLOCK_PX)
 
 
 def test_smoker_facing_block_orbit_side_top_and_front():
@@ -247,6 +245,46 @@ def test_smoker_lit_front_uses_on_texture():
 
     assert front is not None
     assert front.tobytes() == _catalog_face_image("smoker_front_on.png").tobytes()
+
+
+def test_furnace_lit_front_unchanged_single_frame():
+    from pathlib import Path
+
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.structure_loader import build_schematic_context, load_structure_yaml
+
+    config = load_structure_yaml(Path("structures/residence/stage1/stage.yaml"))
+    ctx = build_schematic_context(config)
+    front = resolve_orbit_face_texture(
+        "FURNACE@north;lit=true",
+        ctx.sideview_textures,
+        face_kind="side",
+        side_facing="north",
+        topdown_textures=ctx.topdown_textures,
+        sideview_textures=ctx.sideview_textures,
+    )
+
+    assert front is not None
+    assert front.tobytes() == _catalog_face_image("furnace_front_on.png").tobytes()
+
+
+def test_smoker_lit_topdown_uses_first_animation_frame():
+    from pathlib import Path
+
+    from helpers.structure_loader import build_schematic_context, load_structure_yaml
+    from helpers.utils_schematics import resolve_cell_texture
+
+    config = load_structure_yaml(Path("structures/residence/stage1/stage.yaml"))
+    ctx = build_schematic_context(config)
+    top = resolve_cell_texture(
+        "SMOKER@north;lit=true",
+        ctx.topdown_textures,
+        view="top",
+        size=constants.BLOCK_PX,
+    )
+
+    assert top is not None
+    assert top.tobytes() == _catalog_face_image("smoker_front_on.png").tobytes()
 
 
 def test_blast_furnace_facing_block_orbit_textures():

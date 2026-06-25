@@ -20,6 +20,10 @@ When a feature file has frontmatter `labels` including **`agent`** (case-insensi
 - `## Acceptance Criteria` — testable bullets `[ ]`
 - `## Decisions` — concrete plan before `in-progress`
 
+## Phased epics
+
+Multi-card governance work uses shared `epic: "{PascalCase}"` and series `order` (`lc0`, `lc1`, … or `li0`, `li1`, …). User provides **Description** + **Feature Area** on each card; agent may pre-fill **Label Paths**, **Label Methods**, **Acceptance Criteria**, **Decisions**, and **Context** at spawn. Examples: `LessonsCoverageMetric` (lc0–lc3); `LessonsReferenceIndex` (li0–li3); `GovernanceAreaSchema` (gs0–gs3); `ArtifactsDocYaml` (ap0–ap1, `doc:` yaml parser).
+
 ## Workflow
 
 1. Confirm **Description** and **Feature Area** present (default Feature Area if omitted: `Agent Workflow`)
@@ -28,6 +32,10 @@ When a feature file has frontmatter `labels` including **`agent`** (case-insensi
 4. `todo` → `in-progress` → implement per **Decisions**
 5. Staged pytests green; update `docs/feature-areas.yaml` and `docs/` when registry or user docs change
 6. Mark **Acceptance Criteria** `[x]` → `review` → user: `done`
+
+## Card Done `artifacts:` — registry yaml
+
+When capturing lessons that reference registry YAML under `docs/` (`lessons-index.yaml`, `feature-areas.yaml`), use an explicit extension on `doc:` (e.g. `doc:lessons-index.yaml`). Extensionless registry stems are skipped by the parser (Signature: `artifacts-doc-yaml-normalize`). See [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:` schema.
 
 ## Code edits on agent cards
 

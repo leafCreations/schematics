@@ -14,11 +14,11 @@ Which artifacts must agree after a governance change. **Notes** are grep targets
 | -------- | ---------- | ----- |
 | [AGENTS.md](../../AGENTS.md) **Every turn** | [agent-triage/SKILL.md](SKILL.md) §1/§1b, [agent-routing.mdc](../../rules/agent-routing.mdc) lifecycle | Steps `1`–`5`, `1b`; Classify quickly rows |
 | [agent-routing.mdc](../../rules/agent-routing.mdc) | AGENTS.md turn lifecycle, card types | `START →` block; discovery budget |
-| [agent-triage/SKILL.md](SKILL.md) | AGENTS.md Classify + Every turn | §1 ↔ Classify quickly; [reference.md](reference.md) § Classify mirror |
+| [agent-triage/SKILL.md](SKILL.md) | AGENTS.md Classify + Every turn | §1 ↔ Classify quickly; [reference.md](reference.md) § Classify mirror; § Lessons by area |
 | [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 handoff | AGENTS.md End handoff, [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) | `### Files used`, `### Self-evaluation` fields |
 | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | Rules (**Signature** only), § Failure pattern routing below, [testing.mdc](../../rules/testing.mdc) | Five columns per §6f |
 | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | [targeted-testing/reference.md](../targeted-testing/reference.md), testing.mdc `precommit-*` | Area hook patterns |
-| [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table | `bug`, `inquiry`, `commit-issue`, `agent`, feature; **QA follow-up** refreshes **Feature Areas** / **Label Paths** / **Label Methods** when scope changes; **Lessons captured**; **Label Paths** + **Label Methods** when Feature Areas / Feature Area set |
+| [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table | **Prior lessons gate**; `bug`, `inquiry`, `commit-issue`, `agent`, feature; **QA follow-up**; **Lessons captured**; **Label Paths** + **Label Methods** |
 | [docs/development.md](../../docs/development.md) Cursor agent workflow | AGENTS.md, agent-consistency.mdc | When user-facing agent docs change |
 
 ### Four check types → matrix rows
@@ -79,7 +79,7 @@ Place in handoff `- **Drift alerts:**` as `KNOWN_DRIFT: …` (no `[severity]` br
 
 | Signal | Mode | First action (short) |
 | ------ | ---- | -------------------- |
-| Kanban card / implement from card | Review first → implement | kanban-markdown + card |
+| Kanban card / implement from card | Review first → implement | kanban-markdown + card; § Prior lessons gate before Decisions/CA |
 | Review QA issue / user screenshot fix | Surgical / Review | kanban-review-qa.mdc + **QA follow-up** + refresh **Feature Areas** / **Label Paths** / **Label Methods** when scope changes |
 | User says card Done / closed | Governance | kanban-markdown § Card Done — lessons learned |
 | AGENTS.md governance audit | Read-only | kanban-markdown § Periodic AGENTS.md governance audit |
@@ -91,10 +91,30 @@ Place in handoff `- **Drift alerts:**` as `KNOWN_DRIFT: …` (no `[severity]` br
 | UI wiring / dialog not persisting | Surgical | §1b `ui-dialog-no-persist` |
 | Orbit 3D holes / transparent partial blocks | Surgical | §1b `orbit-stair-mask-transparency` |
 | Agent handoff / process mistake | Surgical | §1b self-eval reference patterns |
+| Agent created `.tmp-venv` / missing project venv | Surgical | §1b `agent-no-tmp-venv` → [targeted-testing](../targeted-testing/SKILL.md); use `.venv` not throwaway venv |
 | Repeated mistake / churn | Grep | §1b failure pattern routing |
 | Run tests / commit-ready | Verify | targeted-testing / pre-commit-pytest.sh |
+| Area lesson lookup (kanban + Feature Areas) | Review first | `docs/lessons-index.yaml` area block + § Lessons by area → `resolve_prior_lessons.py` |
 
 Ad-hoc bugs → **Surgical**. Named **To Do** card → [kanban-markdown](../kanban-markdown/SKILL.md). **Bug** cards: [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc). **Inquiry** cards: research + **Response** — [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc).
+
+## Lessons by area (read before card grep)
+
+After resolving **`## Feature Areas`** or agent **`## Feature Area`** — **before** broad `grep` under `.devtool/features/done/`. Read order: (1) [docs/lessons-index.yaml](../../docs/lessons-index.yaml) area block, (2) matching row below, (3) `scripts/resolve_prior_lessons.py`, (4) full done card only when still ambiguous. Cite **Signature** or index path — do not duplicate Fix pattern prose. Exhaustive area keys: `lessons-index.yaml` `areas:`.
+
+| Signal / Feature Area | Read first |
+| --------------------- | ---------- |
+| Kanban card with **Feature Areas** / **Feature Area** | `docs/lessons-index.yaml` area block → this table → `resolve_prior_lessons.py` — [kanban-prior-lessons-gate.mdc](../../rules/kanban-prior-lessons-gate.mdc) |
+| **Render Preview** — animated lit fronts | `lessons-index.yaml` `Render Preview`; Signature `orbit-animated-texture-strip` → [testing.mdc](../../rules/testing.mdc); [ui-change/SKILL.md](../ui-change/SKILL.md) § Orbit |
+| **Render Preview** — stair / fence / wall holes | `lessons-index.yaml` `Render Preview`; Signatures `orbit-stair-mask-transparency`, `orbit-fence-mask-transparency` → [ui-change/SKILL.md](../ui-change/SKILL.md) § Orbit lessons |
+| Pre-commit / hook / pytest scope | `lessons-index.yaml` `Agent Workflow` or `_uncategorized`; [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns; `precommit-stash-old-hooks`, `precommit-ruff-staged-venv`, `agent-no-tmp-venv` |
+| **Properties Panel** — `MainWindow.__new__` tests | `lessons-index.yaml` `Properties Panel`; Signature `precommit-mainwindow-__new__-test` → [testing.mdc](../../rules/testing.mdc) |
+| **Agent Workflow** — routing / kanban / index | `lessons-index.yaml` `Agent Workflow`; Signature `feature-areas-lesson-pointers`; [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Prior lessons gate |
+| **Feature Area Registry** — lesson pointers | `lessons-index.yaml` `Feature Area Registry`; `docs/feature-areas.yaml` `lesson_signatures` / `lesson_docs`; `resolve_feature_areas.py --lessons` |
+| **Palette Registry** — texture / orbit overlap | `lessons-index.yaml` `Palette Registry`; Signature `orbit-animated-texture-strip` |
+| Card **Done** / lessons index refresh | [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:`; `scripts/build_lessons_index.py` |
+| Card Done `artifacts:` — registry yaml under `docs/` | Signature `artifacts-doc-yaml-normalize` → explicit `doc:…yaml` (not extensionless); [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:` |
+| All areas (exhaustive) | [docs/lessons-index.yaml](../../docs/lessons-index.yaml) — grouped Signatures, done cards, artifacts per area |
 
 ## Failure pattern routing (grep on signals only)
 
@@ -102,12 +122,13 @@ Run after §1 classifies a **failure** — not on every turn. Grep **Trigger sni
 
 | Failure signal (§1 classify) | Grep in | Example signatures / trigger snippets |
 | ---------------------------- | ------- | --------------------------------------- |
-| Pre-commit / hook / ruff / palette validate | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | `precommit-stash-old-hooks`, `precommit-pytest-scope-mismatch`, `validate-palettes`, `ruff` |
+| Pre-commit / hook / ruff / palette validate | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | `precommit-stash-old-hooks`, `precommit-pytest-scope-mismatch`, `precommit-ruff-staged-venv`, `validate-palettes`, `ruff` |
 | Pytest scope / hook surprise / hardcoded counts | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) + [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `precommit-pytest-scope-mismatch`, `palette-hardcoded-count`, `FAILED tests/` |
 | UI wiring / dialog / persist | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `ui-dialog-no-persist`, `_persist_dialog_changes` |
 | Orbit 3D holes / transparent stairs | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `orbit-stair-mask-transparency`, `test_orbit_stair_face_textures_are_opaque` |
 | Worldgen / placement / functional blocks | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) + `.cursor/rules/worldgen.mdc` | `residence` stage 1 for chest NBT tests (see worldgen rule) |
-| Agent handoff / kanban / AGENTS.md / self-eval | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `self-eval-skipped`, `kanban-roadmap-queue`, `agents-md-stale`, `handoff-missing-files-context` |
+| Agent handoff / kanban / AGENTS.md / self-eval | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `self-eval-skipped`, `kanban-roadmap-queue`, `agents-md-stale`, `handoff-missing-files-context`, `agent-no-tmp-venv` |
+| Card Done `artifacts:` / lessons index bad `doc:` paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `artifacts-doc-yaml-normalize`, `lessons-index.yaml.md`, `doc:lessons-index` |
 | Structure YAML paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `yaml-stage1-structure-yaml`, `stage1/structure.yaml` |
 
 **No match:** proceed with normal discovery; note recurring failures for self-eval §6 churn.

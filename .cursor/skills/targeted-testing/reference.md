@@ -49,6 +49,7 @@ Also: unmapped `*.py` changes, or >20 targeted test files accumulated.
 | Pink fallback on `facing_block` vertical faces | `test_furnace_orbit_vertical_faces_resolve_front_and_side`, `test_furnace_orbit_front_signature_uses_topdown_texture`, `test_furnace_orbit_top_face_uses_block_cap_not_front`, `test_furnace_orbit_front_vertical_face_upright_for_all_directions` |
 | Embedded solid / crafting table sides | `test_solid_face_visible_at_material_boundary`, `test_embedded_crafting_table_has_vertical_faces`, `test_crafting_table_orbit_side_uses_catalog_side_texture` |
 | Catalog functional side/cap (smoker, blast furnace) | `test_smoker_facing_block_orbit_side_top_and_front`, `test_smoker_lit_front_uses_on_texture`, `test_blast_furnace_facing_block_orbit_textures`, `test_minecraft_smoker_alias_uses_facing_block_registry` |
+| Lit `_on` animated strip (stacked fire openings) | `test_block_texture_load.py` (`animation_first_frame`, `load_block_texture_image`); `test_furnace_lit_front_unchanged_single_frame`, `test_smoker_lit_topdown_uses_first_animation_frame` — assert via `load_block_texture_image`, not full-strip resize |
 | Lower slab open half culled | `test_lower_stair_slab_top_face_visible_on_open_half` |
 | Minimal visual repro | `structures/test/stage1` → Viewer **3D** |
 | Integration | `residence/stage1` stair run vs mossy cobblestone |
@@ -113,6 +114,7 @@ Agents often run a narrow test set during development, then commit fails because
 | `tests/test_*.py` | that test file only |
 | `scripts/migrate_structure_to_yaml.py` | `test_structure_loader` |
 | `scripts/bake_sprites.py`, `generate_catalog.py` | `test_sprite_baker_*`, `test_block_catalog` |
+| `scripts/build_lessons_index.py`, `scripts/resolve_prior_lessons.py` | `test_build_lessons_index`, `test_resolve_prior_lessons`; `-k parse_artifacts` after `_normalize_doc_ref` / `parse_artifacts_line` edits |
 
 ## Convention fallback
 

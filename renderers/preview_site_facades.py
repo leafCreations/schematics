@@ -64,6 +64,7 @@ def _render_single_site_facade_preview(
         draw,
         ctx,
         elevations[direction],
+        direction,
         panel_x,
         panel_y,
         layout,

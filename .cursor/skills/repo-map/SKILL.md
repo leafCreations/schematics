@@ -97,6 +97,8 @@ After every implementation, agents **must** update `docs/feature-areas.yaml` whe
 | Pre-commit test mapping | `scripts/pre-commit-pytest.sh` |
 | Layer save / dirty state | `ui/document.py`, `ui/main_window.py` |
 | Fence / wall adjacency icons | `helpers/fence_adjacency.py`, `helpers/wall_blockstates.py` |
+| Animated block texture load (`.mcmeta` frame 0) | `helpers/block_texture_load.py` |
+| Facing-block lit front (2D + 3D) | `helpers/facing_block_textures.py`, `helpers/orbit_face_textures.py` |
 | Bed worldgen patch | `helpers/worldgen_region_patch.py` |
 | Terrain legacy tokens | `helpers/terrain_tokens.py` |
 | Editor prefs | `config/editor_settings.yaml`, `ui/app_settings.py` |
@@ -142,6 +144,7 @@ Use `.venv/bin/pytest … -q`. Full map: [reference.md](reference.md) and `scrip
 | `.devtool/features/*.md` with `status: "todo"` | **Work queue** — read **`## Feature Areas`**; resolve via [docs/feature-areas.yaml](../../docs/feature-areas.yaml) |
 | `.devtool/features/*.md` with `status: "backlog"` | **Ignore** — user-managed |
 | `.devtool/features/done/*.md` | **Done** — user-managed after app review |
+| `.devtool/features/archived/*.md` | **Archived** — prior lessons gate scans with `done/` |
 | [kanban-markdown](../kanban-markdown/SKILL.md) | Column rules and card edits |
 
 Do **not** treat [roadmap.md](../../docs/roadmap.md) as the live task queue.

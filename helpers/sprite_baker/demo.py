@@ -2,6 +2,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from helpers.block_texture_load import load_block_texture_image
 from helpers.paths import BLOCK_TEXTURES_FOLDER
 
 
@@ -13,8 +14,7 @@ def bake_texture_file(source: Path, size: int) -> Image.Image:
     if not source.exists():
         raise SpriteBakeError(f"Texture source not found: {source}")
 
-    texture = Image.open(source).convert("RGBA")
-    return texture.resize((size, size), Image.Resampling.NEAREST)
+    return load_block_texture_image(source, size)
 
 
 def bake_demo_planks(size: int, *, textures_dir: Path = BLOCK_TEXTURES_FOLDER) -> Image.Image:

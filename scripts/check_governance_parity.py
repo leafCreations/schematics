@@ -115,6 +115,7 @@ CLASSIFY_ANCHORS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("agent handoff", ("agent handoff", "process mistake")),
     ("repeated churn", ("repeated mistake", "familiar churn", "churn")),
     ("run tests / commit-ready", ("run tests", "commit-ready", '"run tests"')),
+    ("area lesson lookup", ("area lesson lookup", "lessons by area")),
 )
 
 

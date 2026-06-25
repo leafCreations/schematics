@@ -11,6 +11,8 @@
 #   tests: pytest files
 #   related: other feature area labels to consider
 #   docs: optional user/developer docs
+#   lesson_signatures: optional curated promotion Signatures (≤8; grep targets)
+#   lesson_docs: optional lesson doc paths (≤5; under docs/)
 
 areas:
   File Menu:
@@ -471,6 +473,10 @@ areas:
       - helpers/orbit_texture_atlas.py
       - helpers/orbit_face_textures.py
       - helpers/orbit_partial_mesh.py
+      - helpers/block_texture_load.py
+      - helpers/facing_block_textures.py
+      - helpers/facade_projection.py
+      - helpers/utils_schematics.py
       - ui/render_preview.py
       - renderers/preview_top_view.py
       - renderers/preview_structure_facades.py
@@ -500,11 +506,18 @@ areas:
       - MainWindow._ensure_orbit_mesh
       - MainWindow._on_preview_view_mode_changed
       - MainWindow._on_tab_changed
+      - load_block_texture_image
+      - animation_first_frame
+      - facing_block_front_texture_filename
+      - load_facing_block_front_texture
+      - block_faces_facade
+      - draw_facade_cell
     tests:
       - tests/test_preview_panel.py
       - tests/test_orbit_preview.py
       - tests/test_orbit_greedy_mesh.py
       - tests/test_orbit_partial_mesh.py
+      - tests/test_block_texture_load.py
       - tests/test_render_preview.py
       - tests/test_structure_facades.py
       - tests/test_preview_site_facades.py
@@ -518,6 +531,12 @@ areas:
       - Preview Toolbar
     docs:
       - docs/ui.md
+    lesson_signatures:
+      - orbit-animated-texture-strip
+      - orbit-fence-mask-transparency
+      - orbit-stair-mask-transparency
+    lesson_docs:
+      - docs/render-types.md
 
   Render Selection:
     summary: Render-type dropdown on preview panel (Top Down, Structure Facades, Site Facades, Site Top Down, Materials List)
@@ -673,10 +692,17 @@ areas:
       - docs/feature-areas.yaml
     wiring:
       - scripts/resolve_feature_areas.py
+      - scripts/build_lessons_index.py
       - scripts/create_governance_audit_card.py
       - scripts/check_governance_parity.py
+    handlers:
+      - resolve_lesson_pointers
+      - sync_registry_lesson_pointers
+    tests:
+      - tests/test_resolve_feature_areas.py
     docs:
       - .cursor/skills/kanban-markdown/SKILL.md
+      - docs/development.md
 
   Agent Workflow:
     summary: Cursor agent routing, skills, rules, kanban process, failure memory
@@ -695,5 +721,27 @@ areas:
       - .cursor/rules/kanban-commit-issue-cards.mdc
       - .cursor/rules/kanban-inquiry-cards.mdc
       - .cursor/rules/kanban-agent-cards.mdc
+      - .cursor/rules/kanban-prior-lessons-gate.mdc
+      - scripts/resolve_prior_lessons.py
+      - scripts/build_lessons_index.py
+      - scripts/resolve_feature_areas.py
+      - tests/test_resolve_prior_lessons.py
+      - tests/test_build_lessons_index.py
+      - docs/lessons-index.yaml
+    handlers:
+      - resolve_prior_lessons
+      - build_lessons_index
+      - resolve_feature_areas
+      - _normalize_doc_ref
+      - parse_artifacts_line
     docs:
+      - docs/development.md
+    lesson_signatures:
+      - precommit-stash-old-hooks
+      - lessons-by-area-routing
+      - feature-areas-lesson-pointers
+      - artifacts-doc-yaml-normalize
+      - precommit-ruff-staged-venv
+      - agent-no-tmp-venv
+    lesson_docs:
       - docs/development.md

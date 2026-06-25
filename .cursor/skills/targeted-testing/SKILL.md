@@ -23,6 +23,11 @@ Running: <test paths> — because <changed files / behavior>
 
 Use `.venv/bin/pytest` from repo root (or `pytest` if venv active).
 
+**Do not** create `.tmp-venv` or other throwaway venvs in the repo (Signature:
+`agent-no-tmp-venv`). If `.venv` is missing, ask the user to run
+`python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"` — or run that once
+with user approval — then use `.venv/bin/pytest`.
+
 ## Workflow
 
 ### 1. Identify changed paths

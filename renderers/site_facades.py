@@ -92,7 +92,16 @@ def _draw_site_facade_panels(
     for view_key in layout["view_keys"]:
         _draw_site_facade_heading(draw, view_key, current_x, current_y, layout)
 
-        _draw_site_facade_panel(img, draw, ctx, elevations[view_key], current_x, current_y, layout)
+        _draw_site_facade_panel(
+            img,
+            draw,
+            ctx,
+            elevations[view_key],
+            view_key,
+            current_x,
+            current_y,
+            layout,
+        )
 
         current_x += layout["panel_w"] + layout["padding"]
 
@@ -112,6 +121,7 @@ def _draw_site_facade_panel(
     draw: ImageDraw.ImageDraw,
     ctx: SchematicContext,
     panel_data: LayerElevations,
+    facade_direction: str,
     current_x: int,
     current_y: int,
     layout: SiteFacadeLayout,
@@ -135,6 +145,7 @@ def _draw_site_facade_panel(
                 bx,
                 by,
                 layout["block_px"],
+                facade_direction=facade_direction,
                 empty_fill=(235, 245, 255),
                 empty_outline=None,
                 fallback_default=(230, 230, 230),

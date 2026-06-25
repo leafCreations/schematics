@@ -250,6 +250,28 @@ def _build_fence_texture_keys(parsed: ParsedToken, variant: str) -> list[str]:
     return _build_connection_texture_keys(parsed, variant)
 
 
+def _resolve_facing_block_topdown_texture(
+    raw_token: RawToken,
+    entry: dict,
+    base_token: Token,
+    direction: str | None,
+    parsed: ParsedToken,
+    block_px: int,
+) -> Image.Image | None:
+    from helpers.facing_block_textures import load_facing_block_front_texture
+
+    tex = load_facing_block_front_texture(raw_token, entry, block_px)
+    if tex is None:
+        return None
+
+    return _prepare_topdown_texture(
+        tex.copy(),
+        base_token,
+        direction,
+        parsed.rotation,
+    )
+
+
 def resolve_cell_texture(
     raw_token: RawToken,
     textures: MappedTextureImages,
@@ -273,6 +295,19 @@ def resolve_cell_texture(
 
     if view == "side":
         direction = parsed.direction or resolved_direction or defaults.get("direction")
+
+    if view == "top" and entry.get("behavior") == "facing_block":
+        block_px = size if size is not None else 30
+        tex = _resolve_facing_block_topdown_texture(
+            raw_token,
+            entry,
+            base_token,
+            direction,
+            parsed,
+            block_px,
+        )
+        if tex is not None:
+            return _resize_texture(tex, size)
 
     if (
         view == "top"

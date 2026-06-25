@@ -68,7 +68,7 @@ Before adding geometry for “transparent” or “missing” partial-block face
 4. **Manual QA** — `structures/test/stage1` (oak stairs); `residence/stage1` (oak vs mossy cobblestone, **fences**); `well/stage1` (**cobblestone** stairs, **walls**). Top / front / side / bottom views.
 5. **Tests** — opaque: `test_orbit_stair_face_textures_are_opaque`, `test_orbit_slab_face_textures_are_opaque`, `test_orbit_cobblestone_stair_face_textures_are_opaque`, `test_lower_stair_slab_top_face_visible_on_open_half`; masked fence/wall: `test_orbit_fence_side_texture_uses_masked_bake`, `test_orbit_wall_side_texture_uses_masked_bake`; **`facing_block`:** `test_furnace_orbit_vertical_faces_resolve_front_and_side`; full orbit mapping in [targeted-testing/reference.md](../targeted-testing/reference.md).
 7. **Greedy shell vs per-block faces** — `_solid_face_visible` culls same-token neighbors only; **material boundaries** emit vertical faces (embedded `CRAFTING_TABLE`). Side textures: `_resolve_orbit_catalog_block_face` → `{block}_side.png`.
-8. **Catalog functionals** — `SMOKER` / `BLAST_FURNACE` are registry **`facing_block`** tokens (`facing` + `lit` blockstates), not bare `minecraft:*` solids. Orbit front/side/top like `FURNACE`; `;lit=true` → `_front_on.png`. Legacy `minecraft:smoker` cells resolve to registry picker entries (`requires_direction`, **Lit**) via `_ensure_picker_entry_indexes` + `cell_token_matches_picker_entry`.
+8. **Catalog functionals** — `SMOKER` / `BLAST_FURNACE` are registry **`facing_block`** tokens (`facing` + `lit` blockstates), not bare `minecraft:*` solids. Orbit front/side/top like `FURNACE`; `;lit=true` → `_front_on.png`. Animated `_on` strips (`smoker_front_on.png` + `.mcmeta`) load **frame 0 only** via `helpers/block_texture_load.py` (2D + 3D). Legacy `minecraft:smoker` cells resolve to registry picker entries (`requires_direction`, **Lit**) via `_ensure_picker_entry_indexes` + `cell_token_matches_picker_entry`.
 9. **Slab roof decks** — bottom `SLAB` layers use neighbor-cell `box_face_occluded` + `_slab_deck_bottom_face_occluded` (hide −Y and shared vertical faces). Isolated single slab keeps exterior −Y. Tests: `test_slab_deck_7x7_minus_y_faces_culled`, `test_slab_deck_mesh_has_no_minus_y_normals`.
 10. **Solid beside slab** — greedy shell skips full faces toward `partial_worlds`; `_collect_solid_slab_neighbor_strip_faces` restores **upper** vertical strip beside bottom slab (lower beside `#top`). Tests: `test_solid_emits_upper_strip_face_toward_bottom_slab`.
 
@@ -90,6 +90,17 @@ Details: `docs/render-types.md` § Orbit partial blocks — lessons learned.
 | View prefs (tooltips, axis labels) | `~/.config/structure_scripts/editor_settings.yaml` |
 
 Details: `docs/structure-tokens.md`, `docs/editor-properties.md`.
+
+## Properties brush — lit defaults
+
+`PropertiesPanel.show_picker_entry` must match registry defaults for **Lit**:
+
+| Behavior | Default **Lit** combo | Source |
+| -------- | --------------------- | ------ |
+| `campfire` | `"true"` | `DEFAULT_CAMPFIRE_LIT` in `helpers/campfire_state.py` |
+| `facing_block` (furnace, smoker, …) | `"false"` | Unlit front unless user toggles |
+
+Test: `test_campfire_facing_and_lit_in_build_placement_token` in `tests/test_properties_panel.py`.
 
 ## main_window.py
 

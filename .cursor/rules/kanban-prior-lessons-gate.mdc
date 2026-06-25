@@ -1,0 +1,28 @@
+---
+description: Kanban pre-implementation — consult done-card lessons and commit-issue patterns before Decisions
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban prior lessons gate
+
+When running **pre-implementation card review** on a **feature**, **bug**, or **agent** card — or **review** on a **`commit-issue`** card — follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § **Prior lessons gate** before writing **Decisions** / **Corrective Action**. Signature: `lessons-by-area-routing` — index + routing table before broad done-card grep.
+
+## Required
+
+1. Read **`docs/lessons-index.yaml`** for each resolved area label (grouped Signatures + artifact paths) when the index exists locally, and the matching row in [agent-triage/reference.md](../skills/agent-triage/reference.md) § **Lessons by area** — before broad done-card grep. Index paths prefer structured ``artifacts:`` sub-bullets on done cards (`parse_artifacts_line` in `scripts/resolve_prior_lessons.py`); fall back to **Governance** link heuristics when absent.
+2. Optional: `python3 scripts/resolve_feature_areas.py --lessons "<Area>"` — registry `lesson_signatures` / `lesson_docs` pointers only.
+3. Run `python3 scripts/resolve_prior_lessons.py` with card **`epic`**, **`## Feature Areas`** / **`## Feature Area`** labels, and optional **`## Label Paths`** prefixes. Output includes **Registry lesson pointers** when `lesson_signatures` / `lesson_docs` are set on resolved areas (Signature: `feature-areas-lesson-pointers`).
+4. Read **`## Lessons captured`** on matched **`done/`** and **`archived/`** cards only when index + resolver output are still ambiguous; skim open **`commit-issue`** cards with overlapping staged paths.
+5. Load area **skills & rules** from [AGENTS.md](../../AGENTS.md) § Area → skills & rules; grep **Signatures** in [agent-triage/reference.md](../skills/agent-triage/reference.md) § Failure pattern routing when symptoms match.
+6. **Record** applied lessons on the card — one bullet under **Decisions** or **Corrective Action** (`**Prior lessons (YYYY-MM-DD):**` …) with links to done/archived cards / Signatures used.
+
+## Do not
+
+- Skip the gate because the card is small or epic-linked Context already names a parent card
+- Implement before **Decisions** / **Corrective Action** when lessons change the plan
+- Duplicate **Fix pattern** prose from reference tables on the card — cite **Signature** or done-card path only
+
+## Full workflow
+
+[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Pre-implementation card review + § Prior lessons gate.

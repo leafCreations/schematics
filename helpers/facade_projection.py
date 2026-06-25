@@ -107,6 +107,7 @@ def draw_facade_cell(
     by: int,
     block_px: int,
     *,
+    facade_direction: str | None = None,
     empty_fill: tuple[int, int, int] = (245, 245, 245),
     empty_outline: tuple[int, int, int] | None = (230, 230, 230),
     fallback_default: tuple[int, int, int] = (245, 245, 245),
@@ -120,6 +121,15 @@ def draw_facade_cell(
             draw.rectangle(rect, fill=empty_fill)
         else:
             draw.rectangle(rect, fill=empty_fill, outline=empty_outline)
+        return
+
+    if facade_direction is not None and _paste_facing_block_facade_front(
+        img,
+        raw_token,
+        facade_direction,
+        (bx, by),
+        block_px,
+    ):
         return
 
     if ctx.sideview_textures and schematics_utils.paste_sideview_token(
@@ -137,3 +147,33 @@ def draw_facade_cell(
         draw.rectangle(rect, fill=fill)
     else:
         draw.rectangle(rect, fill=fill, outline=fallback_outline)
+
+
+def _paste_facing_block_facade_front(
+    img: Image.Image,
+    raw_token: RawToken,
+    facade_direction: str,
+    xy: tuple[int, int],
+    block_px: int,
+) -> bool:
+    from helpers.facing_block_textures import block_faces_facade, load_facing_block_front_texture
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
+
+    if not block_faces_facade(raw_token, facade_direction):
+        return False
+
+    parsed = parse_structure_token(raw_token)
+    if parsed is None:
+        return False
+
+    entry = get_block_entry(parsed) or {}
+    if entry.get("behavior") != "facing_block":
+        return False
+
+    tex = load_facing_block_front_texture(raw_token, entry, block_px)
+    if tex is None:
+        return False
+
+    schematics_utils._paste_prepared_texture(img, tex, xy)
+    return True

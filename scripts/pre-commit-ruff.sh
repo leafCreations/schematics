@@ -20,6 +20,15 @@ fi
 
 mapfile -t STAGED_PY < <(git diff --cached --name-only --diff-filter=ACM -- '*.py' '*.pyi')
 
+FILTERED_PY=()
+for path in "${STAGED_PY[@]}"; do
+  case "$path" in
+    .venv/* | .tmp-venv/* | */site-packages/*) continue ;;
+  esac
+  FILTERED_PY+=("$path")
+done
+STAGED_PY=("${FILTERED_PY[@]}")
+
 if ((${#STAGED_PY[@]} == 0)); then
   exit 0
 fi

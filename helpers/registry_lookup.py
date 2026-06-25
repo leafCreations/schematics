@@ -116,5 +116,6 @@ def load_catalog_texture_image(
     if path is None:
         return None
 
-    image = Image.open(path).convert("RGBA")
-    return image.resize((size, size), Image.Resampling.NEAREST)
+    from helpers.block_texture_load import load_block_texture_image
+
+    return load_block_texture_image(path, size)

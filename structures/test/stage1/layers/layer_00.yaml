@@ -1,17 +1,17 @@
 index: 0
 group: Main
 cells:
-- - BLAST_FURNACE@south;lit=false
+- - BLAST_FURNACE@south;lit=true
   - .
   - CRAFTING_TABLE
   - .
-  - FURNACE@east
+  - FURNACE@east;lit=true
 - - .
   - .
   - .
   - .
   - .
-- - SMOKER@south;lit=false
+- - SMOKER@south;lit=true
   - .
   - CHEST@north
   - .

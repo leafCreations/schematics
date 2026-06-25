@@ -14,6 +14,10 @@ REGISTRY_PATH = REPO_ROOT / "docs/feature-areas.yaml"
 
 _PATH_KEYS = ("paths", "wiring", "tests")
 _HANDLER_KEY = "handlers"
+_LESSON_SIGNATURE_KEY = "lesson_signatures"
+_LESSON_DOCS_KEY = "lesson_docs"
+MAX_LESSON_SIGNATURES = 8
+MAX_LESSON_DOCS = 5
 
 
 def load_registry() -> dict:
@@ -59,6 +63,50 @@ def resolve_areas(
     return ordered, unknown
 
 
+def resolve_lesson_pointers(labels: list[str]) -> tuple[dict[str, list[str]], list[str]]:
+    """Merge curated ``lesson_signatures`` / ``lesson_docs`` for area labels."""
+    areas = load_registry()
+    unknown: list[str] = []
+    seen_sig: set[str] = set()
+    seen_doc: set[str] = set()
+    signatures: list[str] = []
+    docs: list[str] = []
+
+    for label in labels:
+        entry = areas.get(label)
+        if entry is None:
+            unknown.append(label)
+            continue
+        for sig in entry.get(_LESSON_SIGNATURE_KEY, []) or []:
+            if sig not in seen_sig:
+                seen_sig.add(sig)
+                signatures.append(sig)
+        for doc in entry.get(_LESSON_DOCS_KEY, []) or []:
+            if doc not in seen_doc:
+                seen_doc.add(doc)
+                docs.append(doc)
+
+    return {"lesson_signatures": signatures, "lesson_docs": docs}, unknown
+
+
+def format_lesson_pointers(pointers: dict[str, list[str]]) -> str:
+    """Human-readable lesson pointer block for card review."""
+    lines: list[str] = []
+    signatures = pointers.get("lesson_signatures") or []
+    docs = pointers.get("lesson_docs") or []
+    if signatures:
+        lines.append("lesson_signatures:")
+        for sig in signatures:
+            lines.append(f"  - {sig}")
+    if docs:
+        if lines:
+            lines.append("")
+        lines.append("lesson_docs:")
+        for doc in docs:
+            lines.append(f"  - {doc}")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("labels", nargs="*", help="Feature area labels (e.g. 'Render Preview')")
@@ -71,6 +119,11 @@ def main(argv: list[str] | None = None) -> int:
         "--handlers",
         action="store_true",
         help="Print registry handlers (stable entry points) instead of paths",
+    )
+    parser.add_argument(
+        "--lessons",
+        action="store_true",
+        help="Print curated lesson_signatures and lesson_docs for labels",
     )
     parser.add_argument(
         "--list",
@@ -86,6 +139,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.labels:
         parser.error("labels required unless --list is set")
+
+    if args.lessons:
+        pointers, unknown = resolve_lesson_pointers(args.labels)
+        if unknown:
+            print("Unknown labels:", ", ".join(unknown), file=sys.stderr)
+        if not pointers["lesson_signatures"] and not pointers["lesson_docs"]:
+            print("(no lesson pointers for resolved labels)", file=sys.stderr)
+        else:
+            print(format_lesson_pointers(pointers))
+        return 1 if unknown else 0
 
     paths, unknown = resolve_areas(
         args.labels,

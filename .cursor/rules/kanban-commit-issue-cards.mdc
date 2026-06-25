@@ -35,10 +35,19 @@ After **Root Cause** and **Corrective Action**, ask whether the failure is a **r
 | Step | Requirement |
 | ---- | ----------- |
 | Card created | `status: todo`, `labels: ["commit-issue"]` — user fixes commit or assigns review |
-| User: **review** | Agent reads code + card; fills **Root Cause** and **Corrective Action** — **no implementation yet** |
+| User: **review** | Agent reads code + card; **prior lessons gate**; fills **Root Cause** and **Corrective Action** — **no implementation yet** |
 | User approves plan | User explicitly asks to **implement** |
 | `todo` → `in-progress` | Only after user approval; follow **Corrective Action** |
 | `in-progress` → `review` | Fix applied; staged `scripts/pre-commit-pytest.sh` green; commit succeeds |
+
+## Card Done — lessons learned
+
+When the user moves a **commit-issue** card to **Done**:
+
+1. Read **Problem**, **Corrective Action**, and promoted **Signature** (if any).
+2. Ensure durable patterns live in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md) § Failure patterns and [testing.mdc](testing.mdc) when hook-level (e.g. `precommit-ruff-staged-venv`, `agent-no-tmp-venv`).
+3. Add **`## Lessons captured (YYYY-MM-DD)`** on `done/{id}.md` listing updated artifacts; run `python3 scripts/build_lessons_index.py`.
+4. Area-specific fixes (UI, helpers) → matching skill + rule per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done.
 
 ## Do not
 
