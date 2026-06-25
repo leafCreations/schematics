@@ -45,6 +45,7 @@ Do **not** start implementation on spawned cards until user assigns work (pre-im
 - Implement application code on the inquiry card unless user explicitly asks
 - Spawn cards in **Backlog** — always **todo**
 - Skip **Decisions** / **Label Paths** / **Label Methods** on spawned **feature** cards when Feature Areas are set
+- Orbit / render **2D vs 3D parity** questions surfaced during bug QA → spawn **`inquiry`** card (not a bug on the parent unless AC contradicts shipped behavior); link from parent **Context** or handoff
 
 ## Full workflow
 

@@ -67,7 +67,7 @@ Before handoff, score the turn against these checks:
 
 | Area touched | Verify |
 | ------------ | ------ |
-| Kanban / card implementation | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) updated; **`docs/`** reviewed per [docs-maintenance](../docs-maintenance/SKILL.md); **`## Acceptance Criteria`** marked `[x]` before **Review** (feature/bug/agent); bug → **Corrective Action**; inquiry → **Response** only; agent card → **Decisions**; **§6:** ≥1 skill + ≥1 rule updated; governance edits → **§6g** |
+| Kanban / card implementation | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) updated; **`docs/`** reviewed per [docs-maintenance](../docs-maintenance/SKILL.md); **`## Acceptance Criteria`** marked `[x]` before **Review** (feature/bug/agent); bug → **Corrective Action**; inquiry → **Response** only; agent card → **Decisions**; Review QA fix → **QA follow-up** + refresh **Feature Areas** / **Label Paths** / **Label Methods** when scope changes; user **Done** → lessons captured (§ Card Done); **§6:** ≥1 skill + ≥1 rule updated; governance edits → **§6g** |
 | Structure YAML / editor save | Manifest vs `stage.yaml` split correct ([repo-map](../repo-map/SKILL.md)) |
 | UI panel/dialog | [ui-change](../ui-change/SKILL.md) checklist |
 | Registry/palette | `validate_palettes()` if behavior/palette changed; **templated families** use one token + materials, not raw catalog ids in `blocks:` ([repo-map](../repo-map/SKILL.md) § Templated block families) |

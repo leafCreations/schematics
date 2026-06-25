@@ -8,13 +8,60 @@ FURNACE:
     requires_variant: false
   defaults:
     direction: north
+    lit: "false"
   minecraft:
     block: minecraft:furnace
     blockstates:
       facing: '{direction}'
+      lit: '{lit}'
   render:
     top: furnace_front.png
+    side: furnace_side.png
     inventory_image: furnace_front.png
+  visibility:
+    interior: false
+SMOKER:
+  behavior: facing_block
+  ui:
+    label: Smoker
+    palette: functional
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
+  defaults:
+    direction: north
+    lit: "false"
+  minecraft:
+    block: minecraft:smoker
+    blockstates:
+      facing: '{direction}'
+      lit: '{lit}'
+  render:
+    top: smoker_front.png
+    side: smoker_side.png
+    inventory_image: smoker_front.png
+  visibility:
+    interior: false
+BLAST_FURNACE:
+  behavior: facing_block
+  ui:
+    label: Blast Furnace
+    palette: functional
+    requires_material: false
+    requires_direction: true
+    requires_variant: false
+  defaults:
+    direction: north
+    lit: "false"
+  minecraft:
+    block: minecraft:blast_furnace
+    blockstates:
+      facing: '{direction}'
+      lit: '{lit}'
+  render:
+    top: blast_furnace_front.png
+    side: blast_furnace_side.png
+    inventory_image: blast_furnace_front.png
   visibility:
     interior: false
 CRAFTING_TABLE:

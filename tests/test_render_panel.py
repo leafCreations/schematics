@@ -61,14 +61,39 @@ def test_render_panel_has_export_and_world_buttons(qapp):
     assert panel._export_button.menu().actions()[0].text() == "All Renders"
     assert panel._generate_world_button.text() == "Generate World"
     assert panel._open_output_button.text() == "Open Output Folder"
+    assert panel._open_world_button.text() == "Open World Folder"
     assert panel._export_button.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Maximum
     assert (
         panel._generate_world_button.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Maximum
     )
     assert panel._open_output_button.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Maximum
+    assert panel._open_world_button.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Maximum
 
     actions_layout = panel._open_output_button.parentWidget().layout()
     assert isinstance(actions_layout, QHBoxLayout)
     assert actions_layout.indexOf(panel._export_button) >= 0
     assert actions_layout.indexOf(panel._generate_world_button) >= 0
     assert actions_layout.indexOf(panel._open_output_button) >= 0
+    assert actions_layout.indexOf(panel._open_world_button) >= 0
+
+
+def test_render_panel_open_world_disabled_until_worldgen(qapp, monkeypatch):
+    from ui.widgets.render_panel import RenderPanel
+
+    monkeypatch.setattr(
+        "ui.widgets.render_panel.worldgen_dependencies_available",
+        lambda: True,
+    )
+    panel = RenderPanel()
+    assert panel._open_world_button.isEnabled() is False
+
+    panel.set_worldgen_output_available(True)
+    assert panel._open_world_button.isEnabled() is True
+
+    panel.set_busy(True)
+    assert panel._open_world_button.isEnabled() is False
+    assert panel._open_output_button.isEnabled() is False
+
+    panel.set_busy(False)
+    assert panel._open_world_button.isEnabled() is True
+    assert panel._open_output_button.isEnabled() is True

@@ -1,0 +1,68 @@
+structure: test
+stages:
+- stage: 1
+  path: stage1/stage.yaml
+  output_folder: stage1_test
+dimension: overworld
+grid:
+  site_structure_layers:
+  - 0
+  worldgen_base_y: -60
+  site_width: 7
+  site_depth: 7
+  placement: center
+  offset_x: 1
+  offset_z: 1
+  groups:
+  - Main
+site_ground:
+- - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+- - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+- - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+- - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+- - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+- - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+- - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+  - GRASS
+version: 26.1.2

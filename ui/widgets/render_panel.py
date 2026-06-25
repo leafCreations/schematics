@@ -37,12 +37,15 @@ class RenderPanel(QWidget):
     export_all_renders_requested = Signal()
     generate_world_requested = Signal()
     open_output_requested = Signal()
+    open_world_requested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._preview_render = constants.RENDER_TOP_VIEW
         self._worldgen_available = worldgen_dependencies_available()
         self._worldgen_template_available = True
+        self._worldgen_output_available = False
+        self._busy = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(*PANEL_MARGINS)
@@ -81,6 +84,17 @@ class RenderPanel(QWidget):
         )
         self._open_output_button.clicked.connect(self.open_output_requested.emit)
 
+        self._open_world_button = QPushButton("Open World Folder")
+        self._open_world_button.setSizePolicy(
+            QSizePolicy.Policy.Maximum,
+            QSizePolicy.Policy.Fixed,
+        )
+        self._open_world_button.clicked.connect(self.open_world_requested.emit)
+        self._open_world_button.setEnabled(False)
+        self._open_world_button.setToolTip(
+            "Open the last generated world folder (available after Generate World succeeds).",
+        )
+
         actions_row = QWidget()
         actions_layout = QHBoxLayout(actions_row)
         actions_layout.setContentsMargins(0, 0, 0, 0)
@@ -88,6 +102,7 @@ class RenderPanel(QWidget):
         actions_layout.addWidget(self._export_button)
         actions_layout.addWidget(self._generate_world_button)
         actions_layout.addWidget(self._open_output_button)
+        actions_layout.addWidget(self._open_world_button)
         actions_layout.addStretch(1)
 
         layout.addWidget(actions_row)
@@ -118,12 +133,24 @@ class RenderPanel(QWidget):
             "Add a folder under worldgen_templates/ (see docs/worldgen.md)."
         )
 
+    def set_worldgen_output_available(self, available: bool) -> None:
+        """Enable **Open World Folder** after a successful worldgen run this session."""
+        self._worldgen_output_available = available
+        self._update_open_world_button()
+
     def set_busy(self, busy: bool) -> None:
+        self._busy = busy
         self._export_button.setEnabled(not busy)
         self._generate_world_button.setEnabled(
             not busy and self._worldgen_available and self._worldgen_template_available,
         )
         self._open_output_button.setEnabled(not busy)
+        self._update_open_world_button()
+
+    def _update_open_world_button(self) -> None:
+        self._open_world_button.setEnabled(
+            not self._busy and self._worldgen_output_available,
+        )
 
     def _on_export_render_clicked(self) -> None:
         try:

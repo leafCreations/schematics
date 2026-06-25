@@ -15,13 +15,18 @@ from helpers.block_picker import (
     PickerEntry,
     catalog_block_ids,
     cell_token,
+    cell_token_matches_picker_entry,
     variant_key_for_catalog_block,
 )
 from helpers.brush_preview import load_brush_preview_image
-from helpers.campfire_state import LIT_STATE, explicit_lit
+from helpers.facing_block_state import (
+    LIT_STATE,
+    entry_has_lit_blockstate,
+    explicit_lit,
+)
 from helpers.grid_labels import grid_axis_position, grid_axis_selection_range
 from helpers.lantern_placement import HANGING_STATE, explicit_hanging
-from helpers.registry_lookup import is_minecraft_block_token, minecraft_block_id
+from helpers.registry_lookup import get_block_entry, is_minecraft_block_token, minecraft_block_id
 from helpers.structure_tokens import BlockStates, parse_structure_token
 from helpers.trapdoor_state import OPEN_STATE, explicit_open
 from ui.texture_cache import DEFAULT_ICON_SIZE, pil_to_qpixmap
@@ -211,12 +216,20 @@ class PropertiesPanel(QWidget):
 
             self._lit_combo.clear()
 
-            if entry.behavior == "campfire":
+            show_lit = entry.behavior == "campfire" or (
+                entry.behavior == "facing_block"
+                and entry_has_lit_blockstate(
+                    get_block_entry(parse_structure_token(entry.token)) or {},
+                )
+            )
+
+            if show_lit:
                 self._lit_label.setVisible(True)
                 self._lit_combo.setVisible(True)
                 self._lit_combo.setEnabled(True)
                 self._lit_combo.addItems(["true", "false"])
-                self._lit_combo.setCurrentText("true")
+                default_lit = "true" if entry.behavior == "campfire" else "false"
+                self._lit_combo.setCurrentText(default_lit)
             else:
                 self._lit_label.setVisible(False)
                 self._lit_combo.setVisible(False)
@@ -325,7 +338,7 @@ class PropertiesPanel(QWidget):
 
             if minecraft_block_id(parsed) not in catalog_block_ids(self._active_entry):
                 return
-        elif parsed.token != self._active_entry.token:
+        elif not cell_token_matches_picker_entry(parsed, self._active_entry):
             return
 
         self._material_combo.blockSignals(True)
@@ -392,14 +405,22 @@ class PropertiesPanel(QWidget):
 
             self._open_combo.blockSignals(False)
 
-        if self._active_entry is not None and self._active_entry.behavior == "campfire":
+        if self._active_entry is not None and (
+            self._active_entry.behavior == "campfire"
+            or (
+                self._active_entry.behavior == "facing_block"
+                and entry_has_lit_blockstate(
+                    get_block_entry(parse_structure_token(self._active_entry.token)) or {},
+                )
+            )
+        ):
             self._lit_combo.blockSignals(True)
             lit_state = explicit_lit(parsed)
 
-            if lit_state is False:
-                self._lit_combo.setCurrentText("false")
-            else:
+            if lit_state is True:
                 self._lit_combo.setCurrentText("true")
+            else:
+                self._lit_combo.setCurrentText("false")
 
             self._lit_combo.blockSignals(False)
 
@@ -469,7 +490,12 @@ class PropertiesPanel(QWidget):
 
             return ()
 
-        if self._active_entry.behavior == "campfire":
+        if self._active_entry.behavior == "campfire" or (
+            self._active_entry.behavior == "facing_block"
+            and entry_has_lit_blockstate(
+                get_block_entry(parse_structure_token(self._active_entry.token)) or {},
+            )
+        ):
             lit_value = self._lit_combo.currentText().lower()
 
             if lit_value == "true":

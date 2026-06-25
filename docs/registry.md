@@ -50,16 +50,29 @@ FURNACE:
   behavior: facing_block
   defaults:
     direction: north
+    lit: "false"
   minecraft:
     block: minecraft:furnace
     blockstates:
       facing: "{direction}"
+      lit: "{lit}"
   render:
-    textures:
-      top: furnace_front.png
+    top: furnace_front.png
+    side: furnace_side.png
+    inventory_image: furnace_front.png
   visibility:
     interior: false
+
+SMOKER:
+  behavior: facing_block
+  # same facing + lit blockstates; render.top = smoker_front.png, render.side = smoker_side.png
+
+BLAST_FURNACE:
+  behavior: facing_block
+  # blast_furnace_front.png / blast_furnace_side.png
 ```
+
+Legacy layer cells `minecraft:smoker` and `minecraft:blast_furnace` alias to `SMOKER` / `BLAST_FURNACE` via `helpers/registry_lookup.py`.
 
 ## Texture loading
 

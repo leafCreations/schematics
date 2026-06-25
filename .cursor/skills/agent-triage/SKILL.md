@@ -28,6 +28,8 @@ Mirrors [AGENTS.md](../../AGENTS.md) § **Classify quickly** (canonical). On dri
 | Signal | Mode | First action |
 | ------ | ---- | ------------ |
 | Kanban card assigned | **Review first** → implement | Card + [kanban-markdown](../kanban-markdown/SKILL.md) |
+| Review QA issue / screenshot fix | **Surgical** or **Review** | Fix + **QA follow-up** + refresh card **Feature Areas** / **Label Paths** / **Label Methods** when scope changes ([kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc)) |
+| User says card **Done** / closed | **Governance** | [kanban-markdown](../kanban-markdown/SKILL.md) § Card Done — lessons learned; ≥1 skill + ≥1 rule |
 | AGENTS.md governance audit card | **Read-only** | `python3 scripts/create_governance_audit_card.py` (user) → [kanban-markdown](../kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit → **## Audit findings** → `review` |
 | Explain, review, audit, "is this correct?" | **Read-only** | No edits. Grep/Read only. |
 | One error, lint, typo, ad-hoc bug | **Surgical** | Grep → Read 1–3 files → minimal edit |
@@ -35,6 +37,7 @@ Mirrors [AGENTS.md](../../AGENTS.md) § **Classify quickly** (canonical). On dri
 | Pre-commit failed | **Unblock** / **Review** | §1b → pre-commit + self-eval reference; `commit-issue` card → [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc) when user asks |
 | Failing test / pytest / ruff / lint | **Surgical** or **Unblock** | §1b → [reference.md](reference.md) § Failure pattern routing |
 | UI wiring / dialog not persisting | **Surgical** | §1b `ui-dialog-no-persist` → [ui-change](../ui-change/SKILL.md) |
+| Orbit 3D holes / transparent partial blocks | **Surgical** | §1b `orbit-stair-mask-transparency` → [ui-change](../ui-change/SKILL.md) § Orbit lessons; `test_orbit_stair_face_textures_are_opaque` |
 | Agent handoff / kanban / process mistake | **Surgical** | §1b → [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns |
 | Repeated mistake / familiar churn | **Grep** | §1b — [reference.md](reference.md) § Failure pattern routing |
 | "Run tests" / verify | **Verify** | [targeted-testing](../targeted-testing/SKILL.md) — smallest test set |

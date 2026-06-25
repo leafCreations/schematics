@@ -10,7 +10,10 @@ description: >-
   Areas on cards; agent resolves to ## Label Paths and ## Label Methods via
   docs/feature-areas.yaml and MUST update that registry after every implementation;
   MUST mark ## Acceptance Criteria [x] when moving to review; MUST review and update
-  docs/ per docs-maintenance (no exceptions). Bug cards: user provides Steps to
+  docs/ per docs-maintenance (no exceptions). Review QA fixes: append **QA follow-up**
+  on card and refresh **Feature Areas** / **Label Paths** / **Label Methods** when scope
+  changes (§ User-reported QA fixes). User Done: capture lessons learned (§ Card Done).
+  Bug cards: user provides Steps to
   Reproduce, Current/Expected Behavior, Feature Areas, QA Review; agent provides
   Root Cause, Acceptance Criteria, Out of Scope, Label Paths, Label Methods,
   Corrective Action. Inquiry cards: user provides Description and optional Feature
@@ -36,8 +39,8 @@ description: >-
 | ------ | ----- |
 | **To Do** (`todo`) | **Read** — this is the work queue |
 | **In Progress** (`in-progress`) | **Update** — feature/bug/agent/commit-issue: after card review **and** **`## Decisions`** or **`## Corrective Action`**; inquiry: while researching |
-| **Review** (`review`) | **Update** — move here when implementation is complete (`in-progress` → `review`); implement **`## QA Review`** when the user asks |
-| **Done** (`done`) | **Do not move** — user moves here after manual app review **and** any **`## QA Review`** are implemented |
+| **Review** (`review`) | **Update** — move here when implementation is complete (`in-progress` → `review`); implement **`## QA Review`** when the user asks; **record QA fixes** on the card (§ User-reported QA fixes) |
+| **Done** (`done`) | **Do not move** — user moves here after manual app review; when user says **Done**, agent runs **lessons learned capture** (§ Card Done — lessons learned) |
 | **Backlog** (`backlog`) | **Ignore** — user-managed; do not list, prioritize, or create cards here unless the user explicitly asks |
 
 Do **not** grep or summarize Backlog cards when the user asks “what should I work on?” or similar.
@@ -108,8 +111,10 @@ User assigns card (path or title)
   → user runs ## Verify (manual app checks)
   → user adds ## QA Review during review (if any)
   → agent reviews and implements ## QA Review (if any)
+  → user reports QA issues in chat/screenshots → agent fixes + records on card (§ User-reported QA fixes)
   → staged pytests green
   → user: review → done
+  → user says card is Done → agent captures lessons learned (§ Card Done — lessons learned)
 ```
 
 **Bug cards** (`labels` includes `bug` — see § Bug cards): use **`## Corrective Action`** instead of **`## Decisions`**; agent also writes **`## Root Cause (current code)`** and **`## Acceptance Criteria`** during card review.
@@ -197,9 +202,17 @@ When **`## Feature Areas`** or an agent card **`## Feature Area`** is present:
 - `tests/test_main_window.py` — `test_pick_structure_stage_*` (add: open while preview render active)
 ```
 
-## Bug cards (`labels` includes `bug`)
+## Bug cards (`labels: ["bug"]`)
 
-When frontmatter `labels` contains **`bug`** (case-insensitive), the card follows the **bug** section split below. Do **not** use **`## Decisions`** on bug cards — use **`## Corrective Action`** instead.
+When frontmatter is **`labels: ["bug"]`** (inline JSON array — required form for new cards), the card follows the **bug** section split below. Do **not** use **`## Decisions`** on bug cards — use **`## Corrective Action`** instead.
+
+**Frontmatter (required on create):**
+
+```yaml
+labels: ["bug"]
+```
+
+Do **not** use block-list form (`labels:` / `- bug`).
 
 ### Who writes what
 
@@ -448,6 +461,8 @@ When the user asks to **implement recommendations**, **spawn follow-ups**, or **
 
 **Phased epics:** use consistent `epic` across parent inquiry + all child feature cards; note **Phase N of M** in title or `## Context`; implement in order unless user re-prioritizes. Examples: `DesignFailureMemorySystem` (3 phases); `GovernanceDriftAlerts` (4 phases, phase 4 optional).
 
+**Spawn inquiry from render QA:** when a bug fix reveals **2D vs 3D / worldgen parity** questions (e.g. dual rotation helpers, mask authorship), create a **`labels: ["inquiry"]`** todo card with evidence in **`## Description`** — do not fold research into the closed bug unless user asks. Link from parent bug **Context**.
+
 ### Inquiry card gates
 
 | Gate | Requirement |
@@ -686,6 +701,15 @@ Cards may include **`## QA Review`** for follow-up fixes and polish found during
 
 **Before `review` → `done`:** user manual **`## Verify`** checks complete **and** all **`## QA Review`** implemented (or explicitly waived by the user). Agents implement QA items; only the **user** performs the final move to **Done**.
 
+**Spawn bug cards from QA Review** (when user asks to “note bugs” / “create bug cards” without implementing in place):
+
+1. Add **`## QA Review`** bullets on the parent card — distinguish **bugs** (spawn `labels: ["bug"]` cards) vs **deferred scope** (future feature card; link only).
+2. Create `.devtool/features/{id}.md` per bug with user sections filled from QA evidence; agent fills **Root Cause**, **Acceptance Criteria**, **Label Paths**, **Label Methods**, **Corrective Action** at spawn time.
+3. Add **`## Spawned bug cards`** table on the parent linking paths + one-line summary.
+4. Leave parent `status: "review"` until user moves **Done** — open QA bullets for unfixed bugs are expected when work is deferred to child cards.
+5. **Deferred scope** (not bugs) → spawn a **feature** card (e.g. C4 attachables after C3 QA); link from parent **`## Spawned feature cards`** and mark QA deferral bullets `[x]` with the new path.
+6. **Bug queue order** — set frontmatter `order` (`a0`, `a1`, …) on spawned bug cards in implementation sequence; keep `labels: ["bug"]`; feature follow-ups append after bugs. Record the ordered table on the parent card **`## Spawned bug cards`** (`#`, `order`, `Label` columns).
+
 Example body (user adds during review):
 
 ```markdown
@@ -703,6 +727,83 @@ After agent implements:
 - [x] Preview dropdown should disable while render is in progress
 - [x] Caption text should not show full filesystem path
 ```
+
+## User-reported QA fixes (Review)
+
+During **Review**, the user may report follow-up issues via chat, screenshots, or **`## QA Review`** — not only pre-written card bullets.
+
+**When the user reports a QA issue and asks you to fix it** (or you fix it in the same turn):
+
+1. **Implement** the fix (same pytest/docs gates as initial implementation when code changes).
+2. **Record on the card** in the same turn — **mandatory**; do not rely on chat history alone.
+3. **Refresh card labels** when the fix touches scope not already on the card (same turn):
+   - **`## Feature Areas`** — **append** a product-area label when the fix crosses into a new area (e.g. card had `Render Preview` only but fix also touched `Sprite Baker`). Resolve via `docs/feature-areas.yaml`; do not remove user labels.
+   - **`## Label Paths`** — **append** any new or previously omitted repo paths edited or added (files only; dedupe).
+   - **`## Label Methods`** — **append** new symbols touched (`path` — `symbol`, …); refine wrong symbols; cap per § Feature Areas.
+   - When new paths/symbols are **stable** for the area, also update **`docs/feature-areas.yaml`** (`paths`, `handlers`, `tests`) per implementation gates.
+4. Bump card `modified`.
+
+**Where to record** (append dated bullets; do not overwrite shipped **Corrective Action** / **Decisions**):
+
+| Card type | Record under |
+| --------- | ------------ |
+| `bug` | **`## Corrective Action`** — `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer |
+| feature (default) | **`## Decisions`** — same `**QA follow-up**` format |
+| `agent` | **`## Decisions`** — same format |
+
+**Optional:** mirror fixed items into **`## QA Review`** as `[x]` bullets when that section exists.
+
+**Example** (bug card):
+
+```markdown
+## Corrective Action
+
+- Extend partial face occlusion …
+
+**QA follow-up (2026-06-25):** Black slab tops — 2D half-mask bakes on orbit quads → `_resolve_orbit_slab_face_texture` + `test_orbit_slab_face_textures_are_opaque`.
+
+**QA follow-up (2026-06-25):** Solid face hole above bottom slab → `_collect_solid_slab_neighbor_strip_faces` in `helpers/orbit_greedy_mesh.py` + `test_solid_emits_upper_strip_face_toward_bottom_slab`. **Labels:** appended `helpers/orbit_greedy_mesh.py` + `build_orbit_greedy_mesh_from_context` to **Label Paths** / **Label Methods**.
+```
+
+**Label refresh checklist** (after each QA fix that changes code):
+
+| Section | When to update |
+| ------- | -------------- |
+| **`## Feature Areas`** | Fix touched a product area not already listed |
+| **`## Label Paths`** | Fix edited/added a path not on the card |
+| **`## Label Methods`** | Fix touched a symbol or test name not on the card |
+| **`docs/feature-areas.yaml`** | New path/handler is durable for that area (same gate as initial implementation) |
+
+Mention label updates in the **`**QA follow-up**`** bullet when paths/methods changed (see example above).
+
+**Do not** skip card updates because the fix was "small" or "surgical" — the card is the audit trail.
+
+## Card Done — lessons learned capture
+
+The **user** moves cards to **Done** (`done/{id}.md`). When the user says the card is **done**, **closed**, **move to Done**, or equivalent **after** accepting Review:
+
+**Agent must run lessons learned capture in that turn** (even if no code changes in that turn):
+
+1. **Read** the full card — original **Corrective Action** / **Decisions**, all **`**QA follow-up**`** bullets, **Feature Areas**, **Context**.
+2. **Distill** durable lessons (symptom → root cause → fix pattern → tests) — not a copy-paste of the whole card.
+3. **Update governance artifacts** so future implementations do not repeat the mistake:
+
+| Lesson type | Update (same turn) |
+| ----------- | ------------------ |
+| Area workflow (UI, render, worldgen, …) | Matching **area skill** (e.g. `ui-change/SKILL.md` § lessons learned) |
+| Hard constraint / gate | Matching **scoped `.mdc` rule** (different file from the skill) |
+| User-visible behavior | **`docs/`** per [docs-maintenance](../docs-maintenance/SKILL.md) — e.g. `docs/render-types.md` lessons table |
+| New symbols / paths | **`docs/feature-areas.yaml`** `handlers:` + card **Label Methods** if missing |
+| Registry / palette policy | **`registries/`** + docs as needed |
+| Cross-cutting failure | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns (**Signature** only in rules) |
+
+4. **Minimum:** edit **≥1 skill** and **≥1 rule** (different learnings) — same bar as implementation turns ([agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6).
+5. **Card** — add **`## Lessons captured (YYYY-MM-DD)`** with links to updated skill/rule/doc paths (user may already have moved file to `done/` — edit `done/{id}.md` if present, else active card).
+6. **Handoff** — `Skills updated:` / `Rules updated:` must list paths; `Docs:` lists lesson doc updates.
+
+**Do not** move the card to **Done** for the user. **Do not** skip lessons capture because AC were already `[x]` — QA follow-ups are the primary source.
+
+**If user says Done but QA follow-ups are open:** ask whether to defer, spawn child cards, or waive before capturing lessons.
 
 ## Reading the board
 
@@ -777,7 +878,7 @@ Description and acceptance criteria.
 
 - String fields: always `"double-quoted"`
 - Nullable fields (`assignee`, `dueDate`, `completedAt`): bare `null` when unset
-- `labels`: keep `[]` for agents; path references belong in **`## Label Paths`** in the body
+- `labels`: keep `[]` for feature/agent cards; **bug cards:** exactly `labels: ["bug"]` (inline JSON array on one line — **not** block-list `labels:\n  - bug`); inquiry `labels: ["inquiry"]`; commit-issue `labels: ["commit-issue"]`
 - Order: `"double-quoted"` fractional index
 - Field order: `id`, `status`, `priority`, `assignee`, `dueDate`, `created`, `modified`, `completedAt`, `labels`, `order`
 

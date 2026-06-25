@@ -1,0 +1,53 @@
+---
+description: Kanban Review QA fixes and Done lessons-learned capture (all card types)
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban Review QA and Done lessons
+
+Applies when working on any card under `.devtool/features/` during **Review** or when the user closes a card.
+
+Full workflow: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § User-reported QA fixes, § Card Done — lessons learned.
+
+## User-reported QA fixes (mandatory)
+
+When the user reports a **Review** issue and you fix it:
+
+| Card `labels` | Append dated record under |
+| ------------- | ------------------------- |
+| `bug` | **`## Corrective Action`** |
+| feature (default), `agent` | **`## Decisions`** |
+
+Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. When paths or symbols changed, note **Labels:** appended paths/methods (or `none` if card already complete).
+
+**Same turn — refresh card scope** (mandatory when the fix changes code):
+
+1. **`## Feature Areas`** — append product-area label(s) when fix crosses into an area not listed (`python scripts/resolve_feature_areas.py --list`).
+2. **`## Label Paths`** — append edited/added file paths not already on the card (dedupe).
+3. **`## Label Methods`** — append `path` — `symbol` bullets for new handlers, helpers, or tests touched.
+4. **`docs/feature-areas.yaml`** — when new paths/handlers are durable for that area (same gate as initial implementation).
+
+- Bump card `modified` in the **same turn** as the fix.
+- Do **not** rely on chat history as the only record.
+
+## Do not
+
+- Skip card **QA follow-up** recording because the fix was small
+- Skip **Label Paths** / **Label Methods** refresh when the fix edited files or symbols not on the card
+- Remove user **Feature Areas** labels — append only
+
+## Card Done — lessons learned (mandatory)
+
+When the user says the card is **done** / **closed** / ready for **Done**:
+
+1. Read the card (including all **QA follow-up** bullets).
+2. Update **≥1 skill** + **≥1 rule** (different learnings) + relevant **`docs/`** / registry / `feature-areas.yaml`.
+3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card listing updated paths.
+
+**User** moves `review` → `done/` — agents capture lessons, not column moves.
+
+## Do not
+
+- Put pytest-only checklist items in **`## QA Review`** (agent workflow — see kanban-markdown § QA Review)
+- Skip **lessons captured** when user says Done because AC were already `[x]`

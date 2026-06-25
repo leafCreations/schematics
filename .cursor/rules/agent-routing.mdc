@@ -19,7 +19,10 @@ alwaysApply: true
 ```text
 START → agent-triage/SKILL.md (classify; §1b failure-pattern grep on signals only)
 WORK  → card Label Paths + Label Methods (when Feature Areas set) OR surgical grep → minimal edit
+        → Review QA fix: **QA follow-up** + refresh Feature Areas / Label Paths / Label Methods
+          when scope changes (kanban-markdown § User-reported QA fixes)
 VERIFY → targeted pytest; pre-commit-pytest.sh before Review/commit
+DONE  → user says card Done → lessons learned capture (kanban-markdown § Card Done — lessons learned)
 END   → agent-self-evaluation/SKILL.md + handoff block
 ```
 

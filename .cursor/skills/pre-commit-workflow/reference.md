@@ -15,6 +15,7 @@ Area-specific hook and pytest mistakes. Promote from **`commit-issue`** cards on
 | `precommit-ruff-dirty-after-fix` | ruff hook passed, commit still blocked / dirty tree | Hook re-staged fixed files — `git status`, `git add` any remaining, commit again | pre-commit-workflow | — |
 | `precommit-palette-top-texture` | `top texture … not found` in validate-palettes | Add texture under assets + bake, or skip top check only when behavior has no `render.textures.top` (`registries/validate.py`) | pre-commit-workflow | — |
 | `precommit-no-card-skip-env` | expected card missing; `SKIP_COMMIT_ISSUE_CARD=1` | Intentional disable for CI/retries — do not expect a card; use `git commit` without skip for local capture | pre-commit-workflow | — |
+| `precommit-mainwindow-__new__-test` | `AttributeError: '_preview_panel'` in `test_main_window` using `MainWindow.__new__` | Guard optional widgets in `_clear_preview_session` (`getattr(self, "_preview_panel", None)`) or stub panel on test instance | pre-commit-workflow | testing.mdc |
 
 **Lookup:** on failure signals, [agent-triage/SKILL.md](../agent-triage/SKILL.md) §1b → grep **Signature** or **Trigger snippet** here before re-diagnosing. Cross-cutting patterns: [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns.
 

@@ -63,6 +63,8 @@ Only keys present in the registry texture mapping are baked on demand during com
 
 Material inventory panels use the same path via `load_or_bake_generated_sprite()` for generated icon behaviors.
 
+The **3D orbit preview** reuses the same `compile_texture_set()` top/side maps (`ctx.topdown_textures`, `ctx.sideview_textures`) when sampling block faces into `helpers/orbit_texture_atlas.py`.
+
 Pre-baking with the CLI is still useful for CI, bulk updates, and verifying output before commit.
 
 ## Source code

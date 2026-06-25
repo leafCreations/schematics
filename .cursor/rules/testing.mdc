@@ -25,8 +25,17 @@ Use these mappings as the default starting point:
 | ------------------ | --------------------------------------------------------------- |
 | `helpers/cells.py` | `pytest tests/test_cells.py -q`                                 |
 | `ui/`              | `pytest tests/test_ui_document.py tests/test_main_window.py -q` |
+| `ui/main_window.py` (`MainWindow.__new__` tests) | `pytest tests/test_main_window.py -q` — Signature: `precommit-mainwindow-__new__-test` |
+| `ui/widgets/render_panel.py` | `pytest tests/test_render_panel.py -q` |
 | `registries/`      | `pytest tests/test_palette_integrity.py -q`                     |
 | `renderers/`       | Run renderer-specific tests if present                          |
+| `helpers/orbit_face_textures.py` | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_partial_mesh.py tests/test_orbit_preview.py -q` |
+| `helpers/orbit_*.py`, `ui/widgets/orbit_preview_widget.py`, `ui/mesh_build_worker.py` | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_partial_mesh.py tests/test_orbit_preview.py -q` |
+| Fence/wall masked orbit textures + shader discard | `pytest tests/test_orbit_partial_mesh.py -q -k "fence or wall"` |
+| Slab deck / partial occlusion (`orbit_partial_mesh`, `orbit_greedy_mesh` strip faces) | `pytest tests/test_orbit_partial_mesh.py -q -k slab` |
+| `helpers/block_picker.py`, `ui/widgets/properties_panel.py` (brush/direction) | `pytest tests/test_block_picker.py tests/test_properties_panel.py -q` |
+| `helpers/orbit_greedy_mesh.py` (solid shell culling) | `pytest tests/test_orbit_greedy_mesh.py::test_solid_face_visible_at_material_boundary tests/test_orbit_greedy_mesh.py::test_embedded_crafting_table_has_vertical_faces -q` |
+| `registries/behaviors/functional.yaml` (SMOKER, BLAST_FURNACE facing_block) | `pytest tests/test_orbit_greedy_mesh.py -k 'smoker or blast_furnace or minecraft_smoker' -q` |
 | `structures/`      | Run tests covering the affected structures or builders          |
 | `scripts/`         | Run tests covering the affected workflow or utility             |
 

@@ -48,7 +48,8 @@ All three call `add_panel_title_row`, which sets the title `QLabel` font to **bo
 - `palette_panel.py` — `create_simple_titled_panel_layout(self, "Palettes")`
 - `layer_list_panel.py` / `groups_panel.py` — `create_titled_panel_layout` + four actions
 - `properties_panel.py` — nested `create_nested_group_layout` for Selected Block / Grid cell
-- `preview_toolbar.py` — compact `QWidget` row (not a `QGroupBox`); Previous/Next + trailing zoom label for Viewer preview
+- `preview_toolbar.py` — compact `QWidget` row (not a `QGroupBox`); Previous/Next + trailing zoom label for Viewer preview (2D only)
+- `orbit_preview_widget.py` — lazy-loaded `QOpenGLWidget` for 3D orbit; created on first **3D** toggle, not at `PreviewPanel` import; `QMatrix4x4.lookAt` uses `QVector3D` (Qt6 API). **Partial blocks:** stairs/slabs → opaque atlas tiles in `orbit_face_textures.py` (not 2D masks); fences/walls → masked bakes + `sample.a < 0.05` discard in `_FRAGMENT_SHADER_TEXTURED` (not solid `PLANKS:*` on post faces). See `docs/render-types.md` § lessons learned
 
 ## Structure tab right column (no gaps when hiding)
 

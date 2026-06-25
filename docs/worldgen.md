@@ -30,6 +30,8 @@ build_stage_complete_schematics(structure="residence", stage=1, renders="worldge
 
 Output is written to `output/worlds/{output_folder}/v{version}/` (for example `output/worlds/residence/v26_2/`), matching the template folder naming under `worldgen_templates/`.
 
+In the editor **Viewer** tab, **Open World Folder** opens that path after a successful **Generate World** (or **All Renders** including worldgen) in the current session. Schematic PNGs remain under `output/schematics/{output_folder}/` — use **Open Output Folder** for those.
+
 ## Beds on Minecraft Java 26.1
 
 Beds use a special renderer in 26.1 (they move to standard block models in 26.2). Amulet writes the correct `minecraft:*_bed` blockstates, but programmatic placement does not queue all of the follow-up data vanilla placement would.

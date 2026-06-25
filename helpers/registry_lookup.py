@@ -69,6 +69,12 @@ def solid_entry_for_block_id(block_id: str) -> dict:
 
 def get_block_entry(parsed: ParsedToken) -> dict | None:
     if is_minecraft_block_token(parsed):
+        from helpers.facing_block_state import minecraft_functional_alias_token
+
+        alias = minecraft_functional_alias_token(minecraft_block_id(parsed))
+        if alias is not None:
+            return BLOCK_REGISTRY.get(alias)
+
         return solid_entry_for_block_id(minecraft_block_id(parsed))
 
     legacy_block_id = legacy_terrain_block_id(parsed)

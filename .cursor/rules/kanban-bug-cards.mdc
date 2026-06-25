@@ -6,7 +6,15 @@ alwaysApply: false
 
 # Kanban bug cards
 
-When a feature file has frontmatter `labels` including **`bug`** (case-insensitive), follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Bug cards.
+When a feature file has frontmatter `labels: ["bug"]`, follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Bug cards.
+
+## Frontmatter (agent creates)
+
+```yaml
+labels: ["bug"]
+```
+
+Use the **inline JSON array** form exactly — not a YAML block list (`labels:\n  - bug`).
 
 ## User provides
 
@@ -23,7 +31,31 @@ When a feature file has frontmatter `labels` including **`bug`** (case-insensiti
 - `## Out of Scope` — optional
 - `## Label Paths` — resolved from Feature Areas via `docs/feature-areas.yaml`
 - `## Label Methods` — symbols to edit (when Feature Areas set; see kanban-markdown § Feature Areas)
-- `## Corrective Action` — concrete fix plan (**not** `## Decisions`)
+- `## Corrective Action` — concrete fix plan (**not** `## Decisions`); append **`**QA follow-up (YYYY-MM-DD):**`** bullets when fixing Review issues (§ User-reported QA fixes)
+
+## User-reported QA fixes
+
+When fixing **Review** issues the user reports (chat, screenshots, or **`## QA Review`**):
+
+1. Implement the fix; run targeted pytest when code changes.
+2. **Append** a dated `**QA follow-up (YYYY-MM-DD):**` bullet under **`## Corrective Action`** — symptom, fix, test/doc pointer; add **`Labels:`** note when paths/methods were appended.
+3. **Refresh scope on the card** (same turn, when code changed):
+   - **`## Feature Areas`** — append area label if fix crossed into a new product area.
+   - **`## Label Paths`** — append any edited/added paths not already listed.
+   - **`## Label Methods`** — append symbols/tests touched; update **`docs/feature-areas.yaml`** when durable.
+4. Bump `modified`. Optionally mark matching **`## QA Review`** `[x]`.
+
+**Do not** skip the card update — the card is the audit trail. Full workflow: kanban-markdown § User-reported QA fixes.
+
+## Card Done — lessons learned
+
+When the user says the bug card is **Done** (user moves file to `done/`):
+
+1. Read all **Corrective Action** + **QA follow-up** bullets on the card.
+2. Capture durable lessons in **≥1 area skill** + **≥1 scoped rule** + **`docs/`** (and `feature-areas.yaml` / `registries/` when applicable).
+3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card with links to updated artifacts.
+
+Full checklist: kanban-markdown § Card Done — lessons learned capture. **Do not** move the card to Done for the user.
 
 ## Do not
 
@@ -31,6 +63,19 @@ When a feature file has frontmatter `labels` including **`bug`** (case-insensiti
 - Start implementation with empty or disputed **Corrective Action**
 - Move to **Review** without all **Acceptance Criteria** marked `[x]`
 - Put method names only in **Label Paths** — use **Label Methods** (files-only paths in Label Paths)
+- Treat **deferred scope** on a parent feature card (documented Out of Scope) as a bug — spawn a **feature** card instead unless behavior contradicts shipped AC
+
+## Spawn from parent QA Review
+
+When the user asks to record QA findings as bug cards (not fix in place on the parent):
+
+- Parent feature card: **`## QA Review`** + **`## Spawned bug cards`** table; note failed **Verify** lines when applicable
+- Child cards: `labels: ["bug"]`, `status: "todo"`, same `epic` as parent when part of a series
+- Set **`order`** (`a0`, `a1`, …) in **implementation sequence** on the parent **`## Spawned bug cards`** table
+- Lanterns / attachables explicitly deferred in parent **Out of Scope** → document in QA as deferred, not a bug card
+- Orbit preview bugs that mismatch 2D facing — reuse existing 2D rotation helpers (`corner_stair_facing_rotation`, `normalize_direction`) in 3D box builders; **mirror south-authored boxes on local Z** before rotation so `@south` treads sit on +Z (matches `build_stair_top_mask` / `test_paste_corner_stair_matches_worldgen_facing`)
+- Orbit stair **holes / transparency** (Signature: `orbit-stair-mask-transparency`) — **check textures before geometry**: 2D L-mask bakes on 3D faces + alpha discard look like missing mesh; fix with **full solid tiles** in `resolve_orbit_face_texture` (`PLANKS:{material}` for plank materials; `minecraft:{material}` for stone — not `PLANKS:cobblestone`), corner-probe `box_face_occluded` on `±Y`, riser box, same-cell culling; **do not** void-fill with masked tiles. QA: `structures/test/stage1`, `residence/stage1`, `well/stage1` cobblestone stairs. Tests: `test_orbit_stair_face_textures_are_opaque`, `test_orbit_cobblestone_stair_face_textures_are_opaque`, `test_lower_stair_slab_top_face_visible_on_open_half`
+- Orbit **fence / wall black rail gaps** (Signature: `orbit-fence-mask-transparency`) — **not** solid tiles on post faces (fills gaps with wood). Keep **masked** `FENCE:*` / `WALL:*` bakes on thin box geometry; shader **`if (sample.a < 0.05) discard`** (stairs/slabs use opaque tiles — safe). Tests: `test_orbit_fence_side_texture_uses_masked_bake`, `test_orbit_wall_side_texture_uses_masked_bake`
 
 ## Full workflow
 

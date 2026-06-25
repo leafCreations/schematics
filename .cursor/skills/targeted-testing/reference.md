@@ -37,6 +37,23 @@ Also: unmapped `*.py` changes, or >20 targeted test files accumulated.
 | `helpers/block_catalog.py` | `test_block_catalog`, `test_block_picker` |
 | `helpers/pipeline.py`, `paths.py`, `render_image.py`, `fonts.py` | `test_paths`, `test_pipeline`, `test_fonts` |
 | `helpers/site_ground.py`, `structure_metadata.py` | `test_ui_document`, `test_site_cells`, `test_structure_metadata` |
+| `helpers/orbit_greedy_mesh.py`, `orbit_texture_atlas.py` | `test_orbit_preview`, `test_orbit_greedy_mesh` |
+| Partial vs solid culling | `test_orbit_partial_mesh.py` — riser + `test_lower_stair_slab_top_face_visible_on_open_half`, `test_orbit_stair_face_textures_are_opaque`, `test_orbit_cobblestone_stair_face_textures_are_opaque`, `test_orbit_fence_side_texture_uses_masked_bake`, `test_orbit_wall_side_texture_uses_masked_bake` |
+| `helpers/orbit_partial_mesh.py`, `orbit_face_textures.py`, `orbit_preview_widget.py` | `test_orbit_partial_mesh` (+ greedy/preview when mesh integration changes). Stair/slab opaque tiles; fence/wall masked bakes + shader discard. |
+
+### Orbit stair “missing faces” — diagnose first
+
+| Check | Command / test |
+| ----- | -------------- |
+| Transparent pixels in face bake | `test_orbit_stair_face_textures_are_opaque` — must pass before adding mesh |
+| Pink fallback on `facing_block` vertical faces | `test_furnace_orbit_vertical_faces_resolve_front_and_side`, `test_furnace_orbit_front_signature_uses_topdown_texture`, `test_furnace_orbit_top_face_uses_block_cap_not_front`, `test_furnace_orbit_front_vertical_face_upright_for_all_directions` |
+| Embedded solid / crafting table sides | `test_solid_face_visible_at_material_boundary`, `test_embedded_crafting_table_has_vertical_faces`, `test_crafting_table_orbit_side_uses_catalog_side_texture` |
+| Catalog functional side/cap (smoker, blast furnace) | `test_smoker_facing_block_orbit_side_top_and_front`, `test_smoker_lit_front_uses_on_texture`, `test_blast_furnace_facing_block_orbit_textures`, `test_minecraft_smoker_alias_uses_facing_block_registry` |
+| Lower slab open half culled | `test_lower_stair_slab_top_face_visible_on_open_half` |
+| Minimal visual repro | `structures/test/stage1` → Viewer **3D** |
+| Integration | `residence/stage1` stair run vs mossy cobblestone |
+
+**Lesson:** holes in tread/side/bottom are often **masked α + shader discard**, not missing quads. See `docs/render-types.md` § Orbit partial blocks — lessons learned.
 | `helpers/worldgen_*.py` | See worldgen row below |
 | `helpers/*` (other) | `test_utils` |
 
@@ -68,6 +85,7 @@ Widget-specific shortcuts (manual edits, narrower than hook):
 
 | Widget / area | Prefer |
 | ------------- | ------ |
+| `orbit_preview_widget.py`, `mesh_build_worker.py` | `test_orbit_preview`, `test_orbit_greedy_mesh` (skip `view_matrix` test in headless CI) |
 | `palette_panel.py` | `test_palette_panel.py` |
 | `grid.py` | `test_grid_scrollbars.py` + grid tests if present |
 | `properties_panel.py` | `test_properties_panel.py` |

@@ -56,11 +56,28 @@ Start with [agent-triage](../agent-triage/SKILL.md) and [repo-map](../repo-map/S
 - Zoom resets to 100% on Viewer tab open — wire in `main_window._on_tab_changed` if adding tab-level preview behavior.
 - **Open Structure / Open Recent:** `_restart_editor_for_structure` bypasses `_block_if_render_in_progress` when `_render_is_preview` (process `execve` replaces the editor); export/worldgen renders still block with “opening another structure.”
 - **Viewer preview zoom:** persisted in `viewer.preview_zoom_percent` (`editor_settings.yaml`); restored on **Viewer** tab open via `PreviewPanel.restore_saved_zoom()`. Toolbar **slider** + **Reset** + wheel; **Viewer** menu (after **Structure** in menu bar; Zoom In/Out/Reset) enabled on Viewer tab only.
+- **3D orbit preview:** **2D | 3D** toggle on `PreviewPanel`; lazy `OrbitPreviewWidget` (`QOpenGLWidget`); mesh via `helpers/orbit_mesh.py` + `MeshBuildWorker`; stale refresh in `MainWindow._ensure_orbit_mesh`. Do not instantiate GL widgets at import time (headless pytest). **`QMatrix4x4.lookAt`** in Qt6/PySide6 takes three **`QVector3D`** (eye, center, up) — not nine floats.
+
+### Orbit preview — lessons learned (C3b partial blocks)
+
+Before adding geometry for “transparent” or “missing” partial-block faces, **check textures first**:
+
+1. **Stairs / slabs — opaque tiles** — Editor top-down stair/slab bakes use L-masks or half-height masks (~50% transparent pixels). Orbit box faces must use **full solid-block tiles** (`_orbit_solid_material_face_token`: `PLANKS:{material}` for plank materials; `minecraft:{material}` for stone/cobblestone), not masked `STAIRS:*` / `SLAB:*` bakes.
+2. **Fences / walls — masked bakes + discard** — Post/arm boxes are full-height; rail **gaps** live in the 2D adjacency-mask bake, not geometry. Keep masked `FENCE:*` / `WALL:*` bakes; fragment shader `if (sample.a < 0.05) discard` in `_FRAGMENT_SHADER_TEXTURED`. **Do not** map fence faces to solid `PLANKS:*` (fills gaps with wood). Stairs/slabs use opaque atlas tiles — discard is safe for them.
+3. **Do not void-fill stairs** — Extra boxes in the L-void with masked textures made QA worse. Prefer corner-probe culling on lower `+Y` + riser strip + plank faces.
+4. **Manual QA** — `structures/test/stage1` (oak stairs); `residence/stage1` (oak vs mossy cobblestone, **fences**); `well/stage1` (**cobblestone** stairs, **walls**). Top / front / side / bottom views.
+5. **Tests** — opaque: `test_orbit_stair_face_textures_are_opaque`, `test_orbit_slab_face_textures_are_opaque`, `test_orbit_cobblestone_stair_face_textures_are_opaque`, `test_lower_stair_slab_top_face_visible_on_open_half`; masked fence/wall: `test_orbit_fence_side_texture_uses_masked_bake`, `test_orbit_wall_side_texture_uses_masked_bake`; **`facing_block`:** `test_furnace_orbit_vertical_faces_resolve_front_and_side`; full orbit mapping in [targeted-testing/reference.md](../targeted-testing/reference.md).
+7. **Greedy shell vs per-block faces** — `_solid_face_visible` culls same-token neighbors only; **material boundaries** emit vertical faces (embedded `CRAFTING_TABLE`). Side textures: `_resolve_orbit_catalog_block_face` → `{block}_side.png`.
+8. **Catalog functionals** — `SMOKER` / `BLAST_FURNACE` are registry **`facing_block`** tokens (`facing` + `lit` blockstates), not bare `minecraft:*` solids. Orbit front/side/top like `FURNACE`; `;lit=true` → `_front_on.png`. Legacy `minecraft:smoker` cells resolve to registry picker entries (`requires_direction`, **Lit**) via `_ensure_picker_entry_indexes` + `cell_token_matches_picker_entry`.
+9. **Slab roof decks** — bottom `SLAB` layers use neighbor-cell `box_face_occluded` + `_slab_deck_bottom_face_occluded` (hide −Y and shared vertical faces). Isolated single slab keeps exterior −Y. Tests: `test_slab_deck_7x7_minus_y_faces_culled`, `test_slab_deck_mesh_has_no_minus_y_normals`.
+10. **Solid beside slab** — greedy shell skips full faces toward `partial_worlds`; `_collect_solid_slab_neighbor_strip_faces` restores **upper** vertical strip beside bottom slab (lower beside `#top`). Tests: `test_solid_emits_upper_strip_face_toward_bottom_slab`.
+
+Details: `docs/render-types.md` § Orbit partial blocks — lessons learned.
 - Update `docs/ui.md` Viewer table and `docs/feature-areas.yaml` when adding preview controls.
 
 ## Render panel (Viewer tab actions)
 
-- `ui/widgets/render_panel.py` — export/worldgen buttons only (no schematic path label).
+- `ui/widgets/render_panel.py` — export/worldgen/**Open Output Folder**/**Open World Folder** buttons (no schematic path label). World folder enables only after successful worldgen this session (`set_worldgen_output_available`).
 - Worldgen enablement: `RenderPanel.set_worldgen_template_available` from `main_window._sync_render_output_hint` after `resolve_worldgen_template_dir`.
 
 ## Persistence — what saves where

@@ -98,16 +98,20 @@ Three tabs at the top: **Structure** (edit layers), **Site** (footprint preview 
 
 | Control | Role |
 | ------- | ---- |
-| **Preview** | In-app preview: render-type dropdown, optional floor **group** selector (Top Down only), thumbnail gallery, **Preview toolbar** (Previous/Next + zoom %), and scrollable main image |
-| **Preview toolbar** | **Previous** / **Next** gallery navigation; **zoom slider** (25%–400%), **Reset** (100%), and **zoom level** label. Mouse wheel over the main image zooms in/out. Zoom level is saved to `editor_settings.yaml` and restored when you open the **Viewer** tab |
+| **Preview** | In-app preview: **2D** / **3D** toggle, render-type dropdown (2D only), optional floor **group** selector (Top Down only), thumbnail gallery, **Preview toolbar** (2D zoom), and scrollable main image or orbit GL view |
+| **2D \| 3D** | **2D** — existing PNG gallery preview. **3D** — greedy-meshed orbit view with catalog texture atlas from the in-memory structure (`SchematicContext`); drag to rotate, scroll to zoom; mesh rebuilds on the same stale/dirty rules as 2D |
+| **Preview toolbar** | **Previous** / **Next** gallery navigation (2D only); **zoom slider** (25%–400%), **Reset** (100%), and **zoom level** label. Mouse wheel over the main image zooms in/out. Zoom level is saved to `editor_settings.yaml` and restored when you open the **Viewer** tab |
 | **Preview** dropdown | **Top Down** (per-Y PNGs for the selected floor group), **Structure Facades**, **Site Facades**, **Site Top Down** (per site Y), **Materials List** — selecting a type auto-renders into the session folder when needed |
 | **Export Render** | Split button — exports the preview dropdown selection to `output/schematics/{output_folder}/`; menu **All Renders** runs all blueprint types |
 | **Generate World** | Runs worldgen only using the structure manifest **Minecraft version** (`26.1.2` or `26.2`); disabled when no matching template exists under `worldgen_templates/` |
-| **Open Output Folder** | Opens `output/schematics/{output_folder}/` in the file manager |
+| **Open Output Folder** | Opens `output/schematics/{output_folder}/` in the file manager (schematic PNG exports) |
+| **Open World Folder** | Opens the last generated world under `output/worlds/{output_folder}/v{version}/` after **Generate World** (or **All Renders** with worldgen) succeeds in this session; disabled until then |
 
 Preview PNGs for the current editor session are written under `output/schematics/_preview/{session}/` (one UUID per process). That folder is removed when you quit, open a different structure/stage, create a new structure in the editor, or reload the window.
 
-After you **save** a layer or site settings, session previews are marked stale. Opening the **Viewer** tab (or saving while already on **Viewer**) re-runs the preview for the current dropdown selection so the gallery matches saved YAML on disk. If nothing changed since the last preview, existing session PNGs are reused without a redundant render.
+After you **save** a layer or site settings, session previews are marked stale. Opening the **Viewer** tab (or saving while already on **Viewer**) re-runs the preview for the current mode: **2D** re-renders PNGs for the dropdown selection; **3D** rebuilds the orbit mesh from the in-memory document. If nothing changed since the last preview, existing session PNGs (2D) or the cached mesh (3D) are reused.
+
+**3D orbit preview** uses a greedy-meshed exterior shell with catalog textures from `compile_texture_set()` packed into one GPU atlas at `BLOCK_PX` resolution. Per-block texture tiling and face-aware sampling (C3a) avoid stretched UVs on merged quads; `slab`, `stairs`, `fence`, and `wall` behaviors use simplified partial geometry (C3b). Mesh construction runs on a background thread; OpenGL upload happens on the UI thread. Drag to orbit and scroll to zoom. See [render-types.md](render-types.md).
 
 While you have **unsaved** edits (including after **Undo** / **Redo**), preview renders use the in-memory document so the gallery matches the grid without requiring a save first. Export and **Generate World** still prompt to save because they write to the permanent output folders.
 
@@ -332,7 +336,7 @@ ui/
     structure_settings_panel.py  # Structure identity + footprint size
     site_grid.py            # Scaled read-only site footprint preview
     preview_panel.py        # In-app preview dropdown, gallery, navigation
-    render_panel.py         # Export Render split button and Generate World action
+    render_panel.py         # Export Render, Generate World, Open Output/World Folder
     materials_panel.py      # Live all-layer materials table
     properties_panel.py     # Brush + cell inspector
     groups_panel.py         # Layer group list

@@ -163,6 +163,31 @@ def test_picker_entry_for_cell_catalog_block():
     assert entry.token == "minecraft:stone"
 
 
+def test_picker_entry_for_cell_minecraft_smoker_aliases_to_registry():
+    entry = picker_entry_for_cell("minecraft:smoker@west")
+
+    assert entry is not None
+    assert entry.token == "SMOKER"
+    assert entry.behavior == "facing_block"
+    assert entry.requires_direction is True
+
+
+def test_picker_entry_for_cell_minecraft_blast_furnace_aliases_to_registry():
+    entry = picker_entry_for_cell("minecraft:blast_furnace")
+
+    assert entry is not None
+    assert entry.token == "BLAST_FURNACE"
+    assert entry.requires_direction is True
+
+
+def test_picker_entry_for_token_smoker_requires_direction():
+    entry = picker_entry_for_token("SMOKER")
+
+    assert entry is not None
+    assert entry.requires_direction is True
+    assert cell_token(entry, direction="east") == "SMOKER@east"
+
+
 def test_picker_entry_for_cell_empty_returns_none():
     assert picker_entry_for_cell(".") is None
 

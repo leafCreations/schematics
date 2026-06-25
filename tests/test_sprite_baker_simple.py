@@ -71,6 +71,9 @@ def test_registry_mapping_skips_default_variant():
     assert "TORCH#normal" not in mapping
     assert "CHEST#left" in mapping
 
+    side_mapping = build_registry_texture_mapping("side")
+    assert side_mapping["FURNACE"] == "furnace_side.png"
+
 
 def test_compose_simple_rejects_non_simple_block(tmp_path: Path):
     textures_dir = tmp_path / "textures"

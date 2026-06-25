@@ -400,14 +400,16 @@ areas:
       - docs/ui.md
 
   Render Panel:
-    summary: Export Render split button, Generate World, Open Output Folder
+    summary: Export Render split button, Generate World, Open Output Folder, Open World Folder
     tab: Render Tab
     paths:
       - ui/widgets/render_panel.py
     handlers:
       - RenderPanel.set_preview_render
       - RenderPanel.set_worldgen_template_available
+      - RenderPanel.set_worldgen_output_available
       - RenderPanel.set_busy
+      - MainWindow._open_worldgen_output_folder
     wiring:
       - ui/main_window.py
       - ui/widgets/preview_panel.py
@@ -458,10 +460,17 @@ areas:
       - docs/worldgen.md
 
   Render Preview:
-    summary: In-app PNG gallery with render-type selector; session preview dir; stale refresh after save
+    summary: In-app 2D PNG gallery and 3D greedy-meshed orbit preview; session dir; stale refresh
     tab: Render Tab
     paths:
       - ui/widgets/preview_panel.py
+      - ui/widgets/orbit_preview_widget.py
+      - ui/mesh_build_worker.py
+      - helpers/orbit_mesh.py
+      - helpers/orbit_greedy_mesh.py
+      - helpers/orbit_texture_atlas.py
+      - helpers/orbit_face_textures.py
+      - helpers/orbit_partial_mesh.py
       - ui/render_preview.py
       - renderers/preview_top_view.py
       - renderers/preview_structure_facades.py
@@ -476,18 +485,26 @@ areas:
     wiring:
       - ui/main_window.py
       - ui/render_worker.py
+      - ui/mesh_build_worker.py
       - render_main.py
     handlers:
       - PreviewPanel.set_gallery
+      - PreviewPanel.is_3d_mode
+      - PreviewPanel.set_orbit_mesh
       - PreviewPanel.restore_saved_zoom
       - PreviewPanel.set_zoom_percent
       - PreviewPanel.zoom_in
       - PreviewPanel.zoom_out
       - PreviewPanel.reset_zoom_to_default
       - MainWindow._ensure_preview_render
+      - MainWindow._ensure_orbit_mesh
+      - MainWindow._on_preview_view_mode_changed
       - MainWindow._on_tab_changed
     tests:
       - tests/test_preview_panel.py
+      - tests/test_orbit_preview.py
+      - tests/test_orbit_greedy_mesh.py
+      - tests/test_orbit_partial_mesh.py
       - tests/test_render_preview.py
       - tests/test_structure_facades.py
       - tests/test_preview_site_facades.py
@@ -674,6 +691,7 @@ areas:
       - .cursor/rules/agent-agents-md-maintenance.mdc
       - .cursor/rules/agent-consistency.mdc
       - .cursor/rules/kanban-bug-cards.mdc
+      - .cursor/rules/kanban-review-qa.mdc
       - .cursor/rules/kanban-commit-issue-cards.mdc
       - .cursor/rules/kanban-inquiry-cards.mdc
       - .cursor/rules/kanban-agent-cards.mdc

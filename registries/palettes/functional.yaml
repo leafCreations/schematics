@@ -1,11 +1,11 @@
 label: Functional
 tokens:
 - FURNACE
+- SMOKER
+- BLAST_FURNACE
 - CRAFTING_TABLE
 - CHEST
 - DOOR
 - BED
 blocks:
-- minecraft:blast_furnace
-- minecraft:smoker
 - minecraft:trapped_chest

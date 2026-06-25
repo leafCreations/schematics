@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QIcon, QPixmap, QWheelEvent
@@ -16,14 +17,19 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QStackedWidget,
     QWidget,
 )
 
 import helpers.constants as constants
+from helpers.orbit_mesh import OrbitMeshData
 from renderers.registry import PREVIEW_RENDER_REGISTRY
 from ui.editor_prefs import preview_zoom_percent, set_preview_zoom_percent
 from ui.widgets.panel_header import create_simple_titled_panel_layout
 from ui.widgets.preview_toolbar import PreviewToolbar
+
+if TYPE_CHECKING:
+    from ui.widgets.orbit_preview_widget import OrbitPreviewWidget
 
 _PREVIEW_COMBO_MAX_WIDTH = 200
 _THUMBNAIL_MAX_HEIGHT = 72
@@ -73,6 +79,7 @@ class _PreviewScrollWheelFilter(QObject):
 class PreviewPanel(QGroupBox):
     preview_render_requested = Signal(str)
     preview_group_changed = Signal(str)
+    view_mode_changed = Signal(str)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -85,6 +92,8 @@ class PreviewPanel(QGroupBox):
         self._current_index = -1
         self._source_pixmap: QPixmap | None = None
         self._zoom_factor = clamp_zoom_factor(preview_zoom_percent() / 100.0)
+        self._view_mode = "2d"
+        self._orbit_has_mesh = False
 
         self._render_combo = QComboBox()
         self._render_combo.setMaximumWidth(_PREVIEW_COMBO_MAX_WIDTH)
@@ -111,6 +120,18 @@ class PreviewPanel(QGroupBox):
         toolbar_layout.addWidget(self._group_combo)
         toolbar_layout.addWidget(self._updated_label)
         toolbar_layout.addStretch(1)
+
+        self._mode_2d_button = QPushButton("2D")
+        self._mode_3d_button = QPushButton("3D")
+        self._mode_2d_button.setCheckable(True)
+        self._mode_3d_button.setCheckable(True)
+        self._mode_2d_button.setChecked(True)
+        self._view_mode_group = QButtonGroup(self)
+        self._view_mode_group.addButton(self._mode_2d_button, 0)
+        self._view_mode_group.addButton(self._mode_3d_button, 1)
+        self._view_mode_group.idClicked.connect(self._on_view_mode_clicked)
+        toolbar_layout.addWidget(self._mode_2d_button)
+        toolbar_layout.addWidget(self._mode_3d_button)
 
         self._caption = QLabel("Select a render type to generate a preview.")
         self._caption.setWordWrap(True)
@@ -149,11 +170,17 @@ class PreviewPanel(QGroupBox):
         self._scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll.viewport().installEventFilter(_PreviewScrollWheelFilter(self))
 
+        self._orbit_widget: OrbitPreviewWidget | None = None
+        self._view_stack = QStackedWidget()
+        self._view_stack.addWidget(self._scroll)
+        self._orbit_placeholder = QWidget()
+        self._view_stack.addWidget(self._orbit_placeholder)
+
         layout.addWidget(toolbar)
         layout.addWidget(self._caption)
         layout.addWidget(self._thumbnail_scroll)
         layout.addWidget(self._preview_toolbar)
-        layout.addWidget(self._scroll, stretch=1)
+        layout.addWidget(self._view_stack, stretch=1)
 
         self._group_combo.hide()
         self._update_group_combo_visibility()
@@ -187,10 +214,44 @@ class PreviewPanel(QGroupBox):
         return self.selected_render() == constants.RENDER_TOP_VIEW
 
     def _update_group_combo_visibility(self) -> None:
+        if self.is_3d_mode():
+            self._group_combo.hide()
+            return
         if not self.uses_group_selector():
             self._group_combo.hide()
             return
         self._group_combo.setVisible(len(self._groups) > 1)
+
+    def is_3d_mode(self) -> bool:
+        return self._view_mode == "3d"
+
+    def has_orbit_mesh(self) -> bool:
+        return self._orbit_has_mesh
+
+    def set_orbit_mesh(self, mesh: OrbitMeshData | None) -> None:
+        self._orbit_has_mesh = mesh is not None and mesh.vertex_count > 0
+        widget = self._ensure_orbit_widget()
+        widget.set_mesh(mesh)
+
+    def set_orbit_loading(self, message: str = "Building 3D mesh…") -> None:
+        self._orbit_has_mesh = False
+        self._ensure_orbit_widget().set_status_message(message)
+
+    def set_orbit_error(self, message: str) -> None:
+        self._orbit_has_mesh = False
+        self._ensure_orbit_widget().set_status_message(message)
+
+    def _ensure_orbit_widget(self) -> OrbitPreviewWidget:
+        if self._orbit_widget is not None:
+            return self._orbit_widget
+        from ui.widgets.orbit_preview_widget import OrbitPreviewWidget
+
+        self._orbit_widget = OrbitPreviewWidget()
+        placeholder_index = self._view_stack.indexOf(self._orbit_placeholder)
+        self._view_stack.removeWidget(self._orbit_placeholder)
+        self._orbit_placeholder.deleteLater()
+        self._view_stack.insertWidget(placeholder_index, self._orbit_widget)
+        return self._orbit_widget
 
     def selected_render(self) -> str:
         render_name = self._render_combo.currentData()
@@ -215,6 +276,8 @@ class PreviewPanel(QGroupBox):
         self._update_group_combo_visibility()
 
     def set_render_busy(self, busy: bool) -> None:
+        if self.is_3d_mode():
+            return
         self._render_combo.setEnabled(not busy)
         if self.uses_group_selector():
             self._group_combo.setEnabled(not busy)
@@ -249,6 +312,33 @@ class PreviewPanel(QGroupBox):
     def show_preview(self, image_path: Path) -> None:
         """Display a single image (legacy helper); prefer set_gallery for top-down previews."""
         self.set_gallery([image_path], select_index=0)
+
+    def _on_view_mode_clicked(self, button_id: int) -> None:
+        mode = "3d" if button_id == 1 else "2d"
+        if mode == self._view_mode:
+            return
+        self._view_mode = mode
+        if mode == "3d":
+            self._ensure_orbit_widget()
+            self._view_stack.setCurrentWidget(self._orbit_widget)
+        else:
+            self._view_stack.setCurrentWidget(self._scroll)
+        self._update_view_mode_chrome()
+        self.view_mode_changed.emit(mode)
+
+    def _update_view_mode_chrome(self) -> None:
+        is_3d = self.is_3d_mode()
+        self._render_combo.setVisible(not is_3d)
+        self._group_combo.setVisible(
+            not is_3d and self.uses_group_selector() and len(self._groups) > 1,
+        )
+        self._thumbnail_scroll.setVisible(not is_3d and bool(self._image_paths))
+        self._preview_toolbar.setVisible(not is_3d)
+        if is_3d:
+            self._caption.setText("3D orbit preview from the in-memory structure.")
+            self._caption.show()
+        elif not self._image_paths:
+            self._caption.show()
 
     def _on_render_selection_changed(self, _index: int) -> None:
         self._update_group_combo_visibility()

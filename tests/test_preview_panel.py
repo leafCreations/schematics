@@ -368,3 +368,20 @@ def test_preview_panel_clear(qapp):
     assert panel._caption.text() == "No preview yet."
     assert panel._updated_label.text() == ""
     assert panel._image_label.pixmap() is None or panel._image_label.pixmap().isNull()
+
+
+def test_preview_panel_2d_3d_toggle_defaults_to_2d(qapp):
+    panel = PreviewPanel()
+    panel.show()
+    modes: list[str] = []
+    panel.view_mode_changed.connect(modes.append)
+
+    assert panel.is_3d_mode() is False
+    assert panel._mode_2d_button.isChecked()
+    assert panel._render_combo.isVisible()
+
+    panel._mode_3d_button.click()
+
+    assert panel.is_3d_mode() is True
+    assert modes == ["3d"]
+    assert not panel._preview_toolbar.isVisible()

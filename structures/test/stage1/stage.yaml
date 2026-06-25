@@ -1,0 +1,7 @@
+structure: test
+stage: 1
+name: Test Stage 1
+version: 26.1.2
+layer_files:
+- layers/layer_00.yaml
+- layers/layer_01.yaml

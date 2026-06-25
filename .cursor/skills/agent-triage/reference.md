@@ -18,7 +18,7 @@ Which artifacts must agree after a governance change. **Notes** are grep targets
 | [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 handoff | AGENTS.md End handoff, [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) | `### Files used`, `### Self-evaluation` fields |
 | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | Rules (**Signature** only), § Failure pattern routing below, [testing.mdc](../../rules/testing.mdc) | Five columns per §6f |
 | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | [targeted-testing/reference.md](../targeted-testing/reference.md), testing.mdc `precommit-*` | Area hook patterns |
-| [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table | `bug`, `inquiry`, `commit-issue`, `agent`, feature; **Label Paths** + **Label Methods** when Feature Areas / Feature Area set |
+| [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table | `bug`, `inquiry`, `commit-issue`, `agent`, feature; **QA follow-up** refreshes **Feature Areas** / **Label Paths** / **Label Methods** when scope changes; **Lessons captured**; **Label Paths** + **Label Methods** when Feature Areas / Feature Area set |
 | [docs/development.md](../../docs/development.md) Cursor agent workflow | AGENTS.md, agent-consistency.mdc | When user-facing agent docs change |
 
 ### Four check types → matrix rows
@@ -80,6 +80,8 @@ Place in handoff `- **Drift alerts:**` as `KNOWN_DRIFT: …` (no `[severity]` br
 | Signal | Mode | First action (short) |
 | ------ | ---- | -------------------- |
 | Kanban card / implement from card | Review first → implement | kanban-markdown + card |
+| Review QA issue / user screenshot fix | Surgical / Review | kanban-review-qa.mdc + **QA follow-up** + refresh **Feature Areas** / **Label Paths** / **Label Methods** when scope changes |
+| User says card Done / closed | Governance | kanban-markdown § Card Done — lessons learned |
 | AGENTS.md governance audit | Read-only | kanban-markdown § Periodic AGENTS.md governance audit |
 | Explain / audit / is this correct? | Read-only | Grep + read |
 | One error, lint, typo, ad-hoc bug | Surgical | Grep → 1–3 files |
@@ -87,6 +89,7 @@ Place in handoff `- **Drift alerts:**` as `KNOWN_DRIFT: …` (no `[severity]` br
 | Pre-commit failed | Unblock / Review | §1b pre-commit + self-eval reference |
 | Failing test / pytest / ruff / lint | Surgical / Unblock | §1b failure pattern routing |
 | UI wiring / dialog not persisting | Surgical | §1b `ui-dialog-no-persist` |
+| Orbit 3D holes / transparent partial blocks | Surgical | §1b `orbit-stair-mask-transparency` |
 | Agent handoff / process mistake | Surgical | §1b self-eval reference patterns |
 | Repeated mistake / churn | Grep | §1b failure pattern routing |
 | Run tests / commit-ready | Verify | targeted-testing / pre-commit-pytest.sh |
@@ -102,6 +105,7 @@ Run after §1 classifies a **failure** — not on every turn. Grep **Trigger sni
 | Pre-commit / hook / ruff / palette validate | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | `precommit-stash-old-hooks`, `precommit-pytest-scope-mismatch`, `validate-palettes`, `ruff` |
 | Pytest scope / hook surprise / hardcoded counts | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) + [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `precommit-pytest-scope-mismatch`, `palette-hardcoded-count`, `FAILED tests/` |
 | UI wiring / dialog / persist | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `ui-dialog-no-persist`, `_persist_dialog_changes` |
+| Orbit 3D holes / transparent stairs | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `orbit-stair-mask-transparency`, `test_orbit_stair_face_textures_are_opaque` |
 | Worldgen / placement / functional blocks | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) + `.cursor/rules/worldgen.mdc` | `residence` stage 1 for chest NBT tests (see worldgen rule) |
 | Agent handoff / kanban / AGENTS.md / self-eval | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `self-eval-skipped`, `kanban-roadmap-queue`, `agents-md-stale`, `handoff-missing-files-context` |
 | Structure YAML paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `yaml-stage1-structure-yaml`, `stage1/structure.yaml` |

@@ -165,6 +165,7 @@ Canonical cross-cutting table. Row schema: [SKILL.md](SKILL.md) §6f. Pre-commit
 | `implementation-handoff-none-updates` | `Skills updated: none` or `Rules updated: none` on implementation | §6 requires both on implementation turns | agent-self-evaluation | agent-self-evaluation.mdc |
 | `docs-not-synced-on-ship` | feature shipped without `docs/` sync | docs-maintenance before Review | docs-maintenance | — |
 | `ruff-e501-line-length` | `E501 Line too long` on commit | Wrap strings; split lines ≤ 100 chars | pre-commit-workflow | agent-routing.mdc |
+| `orbit-stair-mask-transparency` | orbit 3D holes / transparent treads / missing bottom; flat color on stone stairs | Solid tiles in `orbit_face_textures` (`PLANKS:*` or `minecraft:*`); no alpha discard; corner-probe `±Y`; see `docs/render-types.md` lessons | ui-change | kanban-bug-cards.mdc |
 
 **Signature** = lowercase kebab-case grep key (optional area prefix). Rules cite **Signature** + this row — do not duplicate **Fix pattern** prose in `.mdc` files.
 

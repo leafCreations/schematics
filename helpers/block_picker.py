@@ -19,6 +19,7 @@ from helpers.block_catalog import (
     normalize_block_id,
 )
 from helpers.campfire_state import is_campfire_block_id
+from helpers.facing_block_state import minecraft_functional_alias_token
 from helpers.minecraft_versions import normalize_minecraft_version
 from helpers.palette_sections import normalize_palette_section_keys
 from helpers.registry_lookup import is_minecraft_block_token, minecraft_block_id
@@ -247,6 +248,17 @@ def _ensure_picker_entry_indexes(*, catalog: dict[str, Any] | None = None) -> No
             else:
                 by_registry[entry.token] = entry
 
+    for registry_token, picker_entry in by_registry.items():
+        reg_entry = BLOCK_REGISTRY.get(registry_token)
+        if reg_entry is None:
+            continue
+
+        block_template = _default_block_template(reg_entry)
+        if block_template is None or "{" in block_template:
+            continue
+
+        by_block[normalize_block_id(block_template)] = picker_entry
+
     _picker_by_registry_token = by_registry
     _picker_by_block_id = by_block
 
@@ -334,6 +346,24 @@ def cell_positions_with_same_block_type(
     return positions
 
 
+def cell_token_matches_picker_entry(parsed, entry: PickerEntry) -> bool:
+    """Return whether a parsed cell token matches an active palette entry."""
+    if entry.is_catalog_block:
+        if not is_minecraft_block_token(parsed):
+            return False
+
+        return minecraft_block_id(parsed) in catalog_block_ids(entry)
+
+    if parsed.token == entry.token:
+        return True
+
+    if is_minecraft_block_token(parsed):
+        alias = minecraft_functional_alias_token(minecraft_block_id(parsed))
+        return alias == entry.token
+
+    return False
+
+
 def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
     """Return the palette entry that matches a structure-layer cell token."""
     parsed = parse_structure_token(raw_token)
@@ -346,7 +376,19 @@ def picker_entry_for_cell(raw_token: str) -> PickerEntry | None:
     if is_minecraft_block_token(parsed):
         block_id = minecraft_block_id(parsed)
         assert _picker_by_block_id is not None
-        return _picker_by_block_id.get(block_id) or picker_entry_for_block_id(block_id)
+        assert _picker_by_registry_token is not None
+
+        mapped = _picker_by_block_id.get(block_id)
+        if mapped is not None:
+            return mapped
+
+        alias = minecraft_functional_alias_token(block_id)
+        if alias is not None:
+            registry_entry = _picker_by_registry_token.get(alias)
+            if registry_entry is not None:
+                return registry_entry
+
+        return picker_entry_for_block_id(block_id)
 
     legacy_block_id = legacy_terrain_block_id(parsed)
 

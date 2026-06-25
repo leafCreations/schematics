@@ -141,6 +141,7 @@ Pre-commit also runs **full suite** when:
 | `ui/widgets/palette_panel.py` | `tests/test_palette_panel.py` |
 | `ui/main_window.py` | `tests/test_main_window.py` |
 | `renderers/worldgen.py` | `tests/test_worldgen_bed.py` `tests/test_worldgen_site.py` … (see reference) |
+| `helpers/orbit_*.py`, `ui/widgets/orbit_preview_widget.py`, `ui/mesh_build_worker.py` | `tests/test_orbit_greedy_mesh.py` `tests/test_orbit_partial_mesh.py` `tests/test_orbit_preview.py` |
 | `structures/**` | `tests/test_structure_loader.py` `tests/test_ui_document.py` |
 
 Full list: [reference.md](reference.md).

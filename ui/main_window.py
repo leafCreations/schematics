@@ -79,6 +79,7 @@ from helpers.layer_rotation import (
 )
 from helpers.layer_visibility import is_layer_visible, set_layer_visible
 from helpers.minecraft_versions import format_version_title_suffix
+from helpers.orbit_mesh import OrbitMeshData
 from helpers.path_strip import (
     clear_all_paths,
     erase_path_at_site,
@@ -93,6 +94,7 @@ from helpers.paths import (
 )
 from helpers.pipeline import renders_include_worldgen
 from helpers.site_ground import resize_site_ground
+from helpers.structure_loader import build_schematic_context
 from helpers.structure_metadata import identity_from_structure_path, resolve_structure_version
 from helpers.trapdoor_state import with_trapdoor_open
 from ui.app_settings import (
@@ -133,6 +135,7 @@ from ui.editor_prefs import (
 from ui.icon_theme import configure_ui_icon_theme
 from ui.materials_icons import MaterialsIconCache
 from ui.menu_style import configure_ui_menus
+from ui.mesh_build_worker import MeshBuildWorker
 from ui.platform import ensure_qt_platform
 from ui.reload import (
     open_editor_in_empty_state_process,
@@ -563,8 +566,11 @@ class MainWindow(QMainWindow):
         self._preview_stale = False
         self._render_thread: QThread | None = None
         self._render_worker: RenderWorker | None = None
+        self._mesh_thread: QThread | None = None
+        self._mesh_worker: MeshBuildWorker | None = None
         self._render_is_preview = False
         self._last_schematics_dir: Path | None = None
+        self._last_worldgen_dir: Path | None = None
         self._undo_stack: list = []
         self._redo_stack: list = []
         self._restoring_history = False
@@ -652,8 +658,10 @@ class MainWindow(QMainWindow):
             lambda: self._on_generate_renders_requested([constants.RENDER_WORLDGEN]),
         )
         self._render_panel.open_output_requested.connect(self._open_render_output_folder)
+        self._render_panel.open_world_requested.connect(self._open_worldgen_output_folder)
         self._preview_panel.preview_render_requested.connect(self._on_preview_render_requested)
         self._preview_panel.preview_group_changed.connect(self._on_preview_group_changed)
+        self._preview_panel.view_mode_changed.connect(self._on_preview_view_mode_changed)
 
         palette_column = QWidget()
         self._palette_column_layout = QVBoxLayout(palette_column)
@@ -2355,7 +2363,7 @@ class MainWindow(QMainWindow):
                 self._site_grid_view.set_structure_selected(True)
         elif index == 2:
             self._preview_panel.restore_saved_zoom()
-            self._ensure_preview_render()
+            self._ensure_viewer_preview()
 
         self._sync_viewer_zoom_actions()
         self._update_save_actions()
@@ -3699,6 +3707,69 @@ class MainWindow(QMainWindow):
     def _clear_preview_session(self) -> None:
         clear_preview_session_dir(self._preview_schematics_dir())
         self._preview_stale = False
+        preview_panel = getattr(self, "_preview_panel", None)
+        if preview_panel is not None:
+            preview_panel.set_orbit_mesh(None)
+
+    def _on_preview_view_mode_changed(self, mode: str) -> None:
+        if mode == "3d":
+            self._ensure_orbit_mesh()
+        elif self._viewer_tab_active():
+            self._ensure_preview_render()
+
+    def _ensure_orbit_mesh(self) -> None:
+        if self._mesh_thread is not None:
+            return
+        if not self._preview_panel.is_3d_mode():
+            return
+        if not self._preview_needs_refresh() and self._preview_panel.has_orbit_mesh():
+            return
+
+        try:
+            config = structure_config_from_document(self._document)
+            ctx = build_schematic_context(config)
+        except (ValueError, FileNotFoundError) as exc:
+            self._preview_panel.set_orbit_error(f"Cannot build 3D mesh: {exc}")
+            return
+
+        self._preview_panel.set_orbit_loading()
+        self._status.showMessage("Building 3D preview mesh…")
+
+        self._mesh_thread = QThread(self)
+        self._mesh_worker = MeshBuildWorker(ctx)
+        self._mesh_worker.moveToThread(self._mesh_thread)
+        self._mesh_thread.started.connect(self._mesh_worker.run)
+        self._mesh_worker.finished.connect(self._on_mesh_finished)
+        self._mesh_worker.failed.connect(self._on_mesh_failed)
+        self._mesh_worker.finished.connect(self._mesh_thread.quit)
+        self._mesh_worker.failed.connect(self._mesh_thread.quit)
+        self._mesh_thread.finished.connect(self._finish_mesh_thread)
+        self._mesh_thread.start()
+
+    def _on_mesh_finished(self, mesh: object) -> None:
+        if not isinstance(mesh, OrbitMeshData):
+            self._preview_panel.set_orbit_error("3D mesh build returned invalid data.")
+            return
+        self._preview_panel.set_orbit_mesh(mesh)
+        self._clear_preview_stale()
+        if mesh.vertex_count == 0:
+            self._status.showMessage("3D preview: no blocks to display.", 5000)
+        else:
+            faces = mesh.vertex_count // 3
+            self._status.showMessage(
+                f"3D preview ready — {faces:,} triangles",
+                5000,
+            )
+
+    def _on_mesh_failed(self, message: str) -> None:
+        self._preview_panel.set_orbit_error(f"3D mesh build failed: {message}")
+        self._status.showMessage("3D mesh build failed.", 5000)
+
+    def _finish_mesh_thread(self) -> None:
+        if self._mesh_thread is not None:
+            self._mesh_thread.deleteLater()
+            self._mesh_thread = None
+        self._mesh_worker = None
 
     def _mark_preview_stale(self) -> None:
         self._preview_stale = True
@@ -3707,7 +3778,19 @@ class MainWindow(QMainWindow):
         self._preview_stale = False
 
     def _refresh_preview_if_stale(self) -> None:
-        if self._preview_needs_refresh() and self._viewer_tab_active():
+        if not self._viewer_tab_active():
+            return
+        if self._preview_panel.is_3d_mode():
+            if self._preview_needs_refresh():
+                self._ensure_orbit_mesh()
+            return
+        if self._preview_needs_refresh():
+            self._ensure_preview_render()
+
+    def _ensure_viewer_preview(self) -> None:
+        if self._preview_panel.is_3d_mode():
+            self._ensure_orbit_mesh()
+        else:
             self._ensure_preview_render()
 
     def _document_has_unsaved_changes(self) -> bool:
@@ -3785,11 +3868,13 @@ class MainWindow(QMainWindow):
             template_available = False
 
         self._last_schematics_dir = OUTPUT_SCHEMATICS_FOLDER / output_folder
+        self._last_worldgen_dir = None
+        self._render_panel.set_worldgen_output_available(False)
         self._render_panel.set_worldgen_template_available(template_available)
         self._sync_render_panel_preview_selection()
         self._sync_preview_groups()
         if self._viewer_tab_active():
-            self._ensure_preview_render()
+            self._ensure_viewer_preview()
 
     def _sync_render_panel_preview_selection(self) -> None:
         self._render_panel.set_preview_render(self._preview_panel.selected_render())
@@ -4279,6 +4364,9 @@ class MainWindow(QMainWindow):
 
         self._render_panel.set_busy(False)
         self._last_schematics_dir = result.schematics_dir
+        if renders_include_worldgen(result.renders) and result.worldgen_dir.exists():
+            self._last_worldgen_dir = result.worldgen_dir
+            self._render_panel.set_worldgen_output_available(True)
         self._status.showMessage(
             f"Renders complete — {result.schematics_dir}",
             8000,
@@ -4320,6 +4408,28 @@ class MainWindow(QMainWindow):
 
         path = self._last_schematics_dir.resolve()
         path.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+
+    def _open_worldgen_output_folder(self) -> None:
+        if self._last_worldgen_dir is None:
+            QMessageBox.information(
+                self,
+                "World folder",
+                "Generate a world first using **Generate World** on the Viewer tab.",
+            )
+            return
+
+        path = self._last_worldgen_dir.resolve()
+        if not path.is_dir():
+            QMessageBox.information(
+                self,
+                "World folder",
+                f"The last worldgen output folder is missing:\n{path}",
+            )
+            self._last_worldgen_dir = None
+            self._render_panel.set_worldgen_output_available(False)
+            return
+
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
 
     def _confirm_render_save(self) -> bool:
