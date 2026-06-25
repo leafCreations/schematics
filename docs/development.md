@@ -160,10 +160,46 @@ Optional per-area keys in `docs/feature-areas.yaml`:
 
 ```bash
 python3 scripts/resolve_feature_areas.py --lessons "Render Preview"
+python3 scripts/resolve_feature_areas.py --agents-parity "Render Preview"
 python3 scripts/resolve_prior_lessons.py "Render Preview" --paths helpers/orbit_face_textures.py
 ```
 
+**`--agents-parity` (gs3):** prints `agents_skill`, `agents_rules`, `lesson_routing_row`, and whether the `lesson_routing_row` anchor appears in [agent-triage/reference.md](../.cursor/skills/agent-triage/reference.md) § **Lessons by area** (`lessons_by_area_row: found|missing|n/a`). Use during kanban pre-implementation review alongside `--lessons`. Single area label per invocation is typical.
+
+```bash
+pytest tests/test_resolve_feature_areas.py -q -k agents_parity
+```
+
 Dual **Feature Area** labels on a card union pointers from each resolved area.
+
+### Governance area schema (gs0)
+
+Optional per-area keys in `docs/feature-areas.yaml` for **mechanical** agent routing and parity checks — so prior-lessons gates and `check_governance_parity.py` do not rely on parsing AGENTS.md markdown tables.
+
+| Key | Type | Purpose |
+| --- | ---- | ------- |
+| `agents_skill` | string | Primary skill stem (e.g. `ui-change`) — gate step loads `.cursor/skills/{stem}/SKILL.md` |
+| `agents_rules` | list | Rule stems under `.cursor/rules/` with optional `#signature` (e.g. `ui-panels.mdc`, `testing.mdc#orbit-animated-texture-strip`) |
+| `lesson_routing_row` | string \| null | Anchor label in [agent-triage/reference.md](../.cursor/skills/agent-triage/reference.md) § **Lessons by area** first column; `null` when `lessons-index.yaml` area block is enough |
+
+**Relationship to lesson pointers and index:**
+
+| Artifact | Role |
+| -------- | ---- |
+| `lesson_signatures` / `lesson_docs` (li2) | Curated grep/doc highlights per area — manual curation; `--lessons` on `resolve_feature_areas.py` |
+| `docs/lessons-index.yaml` | Committed index of promoted Signatures, done cards, artifacts — built by `build_lessons_index.py` |
+| `lesson_routing_row` | Links an area to a row in triage § **Lessons by area** for pre-implementation read order |
+| `agents_skill` / `agents_rules` | Links an area to load-when-touching skills and scoped rules (`check_area_schema_parity` in `check_governance_parity.py` — gs2) |
+
+All governance keys are **optional** and **backward compatible** — areas without them behave as today until gs1 seeds high-traffic areas.
+
+**Out of scope (gs0–gs3):** editing or generating AGENTS.md **Area → skills & rules** table rows from yaml. That table stays narrative until a follow-up epic after mechanical parity lands.
+
+**gs3 (complete):** `--agents-parity` on `resolve_feature_areas.py`; pytest `agents_parity` tests; pre-commit maps `feature-areas.yaml` / parity script changes to schema tests.
+
+**gs1 seed areas (complete):** Render Preview, Agent Workflow, Properties Panel, Feature Area Registry, Palette Registry — `agents_skill`, `agents_rules`, `lesson_routing_row` in `docs/feature-areas.yaml`.
+
+Epic `GovernanceAreaSchema` (gs0–gs3) — **complete**. Schema spec, five seeded areas, `check_area_schema_parity`, pytest + `--agents-parity`. **Follow-up epic:** AGENTS **Area → skills & rules** table sync or codegen from yaml.
 
 ### Lessons captured `artifacts:` schema
 

@@ -13,6 +13,26 @@
 #   docs: optional user/developer docs
 #   lesson_signatures: optional curated promotion Signatures (≤8; grep targets)
 #   lesson_docs: optional lesson doc paths (≤5; under docs/)
+#   agents_skill: optional primary skill stem (no path prefix) — gate loads
+#     .cursor/skills/{stem}/SKILL.md (e.g. ui-change, agent-triage, kanban-markdown)
+#   agents_rules: optional list of rule filenames under .cursor/rules/ with optional
+#     #signature anchor for Signature-scoped rules (e.g. ui-panels.mdc,
+#     testing.mdc#orbit-animated-texture-strip)
+#   lesson_routing_row: optional string | null — substring of the **Signal / Feature Area**
+#     first column in agent-triage/reference.md § Lessons by area; use null when
+#     lessons-index.yaml area block is sufficient (index-only routing)
+#
+# Governance area schema (epic GovernanceAreaSchema gs0–gs3):
+#   Source of truth for agent skill/rule routing is this yaml — not AGENTS.md tables.
+#   All governance keys are optional; absent keys skip parity checks until gs1 seeds them.
+#   gs1 seeded: Render Preview, Agent Workflow, Properties Panel, Feature Area Registry,
+#   Palette Registry (agents_skill / agents_rules / lesson_routing_row). AGENTS table
+#   sync deferred until post–gs3 (Signature: governance-area-schema-defer-agents-table).
+#
+# Example (gs1 seeded — see Render Preview area):
+#   agents_skill: ui-change
+#   agents_rules: [ui-panels.mdc, testing.mdc#orbit-animated-texture-strip, …]
+#   lesson_routing_row: Render Preview
 
 areas:
   File Menu:
@@ -328,6 +348,12 @@ areas:
     docs:
       - docs/ui.md
       - docs/editor-properties.md
+    agents_skill: ui-change
+    agents_rules:
+      - ui-panels.mdc
+      - ui-general.mdc
+      - testing.mdc#precommit-mainwindow-__new__-test
+    lesson_routing_row: Properties Panel
 
   Materials Panel:
     summary: Live materials inventory for current layer or all layers
@@ -537,6 +563,14 @@ areas:
       - orbit-stair-mask-transparency
     lesson_docs:
       - docs/render-types.md
+    agents_skill: ui-change
+    agents_rules:
+      - ui-panels.mdc
+      - ui-general.mdc
+      - testing.mdc#orbit-animated-texture-strip
+      - testing.mdc#orbit-stair-mask-transparency
+      - testing.mdc#orbit-fence-mask-transparency
+    lesson_routing_row: Render Preview
 
   Render Selection:
     summary: Render-type dropdown on preview panel (Top Down, Structure Facades, Site Facades, Site Top Down, Materials List)
@@ -593,6 +627,10 @@ areas:
       - Block Picker
     docs:
       - docs/registry.md
+    agents_skill: repo-map
+    agents_rules:
+      - testing.mdc#orbit-animated-texture-strip
+    lesson_routing_row: Palette Registry
 
   Adding Categories:
     summary: Add or extend palette categories and palette YAML content
@@ -697,12 +735,25 @@ areas:
       - scripts/check_governance_parity.py
     handlers:
       - resolve_lesson_pointers
+      - resolve_agents_parity
       - sync_registry_lesson_pointers
     tests:
       - tests/test_resolve_feature_areas.py
     docs:
       - .cursor/skills/kanban-markdown/SKILL.md
       - docs/development.md
+    agents_skill: kanban-markdown
+    agents_rules:
+      - kanban-bug-cards.mdc
+      - kanban-review-qa.mdc
+      - kanban-commit-issue-cards.mdc
+      - kanban-inquiry-cards.mdc
+      - kanban-agent-cards.mdc
+      - kanban-prior-lessons-gate.mdc
+      - agent-consistency.mdc
+      - testing.mdc#artifacts-doc-yaml-normalize
+      - kanban-prior-lessons-gate.mdc#feature-areas-lesson-pointers
+    lesson_routing_row: Feature Area Registry
 
   Agent Workflow:
     summary: Cursor agent routing, skills, rules, kanban process, failure memory
@@ -732,6 +783,8 @@ areas:
       - resolve_prior_lessons
       - build_lessons_index
       - resolve_feature_areas
+      - check_area_schema_parity
+      - check_governance_parity
       - _normalize_doc_ref
       - parse_artifacts_line
     docs:
@@ -743,5 +796,25 @@ areas:
       - artifacts-doc-yaml-normalize
       - precommit-ruff-staged-venv
       - agent-no-tmp-venv
+      - governance-area-schema-defer-agents-table
+      - governance-area-schema-parity-tests
     lesson_docs:
       - docs/development.md
+    agents_skill: agent-triage
+    agents_rules:
+      - agent-routing.mdc
+      - agent-self-evaluation.mdc
+      - agent-agents-md-maintenance.mdc
+      - agent-consistency.mdc
+      - kanban-bug-cards.mdc
+      - kanban-review-qa.mdc
+      - kanban-commit-issue-cards.mdc
+      - kanban-inquiry-cards.mdc
+      - kanban-agent-cards.mdc
+      - kanban-prior-lessons-gate.mdc
+      - testing.mdc#precommit-stash-old-hooks
+      - kanban-prior-lessons-gate.mdc#lessons-by-area-routing
+      - testing.mdc#artifacts-doc-yaml-normalize
+      - testing.mdc#precommit-ruff-staged-venv
+      - testing.mdc#agent-no-tmp-venv
+    lesson_routing_row: Agent Workflow

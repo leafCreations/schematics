@@ -42,6 +42,7 @@ Use these mappings as the default starting point:
 | `structures/`      | Run tests covering the affected structures or builders          |
 | `scripts/`         | Run tests covering the affected workflow or utility             |
 | `scripts/build_lessons_index.py`, `scripts/resolve_prior_lessons.py` | `pytest tests/test_build_lessons_index.py tests/test_resolve_prior_lessons.py -q` |
+| `scripts/check_governance_parity.py`, `scripts/resolve_feature_areas.py`, `docs/feature-areas.yaml` | `pytest tests/test_check_governance_parity.py tests/test_resolve_feature_areas.py -q -k agents_parity` (Signature: `governance-area-schema-parity-tests`) |
 | `parse_artifacts_line`, `artifacts:` on Card Done bullets | same + grep `artifacts:` in `docs/development.md` and kanban-markdown § Card Done; `doc:` yaml paths need explicit `.yaml`/`.yml` (Signature: `artifacts-doc-yaml-normalize`) |
 
 For uncommon cases, consult:

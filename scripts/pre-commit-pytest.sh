@@ -258,6 +258,16 @@ for file in "${STAGED[@]}"; do
       add tests/test_structure_loader.py
       ;;
 
+    docs/feature-areas.yaml)
+      CODE_TOUCHED=1
+      add tests/test_resolve_feature_areas.py tests/test_check_governance_parity.py
+      ;;
+
+    scripts/check_governance_parity.py | scripts/resolve_feature_areas.py)
+      CODE_TOUCHED=1
+      add tests/test_resolve_feature_areas.py tests/test_check_governance_parity.py
+      ;;
+
     scripts/bake_sprites.py | scripts/generate_catalog.py | scripts/prune_minecraft_assets.py | scripts/migrate_project_assets.py | scripts/dedupe_minecraft_assets.py)
       CODE_TOUCHED=1
       add_glob "tests/test_sprite_baker_*.py"

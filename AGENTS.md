@@ -72,6 +72,7 @@ python scripts/resolve_feature_areas.py --lessons "Render Preview"
 | Handoff format fields | End handoff section |
 | Failure pattern schema or new cross-cutting row | Classify quickly (failure-pattern lookup) + [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md) |
 | New scoped **agent/kanban rule** | Area → skills & rules table + [agent-consistency.mdc](.cursor/rules/agent-consistency.mdc) checklist if governance paths |
+| Governance area schema keys (`agents_skill`, `agents_rules`, `lesson_routing_row`) | `docs/feature-areas.yaml` header + [docs/development.md](docs/development.md) § Governance area schema — **gs0–gs3 complete**; **do not** sync **Area → skills & rules** table from yaml until a separate follow-up epic |
 | Governance artifact parity (any agent/kanban edit) | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Consistency matrix |
 | Drift alert vocabulary (prefix lines) | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Drift alert examples |
 | Drift severity + KNOWN_DRIFT format | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Drift severity, § KNOWN_DRIFT |
@@ -114,6 +115,8 @@ End every response with two sections (see [agent-self-evaluation](.cursor/skills
 | Area lesson lookup (kanban + Feature Areas) | **Review first** | `docs/lessons-index.yaml` area block + [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Lessons by area → `resolve_prior_lessons.py` |
 
 ## Area → skills & rules (load when touching)
+
+**Narrative routing table** — **gs0–gs3 complete** (`GovernanceAreaSchema` epic). Per-area `agents_skill` / `agents_rules` in `docs/feature-areas.yaml` are the **parity source of truth** (`check_area_schema_parity`, `--agents-parity`). This table stays narrative until a follow-up epic syncs or generates rows from yaml (Signature: `governance-area-schema-defer-agents-table`).
 
 | Area | Skill | Rule(s) |
 | ---- | ----- | ------- |

@@ -20,6 +20,7 @@ Which artifacts must agree after a governance change. **Notes** are grep targets
 | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | [targeted-testing/reference.md](../targeted-testing/reference.md), testing.mdc `precommit-*` | Area hook patterns |
 | [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table | **Prior lessons gate**; `bug`, `inquiry`, `commit-issue`, `agent`, feature; **QA follow-up**; **Lessons captured**; **Label Paths** + **Label Methods** |
 | [docs/development.md](../../docs/development.md) Cursor agent workflow | AGENTS.md, agent-consistency.mdc | When user-facing agent docs change |
+| [docs/feature-areas.yaml](../../docs/feature-areas.yaml) governance keys | AGENTS.md Maintaining table, docs/development.md § Governance area schema | `agents_skill`, `agents_rules`, `lesson_routing_row`; **gs0–gs3 complete** — Signature `governance-area-schema-defer-agents-table` (no AGENTS **Area → skills & rules** sync until follow-up epic); parity via `check_area_schema_parity` + `--agents-parity` |
 
 ### Four check types → matrix rows
 
@@ -41,7 +42,7 @@ Named warning lines for governance parity (epic **GovernanceDriftAlerts**). **Su
 | `Routing drift alert:` | **Routing** | AGENTS.md Every turn / Classify ↔ triage §1/§1b ↔ agent-routing.mdc; audit **Routing** | `Routing drift alert:` AGENTS Classify row "Agent handoff" missing in triage §1 |
 | `Card-type drift alert:` | **Card-type** | AGENTS card types ↔ `kanban-*.mdc` ↔ kanban-markdown; audit **Card types** | `Card-type drift alert:` Frontmatter label `refactor` on card — add AGENTS card types row + `kanban-refactor-cards.mdc` |
 | `Failure-pattern drift alert:` | **Failure-pattern** | Signature in rule or triage exists in a reference row; audit **Failure patterns** | `Failure-pattern drift alert:` Rule cites `precommit-palette-top-texture` — no row in pre-commit-workflow or self-eval reference |
-| `Registry drift alert:` | **Registry** | `docs/feature-areas.yaml` **Agent Workflow** `paths` ↔ AGENTS area → skills & rules; `handlers:` malformed/duplicate; kanban **Label Methods** ↔ registry; audit **Area table** | `Registry drift alert:` handler `MainWindow._foo` listed in both **Area A** and **Area B** |
+| `Registry drift alert:` | **Registry** | `docs/feature-areas.yaml` governance schema (`agents_skill`, `agents_rules`, `lesson_routing_row`, `lesson_signatures`) + **Agent Workflow** `paths` ↔ AGENTS area → skills & rules (schema-internal lesson paths excluded); `handlers:` malformed/duplicate; kanban **Label Methods** ↔ registry; audit **Area table** | `Registry drift alert:` feature-areas.yaml **Agent Workflow** `agents_skill` `bad-skill` — missing `.cursor/skills/bad-skill/SKILL.md` |
 
 **Use:** paste one line per mismatch when comparing artifacts (manual grep, `python3 scripts/check_governance_parity.py`, or audit findings). Do not invent prefixes outside this table.
 
@@ -110,6 +111,7 @@ After resolving **`## Feature Areas`** or agent **`## Feature Area`** — **befo
 | Pre-commit / hook / pytest scope | `lessons-index.yaml` `Agent Workflow` or `_uncategorized`; [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns; `precommit-stash-old-hooks`, `precommit-ruff-staged-venv`, `agent-no-tmp-venv` |
 | **Properties Panel** — `MainWindow.__new__` tests | `lessons-index.yaml` `Properties Panel`; Signature `precommit-mainwindow-__new__-test` → [testing.mdc](../../rules/testing.mdc) |
 | **Agent Workflow** — routing / kanban / index | `lessons-index.yaml` `Agent Workflow`; Signature `feature-areas-lesson-pointers`; [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Prior lessons gate |
+| **Agent Workflow** — governance area schema (gs0–gs3) | `lessons-index.yaml` `Agent Workflow`; `resolve_feature_areas.py --agents-parity`; `check_area_schema_parity`; Signatures `governance-area-schema-defer-agents-table`, `governance-area-schema-parity-tests` |
 | **Feature Area Registry** — lesson pointers | `lessons-index.yaml` `Feature Area Registry`; `docs/feature-areas.yaml` `lesson_signatures` / `lesson_docs`; `resolve_feature_areas.py --lessons` |
 | **Palette Registry** — texture / orbit overlap | `lessons-index.yaml` `Palette Registry`; Signature `orbit-animated-texture-strip` |
 | Card **Done** / lessons index refresh | [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:`; `scripts/build_lessons_index.py` |
@@ -129,6 +131,7 @@ Run after §1 classifies a **failure** — not on every turn. Grep **Trigger sni
 | Worldgen / placement / functional blocks | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) + `.cursor/rules/worldgen.mdc` | `residence` stage 1 for chest NBT tests (see worldgen rule) |
 | Agent handoff / kanban / AGENTS.md / self-eval | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `self-eval-skipped`, `kanban-roadmap-queue`, `agents-md-stale`, `handoff-missing-files-context`, `agent-no-tmp-venv` |
 | Card Done `artifacts:` / lessons index bad `doc:` paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `artifacts-doc-yaml-normalize`, `lessons-index.yaml.md`, `doc:lessons-index` |
+| Governance area schema / parity drift | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `governance-area-schema-parity-tests`, `governance-area-schema-defer-agents-table`, `Registry drift alert`, `check_governance_parity` |
 | Structure YAML paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `yaml-stage1-structure-yaml`, `stage1/structure.yaml` |
 
 **No match:** proceed with normal discovery; note recurring failures for self-eval §6 churn.

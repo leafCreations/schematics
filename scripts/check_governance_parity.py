@@ -25,6 +25,8 @@ FEATURES_DIR = REPO_ROOT / ".devtool/features"
 
 SELF_EVAL_REFERENCE = REPO_ROOT / ".cursor/skills/agent-self-evaluation/reference.md"
 PRE_COMMIT_REFERENCE = REPO_ROOT / ".cursor/skills/pre-commit-workflow/reference.md"
+TRIAGE_REFERENCE = REPO_ROOT / ".cursor/skills/agent-triage/reference.md"
+LESSONS_INDEX = REPO_ROOT / "docs/lessons-index.yaml"
 
 GOVERNANCE_RULE_GLOBS = (
     ".cursor/rules/agent-*.mdc",
@@ -93,6 +95,15 @@ _SIGNATURE_TABLE_RE = re.compile(r"^\|\s*`([a-z][a-z0-9-]+)`\s*\|", re.MULTILINE
 _SIGNATURE_CITE_RE = re.compile(
     r"(?:signature|§1b grep|grep)\s+`([a-z][a-z0-9-]+)`",
     re.IGNORECASE,
+)
+_LESSON_ROUTING_SIG_RE = re.compile(r"`([a-z][a-z0-9-]+)`")
+_SCHEMA_INTERNAL_PATHS = frozenset(
+    {
+        "docs/lessons-index.yaml",
+        "scripts/build_lessons_index.py",
+        "tests/test_resolve_prior_lessons.py",
+        "tests/test_build_lessons_index.py",
+    }
 )
 _LABELS_RE = re.compile(r"^labels:\s*\[(.*?)\]", re.MULTILINE)
 _AGENTS_RULE_LINK_RE = re.compile(r"\[([^\]]+)\]\((\.cursor/rules/[a-z0-9_-]+\.mdc)\)")
@@ -179,6 +190,15 @@ class DriftIssue:
     message: str
 
 
+@dataclass(frozen=True)
+class AreaSchemaEntry:
+    name: str
+    agents_skill: str
+    agents_rules: tuple[str, ...]
+    lesson_routing_row: str | None
+    lesson_signatures: tuple[str, ...]
+
+
 def parse_drift_line(line: str) -> DriftIssue:
     match = _SEVERITY_PREFIX_RE.match(line)
     if match:
@@ -233,10 +253,12 @@ def corrective_action_for_issue(issue: DriftIssue) -> str:
             "rule citation — Signature only in `.mdc` files."
         ),
         PREFIX_REGISTRY: (
-            "Sync `docs/feature-areas.yaml` **Agent Workflow** `paths` with "
-            "AGENTS.md area → skills & rules table (Agent + Kanban rows); fix "
-            "`handlers:` duplicates, malformed symbols, or kanban **Label Methods** "
-            "symbols missing from the registry."
+            "Sync `docs/feature-areas.yaml` governance schema (`agents_skill`, "
+            "`agents_rules`, `lesson_routing_row`, `lesson_signatures`) and "
+            "**Agent Workflow** `paths` with AGENTS.md area → skills & rules table "
+            "(schema-internal lesson paths are excluded); fix `handlers:` duplicates, "
+            "malformed symbols, or kanban **Label Methods** symbols missing from the "
+            "registry."
         ),
     }
     return actions.get(prefix, actions[PREFIX_ROUTING])
@@ -442,6 +464,131 @@ def _normalize_path(path: str) -> str:
     return path
 
 
+def _rule_file_from_entry(entry: str) -> str:
+    return entry.split("#", 1)[0].strip()
+
+
+def is_schema_internal_registry_path(path: str) -> bool:
+    """Agent Workflow paths validated by schema keys, not AGENTS area rows."""
+    normalized = path.strip().rstrip("/")
+    if normalized in _SCHEMA_INTERNAL_PATHS:
+        return True
+    name = Path(normalized).name
+    return normalized.startswith("scripts/resolve_") and name.endswith(".py")
+
+
+def load_area_schema_entries(feature_areas_text: str) -> list[AreaSchemaEntry]:
+    """Areas with agents_skill set — mechanical governance schema parity."""
+    if yaml is None:
+        raise RuntimeError("PyYAML required — install project dependencies")
+    data = yaml.safe_load(feature_areas_text)
+    areas = data.get("areas", {})
+    entries: list[AreaSchemaEntry] = []
+    for name, entry in areas.items():
+        if not isinstance(entry, dict):
+            continue
+        skill = entry.get("agents_skill")
+        if not skill:
+            continue
+        raw_rules = entry.get("agents_rules", []) or []
+        raw_sigs = entry.get("lesson_signatures", []) or []
+        routing_row = entry.get("lesson_routing_row")
+        entries.append(
+            AreaSchemaEntry(
+                name=str(name),
+                agents_skill=str(skill).strip(),
+                agents_rules=tuple(str(rule).strip() for rule in raw_rules if str(rule).strip()),
+                lesson_routing_row=(str(routing_row).strip() if routing_row is not None else None),
+                lesson_signatures=tuple(str(sig).strip() for sig in raw_sigs if str(sig).strip()),
+            )
+        )
+    return entries
+
+
+def extract_lessons_by_area_first_column(reference_text: str) -> list[str]:
+    section = _section_after(reference_text, "## Lessons by area")
+    return _table_first_column(section)
+
+
+def extract_lesson_routing_reference_signatures(reference_text: str) -> set[str]:
+    """Signatures cited in triage § Lessons by area and § Failure pattern routing."""
+    lessons_section = _section_after(reference_text, "## Lessons by area")
+    failure_section = _section_after(reference_text, "## Failure pattern routing")
+    signatures: set[str] = set()
+    for section in (lessons_section, failure_section):
+        for match in _LESSON_ROUTING_SIG_RE.finditer(section):
+            token = match.group(1)
+            if token.islower() and "-" in token:
+                signatures.add(token)
+    return signatures
+
+
+def extract_lessons_index_area_signatures(lessons_index_text: str, area_name: str) -> set[str]:
+    if yaml is None:
+        raise RuntimeError("PyYAML required — install project dependencies")
+    data = yaml.safe_load(lessons_index_text)
+    area_block = data.get("areas", {}).get(area_name, {})
+    raw = area_block.get("signatures", []) or []
+    return {
+        str(sig).strip() for sig in raw if str(sig).strip() and str(sig).strip() not in {"…", "..."}
+    }
+
+
+def check_area_schema_parity(
+    repo_root: Path,
+    schema_entries: list[AreaSchemaEntry],
+    triage_reference_text: str,
+    lessons_index_text: str,
+    reference_signatures: set[str],
+) -> list[str]:
+    """Mechanical checks for governance area schema keys (agents_skill areas)."""
+    issues: list[str] = []
+    routing_rows = extract_lessons_by_area_first_column(triage_reference_text)
+    routing_reference_sigs = extract_lesson_routing_reference_signatures(triage_reference_text)
+    lesson_index_sigs_by_area = {
+        entry.name: extract_lessons_index_area_signatures(lessons_index_text, entry.name)
+        for entry in schema_entries
+    }
+
+    for entry in schema_entries:
+        skill_path = repo_root / ".cursor/skills" / entry.agents_skill / "SKILL.md"
+        if not skill_path.is_file():
+            issues.append(
+                f"{PREFIX_REGISTRY} feature-areas.yaml **{entry.name}** `agents_skill` "
+                f"`{entry.agents_skill}` — missing `{skill_path.relative_to(repo_root)}`"
+            )
+
+        for rule_entry in entry.agents_rules:
+            rule_file = _rule_file_from_entry(rule_entry)
+            rule_path = repo_root / ".cursor/rules" / rule_file
+            if not rule_path.is_file():
+                issues.append(
+                    f"{PREFIX_REGISTRY} feature-areas.yaml **{entry.name}** `agents_rules` "
+                    f"entry `{rule_entry}` — missing `.cursor/rules/{rule_file}`"
+                )
+
+        if entry.lesson_routing_row:
+            needle = entry.lesson_routing_row.lower()
+            if not any(needle in row.lower() for row in routing_rows):
+                issues.append(
+                    f"{PREFIX_REGISTRY} feature-areas.yaml **{entry.name}** "
+                    f"`lesson_routing_row` `{entry.lesson_routing_row}` — no match in "
+                    "agent-triage/reference.md § Lessons by area"
+                )
+
+        for sig in entry.lesson_signatures:
+            in_index = sig in lesson_index_sigs_by_area.get(entry.name, set())
+            in_reference = sig in routing_reference_sigs or sig in reference_signatures
+            if not in_index and not in_reference:
+                issues.append(
+                    f"{PREFIX_REGISTRY} feature-areas.yaml **{entry.name}** "
+                    f"`lesson_signatures` `{sig}` — not in lessons-index.yaml or "
+                    "agent-triage reference § Lessons by area / Failure pattern routing"
+                )
+
+    return issues
+
+
 def load_agent_workflow_paths(feature_areas_text: str) -> set[str]:
     if yaml is None:
         raise RuntimeError("PyYAML required — install project dependencies")
@@ -603,17 +750,24 @@ def extract_agents_governance_paths(agents_text: str) -> set[str]:
     return paths
 
 
+def filter_registry_compare_paths(paths: set[str]) -> set[str]:
+    """Drop schema-internal Agent Workflow paths — covered by check_area_schema_parity."""
+    return {path for path in paths if not is_schema_internal_registry_path(path)}
+
+
 def check_registry_parity(
     yaml_paths: set[str],
     agents_paths: set[str],
 ) -> list[str]:
+    """Compare Agent Workflow paths (minus schema-internal) with AGENTS Agent/Kanban rows."""
+    yaml_compare = filter_registry_compare_paths(yaml_paths)
     issues: list[str] = []
-    for path in sorted(yaml_paths - agents_paths):
+    for path in sorted(yaml_compare - agents_paths):
         issues.append(
             f"{PREFIX_REGISTRY} feature-areas.yaml lists `{path}` not reflected in "
             "AGENTS Agent/Kanban area rows"
         )
-    for path in sorted(agents_paths - yaml_paths):
+    for path in sorted(agents_paths - yaml_compare):
         if path == "AGENTS.md":
             continue
         issues.append(
@@ -682,17 +836,39 @@ def run_checks(
     features_dir: Path,
     rule_paths: list[Path] | None = None,
     reference_paths: tuple[Path, Path] | None = None,
+    triage_reference_text: str | None = None,
+    lessons_index_text: str | None = None,
     include_severity: bool = True,
 ) -> list[str]:
     rule_paths = rule_paths or collect_governance_rule_paths(repo_root)
     reference_paths = reference_paths or (SELF_EVAL_REFERENCE, PRE_COMMIT_REFERENCE)
+    triage_reference_path = repo_root / ".cursor/skills/agent-triage/reference.md"
+    lessons_index_path = repo_root / "docs/lessons-index.yaml"
+    if triage_reference_text is None:
+        triage_reference_text = triage_reference_path.read_text(encoding="utf-8")
+    if lessons_index_text is None:
+        lessons_index_text = lessons_index_path.read_text(encoding="utf-8")
 
     issues: list[str] = []
     issues.extend(check_classify_parity(agents_text, triage_text))
 
-    reference_sigs = extract_reference_signatures(*reference_paths)
+    reference_sigs = extract_reference_signatures(
+        *reference_paths,
+        triage_reference_path,
+    )
     rule_cites = extract_rule_signature_cites(rule_paths)
     issues.extend(check_failure_pattern_parity(reference_sigs, rule_cites))
+
+    schema_entries = load_area_schema_entries(feature_areas_text)
+    issues.extend(
+        check_area_schema_parity(
+            repo_root,
+            schema_entries,
+            triage_reference_text,
+            lessons_index_text,
+            reference_sigs,
+        )
+    )
 
     yaml_paths = load_agent_workflow_paths(feature_areas_text)
     agents_paths = extract_agents_governance_paths(agents_text)

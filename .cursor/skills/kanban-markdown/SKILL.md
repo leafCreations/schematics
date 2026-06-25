@@ -157,13 +157,15 @@ Users tag cards with **product areas** they understand. Agents resolve those lab
 | **`## Label Paths`** | **Agent** (during pre-implementation card review) | Resolved paths from [docs/feature-areas.yaml](../../docs/feature-areas.yaml) plus any new files discovered in review |
 | **`## Label Methods`** | **Agent** (same review step, when Feature Areas present) | Functions, methods, Qt slots, and test names the implementation will touch — keyed by path |
 
-**Canonical registry:** [docs/feature-areas.yaml](../../docs/feature-areas.yaml) — maps each label → `paths`, `wiring`, `tests`, `related`, optional `handlers` (stable entry points), `docs`, optional `lesson_signatures` / `lesson_docs` (curated highlights; li2).
+**Canonical registry:** [docs/feature-areas.yaml](../../docs/feature-areas.yaml) — maps each label → `paths`, `wiring`, `tests`, `related`, optional `handlers` (stable entry points), `docs`, optional `lesson_signatures` / `lesson_docs` (curated highlights; li2), optional `agents_skill` / `agents_rules` / `lesson_routing_row` (governance routing; **gs0–gs3 complete** — see [docs/development.md](../../docs/development.md) § Governance area schema). **Source of truth** for agent skill/rule routing is yaml — AGENTS.md **Area → skills & rules** table is narrative until a follow-up sync epic (Signature: `governance-area-schema-defer-agents-table`). **Seeded areas:** Render Preview, Agent Workflow, Properties Panel, Feature Area Registry, Palette Registry — verify with `--agents-parity` during card review; do not edit AGENTS table rows when adding governance keys to new areas.
 
 Resolve labels before coding:
 
 ```bash
 python scripts/resolve_feature_areas.py "Render Preview" "Render Selection"
 python scripts/resolve_feature_areas.py --handlers "Open Structures Workflow"
+python scripts/resolve_feature_areas.py --lessons "Render Preview"
+python scripts/resolve_feature_areas.py --agents-parity "Render Preview"
 python scripts/resolve_feature_areas.py --list
 ```
 
@@ -884,7 +886,7 @@ If the user only asked to review the card (no implementation), stay in **To Do**
 
 Bridge **Card Done** lessons (in **`done/`** or **`archived/`**) and **commit-issue** failures into the current card plan.
 
-**Read order:** (1) `docs/lessons-index.yaml` area block + [agent-triage/reference.md](../agent-triage/reference.md) § **Lessons by area**, (2) optional `resolve_feature_areas.py --lessons`, (3) `resolve_prior_lessons.py`, (4) full done card only when still ambiguous.
+**Read order:** (1) `docs/lessons-index.yaml` area block + [agent-triage/reference.md](../agent-triage/reference.md) § **Lessons by area**, (2) optional `resolve_feature_areas.py --lessons` and `--agents-parity` when area has `agents_skill` (gs3), (3) `resolve_prior_lessons.py`, (4) full done card only when still ambiguous.
 
 ### 1. Index + routing table
 
@@ -894,6 +896,7 @@ Optional registry pointers:
 
 ```bash
 python3 scripts/resolve_feature_areas.py --lessons "Render Preview"
+python3 scripts/resolve_feature_areas.py --agents-parity "Render Preview"
 ```
 
 ### 2. Run the resolver
@@ -1073,7 +1076,7 @@ Update `status` and `modified`. File stays in `.devtool/features/` until moved t
 | Feature/bug card review complete | Resolve **Feature Areas** → **Label Paths** + **Label Methods** → **Decisions** (feature) or **Corrective Action** (bug) → `todo` → `in-progress` → implement |
 | Inquiry card complete | **`## Response`** on card → `review` (no code by default) |
 | User spawns inquiry recommendations | § Spawn from inquiry → create **todo** feature/bug cards with `epic`, AC, Label Paths, Label Methods, Decisions |
-| `check_governance_parity.py` finds drift | Script auto-spawns **todo** cards (epic `GovernanceDriftAlert`; priority from severity) with **## Alert**, **## Feature Areas**, **## Label Paths**, **## Corrective Action** — agent refines on pickup; `--no-spawn-cards` to disable |
+| `check_governance_parity.py` finds drift | Script runs `check_area_schema_parity` for areas with `agents_skill` (skill/rule files, `lesson_routing_row`, `lesson_signatures`); registry path compare skips schema-internal lesson paths; auto-spawns **todo** cards (epic `GovernanceDriftAlert`; priority from severity) with **## Alert**, **## Feature Areas**, **## Label Paths**, **## Corrective Action** — agent refines on pickup; `--no-spawn-cards` to disable |
 | Finishing implementation | Staged pytests green → **update feature-areas.yaml** → **review/update docs/** ([docs-maintenance](../docs-maintenance/SKILL.md)) → **check off AC `[x]`** → `in-progress` → `review` |
 | User assigns QA Review on a Review card | Read **`## QA Review`** → implement → check off QA bullets (+ AC if satisfied) → staged pytests green → **update feature-areas.yaml** → **review/update docs/**; stay in **Review** |
 | User verified in app | **User** moves `review` → `done` only when **`## QA Review`** are done (or waived) — agents do not |

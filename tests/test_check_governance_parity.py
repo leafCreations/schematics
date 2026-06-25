@@ -14,8 +14,10 @@ from scripts.check_governance_parity import (
     PREFIX_ROUTING,
     SEVERITY_CRITICAL,
     SEVERITY_WARN,
+    AreaSchemaEntry,
     apply_severity,
     build_drift_card_body,
+    check_area_schema_parity,
     check_card_type_parity,
     check_classify_parity,
     check_failure_pattern_parity,
@@ -26,11 +28,15 @@ from scripts.check_governance_parity import (
     default_severity_for_line,
     extract_agents_governance_paths,
     extract_label_method_symbols,
+    extract_lessons_by_area_first_column,
+    filter_registry_compare_paths,
     format_drift_line,
+    is_schema_internal_registry_path,
     is_valid_handler_symbol,
     issue_card_id,
     load_agent_workflow_paths,
     load_area_handlers,
+    load_area_schema_entries,
     parse_drift_line,
     priority_for_severity,
     run_checks,
@@ -116,6 +122,111 @@ def test_check_registry_parity_detects_agents_only_path():
         {"AGENTS.md", ".cursor/rules/agent-routing.mdc"},
     )
     assert any(PREFIX_REGISTRY in line and "agent-routing" in line for line in issues)
+
+
+def test_is_schema_internal_registry_path():
+    assert is_schema_internal_registry_path("docs/lessons-index.yaml")
+    assert is_schema_internal_registry_path("scripts/resolve_prior_lessons.py")
+    assert is_schema_internal_registry_path("scripts/resolve_feature_areas.py")
+    assert not is_schema_internal_registry_path(".cursor/skills/agent-triage/")
+
+
+def test_filter_registry_compare_paths_drops_schema_internal():
+    paths = {
+        "AGENTS.md",
+        "docs/lessons-index.yaml",
+        "scripts/resolve_prior_lessons.py",
+    }
+    assert filter_registry_compare_paths(paths) == {"AGENTS.md"}
+
+
+def test_check_registry_parity_ignores_schema_internal_yaml_only():
+    issues = check_registry_parity(
+        {
+            "AGENTS.md",
+            "docs/lessons-index.yaml",
+            "scripts/resolve_prior_lessons.py",
+        },
+        {"AGENTS.md"},
+    )
+    assert issues == []
+
+
+def test_load_area_schema_entries_skips_areas_without_agents_skill():
+    yaml_text = """
+areas:
+  Plain Area:
+    paths:
+      - ui/foo.py
+  Seeded Area:
+    agents_skill: agent-triage
+    agents_rules:
+      - agent-routing.mdc
+    lesson_routing_row: Agent Workflow
+    lesson_signatures:
+      - lessons-by-area-routing
+"""
+    entries = load_area_schema_entries(yaml_text)
+    assert len(entries) == 1
+    assert entries[0].name == "Seeded Area"
+    assert entries[0].agents_skill == "agent-triage"
+
+
+def test_check_area_schema_parity_detects_missing_skill(tmp_path: Path):
+    issues = check_area_schema_parity(
+        tmp_path,
+        [
+            AreaSchemaEntry(
+                name="Bad Area",
+                agents_skill="missing-skill",
+                agents_rules=(),
+                lesson_routing_row=None,
+                lesson_signatures=(),
+            )
+        ],
+        "## Lessons by area\n\n| Signal | Read |\n| --- | --- |\n",
+        "areas: {}\n",
+        set(),
+    )
+    assert len(issues) == 1
+    assert PREFIX_REGISTRY in issues[0]
+    assert "missing-skill" in issues[0]
+
+
+def test_check_area_schema_parity_detects_missing_lesson_routing_row(tmp_path: Path):
+    (tmp_path / ".cursor/skills/ui-change").mkdir(parents=True)
+    (tmp_path / ".cursor/skills/ui-change/SKILL.md").write_text("# skill\n", encoding="utf-8")
+    issues = check_area_schema_parity(
+        tmp_path,
+        [
+            AreaSchemaEntry(
+                name="Render Preview",
+                agents_skill="ui-change",
+                agents_rules=(),
+                lesson_routing_row="Not In Table",
+                lesson_signatures=(),
+            )
+        ],
+        "## Lessons by area\n\n| Signal | Read |\n| --- | --- |\n| **Render Preview** | docs |\n",
+        "areas: {}\n",
+        set(),
+    )
+    assert len(issues) == 1
+    assert "lesson_routing_row" in issues[0]
+    assert "Not In Table" in issues[0]
+
+
+def test_extract_lessons_by_area_first_column():
+    reference = """## Lessons by area (read before card grep)
+
+| Signal / Feature Area | Read first |
+| --------------------- | ---------- |
+| **Render Preview** — orbit | docs |
+| **Agent Workflow** — routing | index |
+"""
+    rows = extract_lessons_by_area_first_column(reference)
+    assert any("render preview" in row.lower() for row in rows)
+    assert any("agent workflow" in row.lower() for row in rows)
 
 
 def test_load_agent_workflow_paths_from_yaml():
@@ -315,6 +426,11 @@ areas:
     pre_dir = repo / ".cursor/skills/pre-commit-workflow"
     pre_dir.mkdir(parents=True)
     (pre_dir / "reference.md").write_text("", encoding="utf-8")
+    (triage_dir / "reference.md").write_text(
+        "## Lessons by area\n\n| Signal | Read |\n| --- | --- |\n",
+        encoding="utf-8",
+    )
+    (repo / "docs/lessons-index.yaml").write_text("areas: {}\n", encoding="utf-8")
 
     issues = run_checks(
         repo_root=repo,
@@ -327,6 +443,8 @@ areas:
             ref_dir / "reference.md",
             pre_dir / "reference.md",
         ),
+        triage_reference_text=(triage_dir / "reference.md").read_text(encoding="utf-8"),
+        lessons_index_text=(repo / "docs/lessons-index.yaml").read_text(encoding="utf-8"),
         include_severity=False,
     )
     assert issues == []
@@ -347,6 +465,12 @@ def test_main_exit_code_nonzero_on_drift(tmp_path: Path, monkeypatch: pytest.Mon
         "areas:\n  Agent Workflow:\n    paths:\n      - AGENTS.md\n",
         encoding="utf-8",
     )
+    triage_ref = triage_dir / "reference.md"
+    triage_ref.write_text(
+        "## Lessons by area\n\n| Signal | Read |\n| --- | --- |\n",
+        encoding="utf-8",
+    )
+    (repo / "docs/lessons-index.yaml").write_text("areas: {}\n", encoding="utf-8")
     (repo / ".devtool/features").mkdir(parents=True)
 
     from scripts import check_governance_parity as mod

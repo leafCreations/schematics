@@ -44,6 +44,7 @@ When you **edit** paths matched by this rule's `globs`, keep workflow artifacts 
 | Lessons-by-area routing table | [agent-triage/reference.md](../skills/agent-triage/reference.md) § Lessons by area + AGENTS Classify **Area lesson lookup** + triage §2 discovery |
 | New skill under **Agent Workflow** in yaml (e.g. `pre-commit-workflow`) | AGENTS.md **Agent** or **Kanban** area row skill link; extend `check_governance_parity.py` `_AGENTS_SKILL_LINK_RE` if skill name is not `agent*` / `kanban*` |
 | New / changed `handlers:` in `feature-areas.yaml` | Keep symbols unique across areas; run `check_governance_parity.py`; align kanban **Label Methods** on open cards |
+| Governance area schema keys (`agents_skill`, `agents_rules`, `lesson_routing_row`) | `docs/feature-areas.yaml` header + [docs/development.md](../../docs/development.md) § Governance area schema — **gs0–gs3 complete**; do not sync AGENTS **Area → skills & rules** from yaml until follow-up epic (Signature: `governance-area-schema-defer-agents-table`); gs2: `check_area_schema_parity`; gs3: `--agents-parity` + `agents_parity` pytest; registry path compare skips schema-internal lesson paths |
 
 ## Do not
 

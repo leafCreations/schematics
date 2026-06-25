@@ -168,6 +168,8 @@ Canonical cross-cutting table. Row schema: [SKILL.md](SKILL.md) §6f. Pre-commit
 | `ruff-e501-line-length` | `E501 Line too long` on commit | Wrap strings; split lines ≤ 100 chars | pre-commit-workflow | agent-routing.mdc |
 | `orbit-stair-mask-transparency` | orbit 3D holes / transparent treads / missing bottom; flat color on stone stairs | Solid tiles in `orbit_face_textures` (`PLANKS:*` or `minecraft:*`); no alpha discard; corner-probe `±Y`; see `docs/render-types.md` lessons | ui-change | kanban-bug-cards.mdc |
 | `artifacts-doc-yaml-normalize` | `lessons-index.yaml.md` in index; `doc:lessons-index` skipped | `_normalize_doc_ref` keeps `.yaml`/`.yml`; Card Done uses explicit `doc:…yaml` for registry paths | targeted-testing | testing.mdc |
+| `governance-area-schema-defer-agents-table` | Agent edits AGENTS **Area → skills & rules** when seeding yaml governance keys | Set `agents_skill` / `agents_rules` / `lesson_routing_row` in `docs/feature-areas.yaml` only; run `--agents-parity`; AGENTS table sync is a separate follow-up epic | kanban-markdown | agent-consistency.mdc |
+| `governance-area-schema-parity-tests` | `feature-areas.yaml` or parity script change without targeted tests | `pytest tests/test_resolve_feature_areas.py tests/test_check_governance_parity.py -q -k agents_parity`; `pre-commit-pytest.sh` maps governance paths | targeted-testing | testing.mdc |
 
 **Signature** = lowercase kebab-case grep key (optional area prefix). Rules cite **Signature** + this row — do not duplicate **Fix pattern** prose in `.mdc` files.
 
