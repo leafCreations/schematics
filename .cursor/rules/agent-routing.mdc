@@ -7,26 +7,26 @@ alwaysApply: true
 
 **Repo entry:** [AGENTS.md](../../AGENTS.md). **Do not** treat [docs/roadmap.md](../../docs/roadmap.md) as the queue.
 
+**Hard gates:** [kanban-card-gates.mdc](kanban-card-gates.mdc) — kanban card required for implementation; valid frontmatter `labels` required.
+
 ## User mode
 
 | Mode | Work source | Code / cards |
 | ---- | ----------- | ------------ |
-| **Agent** (default) | **Kanban** `.devtool/features/` — To Do card path, id, or title | Follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); ignore Backlog except governance-lessons epics (`ArtifactsDocYaml`, `LessonsCoverageMetric`, `GovernanceAreaSchema`) — read **To Do + Backlog**, sort by `order` |
-| **Ask** | User question | Read-only — no card moves, no edits unless user leaves Ask mode |
+| **Agent** | Card named + **agent verb** — `implement`, `update`, `review and update`, `spawn`, `answer inquiry`, … | [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); [kanban-card-gates.mdc](kanban-card-gates.mdc) §2 |
+| **Ask-only** | `review …` card only, bare `@path`, no card, or no agent verb | Read-only — no file edits |
 
 ## Turn lifecycle
 
 ```text
-START → agent-triage/SKILL.md (classify; §1b failure-pattern grep on signals only)
-WORK  → card Label Paths + Label Methods → prior lessons gate (kanban-markdown § Prior lessons gate)
+START → agent-triage/SKILL.md (classify; card + label + prompt-verb gate; §1b on failure signals only)
+WORK  → card Label Paths + Label Methods → prior lessons gate (feature/bug/agent/commit-issue)
         → Decisions / Corrective Action → implement
         → Review QA fix: **QA follow-up** + refresh Feature Areas / Label Paths / Label Methods
-          when scope changes (kanban-markdown § User-reported QA fixes)
 VERIFY → targeted pytest; pre-commit-pytest.sh before Review/commit
-DONE  → user says card Done → lessons learned capture (kanban-markdown § Card Done)
-        → `python3 scripts/build_lessons_index.py` refresh `docs/lessons-index.yaml`
-        → when new Signatures/docs apply to an area: curate `lesson_*` in `feature-areas.yaml`
-          (or `build_lessons_index.py --sync-registry` dry-run; manual trim before `--write`)
+DONE  → user says card Done → lessons learned **only** for feature / bug / agent / commit-issue
+        → inquiry Done: **no** lessons capture
+        → build_lessons_index.py when lessons ran; curate feature-areas lesson_* when applicable
 END   → agent-self-evaluation/SKILL.md + handoff block
 ```
 
@@ -36,11 +36,12 @@ END   → agent-self-evaluation/SKILL.md + handoff block
 
 | Label | Rule | Agent plan section |
 | ----- | ---- | ------------------ |
+| `feature` | [kanban-feature-cards.mdc](kanban-feature-cards.mdc) | **Decisions** |
 | `bug` | [kanban-bug-cards.mdc](kanban-bug-cards.mdc) | **Corrective Action** (not Decisions) |
-| `commit-issue` | [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) | **Review** → Root Cause + Corrective Action; implement only after user approval |
-| `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response**; spawn **todo** + `epic` when user approves recommendations |
+| `commit-issue` | [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) | **Review** → Root Cause + Corrective Action; implement after user approval |
+| `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response**; spawn child cards when user approves; **no** Card Done lessons |
 | `agent` | [kanban-agent-cards.mdc](kanban-agent-cards.mdc) | **Decisions**; user **Description** + **Feature Area** |
-| *(feature)* / **bug** / **agent** / **commit-issue** review | [kanban-prior-lessons-gate.mdc](kanban-prior-lessons-gate.mdc) | **Prior lessons gate** before **Decisions** / **Corrective Action** |
+| **Invalid** (missing / `[]` / unknown) | [kanban-card-gates.mdc](kanban-card-gates.mdc) | **Stop** — user must fix `labels` |
 
 Resolve **Feature Areas** (or agent card **Feature Area**) → **Label Paths** + **Label Methods** via `docs/feature-areas.yaml` before `in-progress`.
 
@@ -65,10 +66,10 @@ All agent edits to `.py` / `.pyi` files must keep lines ≤ **100** characters (
 - **Failure signals** (hook, pytest, UI wiring, handoff) → [agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) §1b grep before broad reads
 - **Governance edits** → [agent-triage/reference.md](../skills/agent-triage/reference.md) § Consistency matrix
 - **Governance audit card** → [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit ([AGENTS.md](../../AGENTS.md) Classify quickly)
-- **Classify signal rows** — keep [AGENTS.md](../../AGENTS.md) § Classify quickly, triage §1, and reference § Classify in sync (including **Verify**: `run tests` / `commit-ready`)
+- **Classify signal rows** — keep [AGENTS.md](../../AGENTS.md) § Classify quickly, triage §1, and reference § Classify in sync
 - **Grep** before opening `ui/main_window.py` or other large files
 - After **3** full file reads → prefer grep or semantic search
-- Ad-hoc one-file fixes → **surgical** (no kanban) unless user assigns a card
+- **No card or review-only prompt** → Ask-only — do not edit (Signature: `kanban-prompt-ask-vs-agent`)
 
 ## Handoff (last sections — every response)
 

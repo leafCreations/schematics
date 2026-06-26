@@ -37,7 +37,11 @@ Do **not** start implementation on spawned cards until user assigns work (pre-im
 3. `todo` → `in-progress` → research (read-only)
 4. Write **Response** on the card → `review`
 5. User asks to spawn → create **todo** child cards with `epic` + review-ready sections
-6. User moves inquiry → `done` when satisfied
+6. User moves inquiry → `done` when satisfied — **no** Card Done lessons capture
+
+## Card Done
+
+**Do not** run lessons learned capture when the user closes an **inquiry** card. Inquiry **Done** = user moves to `done/` only ([kanban-card-gates.mdc](../rules/kanban-card-gates.mdc)).
 
 ## Do not
 

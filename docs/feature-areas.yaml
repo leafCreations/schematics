@@ -499,6 +499,7 @@ areas:
       - helpers/orbit_texture_atlas.py
       - helpers/orbit_face_textures.py
       - helpers/orbit_partial_mesh.py
+      - helpers/orbit_attachable_mesh.py
       - helpers/block_texture_load.py
       - helpers/facing_block_textures.py
       - helpers/facade_projection.py
@@ -543,6 +544,7 @@ areas:
       - tests/test_orbit_preview.py
       - tests/test_orbit_greedy_mesh.py
       - tests/test_orbit_partial_mesh.py
+      - tests/test_orbit_attachable_mesh.py
       - tests/test_block_texture_load.py
       - tests/test_render_preview.py
       - tests/test_structure_facades.py
@@ -744,6 +746,8 @@ areas:
       - docs/development.md
     agents_skill: kanban-markdown
     agents_rules:
+      - kanban-card-gates.mdc
+      - kanban-feature-cards.mdc
       - kanban-bug-cards.mdc
       - kanban-review-qa.mdc
       - kanban-commit-issue-cards.mdc
@@ -767,6 +771,8 @@ areas:
       - .cursor/rules/agent-self-evaluation.mdc
       - .cursor/rules/agent-agents-md-maintenance.mdc
       - .cursor/rules/agent-consistency.mdc
+      - .cursor/rules/kanban-card-gates.mdc
+      - .cursor/rules/kanban-feature-cards.mdc
       - .cursor/rules/kanban-bug-cards.mdc
       - .cursor/rules/kanban-review-qa.mdc
       - .cursor/rules/kanban-commit-issue-cards.mdc
@@ -793,10 +799,10 @@ areas:
       - precommit-stash-old-hooks
       - lessons-by-area-routing
       - feature-areas-lesson-pointers
+      - kanban-prompt-ask-vs-agent
       - artifacts-doc-yaml-normalize
       - precommit-ruff-staged-venv
       - agent-no-tmp-venv
-      - governance-area-schema-defer-agents-table
       - governance-area-schema-parity-tests
     lesson_docs:
       - docs/development.md
@@ -806,6 +812,8 @@ areas:
       - agent-self-evaluation.mdc
       - agent-agents-md-maintenance.mdc
       - agent-consistency.mdc
+      - kanban-card-gates.mdc
+      - kanban-feature-cards.mdc
       - kanban-bug-cards.mdc
       - kanban-review-qa.mdc
       - kanban-commit-issue-cards.mdc

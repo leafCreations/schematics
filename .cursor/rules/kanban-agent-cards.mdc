@@ -27,11 +27,12 @@ Multi-card governance work uses shared `epic: "{PascalCase}"` and series `order`
 ## Workflow
 
 1. Confirm **Description** and **Feature Area** present (default Feature Area if omitted: `Agent Workflow`)
-2. Resolve **Feature Area** → **Label Paths** + **Label Methods**
-3. Fill **Acceptance Criteria** and **Decisions** on the card
-4. `todo` → `in-progress` → implement per **Decisions**
-5. Staged pytests green; update `docs/feature-areas.yaml` and `docs/` when registry or user docs change
-6. Mark **Acceptance Criteria** `[x]` → `review` → user: `done`
+2. Classify user **prompt verb** before edits — `review` / bare `@path` → ask-only; `implement` / `update` / `spawn` → agent ([kanban-card-gates.mdc](kanban-card-gates.mdc) §2; Signature: `kanban-prompt-ask-vs-agent`)
+3. Resolve **Feature Area** → **Label Paths** + **Label Methods**
+4. Fill **Acceptance Criteria** and **Decisions** on the card
+5. `todo` → `in-progress` → implement per **Decisions**
+6. Staged pytests green; update `docs/feature-areas.yaml` and `docs/` when registry or user docs change
+7. Mark **Acceptance Criteria** `[x]` → `review` → user: `done`
 
 ## Card Done `artifacts:` — registry yaml
 

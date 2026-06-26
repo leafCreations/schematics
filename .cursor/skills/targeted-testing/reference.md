@@ -40,6 +40,7 @@ Also: unmapped `*.py` changes, or >20 targeted test files accumulated.
 | `helpers/orbit_greedy_mesh.py`, `orbit_texture_atlas.py` | `test_orbit_preview`, `test_orbit_greedy_mesh` |
 | Partial vs solid culling | `test_orbit_partial_mesh.py` — riser + `test_lower_stair_slab_top_face_visible_on_open_half`, `test_orbit_stair_face_textures_are_opaque`, `test_orbit_cobblestone_stair_face_textures_are_opaque`, `test_orbit_fence_side_texture_uses_masked_bake`, `test_orbit_wall_side_texture_uses_masked_bake` |
 | `helpers/orbit_partial_mesh.py`, `orbit_face_textures.py`, `orbit_preview_widget.py` | `test_orbit_partial_mesh` (+ greedy/preview when mesh integration changes). Stair/slab opaque tiles; fence/wall masked bakes + shader discard. |
+| `helpers/orbit_attachable_mesh.py`, `partial_worlds` QA (lantern/fence wall hole) | `test_orbit_attachable_mesh.py` — `test_plank_face_toward_lantern_neighbor_is_not_culled`, `test_plank_face_toward_fence_neighbor_is_not_culled`, `test_greedy_mesh_plank_beside_fence_has_exterior_face`, `test_slab_neighbor_still_in_partial_worlds` |
 
 ### Orbit stair “missing faces” — diagnose first
 

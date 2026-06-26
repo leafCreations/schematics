@@ -1,0 +1,60 @@
+---
+description: Kanban card gates — label required, no card, prompt verb ask-only vs agent
+alwaysApply: true
+---
+
+# Kanban card gates
+
+Hard stops before **edits** (governance, card body, product code). Read [agent-routing.mdc](agent-routing.mdc) and [AGENTS.md](../../AGENTS.md) § Classify quickly. Signature: `kanban-prompt-ask-vs-agent`.
+
+## 1. Kanban card required (product work)
+
+**Do not** edit application code or ship product fixes unless the user assigned a **kanban card** under `.devtool/features/` **and** used an **agent verb** (§2).
+
+| User prompt | Mode | Allowed |
+| ----------- | ---- | ------- |
+| Question, explain, audit | **Ask-only** | Read-only |
+| Fix / implement / refactor **without** naming a card | **Ask-only** | Stop — kanban card required |
+| Names a card but **review-only** verb (§2) | **Ask-only** | Read card + codebase; chat only |
+
+**No surgical / ad-hoc product implementation** without a card + agent verb.
+
+## 2. Prompt verb gate (card named)
+
+Classify the user message **before** editing any file. Case-insensitive; `@path` or `.devtool/features/…` counts as naming a card.
+
+| Intent | Example prompts | Mode | Edits |
+| ------ | --------------- | ---- | ----- |
+| **Review card** | `review @…`, `review foo-2026-06-25`, `Kanban: review …` | **Ask-only** | Read + report in chat — **no** file edits |
+| **Bare card attach** | `@.devtool/features/foo.md` only | **Ask-only** | Summarize card — no edits until agent verb |
+| **Review + update** | `review and update …`, `review and implement …` | **Agent** | Card + governance (+ product per card type) |
+| **Update card** | `update … card` | **Agent** | Card `.md` + scoped work |
+| **Spawn from card** | `spawn cards from …`, `spawn follow-up` | **Agent** | New **todo** cards |
+| **Implement card** | `implement …`, `work on …`, `continue …` | **Agent** | Full card lifecycle |
+| **Answer inquiry** | `Kanban: answer inquiry on …` | **Agent** | **Response** on inquiry card |
+| **No card / default** | anything else | **Ask-only** | Per §1 |
+
+**Upgrade:** if ask-only review finds work needed, tell the user to retry with `review and update`, `update`, `spawn`, or `implement`.
+
+## 3. Frontmatter label required
+
+Every kanban card **must** have a recognized type in frontmatter `labels` (inline JSON array).
+
+| `labels` | Type | Card Done lessons |
+| -------- | ---- | ----------------- |
+| `["feature"]` | Feature | **Required** — [kanban-feature-cards.mdc](kanban-feature-cards.mdc) |
+| `["bug"]` | Bug | **Required** — [kanban-bug-cards.mdc](kanban-bug-cards.mdc) |
+| `["agent"]` | Agent | **Required** — [kanban-agent-cards.mdc](kanban-agent-cards.mdc) |
+| `["inquiry"]` | Inquiry | **Not allowed** — [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) |
+| `["commit-issue"]` | Commit-issue | **Required** — [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) |
+
+**Invalid** — stop **all** work on that card: missing `labels`, `labels: []`, or unknown label.
+
+## 4. Lessons learned scope
+
+| Label | User says **Done** |
+| ----- | ------------------ |
+| `feature`, `bug`, `agent`, `commit-issue` | Run § Card Done — lessons learned ([kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md)) |
+| `inquiry` | **Do not** run lessons capture |
+
+Signature: `kanban-lessons-label-scope`

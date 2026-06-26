@@ -47,7 +47,9 @@ AGENTS_CLASSIFY_SNIPPET = """
 
 | Signal | Mode | First read |
 | ------ | ---- | ---------- |
-| Kanban card assigned | **Review** | Card |
+| Review kanban card only (`review …`, bare `@path`) | **Ask-only** | Card |
+| Update / spawn / implement card (agent verbs) | **Agent** | Card |
+| Kanban: answer inquiry on … | **Agent** | Inquiry |
 | Pre-commit failed | **Unblock** | hooks |
 """
 
@@ -56,7 +58,9 @@ TRIAGE_CLASSIFY_SNIPPET = """
 
 | Signal | Mode | First action |
 | ------ | ---- | ------------ |
-| Kanban card assigned | **Review** | Card |
+| Review kanban card only (`review …`, bare `@path`) | **Ask-only** | Card |
+| Update / spawn / implement card (agent verbs) | **Agent** | Card |
+| Kanban: answer inquiry on … | **Agent** | Inquiry |
 | Pre-commit failed | **Unblock** | hooks |
 """
 
@@ -77,8 +81,11 @@ AGENTS_CARD_TYPES = """
 
 | Label | User provides | Agent provides |
 | ----- | ------------- | -------------- |
+| `feature` | Feature Areas | Decisions |
 | `bug` | Steps | Root Cause |
 | `inquiry` | Description | Response |
+| `agent` | Description | Decisions |
+| `commit-issue` | Problem | Corrective Action |
 """
 
 
@@ -91,7 +98,7 @@ def test_check_classify_parity_detects_missing_triage_row():
         AGENTS_CLASSIFY_SNIPPET,
         "## 1. Classify\n\n| Signal | Mode |\n| --- | --- |\n",
     )
-    assert any(PREFIX_ROUTING in line and "kanban card" in line.lower() for line in issues)
+    assert any(PREFIX_ROUTING in line and "review card" in line.lower() for line in issues)
 
 
 def test_check_failure_pattern_parity_detects_missing_reference_row():
@@ -382,7 +389,8 @@ def test_check_card_type_parity_detects_unknown_label():
 
 
 def test_check_card_type_parity_passes_for_known_labels():
-    assert check_card_type_parity({"bug"}, {"bug", "inquiry", "commit-issue", "agent"}) == []
+    known = {"feature", "bug", "inquiry", "commit-issue", "agent"}
+    assert check_card_type_parity({"bug"}, known) == []
 
 
 def test_run_checks_integration_pass(tmp_path: Path):

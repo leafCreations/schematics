@@ -39,13 +39,15 @@ Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. W
 
 ## Card Done — lessons learned (mandatory)
 
-When the user says the card is **done** / **closed** / ready for **Done**:
+When the user says a **`feature`**, **`bug`**, or **`agent`** card is **Done** (user moves file to `done/`):
 
-1. Read the card (including all **QA follow-up** bullets).
-2. Update **≥1 skill** + **≥1 rule** (different learnings) + relevant **`docs/`** / registry / `feature-areas.yaml`.
-3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card listing updated paths.
+1. Read all **Corrective Action** / **Decisions** + **QA follow-up** bullets on the card.
+2. Capture durable lessons in **≥1 area skill** + **≥1 scoped rule** + **`docs/`** (and `feature-areas.yaml` / `registries/` when applicable).
+3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card with links to updated artifacts.
 
-**User** moves `review` → `done/` — agents capture lessons, not column moves.
+**`inquiry` cards:** user **Done** → **no** lessons capture ([kanban-card-gates.mdc](kanban-card-gates.mdc)).
+
+Full checklist: kanban-markdown § Card Done — lessons learned capture. **Do not** move the card to Done for the user.
 
 ## Do not
 

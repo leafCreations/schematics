@@ -21,7 +21,8 @@ from helpers.orbit_partial_mesh import (
     OrbitBox,
     box_face_occluded,
     group_orbit_boxes_by_world,
-    is_partial_behavior,
+    is_orbit_box_behavior,
+    is_partial_volume_behavior,
     iter_all_orbit_boxes,
     solid_face_strip_half_toward_neighbor,
 )
@@ -141,9 +142,11 @@ def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData
     }
     all_boxes = iter_all_orbit_boxes(cells, layer_cells_cache)
     boxes_by_world = group_orbit_boxes_by_world(all_boxes)
-    solid_cells = [cell for cell in cells if not is_partial_behavior(cell.token)]
+    solid_cells = [cell for cell in cells if not is_orbit_box_behavior(cell.token)]
     voxel_map = {cell.world: cell for cell in solid_cells}
-    partial_worlds = frozenset(cell.world for cell in cells if is_partial_behavior(cell.token))
+    partial_worlds = frozenset(
+        cell.world for cell in cells if is_partial_volume_behavior(cell.token)
+    )
 
     atlas = OrbitTextureAtlas()
     merge_id_to_atlas: list[int] = []
@@ -385,7 +388,7 @@ def _collect_partial_box_faces(
     pending_quads: list[_PendingQuad],
 ) -> None:
     for index, box in enumerate(all_boxes):
-        if not is_partial_behavior(box.cell.token):
+        if not is_orbit_box_behavior(box.cell.token):
             continue
 
         for face_pass in _FACE_PASSES:

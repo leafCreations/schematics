@@ -114,7 +114,8 @@ While editing, run only the tests you care about, e.g. `pytest tests/test_ui_doc
 
 Agent routing and kanban process live outside application code:
 
-- [AGENTS.md](../AGENTS.md) — entry point; card types (`agent`, `bug`, `inquiry`, `commit-issue`); **Feature Areas** / **Feature Area** → **Label Paths** + **Label Methods**
+- [AGENTS.md](../AGENTS.md) — entry point; **prompt verb gate** (`review` → ask-only; `implement` / `update` / `spawn` → agent); card types; Card Done lessons scope
+- [kanban-card-gates.mdc](../.cursor/rules/kanban-card-gates.mdc) — §2 Ask-only vs Agent prompts (canonical table)
 - [kanban-markdown/SKILL.md](../.cursor/skills/kanban-markdown/SKILL.md) — card lifecycle; **prior lessons gate** before Decisions/CA; registry maintenance
 - `python scripts/resolve_feature_areas.py "<label>"` — paths; `--handlers` for registry entry-point symbols; `--lessons` for curated `lesson_signatures` / `lesson_docs`
 - `python3 scripts/resolve_prior_lessons.py --epic "<Epic>" "<Feature Area>" --paths …` — done/archived-card lessons + open commit-issue overlap + **Registry lesson pointers** when present

@@ -19,6 +19,9 @@ from helpers.utils import normalize_direction
 from helpers.utils_schematics import corner_stair_facing_rotation
 
 PARTIAL_BEHAVIORS = frozenset({"slab", "stairs", "fence", "wall"})
+ATTACHABLE_BEHAVIORS = frozenset({"torch", "lantern", "bed", "chest", "trapdoor", "door"})
+ORBIT_BOX_BEHAVIORS = PARTIAL_BEHAVIORS | ATTACHABLE_BEHAVIORS
+PARTIAL_VOLUME_BEHAVIORS = frozenset({"slab", "stairs"})
 
 POST_MIN = 0.375
 POST_MAX = 0.625
@@ -49,9 +52,28 @@ def is_partial_behavior(token: str) -> bool:
     return get_block_behavior(entry) in PARTIAL_BEHAVIORS
 
 
+def is_partial_volume_behavior(token: str) -> bool:
+    parsed = parse_structure_token(token)
+    if parsed is None:
+        return False
+    entry = get_block_entry(parsed) or {}
+    return get_block_behavior(entry) in PARTIAL_VOLUME_BEHAVIORS
+
+
+def is_orbit_box_behavior(token: str) -> bool:
+    parsed = parse_structure_token(token)
+    if parsed is None:
+        return False
+    entry = get_block_entry(parsed) or {}
+    return get_block_behavior(entry) in ORBIT_BOX_BEHAVIORS
+
+
 def iter_orbit_boxes_for_cell(
     cell: OccupiedVoxel,
     layer_cells: CellGrid,
+    *,
+    layer_cells_cache: dict[int, CellGrid] | None = None,
+    cell_by_world: dict[tuple[int, int, int], OccupiedVoxel] | None = None,
 ) -> list[OrbitBox]:
     parsed = parse_structure_token(cell.token)
     if parsed is None:
@@ -68,6 +90,21 @@ def iter_orbit_boxes_for_cell(
     if behavior in {"fence", "wall"}:
         return _fence_boxes(cell, layer_cells, wx, wy, wz)
 
+    if behavior in ATTACHABLE_BEHAVIORS:
+        from helpers.orbit_attachable_mesh import attachable_boxes_for_cell
+
+        return attachable_boxes_for_cell(
+            cell,
+            entry,
+            parsed,
+            layer_cells,
+            layer_cells_cache=layer_cells_cache,
+            cell_by_world=cell_by_world,
+            wx=wx,
+            wy=wy,
+            wz=wz,
+        )
+
     return _full_block_box(cell)
 
 
@@ -75,10 +112,18 @@ def iter_all_orbit_boxes(
     cells: list[OccupiedVoxel],
     layer_cells_cache: dict[int, CellGrid],
 ) -> list[OrbitBox]:
+    cell_by_world = {cell.world: cell for cell in cells}
     boxes: list[OrbitBox] = []
     for cell in cells:
         layer_cells = layer_cells_cache.get(cell.layer_list_index, [])
-        boxes.extend(iter_orbit_boxes_for_cell(cell, layer_cells))
+        boxes.extend(
+            iter_orbit_boxes_for_cell(
+                cell,
+                layer_cells,
+                layer_cells_cache=layer_cells_cache,
+                cell_by_world=cell_by_world,
+            ),
+        )
     return boxes
 
 

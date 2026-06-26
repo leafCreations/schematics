@@ -18,7 +18,7 @@ Which artifacts must agree after a governance change. **Notes** are grep targets
 | [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 handoff | AGENTS.md End handoff, [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) | `### Files used`, `### Self-evaluation` fields |
 | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | Rules (**Signature** only), § Failure pattern routing below, [testing.mdc](../../rules/testing.mdc) | Five columns per §6f |
 | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | [targeted-testing/reference.md](../targeted-testing/reference.md), testing.mdc `precommit-*` | Area hook patterns |
-| [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table | **Prior lessons gate**; `bug`, `inquiry`, `commit-issue`, `agent`, feature; **QA follow-up**; **Lessons captured**; **Label Paths** + **Label Methods** |
+| [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table | **Card label gate**; `feature` / `bug` / `agent` / `inquiry` / `commit-issue`; lessons **only** feature/bug/agent/commit-issue; **no card** → ask-only |
 | [docs/development.md](../../docs/development.md) Cursor agent workflow | AGENTS.md, agent-consistency.mdc | When user-facing agent docs change |
 | [docs/feature-areas.yaml](../../docs/feature-areas.yaml) governance keys | AGENTS.md Maintaining table, docs/development.md § Governance area schema | `agents_skill`, `agents_rules`, `lesson_routing_row`; **gs0–gs3 complete** — Signature `governance-area-schema-defer-agents-table` (no AGENTS **Area → skills & rules** sync until follow-up epic); parity via `check_area_schema_parity` + `--agents-parity` |
 
@@ -80,24 +80,27 @@ Place in handoff `- **Drift alerts:**` as `KNOWN_DRIFT: …` (no `[severity]` br
 
 | Signal | Mode | First action (short) |
 | ------ | ---- | -------------------- |
-| Kanban card / implement from card | Review first → implement | kanban-markdown + card; § Prior lessons gate before Decisions/CA |
-| Review QA issue / user screenshot fix | Surgical / Review | kanban-review-qa.mdc + **QA follow-up** + refresh **Feature Areas** / **Label Paths** / **Label Methods** when scope changes |
-| User says card Done / closed | Governance | kanban-markdown § Card Done — lessons learned |
+| **Review** kanban card only (`review …`, bare `@path`) | Ask-only | kanban-card-gates §2 — no edits |
+| **Update / spawn / implement** card (agent verbs) | Agent | kanban-markdown + prior lessons gate |
+| `Kanban: answer inquiry on …` | Agent | Inquiry **Response** |
+| Card missing / empty / unknown `labels` | Block | Stop — user fixes frontmatter `labels` |
+| Implement / fix without a card | Ask-only | No product edits — kanban card required |
+| Review QA on assigned card | Review | kanban-review-qa.mdc + **QA follow-up** + refresh card scope |
+| User says feature / bug / agent / commit-issue Done | Governance | kanban-markdown § Card Done — lessons learned |
+| User says inquiry Done | Close only | No lessons capture |
 | AGENTS.md governance audit | Read-only | kanban-markdown § Periodic AGENTS.md governance audit |
-| Explain / audit / is this correct? | Read-only | Grep + read |
-| One error, lint, typo, ad-hoc bug | Surgical | Grep → 1–3 files |
-| Multi-file feature (no card) | Implementation | repo-map + reference |
+| Explain / audit / is this correct? | Ask-only | Grep + read |
 | Pre-commit failed | Unblock / Review | §1b pre-commit + self-eval reference |
-| Failing test / pytest / ruff / lint | Surgical / Unblock | §1b failure pattern routing |
-| UI wiring / dialog not persisting | Surgical | §1b `ui-dialog-no-persist` |
-| Orbit 3D holes / transparent partial blocks | Surgical | §1b `orbit-stair-mask-transparency` |
-| Agent handoff / process mistake | Surgical | §1b self-eval reference patterns |
-| Agent created `.tmp-venv` / missing project venv | Surgical | §1b `agent-no-tmp-venv` → [targeted-testing](../targeted-testing/SKILL.md); use `.venv` not throwaway venv |
+| Failing test / pytest / ruff (no card) | Ask-only / Unblock | §1b failure pattern routing |
+| UI wiring / dialog (no card) | Ask-only | §1b `ui-dialog-no-persist` |
+| Orbit 3D holes (no card) | Ask-only | §1b `orbit-stair-mask-transparency` |
+| Agent handoff / process mistake | Governance | §1b self-eval reference patterns |
+| Agent `.tmp-venv` / missing venv | Ask-only / Unblock | §1b `agent-no-tmp-venv` |
 | Repeated mistake / churn | Grep | §1b failure pattern routing |
 | Run tests / commit-ready | Verify | targeted-testing / pre-commit-pytest.sh |
-| Area lesson lookup (kanban + Feature Areas) | Review first | `docs/lessons-index.yaml` area block + § Lessons by area → `resolve_prior_lessons.py` |
+| Area lesson lookup (kanban + Feature Areas) | Review first | lessons-index.yaml + § Lessons by area → `resolve_prior_lessons.py` |
 
-Ad-hoc bugs → **Surgical**. Named **To Do** card → [kanban-markdown](../kanban-markdown/SKILL.md). **Bug** cards: [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc). **Inquiry** cards: research + **Response** — [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc).
+**Kanban + agent verb for implementation** — [kanban-markdown](../kanban-markdown/SKILL.md). Signatures: `kanban-prompt-ask-vs-agent`, `kanban-lessons-label-scope`.
 
 ## Lessons by area (read before card grep)
 
@@ -110,7 +113,7 @@ After resolving **`## Feature Areas`** or agent **`## Feature Area`** — **befo
 | **Render Preview** — stair / fence / wall holes | `lessons-index.yaml` `Render Preview`; Signatures `orbit-stair-mask-transparency`, `orbit-fence-mask-transparency` → [ui-change/SKILL.md](../ui-change/SKILL.md) § Orbit lessons |
 | Pre-commit / hook / pytest scope | `lessons-index.yaml` `Agent Workflow` or `_uncategorized`; [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns; `precommit-stash-old-hooks`, `precommit-ruff-staged-venv`, `agent-no-tmp-venv` |
 | **Properties Panel** — `MainWindow.__new__` tests | `lessons-index.yaml` `Properties Panel`; Signature `precommit-mainwindow-__new__-test` → [testing.mdc](../../rules/testing.mdc) |
-| **Agent Workflow** — routing / kanban / index | `lessons-index.yaml` `Agent Workflow`; Signature `feature-areas-lesson-pointers`; [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Prior lessons gate |
+| **Agent Workflow** — routing / kanban / index | `lessons-index.yaml` `Agent Workflow`; Signatures `feature-areas-lesson-pointers`, `kanban-prompt-ask-vs-agent`; [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2; [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Prior lessons gate |
 | **Agent Workflow** — governance area schema (gs0–gs3) | `lessons-index.yaml` `Agent Workflow`; `resolve_feature_areas.py --agents-parity`; `check_area_schema_parity`; Signatures `governance-area-schema-defer-agents-table`, `governance-area-schema-parity-tests` |
 | **Feature Area Registry** — lesson pointers | `lessons-index.yaml` `Feature Area Registry`; `docs/feature-areas.yaml` `lesson_signatures` / `lesson_docs`; `resolve_feature_areas.py --lessons` |
 | **Palette Registry** — texture / orbit overlap | `lessons-index.yaml` `Palette Registry`; Signature `orbit-animated-texture-strip` |
@@ -129,6 +132,10 @@ Run after §1 classifies a **failure** — not on every turn. Grep **Trigger sni
 | UI wiring / dialog / persist | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `ui-dialog-no-persist`, `_persist_dialog_changes` |
 | Orbit 3D holes / transparent stairs | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `orbit-stair-mask-transparency`, `test_orbit_stair_face_textures_are_opaque` |
 | Worldgen / placement / functional blocks | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) + `.cursor/rules/worldgen.mdc` | `residence` stage 1 for chest NBT tests (see worldgen rule) |
+| `kanban-no-card-implement` | implement without card | §1b `kanban-no-card-implement` → [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) |
+| `kanban-prompt-ask-vs-agent` | edits on `review @card` only; bare `@path` | §1b `kanban-prompt-ask-vs-agent` → kanban-card-gates §2; upgrade to `review and update` / `implement` |
+| `kanban-missing-label` | invalid card `labels` | §1b `kanban-missing-label` → kanban-markdown § Card label gate |
+| `kanban-lessons-label-scope` | lessons on inquiry Done | §1b `kanban-lessons-label-scope` → [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) |
 | Agent handoff / kanban / AGENTS.md / self-eval | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `self-eval-skipped`, `kanban-roadmap-queue`, `agents-md-stale`, `handoff-missing-files-context`, `agent-no-tmp-venv` |
 | Card Done `artifacts:` / lessons index bad `doc:` paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `artifacts-doc-yaml-normalize`, `lessons-index.yaml.md`, `doc:lessons-index` |
 | Governance area schema / parity drift | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `governance-area-schema-parity-tests`, `governance-area-schema-defer-agents-table`, `Registry drift alert`, `check_governance_parity` |

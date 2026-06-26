@@ -68,9 +68,12 @@ LABEL_PATHS_BY_PREFIX: dict[str, list[str]] = {
     PREFIX_CARD: [
         "AGENTS.md",
         ".cursor/skills/kanban-markdown/SKILL.md",
+        ".cursor/rules/kanban-card-gates.mdc",
+        ".cursor/rules/kanban-feature-cards.mdc",
         ".cursor/rules/kanban-bug-cards.mdc",
         ".cursor/rules/kanban-commit-issue-cards.mdc",
         ".cursor/rules/kanban-inquiry-cards.mdc",
+        ".cursor/rules/kanban-agent-cards.mdc",
     ],
     PREFIX_FAILURE: [
         ".cursor/skills/agent-self-evaluation/reference.md",
@@ -115,14 +118,24 @@ _HANDLER_SYMBOL_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-
 
 # Anchor phrases for Classify quickly ↔ triage §1 parity (order matters for messages).
 CLASSIFY_ANCHORS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("kanban card", ("kanban card",)),
+    ("review card only", ("review card", "review …", "bare `@path`")),
+    (
+        "agent verb on card",
+        (
+            "agent verbs",
+            "review and update",
+            "spawn cards from",
+            "answer inquiry on",
+        ),
+    ),
+    ("card missing label", ("missing", "unknown `labels`", "empty / unknown")),
+    ("no card implement", ("without", "a card", "implement / fix")),
+    ("inquiry done", ("inquiry", "done", "close only")),
     ("governance audit", ("governance audit",)),
     ("explain / audit", ("explain", "is this correct")),
-    ("ad-hoc bug", ("one error", "ad-hoc bug", "lint, typo")),
-    ("multi-file feature", ("multi-file", "no card", "refactor (no card)")),
     ("pre-commit failed", ("pre-commit failed",)),
     ("pytest / ruff", ("failing test", "pytest", "ruff / lint")),
-    ("ui wiring", ("ui wiring", "dialog not persisting")),
+    ("ui wiring", ("ui wiring", "dialog")),
     ("agent handoff", ("agent handoff", "process mistake")),
     ("repeated churn", ("repeated mistake", "familiar churn", "churn")),
     ("run tests / commit-ready", ("run tests", "commit-ready", '"run tests"')),
@@ -393,7 +406,7 @@ dueDate: null
 created: "{now}"
 modified: "{now}"
 completedAt: null
-labels: []
+labels: ["feature"]
 order: "{order}"
 ---
 """

@@ -145,7 +145,7 @@ Copying the full kanban lifecycle into a rule when kanban-markdown/SKILL.md alre
 | §6 Scope | Unrelated edits? | agent-triage | — |
 | §6g Governance | Edited agent-consistency `globs`? | agent-self-evaluation §6g; [agent-triage/reference.md](../agent-triage/reference.md) § Consistency matrix | agent-consistency.mdc |
 | §8 Checklist | Docs pass when code changed? | docs-maintenance | — |
-| Kanban label type | Wrong section split on card? | kanban-markdown | kanban-bug-cards.mdc, kanban-inquiry-cards.mdc |
+| Kanban label type | Wrong section split on card? | kanban-markdown | kanban-card-gates.mdc, kanban-feature-cards.mdc, kanban-bug-cards.mdc, kanban-inquiry-cards.mdc |
 
 ## Common failure patterns in this repo
 
@@ -158,6 +158,11 @@ Canonical cross-cutting table. Row schema: [SKILL.md](SKILL.md) §6f. Pre-commit
 | `ui-dialog-no-persist` | dialog OK without `_persist_dialog_changes` | ui-change checklist on accept | ui-change | ui-dialogs.mdc |
 | `self-eval-skipped` | missing `### Self-evaluation` | Required every turn — §7 handoff | agent-self-evaluation | agent-self-evaluation.mdc |
 | `self-eval-missing-rules-updated` | handoff missing `Rules updated:` | Handoff template §7 | agent-self-evaluation | agent-self-evaluation.mdc |
+| `kanban-no-card-implement` | fix/implement/refactor without kanban card path | Ask-only — stop; user must assign `.devtool/features/` card | agent-triage | kanban-card-gates.mdc |
+| `kanban-prompt-ask-vs-agent` | file edits on `review @card` only or bare `@path` attach | Ask-only per kanban-card-gates §2; user retries with `review and update` / `implement` / `spawn` | agent-triage | kanban-card-gates.mdc |
+| `kanban-missing-label` | card `labels` missing, `[]`, or unknown | Stop — user sets `feature` / `bug` / `agent` / `inquiry` / `commit-issue` | kanban-markdown | kanban-card-gates.mdc |
+| `kanban-lessons-label-scope` | lessons capture on inquiry Done | Skip Card Done lessons for `inquiry`; run for `feature` / `bug` / `agent` / `commit-issue` | kanban-markdown | kanban-card-gates.mdc |
+| `kanban-card-stale-dependency-links` | Context/Decisions links to cards moved to `archived/` or `done/` | Refresh paths + mark deps open vs closed on pre-implementation review | kanban-markdown | kanban-feature-cards.mdc |
 | `kanban-roadmap-queue` | `docs/roadmap.md` as task queue | Use [AGENTS.md](../../AGENTS.md) + agent-routing.mdc | agent-triage | agent-routing.mdc |
 | `handoff-missing-files-context` | missing `### Files used` or **Context load** | §7 two-section end | agent-self-evaluation | agent-self-evaluation.mdc |
 | `agents-md-stale` | workflow change without AGENTS.md update | §2b check 4 — update routing guide | agent-triage | agent-routing.mdc |

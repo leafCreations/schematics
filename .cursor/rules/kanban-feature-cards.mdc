@@ -1,0 +1,59 @@
+---
+description: Kanban feature cards — explicit feature label, implementation + Card Done lessons
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban feature cards
+
+When frontmatter is **`labels: ["feature"]`** (inline JSON array — required form), follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Feature cards.
+
+**Do not** use empty `labels: []` — that is **invalid**; stop and ask the user to set `labels: ["feature"]` ([agent-routing.mdc](agent-routing.mdc) § Card label gate).
+
+## Frontmatter (required on create)
+
+```yaml
+labels: ["feature"]
+```
+
+## User provides
+
+- Story / summary, **`## Feature Areas`**, **`## Acceptance Criteria`** (or agent drafts at review)
+- **`## Verify`** (optional — manual app checks)
+
+## Agent provides (pre-implementation card review)
+
+- **`## Label Paths`** — resolved from Feature Areas via `docs/feature-areas.yaml`
+- **`## Label Methods`** — symbols to edit (when Feature Areas set)
+- **`## Decisions`** — concrete plan before `in-progress`
+- **`## Acceptance Criteria`** — testable bullets `[ ]` when missing
+
+## Card Done — lessons learned (mandatory)
+
+When the user says the card is **Done** (user moves file to `done/`):
+
+1. Run [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
+2. Update **≥1 skill** + **≥1 rule** + relevant **`docs/`** / registry.
+3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card.
+
+**Do not** skip lessons capture because AC were already `[x]`.
+
+## Workflow
+
+1. Confirm **`labels: ["feature"]`** and user story / Feature Areas present
+2. Resolve Feature Areas → Label Paths + Label Methods
+3. Prior lessons gate → refresh **Context** / **Decisions** card links (`archived/` / `done/`; mark closed deps) → **Decisions** → `todo` → `in-progress` → implement
+4. Staged pytests green; `docs/feature-areas.yaml` + `docs/` updated
+5. Mark AC `[x]` → `review` → user Verify / QA
+6. User **Done** → lessons learned (not optional)
+
+## Do not
+
+- Use **`## Corrective Action`** or **`## Response`** on feature cards
+- Implement without an assigned kanban card ([agent-routing.mdc](agent-routing.mdc))
+- Leave **`## Decisions`** as `TBD` before `in-progress`
+- Skip **Label Methods** when Feature Areas are set
+
+## Full workflow
+
+[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Feature cards + implementation gates.

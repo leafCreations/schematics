@@ -41,7 +41,7 @@ description: >-
 | **To Do** (`todo`) | **Read** — this is the work queue |
 | **In Progress** (`in-progress`) | **Update** — feature/bug/agent/commit-issue: after card review **and** **`## Decisions`** or **`## Corrective Action`**; inquiry: while researching |
 | **Review** (`review`) | **Update** — move here when implementation is complete (`in-progress` → `review`); implement **`## QA Review`** when the user asks; **record QA fixes** on the card (§ User-reported QA fixes) |
-| **Done** (`done`) | **Do not move** — user moves here after manual app review; when user says **Done**, agent runs **lessons learned capture** (§ Card Done — lessons learned) |
+| **Done** (`done`) | **Do not move** — user moves here after manual app review; when user says **Done**, agent runs **lessons learned capture** only for **`feature` / `bug` / `agent` / `commit-issue`** (§ Card Done). **`inquiry` Done → no lessons.** |
 | **Backlog** (`backlog`) | **Ignore** — user-managed; do not list, prioritize, or create cards here unless the user explicitly asks |
 
 Do **not** grep or summarize Backlog cards when the user asks “what should I work on?” or similar.
@@ -62,19 +62,15 @@ When the user assigns work, resolve the card using this precedence (best first):
 **Recommended user prompts:**
 
 ```text
-Kanban: implement render-selection-2026-06-22 — review the card first.
+Review .devtool/features/render-selection-2026-06-22.md
 ```
 
 ```text
-Work on .devtool/features/render-selection-2026-06-22.md
+Review and update .devtool/features/render-selection-2026-06-22.md
 ```
 
 ```text
-  Review and implement the first To Do card.
-```
-
-```text
-Kanban: implement QA Review on render-selection-2026-06-22.
+Kanban: implement render-selection-2026-06-22.
 ```
 
 ```text
@@ -93,9 +89,20 @@ Kanban: answer inquiry on my-card-id.
 
 If multiple To Do cards match, list titles + paths and ask the user to pick one.
 
-## End-to-end lifecycle
+### Ask-only vs Agent prompts
 
-**Feature cards** (default):
+Classify the user message **before** any edit. Full table: [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2.
+
+| Mode | When | User examples |
+| ---- | ---- | ------------- |
+| **Ask-only** | `review …` without update/implement/spawn; bare `@.devtool/features/…`; no card | `review @foo.md`, `review enforce-ask-only-…` |
+| **Agent** | Agent verb + card (path, `id`, or title) | `review and update …`, `update … card`, `spawn cards from …`, `implement …`, `Kanban: answer inquiry on …` |
+
+**Ask-only review** — read card + codebase; report in chat; **do not** edit card body, governance, or product code until the user upgrades the verb.
+
+**Promoted lesson (2026-06-25):** Two gates stack — (1) no card → ask-only (`kanban-no-card-implement`); (2) card named + review-only verb → ask-only (`kanban-prompt-ask-vs-agent`). User upgrades with `review and update`, `update`, `spawn`, or `implement`. Keep **Classify quickly** ↔ triage §1 ↔ `CLASSIFY_ANCHORS` (`review card only`, `agent verb on card`) in sync when changing either gate.
+
+**Feature cards** (`labels: ["feature"]`):
 
 ```text
 User assigns card (path or title)
@@ -456,7 +463,7 @@ When the user asks to **implement recommendations**, **spawn follow-ups**, or **
 2. For each recommended **feature** (or **bug** if specified):
    - Create `.devtool/features/{id}.md` with `status: "todo"` — **never Backlog**
    - Set `epic: "{EpicName}"` — PascalCase theme from inquiry title or user (e.g. `DesignFailureMemorySystem`)
-   - Set `labels: []` for features or `labels: ["bug"]` for bugs
+   - Set `labels: ["feature"]` for features or `labels: ["bug"]` for bugs
    - `order` — append after existing **todo** cards (`a0`, `a1`, …)
 3. **Feature card body** (review-ready — agent fills agent sections at spawn time):
 
@@ -564,7 +571,7 @@ For **bug** cards, use the section order in § Bug cards instead. For **inquiry*
 
 **When creating or updating cards (user):**
 
-- **Feature cards:** add **`## Feature Areas`** with 1–5 backtick-quoted labels; optional **`## Acceptance Criteria`** if you write AC yourself (otherwise agent fills during review)
+- **Feature cards** (`labels: ["feature"]`): add **`## Feature Areas`** with 1–5 backtick-quoted labels; optional **`## Acceptance Criteria`** if you write AC yourself (otherwise agent fills during review)
 - **Bug cards** (`labels: ["bug"]`): provide **`## Steps to Reproduce`**, **`## Current Behavior`**, **`## Expected Behavior`**, **`## Feature Areas`**; leave agent sections empty
 - **Inquiry cards** (`labels: ["inquiry"]`): provide **`## Description`**; **`## Feature Areas`** optional; leave **`## Response`** for the agent
 - **Agent cards** (`labels: ["agent"]`): provide **`## Description`** and **`## Feature Area`** (default `` `Agent Workflow` ``); leave agent sections empty
@@ -800,7 +807,14 @@ Mention label updates in the **`**QA follow-up**`** bullet when paths/methods ch
 
 The **user** moves cards to **Done** (`done/{id}.md`). When the user says the card is **done**, **closed**, **move to Done**, or equivalent **after** accepting Review:
 
-**Agent must run lessons learned capture in that turn** (even if no code changes in that turn):
+**Label scope (mandatory):**
+
+| `labels` | Lessons capture |
+| -------- | --------------- |
+| `feature`, `bug`, `agent`, `commit-issue` | **Run** this section — [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) |
+| `inquiry` | **Do not run** — close inquiry only; no skill/rule/doc updates for Card Done |
+
+**Agent must run lessons learned capture in that turn** for in-scope labels (even if no code changes in that turn):
 
 1. **Read** the full card — original **Corrective Action** / **Decisions**, all **`**QA follow-up**`** bullets, **Feature Areas**, **Context**.
 2. **Distill** durable lessons (symptom → root cause → fix pattern → tests) — not a copy-paste of the whole card.
@@ -836,16 +850,32 @@ The **user** moves cards to **Done** (`done/{id}.md`). When the user says the ca
 
 **If user says Done but QA follow-ups are open:** ask whether to defer, spawn child cards, or waive before capturing lessons.
 
+## Card label gate (before any work)
+
+Read frontmatter `labels` on every assigned card **before** pre-implementation review or inquiry research.
+
+| `labels` | Valid? | Action |
+| -------- | ------ | ------ |
+| `["feature"]` | yes | Feature workflow — [kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc) |
+| `["bug"]` | yes | Bug workflow |
+| `["agent"]` | yes | Agent workflow |
+| `["inquiry"]` | yes | Inquiry workflow — **no** Card Done lessons |
+| `["commit-issue"]` | yes | Commit-issue workflow |
+| missing, `[]`, or unknown | **no** | **Stop** — inform user a valid label is required ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc)) |
+
+**Spawn / create cards** with explicit labels — use `labels: ["feature"]` for features (not `labels: []`).
+
 ## Reading the board
 
 **Default for agents:** To Do column only.
 
 1. `Grep` for `status: "todo"` under `.devtool/features/`
 2. Sort matches by `order` (lexicographic fractional index)
-3. Read each card’s type (`labels`: feature / **bug** / **inquiry** / **agent** / **commit-issue**), **`## Feature Areas`** or **`## Feature Area`**, **`## Label Paths`**, **`## Label Methods`**, then other sections
-4. **Feature / bug:** run **pre-implementation card review** (see below) — do **not** implement yet
-5. **Inquiry:** run **inquiry card review** (see § Inquiry cards) — research and **`## Response`** only
-6. After review, move `todo` → `in-progress` and work the card (implement for feature/bug/agent; research for inquiry)
+3. Read each card’s type (`labels`: **`feature`** / **bug** / **inquiry** / **agent** / **commit-issue**), **`## Feature Areas`** or **`## Feature Area`**, **`## Label Paths`**, **`## Label Methods`**, then other sections
+4. **Label gate** — invalid/missing `labels` → stop; do not implement
+5. **Feature / bug / agent / commit-issue:** run **pre-implementation card review** (see below) — do **not** implement yet
+6. **Inquiry:** run **inquiry card review** (see § Inquiry cards) — research and **`## Response`** only
+7. After review, move `todo` → `in-progress` and work the card (implement for feature/bug/agent; research for inquiry)
 
 **Governance lessons queue (`ArtifactsDocYaml`, `LessonsCoverageMetric`, `GovernanceAreaSchema`):** read **To Do** and **Backlog** when the user assigns an epic name, asks for cross-epic order, or re-prioritizes governance work. Sort matching cards by frontmatter `order` (`a0`–`a9` for the current ten-card queue); phase ids (`ap0`, `lc0`, `gs0`, …) live in **Context** tables, not in `order`.
 
@@ -869,6 +899,7 @@ For a card already in progress, grep `status: "in-progress"` or `status: "review
 8. **Report to the user:**
    - **Clarifications** — ambiguities, missing scope, or criteria that need a user answer
    - **Improvements** — suggested edits to the card (wording, scope, feature areas)
+   - **Stale links** — when **Context** / **Decisions** cite sibling cards, rewrite paths to `archived/` or `done/` and mark dependency **done** vs open (Signature: `kanban-card-stale-dependency-links`)
 9. **Resolve before implementing:**
    - Apply agreed card improvements to the `.md` file (bump `modified`)
    - Get explicit user answers for clarifications, or explicit user approval to proceed when none remain
@@ -946,7 +977,7 @@ dueDate: null
 created: "2026-02-20T10:00:00.000Z"
 modified: "2026-02-20T10:00:00.000Z"
 completedAt: null
-labels: []
+labels: ["feature"]
 order: "a0"
 ---
 
@@ -964,7 +995,7 @@ Description and acceptance criteria.
 
 - String fields: always `"double-quoted"`
 - Nullable fields (`assignee`, `dueDate`, `completedAt`): bare `null` when unset
-- `labels`: keep `[]` for feature/agent cards; **bug cards:** exactly `labels: ["bug"]` (inline JSON array on one line — **not** block-list `labels:\n  - bug`); inquiry `labels: ["inquiry"]`; commit-issue `labels: ["commit-issue"]`
+- `labels`: **`["feature"]`** for feature cards; **`["bug"]`** for bugs; **`["inquiry"]`**; **`["agent"]`**; **`["commit-issue"]`** — inline JSON array on one line (**not** `labels: []` or block-list)
 - Order: `"double-quoted"` fractional index
 - Field order: `id`, `status`, `priority`, `assignee`, `dueDate`, `created`, `modified`, `completedAt`, `labels`, `order`
 

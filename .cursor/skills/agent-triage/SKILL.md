@@ -19,7 +19,7 @@ Decide **how** to work before reading files or running commands. Follow this ski
 
 **Version / Minecraft facts:** read [project-context](../project-context/SKILL.md) before web search or assuming 1.x vs 26.x.
 
-**Planned work:** read [kanban-markdown](../kanban-markdown/SKILL.md) — **To Do** only; **ignore Backlog**; card types: **feature** (default), **bug** (`labels` includes `bug`), **inquiry** (`labels` includes `inquiry`), **agent** (`labels` includes `agent` — user **Description** + **Feature Area**), **commit-issue** (`labels` includes `commit-issue` — auto-captured failed commits); pre-implementation card review before feature/bug/agent/commit-issue code; inquiry cards get **`## Response`** only (research, no code by default); resolve **`## Feature Areas`** or agent **`## Feature Area`** → **`## Label Paths`** + **`## Label Methods`** via `docs/feature-areas.yaml` when areas are set; agent writes **`## Decisions`** (feature, agent) or **`## Corrective Action`** + **`## Root Cause (current code)`** (bug, commit-issue) before `in-progress`; **MUST** update `docs/feature-areas.yaml` after every **implementation**; **MUST** review and update **`docs/`** per [docs-maintenance](../docs-maintenance/SKILL.md) (no exceptions); **MUST** mark **`## Acceptance Criteria` `[x]`** before feature/bug/agent `in-progress` → `review`; Python edits ≤ **100** chars per line (Ruff E501); do **not** use `docs/roadmap.md`.
+**Planned work:** read [kanban-markdown](../kanban-markdown/SKILL.md) — **To Do** only; card types: **`feature`**, **bug**, **inquiry**, **agent**, **commit-issue**; **prompt verb gate** ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2 — `review` → ask-only; `implement` / `update` / `spawn` → agent); no card → ask-only; invalid `labels` → stop; Card Done lessons for **feature / bug / agent / commit-issue** only; resolve Feature Areas → Label Paths + Label Methods; update registry + **`docs/`** after implementation; Python ≤ **100** chars (E501).
 
 ## 1. Classify the request
 
@@ -27,27 +27,27 @@ Mirrors [AGENTS.md](../../AGENTS.md) § **Classify quickly** (canonical). On dri
 
 | Signal | Mode | First action |
 | ------ | ---- | ------------ |
-| Kanban card assigned | **Review first** → implement | Card + [kanban-markdown](../kanban-markdown/SKILL.md) § Prior lessons gate |
-| Review QA issue / screenshot fix | **Surgical** or **Review** | Fix + **QA follow-up** + refresh card **Feature Areas** / **Label Paths** / **Label Methods** when scope changes ([kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc)) |
-| User says card **Done** / closed | **Governance** | [kanban-markdown](../kanban-markdown/SKILL.md) § Card Done — lessons learned; ≥1 skill + ≥1 rule |
-| AGENTS.md governance audit card | **Read-only** | `python3 scripts/create_governance_audit_card.py` (user) → [kanban-markdown](../kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit → **## Audit findings** → `review` |
-| Explain, review, audit, "is this correct?" | **Read-only** | No edits. Grep/Read only. |
-| One error, lint, typo, ad-hoc bug | **Surgical** | Grep → Read 1–3 files → minimal edit |
-| Feature, multi-file, refactor (no card) | **Implementation** | [repo-map](../repo-map/SKILL.md) + [reference.md](reference.md) → [docs-maintenance](../docs-maintenance/SKILL.md) before Review |
-| Pre-commit failed | **Unblock** / **Review** | §1b → pre-commit + self-eval reference; `commit-issue` card → [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc) when user asks |
-| Failing test / pytest / ruff / lint | **Surgical** or **Unblock** | §1b → [reference.md](reference.md) § Failure pattern routing |
-| UI wiring / dialog not persisting | **Surgical** | §1b `ui-dialog-no-persist` → [ui-change](../ui-change/SKILL.md) |
-| Orbit 3D holes / transparent partial blocks | **Surgical** | §1b `orbit-stair-mask-transparency` → [ui-change](../ui-change/SKILL.md) § Orbit lessons; `test_orbit_stair_face_textures_are_opaque` |
-| Agent handoff / kanban / process mistake | **Surgical** | §1b → [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns |
-| Agent created `.tmp-venv` / pytest without `.venv` | **Surgical** | §1b `agent-no-tmp-venv` → [targeted-testing](../targeted-testing/SKILL.md) |
-| Repeated mistake / familiar churn | **Grep** | §1b — [reference.md](reference.md) § Failure pattern routing |
-| "Run tests" / verify | **Verify** | [targeted-testing](../targeted-testing/SKILL.md) — smallest test set |
-| User will commit / "commit-ready" | **Verify** | `scripts/pre-commit-pytest.sh` on staged files → green → optional `record-pytest-pass.sh` |
-| Area lesson lookup (kanban + Feature Areas) | **Review first** | `docs/lessons-index.yaml` area block + [reference.md](reference.md) § Lessons by area → `resolve_prior_lessons.py` |
+| **Review** kanban card only (`review …`, bare `@path`) | **Ask-only** | Card + [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2 — no edits |
+| **Update / spawn / implement** card (agent verbs) | **Agent** | Card + label gate; kanban-markdown; prior lessons gate |
+| `Kanban: answer inquiry on …` | **Agent** | Inquiry — **Response** on card |
+| Card missing / empty / unknown `labels` | **Block** | Stop — user must set valid `labels` |
+| Implement / fix / refactor **without** a card | **Ask-only** | No product edits — user must assign or create a kanban card |
+| Review QA issue on assigned card | **Review** | kanban-review-qa.mdc + **QA follow-up** + refresh card scope when needed |
+| User says **feature / bug / agent / commit-issue** Done | **Governance** | kanban-markdown § Card Done — lessons learned |
+| User says **inquiry** Done | **Close only** | No lessons capture |
+| AGENTS.md governance audit | **Read-only** | kanban-markdown § Periodic AGENTS.md governance audit |
+| Explain / audit / is this correct? | **Ask-only** | Grep + read — no edits |
+| Pre-commit failed | **Unblock** / **Review** | §1b pre-commit + self-eval reference |
+| Failing test / pytest / ruff / lint (no card) | **Ask-only** / **Unblock** | §1b — diagnose; fix needs kanban card |
+| UI wiring / dialog (no card) | **Ask-only** | §1b `ui-dialog-no-persist` — explain only |
+| Orbit 3D holes (no card) | **Ask-only** | §1b `orbit-stair-mask-transparency` — explain only |
+| Agent handoff / process mistake | **Governance** | §1b self-eval reference patterns |
+| Agent created `.tmp-venv` / missing project venv | **Ask-only** / **Unblock** | §1b `agent-no-tmp-venv` |
+| Repeated mistake / churn | **Grep** | §1b failure pattern routing |
+| Run tests / commit-ready | **Verify** | targeted-testing / pre-commit-pytest.sh |
+| Area lesson lookup (kanban + Feature Areas) | **Review first** | lessons-index.yaml + § Lessons by area → `resolve_prior_lessons.py` |
 
-If the user is in **Ask mode**, stop at read-only even when they say "fix".
-
-**Surgical vs kanban:** Ad-hoc bugs and one-file fixes are **Surgical** — no card review, no column moves. Use the kanban row only when the user assigns a **To Do** card (path, id, title) or asks to implement planned board work.
+Classify **prompt verb** then card + label ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2). **Agent** only with implement/update/spawn verbs. Signature: `kanban-prompt-ask-vs-agent`.
 
 **Governance edits** (paths in [agent-consistency.mdc](../../rules/agent-consistency.mdc) `globs`): after classify, open [reference.md](reference.md) § **Consistency matrix** and § **Drift alert examples** before editing; run [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6g before handoff; surface drift per § **Governance drift detection** below.
 

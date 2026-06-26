@@ -1,6 +1,6 @@
 # Agent guide — structure_scripts
 
-**Start here** for Cursor agents. This repo uses **kanban cards** (`.devtool/features/`) as the primary work queue unless the user is in **Ask mode**.
+**Start here** for Cursor agents. **Agent mode** requires a kanban card, valid `labels`, and an **agent verb** (`implement`, `update`, `spawn`, …) — see [kanban-card-gates.mdc](.cursor/rules/kanban-card-gates.mdc). **`review …` only** or no card → **Ask-only** (read-only).
 
 Thin always-on orchestration: [`.cursor/rules/agent-routing.mdc`](.cursor/rules/agent-routing.mdc).  
 Full process: [`.cursor/skills/agent-triage/SKILL.md`](.cursor/skills/agent-triage/SKILL.md) → work → [`.cursor/skills/agent-self-evaluation/SKILL.md`](.cursor/skills/agent-self-evaluation/SKILL.md).
@@ -11,20 +11,26 @@ Do **not** use [docs/roadmap.md](docs/roadmap.md) as the task queue.
 
 | User mode | How work arrives | Agent does |
 | --------- | ---------------- | ---------- |
-| **Agent mode** (default) | To Do card path, id, title, or “implement first card” | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) lifecycle |
-| **Governance lessons epics** | `ArtifactsDocYaml`, `LessonsCoverageMetric`, `GovernanceAreaSchema` | Read **To Do + Backlog**; sort by `order` (`a0`–`a9` queue) — [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Reading the board |
-| **Ask mode** | Questions only | Read-only — no card moves, no code unless user switches mode |
+| **Agent mode** | Card named + **agent verb** (`implement`, `update`, `review and update`, `spawn`, `answer inquiry`, …) | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md); [kanban-card-gates.mdc](.cursor/rules/kanban-card-gates.mdc) §2 |
+| **Ask-only** | `review …` card only, bare `@path`, no card, or prompt without agent verb | Read-only — no file edits; suggest upgrade to `review and update` / `implement` |
+| **Governance lessons epics** | `ArtifactsDocYaml`, `LessonsCoverageMetric`, `GovernanceAreaSchema` | Read **To Do + Backlog**; sort by `order` — [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Reading the board |
 
 **Ignore Backlog** unless the user names a backlog card. **Done** column moves are **user only**.
+
+**No implementation without a card** — no surgical/ad-hoc fixes.
+
+### Card label gate
+
+Every card **must** have a recognized `labels` entry (inline JSON array). **Invalid** (missing, `labels: []`, unknown) → **stop**; user must set `feature`, `bug`, `agent`, `inquiry`, or `commit-issue`.
 
 ### Card types (`labels` in frontmatter)
 
 | Label | User provides | Agent provides before `in-progress` |
 | ----- | ------------- | ------------------------------------- |
-| *(feature)* | Feature Areas, story | Label Paths, **Label Methods**, **Decisions**, Acceptance Criteria |
+| `feature` | Feature Areas, story | Label Paths, **Label Methods**, **Decisions**, AC — [kanban-feature-cards.mdc](.cursor/rules/kanban-feature-cards.mdc) |
 | `bug` | Steps to Reproduce, Current/Expected Behavior, Feature Areas | Root Cause, AC, Label Paths, **Label Methods**, **Corrective Action** — [kanban-bug-cards.mdc](.cursor/rules/kanban-bug-cards.mdc) |
 | `commit-issue` | _(auto)_ Problem + Failed Tests | **Review:** Root Cause + Corrective Action; optional Label Paths / Label Methods; implement after user approval — [kanban-commit-issue-cards.mdc](.cursor/rules/kanban-commit-issue-cards.mdc) |
-| `inquiry` | Description; Feature Areas optional | **Response**, Label Paths, **Label Methods** (when Feature Areas set); **spawn:** todo feature cards + `epic` when user approves recommendations — [kanban-inquiry-cards.mdc](.cursor/rules/kanban-inquiry-cards.mdc) |
+| `inquiry` | Description; Feature Areas optional | **Response**, Label Paths, **Label Methods** (when set); spawn child cards when user approves — [kanban-inquiry-cards.mdc](.cursor/rules/kanban-inquiry-cards.mdc); **no** Card Done lessons |
 | `agent` | **Description**, **Feature Area** (default `Agent Workflow`) | Label Paths, **Label Methods**, **Acceptance Criteria**, **Decisions** — [kanban-agent-cards.mdc](.cursor/rules/kanban-agent-cards.mdc) |
 
 Resolve **Feature Areas** → **Label Paths** + **Label Methods** via [docs/feature-areas.yaml](docs/feature-areas.yaml):
@@ -38,15 +44,16 @@ python scripts/resolve_feature_areas.py --lessons "Render Preview"
 ## Every turn (non–Ask mode)
 
 ```text
-1. Classify     → agent-triage §1 (kanban card vs surgical vs read-only)
+1. Classify     → agent-triage §1 (kanban card + label gate vs ask-only)
 1b. On failure  → agent-triage §1b grep reference.md tables (signals only — not every turn)
 2. Discover     → grep first; ≤3 file reads then grep/semantic search
 3. Work         → kanban: Label Paths + Label Methods → prior lessons gate → Decisions/CA
                   → Review QA fix: append **QA follow-up**; refresh Feature Areas / Label Paths /
                     Label Methods when fix scope changes (kanban-markdown § User-reported QA fixes)
 4. Verify       → targeted pytest (scripts/pre-commit-pytest.sh on staged paths)
-5. Done signal  → user says card Done → lessons learned capture (kanban-markdown § Card Done)
-                  → `python3 scripts/build_lessons_index.py` refresh `docs/lessons-index.yaml`;
+5. Done signal  → user says card Done → **lessons learned** only for `feature` / `bug` / `agent` /
+                    `commit-issue` (kanban-markdown § Card Done); **`inquiry` → no lessons capture**
+                  → `python3 scripts/build_lessons_index.py` when lessons ran;
                     curate area `lesson_*` keys when new Signatures/docs apply (`--sync-registry` dry-run)
 6. Self-eval    → Files used (load order) + handoff; implementation: ≥1 skill + ≥1 rule updated;
                   audit AGENTS.md freshness; governance edits → self-eval §6g
@@ -64,6 +71,9 @@ python scripts/resolve_feature_areas.py --lessons "Render Preview"
 | New turn step, gate, or script workflow | Every turn / Classify quickly / Implementation gates |
 | Lessons-by-area routing (li3) | AGENTS Classify **Area lesson lookup** + triage §1/§2 + reference § Lessons by area + kanban-prior-lessons-gate read order |
 | Kanban pre-implementation / prior lessons gate | Every turn step 3; Classify quickly; [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Prior lessons gate + [kanban-prior-lessons-gate.mdc](.cursor/rules/kanban-prior-lessons-gate.mdc); `scripts/resolve_prior_lessons.py` (scans `done/` + `archived/`); `docs/lessons-index.yaml` via `scripts/build_lessons_index.py` (refresh after Card Done); [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Lessons by area (read before done-card grep); optional `artifacts:` tail on lesson bullets — [docs/development.md](docs/development.md) § Lessons captured `artifacts:` schema |
+| Kanban prompt verb gate | Classify quickly; Every turn step 1; [kanban-card-gates.mdc](.cursor/rules/kanban-card-gates.mdc) §2; kanban-markdown § Ask-only vs Agent prompts |
+| Kanban card label gate / no-card implementation | Classify quickly; Every turn step 1; card types table; What not to do |
+| Card Done lessons label scope (`feature`/`bug`/`agent` vs `inquiry`) | Every turn step 5; Implementation gates; Classify quickly Done rows |
 | Kanban Review QA record / Done lessons capture | Every turn steps 3–5; [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § User-reported QA fixes + § Card Done |
 | Failure-pattern routing (triage §1b) | Every turn step 1b + Classify quickly + [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) |
 | Classify quickly parity | Classify quickly ↔ triage §1 ↔ [reference.md](.cursor/skills/agent-triage/reference.md) § Classify — update all three when adding a signal row (including **Verify**: `run tests` / `commit-ready`) |
@@ -97,19 +107,22 @@ End every response with two sections (see [agent-self-evaluation](.cursor/skills
 
 | Signal | Mode | First read |
 | ------ | ---- | ---------- |
-| Kanban card assigned | **Review first** → implement | Card + [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md); **prior lessons gate** before Decisions/CA |
-| Review QA issue (chat/screenshot) | **Surgical** / **Review** | Fix + **QA follow-up** + refresh **Feature Areas** / **Label Paths** / **Label Methods** — [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc) |
-| User says card **Done** | **Governance** | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Card Done — lessons learned |
+| **Review** kanban card only (`review …`, bare `@path`) | **Ask-only** | Card + [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc) §2 — chat only, no edits |
+| **Update / spawn / implement** card (agent verbs) | **Agent** | Card + valid `labels`; [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md); prior lessons gate before Decisions/CA |
+| `Kanban: answer inquiry on …` | **Agent** | Inquiry card — **Response** only unless user asks for code |
+| Card missing / empty / unknown `labels` | **Block** | [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc) — stop; user must set `feature` / `bug` / `agent` / `inquiry` / `commit-issue` |
+| Implement / fix / refactor **without** a card | **Ask-only** | No product edits — user must assign or create a kanban card |
+| Review QA issue on assigned card | **Review** | Fix + **QA follow-up** + refresh **Feature Areas** / **Label Paths** / **Label Methods** — [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc) |
+| User says **`feature` / `bug` / `agent` / `commit-issue`** card **Done** | **Governance** | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Card Done — lessons learned |
+| User says **`inquiry`** card **Done** | **Close only** | No lessons capture — [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc) |
 | AGENTS.md governance audit card | **Read-only** | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit; card from `scripts/create_governance_audit_card.py` → **## Audit findings** → `review` (no fixes unless asked) |
-| Explain / audit / “is this correct?” | **Read-only** | Grep + read only |
-| One error, lint, typo, ad-hoc bug | **Surgical** | Grep → 1–3 files — no card unless user assigns one |
-| Multi-file feature (no card) | **Implementation** | [repo-map](.cursor/skills/repo-map/SKILL.md) |
+| Explain / audit / “is this correct?” | **Ask-only** | Grep + read only |
 | Pre-commit failed | **Unblock** / **Review** | §1b failure-pattern grep → [pre-commit-workflow](.cursor/skills/pre-commit-workflow/reference.md) + [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md); then [pre-commit-workflow/SKILL.md](.cursor/skills/pre-commit-workflow/SKILL.md); `commit-issue` card if capture ran; mass ruff in `site-packages` → `precommit-ruff-staged-venv` |
-| Agent created `.tmp-venv` / pytest without `.venv` | **Surgical** | §1b `agent-no-tmp-venv` → [targeted-testing](.cursor/skills/targeted-testing/SKILL.md); ask user to set up `.venv` |
-| Failing test / pytest / ruff / lint | **Surgical** or **Unblock** | §1b grep → [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Failure pattern routing |
-| UI wiring / dialog not persisting | **Surgical** | §1b grep `ui-dialog-no-persist` → [ui-change](.cursor/skills/ui-change/SKILL.md) |
-| Orbit 3D holes / transparent partial blocks | **Surgical** | §1b `orbit-stair-mask-transparency` → [ui-change](.cursor/skills/ui-change/SKILL.md) § Orbit lessons; `test_orbit_stair_face_textures_are_opaque` |
-| Agent handoff / kanban / process mistake | **Surgical** | §1b grep → [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md) § Common failure patterns |
+| Agent created `.tmp-venv` / pytest without `.venv` | **Ask-only** / **Unblock** | §1b `agent-no-tmp-venv` → [targeted-testing](.cursor/skills/targeted-testing/SKILL.md); assign card before product fixes |
+| Failing test / pytest / ruff / lint (no card) | **Ask-only** / **Unblock** | §1b grep → diagnosis only; fix requires kanban card |
+| UI wiring / dialog not persisting (no card) | **Ask-only** | §1b grep `ui-dialog-no-persist` → explain; fix requires kanban card |
+| Orbit 3D holes / transparent partial blocks (no card) | **Ask-only** | §1b `orbit-stair-mask-transparency` → explain; fix requires kanban card |
+| Agent handoff / kanban / process mistake | **Governance** | §1b grep → [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md) § Common failure patterns |
 | Repeated mistake / familiar churn | **Grep** | Same tables as §1b — [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Failure pattern routing |
 | "Run tests" / verify / commit-ready | **Verify** | [targeted-testing](.cursor/skills/targeted-testing/SKILL.md); `scripts/pre-commit-pytest.sh` on staged files → optional `record-pytest-pass.sh` |
 | Area lesson lookup (kanban + Feature Areas) | **Review first** | `docs/lessons-index.yaml` area block + [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Lessons by area → `resolve_prior_lessons.py` |
@@ -121,7 +134,7 @@ End every response with two sections (see [agent-self-evaluation](.cursor/skills
 | Area | Skill | Rule(s) |
 | ---- | ----- | ------- |
 | Agent / routing / self-eval | [agent-triage](.cursor/skills/agent-triage/SKILL.md), [agent-self-evaluation](.cursor/skills/agent-self-evaluation/SKILL.md), [pre-commit-workflow](.cursor/skills/pre-commit-workflow/SKILL.md) | [agent-routing](.cursor/rules/agent-routing.mdc), [agent-self-evaluation](.cursor/rules/agent-self-evaluation.mdc), [agent-agents-md-maintenance](.cursor/rules/agent-agents-md-maintenance.mdc), [agent-consistency](.cursor/rules/agent-consistency.mdc) |
-| Kanban / `.devtool/features/` | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) | [kanban-bug-cards](.cursor/rules/kanban-bug-cards.mdc), [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc), [kanban-commit-issue-cards](.cursor/rules/kanban-commit-issue-cards.mdc), [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc), [kanban-agent-cards](.cursor/rules/kanban-agent-cards.mdc), [kanban-prior-lessons-gate](.cursor/rules/kanban-prior-lessons-gate.mdc) |
+| Kanban / `.devtool/features/` | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) | [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc), [kanban-feature-cards](.cursor/rules/kanban-feature-cards.mdc), [kanban-bug-cards](.cursor/rules/kanban-bug-cards.mdc), [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc), [kanban-commit-issue-cards](.cursor/rules/kanban-commit-issue-cards.mdc), [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc), [kanban-agent-cards](.cursor/rules/kanban-agent-cards.mdc), [kanban-prior-lessons-gate](.cursor/rules/kanban-prior-lessons-gate.mdc) |
 | UI panels / dialogs | [ui-change](.cursor/skills/ui-change/SKILL.md) | [ui-panels](.cursor/rules/ui-panels.mdc), [ui-dialogs](.cursor/rules/ui-dialogs.mdc), [ui-general](.cursor/rules/ui-general.mdc) |
 | Registry / palettes | [repo-map](.cursor/skills/repo-map/SKILL.md) | — |
 | Structure YAML / loader | [repo-map](.cursor/skills/repo-map/SKILL.md) § Structure packages | — |
@@ -164,7 +177,7 @@ Before `in-progress` → `review` on **feature/bug/agent** cards:
 
 **Review QA fixes:** when the user reports issues during **Review**, implement fixes, append dated `**QA follow-up**` bullets on the card, and **refresh `## Feature Areas` / `## Label Paths` / `## Label Methods`** when the fix touches scope not already listed ([kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § User-reported QA fixes; [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc)).
 
-**Card Done (user):** when the user says a card is **Done**, capture lessons in **≥1 skill**, **≥1 rule**, and relevant **docs** / registry ([kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Card Done — lessons learned). User moves file to `done/`; agent does not.
+**Card Done (user):** when the user says a **`feature` / `bug` / `agent` / `commit-issue`** card is **Done**, capture lessons in **≥1 skill**, **≥1 rule**, and relevant **docs** / registry ([kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Card Done). **`inquiry` Done → no lessons capture.** User moves file to `done/`; agent does not.
 
 ## End handoff (required every turn)
 
@@ -188,6 +201,10 @@ Before `in-progress` → `review` on **feature/bug/agent** cards:
 
 ## What not to do
 
+- Implement product code without card + **agent verb**
+- Edit files on **review-only** prompt (`review @card` without update/implement/spawn)
+- Work on a card with missing, empty, or unknown `labels` — stop and ask user to fix frontmatter
+- Run Card Done lessons capture on **`inquiry`** cards
 - Pick work from Backlog or `docs/roadmap.md` without user direction
 - Full `pytest` after every small edit (use targeted tests)
 - Read all of `ui/main_window.py` — grep handlers first
