@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # Create a kanban commit-issue card after a pre-commit hook fails.
+# Cards are created only during actual git commit (PRE_COMMIT=1), not when agents
+# run scripts/pre-commit-pytest.sh manually during implementation.
 # Set SKIP_COMMIT_ISSUE_CARD=1 to disable (e.g. CI or scripted retries).
 set -euo pipefail
 
 if [[ "${SKIP_COMMIT_ISSUE_CARD:-}" == "1" ]]; then
+  exit 0
+fi
+
+if [[ "${PRE_COMMIT:-}" != "1" ]]; then
   exit 0
 fi
 
@@ -22,7 +28,8 @@ else
   exit 0
 fi
 
-"$PYTHON" "$ROOT/scripts/create_commit_issue_card.py" --hook "$HOOK" --log "$LOG" || {
+"$PYTHON" "$ROOT/scripts/create_commit_issue_card.py" --hook "$HOOK" --log "$LOG" \
+  ${COMMIT_ISSUE_FEATURES_DIR:+--features-dir "$COMMIT_ISSUE_FEATURES_DIR"} || {
   echo "on_pre_commit_failure: could not create commit-issue card (see above)" >&2
   exit 0
 }

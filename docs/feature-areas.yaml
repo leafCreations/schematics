@@ -26,8 +26,9 @@
 #   Source of truth for agent skill/rule routing is this yaml — not AGENTS.md tables.
 #   All governance keys are optional; absent keys skip parity checks until gs1 seeds them.
 #   gs1 seeded: Render Preview, Agent Workflow, Properties Panel, Feature Area Registry,
-#   Palette Registry (agents_skill / agents_rules / lesson_routing_row). AGENTS table
-#   sync deferred until post–gs3 (Signature: governance-area-schema-defer-agents-table).
+#   Palette Registry (agents_skill / agents_rules / lesson_routing_row). gs4 syncs AGENTS
+#   area table via scripts/sync_agents_area_table.py (Signature:
+#   governance-area-schema-agents-table-sync).
 #
 # Example (gs1 seeded — see Render Preview area):
 #   agents_skill: ui-change
@@ -353,6 +354,11 @@ areas:
       - ui-panels.mdc
       - ui-general.mdc
       - testing.mdc#precommit-mainwindow-__new__-test
+    lesson_signatures:
+      - precommit-mainwindow-__new__-test
+      - properties-inspector-live-apply
+    lesson_docs:
+      - docs/editor-properties.md
     lesson_routing_row: Properties Panel
 
   Materials Panel:
@@ -500,6 +506,8 @@ areas:
       - helpers/orbit_face_textures.py
       - helpers/orbit_partial_mesh.py
       - helpers/orbit_attachable_mesh.py
+      - helpers/orbit_block_model_mesh.py
+      - helpers/orbit_render_class.py
       - helpers/block_texture_load.py
       - helpers/facing_block_textures.py
       - helpers/facade_projection.py
@@ -539,12 +547,18 @@ areas:
       - load_facing_block_front_texture
       - block_faces_facade
       - draw_facade_cell
+      - resolve_attachable_block_model
+      - _resolve_lantern_model_name
+      - iter_block_model_face_quads
+      - expand_orbit_quad_corners
+      - orbit_render_class
     tests:
       - tests/test_preview_panel.py
       - tests/test_orbit_preview.py
       - tests/test_orbit_greedy_mesh.py
       - tests/test_orbit_partial_mesh.py
       - tests/test_orbit_attachable_mesh.py
+      - tests/test_orbit_render_class.py
       - tests/test_block_texture_load.py
       - tests/test_render_preview.py
       - tests/test_structure_facades.py
@@ -563,6 +577,12 @@ areas:
       - orbit-animated-texture-strip
       - orbit-fence-mask-transparency
       - orbit-stair-mask-transparency
+      - c4-attachable-partial-mesh-routing
+      - orbit-attachable-block-model-faces
+      - orbit-attachable-direction-rotation-keys
+      - orbit-top-side-seam-geometry
+      - orbit-lantern-hanging-variant
+      - orbit-render-class-routing
     lesson_docs:
       - docs/render-types.md
     agents_skill: ui-change
@@ -572,6 +592,12 @@ areas:
       - testing.mdc#orbit-animated-texture-strip
       - testing.mdc#orbit-stair-mask-transparency
       - testing.mdc#orbit-fence-mask-transparency
+      - testing.mdc#c4-attachable-partial-mesh-routing
+      - testing.mdc#orbit-attachable-block-model-faces
+      - testing.mdc#orbit-attachable-direction-rotation-keys
+      - testing.mdc#orbit-top-side-seam-geometry
+      - testing.mdc#orbit-lantern-hanging-variant
+      - testing.mdc#orbit-render-class-routing
     lesson_routing_row: Render Preview
 
   Render Selection:
@@ -601,6 +627,10 @@ areas:
       - Render Panel
       - Render Preview
     docs:
+      - docs/render-types.md
+    lesson_signatures:
+      - 2d-stair-facing-rotation
+    lesson_docs:
       - docs/render-types.md
 
   Worldgen:
@@ -735,6 +765,7 @@ areas:
       - scripts/build_lessons_index.py
       - scripts/create_governance_audit_card.py
       - scripts/check_governance_parity.py
+      - scripts/sync_agents_area_table.py
     handlers:
       - resolve_lesson_pointers
       - resolve_agents_parity
@@ -766,6 +797,7 @@ areas:
       - .cursor/skills/agent-triage/
       - .cursor/skills/agent-self-evaluation/
       - .cursor/skills/kanban-markdown/
+      - .cursor/skills/kanban-markdown/reference.md
       - .cursor/skills/pre-commit-workflow/
       - .cursor/rules/agent-routing.mdc
       - .cursor/rules/agent-self-evaluation.mdc
@@ -780,19 +812,37 @@ areas:
       - .cursor/rules/kanban-agent-cards.mdc
       - .cursor/rules/kanban-prior-lessons-gate.mdc
       - scripts/resolve_prior_lessons.py
+      - scripts/check_lessons_coverage.py
+      - scripts/lessons_coverage_lib.py
+      - scripts/pre-commit-lessons-coverage.sh
       - scripts/build_lessons_index.py
       - scripts/resolve_feature_areas.py
       - tests/test_resolve_prior_lessons.py
+      - tests/test_check_lessons_coverage.py
       - tests/test_build_lessons_index.py
       - docs/lessons-index.yaml
     handlers:
       - resolve_prior_lessons
+      - find_done_lessons_strict
       - build_lessons_index
       - resolve_feature_areas
+      - check_lessons_coverage
+      - audit_promotion_quality
+      - audit_consumption_coverage
       - check_area_schema_parity
       - check_governance_parity
+      - check_lessons_coverage_drift
+      - report_governance_line_counts
+      - format_line_count_report
+      - collect_baseline_artifact_paths
+      - sync_agents_area_table
+      - check_agents_area_table_parity
+      - check_classify_parity
+      - check_kanban_rule_globs
+      - _classify_signals_section
       - _normalize_doc_ref
       - parse_artifacts_line
+      - extract_signatures
     docs:
       - docs/development.md
     lesson_signatures:
@@ -802,8 +852,19 @@ areas:
       - kanban-prompt-ask-vs-agent
       - artifacts-doc-yaml-normalize
       - precommit-ruff-staged-venv
-      - agent-no-tmp-venv
-      - governance-area-schema-parity-tests
+      - governance-compact-baseline
+      - lessons-coverage-c2-c3-audit
+      - lessons-coverage-ci-drift
+      - card-done-forward-feedback
+      - card-done-forward-feedback-top3-skipped
+      - governance-compact-classify-task-types
+      - governance-area-schema-agents-table-sync
+      - governance-compact-classify-ssot
+      - governance-compact-kanban-rule-globs
+      - governance-compact-self-eval-handoff
+      - ruff-e501-line-length
+      - precommit-no-card-on-manual-hook
+      - lessons-index-inline-sig-backtick
     lesson_docs:
       - docs/development.md
     agents_skill: agent-triage
@@ -823,6 +884,8 @@ areas:
       - testing.mdc#precommit-stash-old-hooks
       - kanban-prior-lessons-gate.mdc#lessons-by-area-routing
       - testing.mdc#artifacts-doc-yaml-normalize
+      - testing.mdc#lessons-index-inline-sig-backtick
+      - kanban-review-qa.mdc#card-done-forward-feedback
       - testing.mdc#precommit-ruff-staged-venv
       - testing.mdc#agent-no-tmp-venv
     lesson_routing_row: Agent Workflow

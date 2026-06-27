@@ -44,15 +44,18 @@ python scripts/resolve_feature_areas.py --lessons "Render Preview"
 ## Every turn (non–Ask mode)
 
 ```text
-1. Classify     → agent-triage §1 (kanban card + label gate vs ask-only)
+1. Classify     → reference § Classify (+ AGENTS summary; triage §1 — kanban card + label gate → one scoped kanban-*-cards.mdc)
 1b. On failure  → agent-triage §1b grep reference.md tables (signals only — not every turn)
 2. Discover     → grep first; ≤3 file reads then grep/semantic search
 3. Work         → kanban: Label Paths + Label Methods → prior lessons gate → Decisions/CA
                   → Review QA fix: append **QA follow-up**; refresh Feature Areas / Label Paths /
                     Label Methods when fix scope changes (kanban-markdown § User-reported QA fixes)
-4. Verify       → targeted pytest (scripts/pre-commit-pytest.sh on staged paths)
-5. Done signal  → user says card Done → **lessons learned** only for `feature` / `bug` / `agent` /
-                    `commit-issue` (kanban-markdown § Card Done); **`inquiry` → no lessons capture**
+4. Verify       → ruff E501 on touched `.py` (`.venv/bin/ruff check --select E501` — Signature:
+                  `ruff-e501-line-length`); targeted pytest (scripts/pre-commit-pytest.sh on staged paths)
+5. Done signal  → user says card Done → **lessons learned** + **forward-looking feedback** for
+                    `feature` / `bug` / `agent` / `commit-issue` (kanban-markdown § Card Done;
+                    Signature: `card-done-forward-feedback`; top-3 in chat before handoff);
+                    **`inquiry` → neither**
                   → `python3 scripts/build_lessons_index.py` when lessons ran;
                     curate area `lesson_*` keys when new Signatures/docs apply (`--sync-registry` dry-run)
 6. Self-eval    → Files used (load order) + handoff; implementation: ≥1 skill + ≥1 rule updated;
@@ -74,15 +77,19 @@ python scripts/resolve_feature_areas.py --lessons "Render Preview"
 | Kanban prompt verb gate | Classify quickly; Every turn step 1; [kanban-card-gates.mdc](.cursor/rules/kanban-card-gates.mdc) §2; kanban-markdown § Ask-only vs Agent prompts |
 | Kanban card label gate / no-card implementation | Classify quickly; Every turn step 1; card types table; What not to do |
 | Card Done lessons label scope (`feature`/`bug`/`agent` vs `inquiry`) | Every turn step 5; Implementation gates; Classify quickly Done rows |
+| Card Done forward-looking feedback (`card-done-forward-feedback`) | Every turn step 5; kanban-markdown § Card Done; top-3 chat (`### Top forward feedback`); kanban-review-qa.mdc; scoped kanban-*.mdc Card Done sections |
 | Kanban Review QA record / Done lessons capture | Every turn steps 3–5; [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § User-reported QA fixes + § Card Done |
 | Failure-pattern routing (triage §1b) | Every turn step 1b + Classify quickly + [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) |
-| Classify quickly parity | Classify quickly ↔ triage §1 ↔ [reference.md](.cursor/skills/agent-triage/reference.md) § Classify — update all three when adding a signal row (including **Verify**: `run tests` / `commit-ready`) |
+| Classify SSOT (gc2) | Full table in [reference.md](.cursor/skills/agent-triage/reference.md) § Classify only; AGENTS ≤5-row summary; triage §1 pointer; `check_classify_parity` — Signature: `governance-compact-classify-ssot` |
+| Classify task types (gc6) | reference.md § Task types + triage §2 Task types summary; Signature: `governance-compact-classify-task-types` |
+| Kanban rule globs (gc3) | triage §1 pointer to agent-routing § Kanban card type; `check_kanban_rule_globs`; docs/development.md § Governance compaction — Signature: `governance-compact-kanban-rule-globs` |
+| Lessons coverage drift / `check_governance_parity.py` lessons integration | Classify quickly + triage §1 + [docs/development.md](docs/development.md) § Lessons Coverage Metric |
 | Governance audit Classify row | Classify quickly + agent-triage §1 + [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit |
 | Kanban Label Methods gate | Card types table + [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Feature Areas |
 | Handoff format fields | End handoff section |
 | Failure pattern schema or new cross-cutting row | Classify quickly (failure-pattern lookup) + [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md) |
 | New scoped **agent/kanban rule** | Area → skills & rules table + [agent-consistency.mdc](.cursor/rules/agent-consistency.mdc) checklist if governance paths |
-| Governance area schema keys (`agents_skill`, `agents_rules`, `lesson_routing_row`) | `docs/feature-areas.yaml` header + [docs/development.md](docs/development.md) § Governance area schema — **gs0–gs3 complete**; **do not** sync **Area → skills & rules** table from yaml until a separate follow-up epic |
+| Governance area schema keys (`agents_skill`, `agents_rules`, `lesson_routing_row`) | `docs/feature-areas.yaml` header + [docs/development.md](docs/development.md) § Governance area schema — gs4 sync via `scripts/sync_agents_area_table.py` — Signature: `governance-area-schema-agents-table-sync` |
 | Governance artifact parity (any agent/kanban edit) | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Consistency matrix |
 | Drift alert vocabulary (prefix lines) | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Drift alert examples |
 | Drift severity + KNOWN_DRIFT format | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Drift severity, § KNOWN_DRIFT |
@@ -105,43 +112,36 @@ End every response with two sections (see [agent-self-evaluation](.cursor/skills
 
 ## Classify quickly
 
+**Full signal table:** [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § **Classify the request (signals)** — Signature: `governance-compact-classify-ssot`. Edit signals in reference only; summary below (≤5 rows).
+
 | Signal | Mode | First read |
 | ------ | ---- | ---------- |
 | **Review** kanban card only (`review …`, bare `@path`) | **Ask-only** | Card + [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc) §2 — chat only, no edits |
-| **Update / spawn / implement** card (agent verbs) | **Agent** | Card + valid `labels`; [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md); prior lessons gate before Decisions/CA |
-| `Kanban: answer inquiry on …` | **Agent** | Inquiry card — **Response** only unless user asks for code |
-| Card missing / empty / unknown `labels` | **Block** | [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc) — stop; user must set `feature` / `bug` / `agent` / `inquiry` / `commit-issue` |
+| **Update / spawn / implement** card (agent verbs) | **Agent** | Card + valid `labels`; [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md); prior lessons gate |
+| Card missing / empty / unknown `labels` | **Block** | [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc) — stop; user must set valid `labels` |
 | Implement / fix / refactor **without** a card | **Ask-only** | No product edits — user must assign or create a kanban card |
-| Review QA issue on assigned card | **Review** | Fix + **QA follow-up** + refresh **Feature Areas** / **Label Paths** / **Label Methods** — [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc) |
-| User says **`feature` / `bug` / `agent` / `commit-issue`** card **Done** | **Governance** | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Card Done — lessons learned |
-| User says **`inquiry`** card **Done** | **Close only** | No lessons capture — [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc) |
-| AGENTS.md governance audit card | **Read-only** | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit; card from `scripts/create_governance_audit_card.py` → **## Audit findings** → `review` (no fixes unless asked) |
-| Explain / audit / “is this correct?” | **Ask-only** | Grep + read only |
-| Pre-commit failed | **Unblock** / **Review** | §1b failure-pattern grep → [pre-commit-workflow](.cursor/skills/pre-commit-workflow/reference.md) + [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md); then [pre-commit-workflow/SKILL.md](.cursor/skills/pre-commit-workflow/SKILL.md); `commit-issue` card if capture ran; mass ruff in `site-packages` → `precommit-ruff-staged-venv` |
-| Agent created `.tmp-venv` / pytest without `.venv` | **Ask-only** / **Unblock** | §1b `agent-no-tmp-venv` → [targeted-testing](.cursor/skills/targeted-testing/SKILL.md); assign card before product fixes |
-| Failing test / pytest / ruff / lint (no card) | **Ask-only** / **Unblock** | §1b grep → diagnosis only; fix requires kanban card |
-| UI wiring / dialog not persisting (no card) | **Ask-only** | §1b grep `ui-dialog-no-persist` → explain; fix requires kanban card |
-| Orbit 3D holes / transparent partial blocks (no card) | **Ask-only** | §1b `orbit-stair-mask-transparency` → explain; fix requires kanban card |
-| Agent handoff / kanban / process mistake | **Governance** | §1b grep → [agent-self-evaluation/reference.md](.cursor/skills/agent-self-evaluation/reference.md) § Common failure patterns |
-| Repeated mistake / familiar churn | **Grep** | Same tables as §1b — [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Failure pattern routing |
-| "Run tests" / verify / commit-ready | **Verify** | [targeted-testing](.cursor/skills/targeted-testing/SKILL.md); `scripts/pre-commit-pytest.sh` on staged files → optional `record-pytest-pass.sh` |
-| Area lesson lookup (kanban + Feature Areas) | **Review first** | `docs/lessons-index.yaml` area block + [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Lessons by area → `resolve_prior_lessons.py` |
+| All other signals (failure, verify, governance, lessons, task type) | *see reference* | [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md) § Classify + § Task types |
 
 ## Area → skills & rules (load when touching)
 
-**Narrative routing table** — **gs0–gs3 complete** (`GovernanceAreaSchema` epic). Per-area `agents_skill` / `agents_rules` in `docs/feature-areas.yaml` are the **parity source of truth** (`check_area_schema_parity`, `--agents-parity`). This table stays narrative until a follow-up epic syncs or generates rows from yaml (Signature: `governance-area-schema-defer-agents-table`).
+**Yaml-synced routing table** — **gs4 complete** (`AgentsTableSync` epic). Per-area
+`agents_skill` / `agents_rules` in `docs/feature-areas.yaml` are the **parity source of truth**
+(`check_area_schema_parity`, `--agents-parity`, `sync_agents_area_table.py --check`). Narrative-only
+rows below (Structure, Worldgen, Tests, …) stay manual. Signature:
+`governance-area-schema-agents-table-sync`.
 
 | Area | Skill | Rule(s) |
 | ---- | ----- | ------- |
-| Agent / routing / self-eval | [agent-triage](.cursor/skills/agent-triage/SKILL.md), [agent-self-evaluation](.cursor/skills/agent-self-evaluation/SKILL.md), [pre-commit-workflow](.cursor/skills/pre-commit-workflow/SKILL.md) | [agent-routing](.cursor/rules/agent-routing.mdc), [agent-self-evaluation](.cursor/rules/agent-self-evaluation.mdc), [agent-agents-md-maintenance](.cursor/rules/agent-agents-md-maintenance.mdc), [agent-consistency](.cursor/rules/agent-consistency.mdc) |
-| Kanban / `.devtool/features/` | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) | [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc), [kanban-feature-cards](.cursor/rules/kanban-feature-cards.mdc), [kanban-bug-cards](.cursor/rules/kanban-bug-cards.mdc), [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc), [kanban-commit-issue-cards](.cursor/rules/kanban-commit-issue-cards.mdc), [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc), [kanban-agent-cards](.cursor/rules/kanban-agent-cards.mdc), [kanban-prior-lessons-gate](.cursor/rules/kanban-prior-lessons-gate.mdc) |
-| UI panels / dialogs | [ui-change](.cursor/skills/ui-change/SKILL.md) | [ui-panels](.cursor/rules/ui-panels.mdc), [ui-dialogs](.cursor/rules/ui-dialogs.mdc), [ui-general](.cursor/rules/ui-general.mdc) |
-| Registry / palettes | [repo-map](.cursor/skills/repo-map/SKILL.md) | — |
+| Agent / routing / self-eval | [agent-triage](.cursor/skills/agent-triage/SKILL.md), [agent-self-evaluation](.cursor/skills/agent-self-evaluation/SKILL.md), [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md), [pre-commit-workflow](.cursor/skills/pre-commit-workflow/SKILL.md), [reference](.cursor/skills/kanban-markdown/reference.md) | [agent-routing](.cursor/rules/agent-routing.mdc), [agent-self-evaluation](.cursor/rules/agent-self-evaluation.mdc), [agent-agents-md-maintenance](.cursor/rules/agent-agents-md-maintenance.mdc), [agent-consistency](.cursor/rules/agent-consistency.mdc), [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc), [kanban-feature-cards](.cursor/rules/kanban-feature-cards.mdc), [kanban-bug-cards](.cursor/rules/kanban-bug-cards.mdc), [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc), [kanban-commit-issue-cards](.cursor/rules/kanban-commit-issue-cards.mdc), [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc), [kanban-agent-cards](.cursor/rules/kanban-agent-cards.mdc), [kanban-prior-lessons-gate](.cursor/rules/kanban-prior-lessons-gate.mdc), [testing](.cursor/rules/testing.mdc) |
+| Kanban / `.devtool/features/` | [kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md), [reference](.cursor/skills/kanban-markdown/reference.md) | [kanban-card-gates](.cursor/rules/kanban-card-gates.mdc), [kanban-feature-cards](.cursor/rules/kanban-feature-cards.mdc), [kanban-bug-cards](.cursor/rules/kanban-bug-cards.mdc), [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc), [kanban-commit-issue-cards](.cursor/rules/kanban-commit-issue-cards.mdc), [kanban-inquiry-cards](.cursor/rules/kanban-inquiry-cards.mdc), [kanban-agent-cards](.cursor/rules/kanban-agent-cards.mdc), [kanban-prior-lessons-gate](.cursor/rules/kanban-prior-lessons-gate.mdc), [agent-consistency](.cursor/rules/agent-consistency.mdc), [testing](.cursor/rules/testing.mdc) |
+| UI panels / dialogs | [ui-change](.cursor/skills/ui-change/SKILL.md) | [ui-panels](.cursor/rules/ui-panels.mdc), [ui-general](.cursor/rules/ui-general.mdc), [testing](.cursor/rules/testing.mdc) |
+| Registry / palettes | [repo-map](.cursor/skills/repo-map/SKILL.md) | [testing](.cursor/rules/testing.mdc) |
 | Structure YAML / loader | [repo-map](.cursor/skills/repo-map/SKILL.md) § Structure packages | — |
 | Worldgen | [project-context](.cursor/skills/project-context/SKILL.md) | [worldgen](.cursor/rules/worldgen.mdc) |
 | Tests / commit | [targeted-testing](.cursor/skills/targeted-testing/SKILL.md) | [testing](.cursor/rules/testing.mdc) |
 | Docs after code | [docs-maintenance](.cursor/skills/docs-maintenance/SKILL.md) | — |
 | Minecraft version facts | [project-context](.cursor/skills/project-context/SKILL.md) | — |
+| Render Preview | [ui-change](.cursor/skills/ui-change/SKILL.md) | [ui-panels](.cursor/rules/ui-panels.mdc), [ui-general](.cursor/rules/ui-general.mdc), [testing](.cursor/rules/testing.mdc) |
 
 Path→test map: [agent-triage/reference.md](.cursor/skills/agent-triage/reference.md). Hook source of truth: `scripts/pre-commit-pytest.sh`.
 
@@ -177,34 +177,27 @@ Before `in-progress` → `review` on **feature/bug/agent** cards:
 
 **Review QA fixes:** when the user reports issues during **Review**, implement fixes, append dated `**QA follow-up**` bullets on the card, and **refresh `## Feature Areas` / `## Label Paths` / `## Label Methods`** when the fix touches scope not already listed ([kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § User-reported QA fixes; [kanban-review-qa](.cursor/rules/kanban-review-qa.mdc)).
 
-**Card Done (user):** when the user says a **`feature` / `bug` / `agent` / `commit-issue`** card is **Done**, capture lessons in **≥1 skill**, **≥1 rule**, and relevant **docs** / registry ([kanban-markdown](.cursor/skills/kanban-markdown/SKILL.md) § Card Done). **`inquiry` Done → no lessons capture.** User moves file to `done/`; agent does not.
+**Card Done (user):** when the user says a **`feature` / `bug` / `agent` / `commit-issue`** card is
+**Done**, capture lessons in **≥1 skill**, **≥1 rule**, and relevant **docs** / registry, then add
+**`## Forward-looking feedback`** on the card (Signature: `card-done-forward-feedback`); surface
+top 3 items in chat (`### Top forward feedback` before handoff).
+**`inquiry` Done → no lessons or forward feedback.** User moves file to `done/`; agent does not.
 
 ## End handoff (required every turn)
 
-```markdown
-### Files used
-1. `AGENTS.md` — …
-2. …
+Full template: [agent-self-evaluation](.cursor/skills/agent-self-evaluation/SKILL.md) §7 — Signature:
+`governance-compact-self-eval-handoff`. **Last sections:** `### Files used` (load order) then
+`### Self-evaluation` (one line per field — expand only on failure).
 
-### Self-evaluation
-- **Scope:** …
-- **Context load:** … — AGENTS.md <current | updated | stale: …>
-- **Tests:** …
-- **Docs:** …
-- **Skills used:** …
-- **Skills updated:** …
-- **Rules updated:** …
-- **Commit-ready:** …
-```
-
-**Implementation turns:** edit **≥1 skill** and **≥1 rule** — see [agent-self-evaluation](.cursor/skills/agent-self-evaluation/SKILL.md) §6.
+**Implementation turns:** edit **≥1 skill** and **≥1 rule** (§6); read-only →
+`Skills updated` / `Rules updated`: `none (read-only)`.
 
 ## What not to do
 
 - Implement product code without card + **agent verb**
 - Edit files on **review-only** prompt (`review @card` without update/implement/spawn)
 - Work on a card with missing, empty, or unknown `labels` — stop and ask user to fix frontmatter
-- Run Card Done lessons capture on **`inquiry`** cards
+- Run Card Done lessons capture or forward feedback on **`inquiry`** cards
 - Pick work from Backlog or `docs/roadmap.md` without user direction
 - Full `pytest` after every small edit (use targeted tests)
 - Read all of `ui/main_window.py` — grep handlers first

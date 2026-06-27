@@ -65,14 +65,14 @@ def test_corner_stairs_rotate_by_facing(tmp_path):
         "STAIRS",
         "N",
         0,
-        corner_stair_shape=True,
+        stairs_behavior=True,
     )
     south = schematics_utils._prepare_topdown_texture(
         tex,
         "STAIRS",
         "S",
         0,
-        corner_stair_shape=True,
+        stairs_behavior=True,
     )
 
     assert north.getpixel((0, 0)) == (0, 255, 0, 255)
@@ -90,14 +90,14 @@ def test_corner_stairs_apply_custom_rotation(tmp_path):
         "STAIRS",
         "S",
         0,
-        corner_stair_shape=True,
+        stairs_behavior=True,
     )
     rotated = schematics_utils._prepare_topdown_texture(
         tex,
         "STAIRS",
         "S",
         90,
-        corner_stair_shape=True,
+        stairs_behavior=True,
     )
 
     assert base.getpixel((0, 0)) == (255, 0, 0, 255)
@@ -105,22 +105,50 @@ def test_corner_stairs_apply_custom_rotation(tmp_path):
 
 
 def test_straight_stairs_still_rotate_with_direction(tmp_path):
-    save_cached(
-        "top",
-        "STAIRS",
-        Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (0, 0, 255, 255)),
-        generated_root=tmp_path,
-    )
+    tex = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (0, 255, 0, 255))
+    tex.putpixel((0, 0), (255, 0, 0, 255))
+    save_cached("top", "STAIRS", tex, generated_root=tmp_path)
 
     entry = BLOCK_REGISTRY["STAIRS"]
     parsed = ParsedToken(token="STAIRS", material="oak", direction="south")
     assert schematics_utils._is_corner_stair_shape(parsed, entry) is False
 
     tex = load_cached("top", "STAIRS", generated_root=tmp_path)
-    north = schematics_utils._prepare_topdown_texture(tex, "STAIRS", "N", 0)
-    south = schematics_utils._prepare_topdown_texture(tex, "STAIRS", "S", 0)
+    north = schematics_utils._prepare_topdown_texture(
+        tex,
+        "STAIRS",
+        "N",
+        0,
+        stairs_behavior=True,
+    )
+    south = schematics_utils._prepare_topdown_texture(
+        tex,
+        "STAIRS",
+        "S",
+        0,
+        stairs_behavior=True,
+    )
 
-    assert north.getpixel((0, 0)) == south.getpixel((0, 0))
+    assert north.getpixel((0, 0)) == (0, 255, 0, 255)
+    assert south.getpixel((0, 0)) == (255, 0, 0, 255)
+
+
+def test_paste_straight_stair_matches_worldgen_facing():
+    textures = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+
+    def cutout_corner(token: str) -> str:
+        img = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (0, 0, 0, 0))
+        schematics_utils.paste_topdown_token(img, textures, token, (0, 0), constants.BLOCK_PX)
+        corners = {(2, 2): "TL", (27, 2): "TR", (2, 27): "BL", (27, 27): "BR"}
+        for point, name in corners.items():
+            if img.getpixel(point)[3] == 0:
+                return name
+        return "?"
+
+    assert cutout_corner("STAIRS:oak@south") == "TL"
+    assert cutout_corner("STAIRS:oak@north") == "BL"
+    assert cutout_corner("STAIRS:oak@east") == "TL"
+    assert cutout_corner("STAIRS:oak@west") == "TR"
 
 
 def test_paste_corner_stair_matches_worldgen_facing():

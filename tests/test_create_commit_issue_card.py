@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
 from scripts.create_commit_issue_card import (
@@ -9,6 +11,9 @@ from scripts.create_commit_issue_card import (
     build_card_body,
     create_commit_issue_card,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ON_FAILURE = REPO_ROOT / "scripts/on_pre_commit_failure.sh"
 
 
 def test_extract_failed_test_files_dedupes_and_preserves_order():
@@ -50,3 +55,42 @@ def test_create_commit_issue_card_writes_todo_card(tmp_path: Path):
     assert "## Problem" in text
     assert "## Failed Tests" in text
     assert "`tests/test_x.py`" in text
+
+
+def test_on_pre_commit_failure_skips_card_without_pre_commit(tmp_path: Path):
+    """Manual agent runs of pre-commit-pytest.sh must not spawn commit-issue cards."""
+    log = tmp_path / "hook.log"
+    log.write_text("FAILED tests/test_x.py::test_y - boom\n", encoding="utf-8")
+    env = {key: value for key, value in os.environ.items() if key != "PRE_COMMIT"}
+    env["SKIP_COMMIT_ISSUE_CARD"] = "0"
+    proc = subprocess.run(
+        [str(ON_FAILURE), "pytest", str(log)],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0
+    assert "commit-issue card created" not in proc.stdout
+
+
+def test_on_pre_commit_failure_creates_card_during_pre_commit(tmp_path: Path):
+    log = tmp_path / "hook.log"
+    log.write_text("FAILED tests/test_x.py::test_y - boom\n", encoding="utf-8")
+    features = tmp_path / "features"
+    env = os.environ.copy()
+    env["PRE_COMMIT"] = "1"
+    env["SKIP_COMMIT_ISSUE_CARD"] = "0"
+    env["COMMIT_ISSUE_FEATURES_DIR"] = str(features)
+    proc = subprocess.run(
+        [str(ON_FAILURE), "pytest", str(log)],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0
+    assert "commit-issue card created" in proc.stdout
+    assert list(features.glob("commit-issue-pytest-*.md"))

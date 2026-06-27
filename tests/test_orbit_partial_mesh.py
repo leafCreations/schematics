@@ -410,7 +410,8 @@ def test_adjacent_stair_cells_do_not_cross_occlude():
     )
 
 
-def test_solid_faces_culled_toward_partial_stair_neighbor():
+def test_solid_faces_partially_restored_toward_stair_neighbor_below():
+    """Greedy shell skips full faces toward stairs; open-half quads are restored."""
     ctx = _ctx_from_layers(
         [
             {
@@ -430,7 +431,7 @@ def test_solid_faces_culled_toward_partial_stair_neighbor():
         if mesh.normals[index + 2] > 0.9 and abs(mesh.positions[index + 2] - 1.0) < 0.01
     )
 
-    assert south_normals == 0
+    assert 0 < south_normals < 48
 
 
 def test_lower_stair_slab_top_face_visible_on_open_half():
@@ -481,6 +482,46 @@ def test_solid_emits_lower_strip_face_toward_top_slab():
             lower_west_strip = True
 
     assert lower_west_strip
+
+
+def test_solid_emits_open_half_strip_beside_cobblestone_and_stair():
+    ctx = _ctx_from_layers(
+        [{"index": 0, "cells": [["minecraft:cobblestone", "STAIRS:oak@south"]]}],
+    )
+    mesh = build_orbit_greedy_mesh_from_context(ctx)
+
+    east_face_vertices = 0
+    for index in range(0, len(mesh.normals), 3):
+        if mesh.normals[index] < 0.9:
+            continue
+        if abs(mesh.positions[index] - 1.0) < 0.01:
+            east_face_vertices += 1
+
+    assert east_face_vertices > 0
+
+
+def test_solid_emits_restored_face_toward_partial_stair_neighbor():
+    from helpers.orbit_partial_mesh import iter_solid_neighbor_face_restore_rects
+
+    ctx = _ctx_from_layers(
+        [{"index": 0, "cells": [["minecraft:cobblestone", "STAIRS:oak@south"]]}],
+    )
+    cells = iter_occupied_voxel_cells(ctx)
+    layer_cells_cache = {0: ctx.layers[0]["cells"]}
+    boxes = iter_all_orbit_boxes(cells, layer_cells_cache)
+    boxes_by_world = group_orbit_boxes_by_world(boxes)
+    cobble = next(cell for cell in cells if cell.token == "minecraft:cobblestone")
+    stair_world = (cobble.world[0] + 1, cobble.world[1], cobble.world[2])
+
+    rects = iter_solid_neighbor_face_restore_rects(
+        cobble.world,
+        (1, 0, 0),
+        boxes_by_world,
+        stair_world,
+    )
+
+    assert rects
+    assert len(rects) < 4
 
 
 def test_orbit_slab_face_textures_are_opaque():

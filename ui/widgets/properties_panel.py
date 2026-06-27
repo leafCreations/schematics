@@ -38,6 +38,7 @@ _BRUSH_PREVIEW_ICON_SIZE = DEFAULT_ICON_SIZE
 
 class PropertiesPanel(QWidget):
     brush_changed = Signal()
+    brush_inspector_changed = Signal()
     brush_blockstate_changed = Signal()
     active_cell_changed = Signal(int, int)
     active_cell_cleared = Signal()
@@ -430,6 +431,7 @@ class PropertiesPanel(QWidget):
     def _on_brush_option_changed(self, _value: str) -> None:
         self._refresh_entry_preview()
         self.brush_changed.emit()
+        self.brush_inspector_changed.emit()
 
     def _on_blockstate_option_changed(self, _value: str) -> None:
         self._refresh_entry_preview()

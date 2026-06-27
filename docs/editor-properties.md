@@ -152,7 +152,7 @@ Shown in **paint** mode only. Fields depend on registry `ui:` metadata (`require
 | Hanging | Combo | `;hanging=` | `LANTERN` only: Auto (omit), Hanging (`true`), Standing (`false`) |
 | Preview | Icon | — | Creative-style item icon when available (`textures/item/`); otherwise block or inventory fallback. Grid cells use baked top-view sprites. |
 
-Changing brush fields updates the paint brush token only; grid cells change when you paint or use another grid action.
+Changing brush fields updates the paint brush token. When a **Grid cell** is selected and its token matches the active palette entry, **Material**, **Direction**, **Variant**, **Hanging**, **Open**, and **Lit** changes also live-apply to that cell and mark the layer dirty (no repainting required). Otherwise, grid cells change when you paint or use another grid action.
 
 ### Inspector — Grid cell (read-only + brush sync)
 

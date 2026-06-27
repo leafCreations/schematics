@@ -213,11 +213,11 @@ def _prepare_topdown_texture(
     direction: str | None,
     rotation: int,
     *,
-    corner_stair_shape: bool = False,
+    stairs_behavior: bool = False,
 ) -> Image.Image:
     tex = get_texture_for_render(base_token, tex)
 
-    if corner_stair_shape:
+    if stairs_behavior:
         facing_rotation = _corner_stair_facing_rotation(direction)
         if facing_rotation:
             tex = utils.rotate_texture_by_degrees(tex, facing_rotation)
@@ -364,7 +364,7 @@ def resolve_cell_texture(
                         base_token,
                         direction,
                         parsed.rotation,
-                        corner_stair_shape=_is_corner_stair_shape(parsed, entry),
+                        stairs_behavior=entry.get("behavior") == "stairs",
                     )
                 elif parsed.rotation:
                     tex = utils.rotate_texture_by_degrees(tex, parsed.rotation)
@@ -383,7 +383,7 @@ def resolve_cell_texture(
             base_token,
             rotate_direction,
             parsed.rotation,
-            corner_stair_shape=_is_corner_stair_shape(parsed, entry),
+            stairs_behavior=entry.get("behavior") == "stairs",
         )
 
         if entry.get("behavior") == "log":

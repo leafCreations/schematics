@@ -38,9 +38,17 @@ Also: unmapped `*.py` changes, or >20 targeted test files accumulated.
 | `helpers/pipeline.py`, `paths.py`, `render_image.py`, `fonts.py` | `test_paths`, `test_pipeline`, `test_fonts` |
 | `helpers/site_ground.py`, `structure_metadata.py` | `test_ui_document`, `test_site_cells`, `test_structure_metadata` |
 | `helpers/orbit_greedy_mesh.py`, `orbit_texture_atlas.py` | `test_orbit_preview`, `test_orbit_greedy_mesh` |
+| `helpers/orbit_render_class.py` — agent dispatch taxonomy (Signature: `orbit-render-class-routing`) | `test_orbit_render_class.py` — classify token before editing orbit helpers; trapdoor open/closed → `block_model`; glossary `docs/render-types.md` § Orbit render class |
 | Partial vs solid culling | `test_orbit_partial_mesh.py` — riser + `test_lower_stair_slab_top_face_visible_on_open_half`, `test_orbit_stair_face_textures_are_opaque`, `test_orbit_cobblestone_stair_face_textures_are_opaque`, `test_orbit_fence_side_texture_uses_masked_bake`, `test_orbit_wall_side_texture_uses_masked_bake` |
 | `helpers/orbit_partial_mesh.py`, `orbit_face_textures.py`, `orbit_preview_widget.py` | `test_orbit_partial_mesh` (+ greedy/preview when mesh integration changes). Stair/slab opaque tiles; fence/wall masked bakes + shader discard. |
 | `helpers/orbit_attachable_mesh.py`, `partial_worlds` QA (lantern/fence wall hole) | `test_orbit_attachable_mesh.py` — `test_plank_face_toward_lantern_neighbor_is_not_culled`, `test_plank_face_toward_fence_neighbor_is_not_culled`, `test_greedy_mesh_plank_beside_fence_has_exterior_face`, `test_slab_neighbor_still_in_partial_worlds` |
+| `helpers/orbit_block_model_mesh.py`, torch/lantern/trapdoor element faces (Signature: `orbit-attachable-block-model-faces`) | `test_orbit_attachable_mesh.py` — `test_wall_torch_uses_block_model_faces_not_sprite_bake_on_aabb`, `test_wall_torch_against_plank_culls_back_face` |
+| `helpers/orbit_attachable_mesh.py` direction Y-rotation (`N`/`S`/`E`/`W` keys; Signature: `orbit-attachable-direction-rotation-keys`) | `test_orbit_attachable_mesh.py` — `test_wall_torch_rotation_follows_token_direction`, `test_door_plate_rotates_with_direction` |
+| `helpers/sprite_baker/block_model.py` compose order (element rot then block Y; Signature: `orbit-block-model-compose-order`) | `test_orbit_attachable_mesh.py` — `test_wall_torch_tip_leans_in_facing_direction` |
+| `helpers/orbit_partial_mesh.py` `iter_solid_neighbor_face_restore_rects` (Signature: `orbit-stair-solid-face-restore`) | `test_orbit_partial_mesh.py` — `test_solid_emits_open_half_strip_beside_cobblestone_and_stair`, `test_solid_emits_restored_face_toward_partial_stair_neighbor` |
+| `helpers/orbit_face_textures.py` `_apply_orbit_catalog_schematic_tint` (water side fallback) | `test_orbit_greedy_mesh.py` — `test_water_orbit_faces_apply_schematic_blue_tint` |
+| `helpers/orbit_greedy_mesh.py` `expand_orbit_quad_corners`; `orbit_face_textures.py` `_resolve_orbit_side_face_texture`, `_force_opaque_orbit_face` (grass/dirt_path seam — geometry/texture only, no `aFaceUv`) | `test_orbit_greedy_mesh.py` — `-k "expand_orbit or dirt_path_side or cobblestone_orbit_side"` |
+| `helpers/orbit_attachable_mesh.py` `_resolve_lantern_model_name` (variant hanging models) | `test_orbit_attachable_mesh.py` — `test_copper_lantern_hanging_uses_variant_hanging_model` |
 
 ### Orbit stair “missing faces” — diagnose first
 
@@ -116,6 +124,7 @@ Agents often run a narrow test set during development, then commit fails because
 | `scripts/migrate_structure_to_yaml.py` | `test_structure_loader` |
 | `scripts/bake_sprites.py`, `generate_catalog.py` | `test_sprite_baker_*`, `test_block_catalog` |
 | `scripts/build_lessons_index.py`, `scripts/resolve_prior_lessons.py` | `test_build_lessons_index`, `test_resolve_prior_lessons`; `-k parse_artifacts` after `_normalize_doc_ref` / `parse_artifacts_line` edits |
+| `scripts/check_lessons_coverage.py`, `scripts/lessons_coverage_lib.py`, `scripts/check_governance_parity.py`, `scripts/pre-commit-lessons-coverage.sh` | `test_check_lessons_coverage`, `test_check_governance_parity`; `-k lessons_coverage or threshold` — Signature: `lessons-coverage-ci-drift`. **Fixtures:** monkeypatch `REPO_ROOT` on both `lessons_coverage_lib` and `resolve_prior_lessons` when using `tmp_path` kanban dirs (`build_report` uses `relative_to(REPO_ROOT)`) |
 
 ## Convention fallback
 

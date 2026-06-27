@@ -31,26 +31,43 @@ Use these mappings as the default starting point:
 | `renderers/`       | Run renderer-specific tests if present                          |
 | `helpers/orbit_face_textures.py` | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_partial_mesh.py tests/test_orbit_preview.py -q` |
 | Orbit water/lava catalog tint | `pytest tests/test_orbit_greedy_mesh.py -q -k water_orbit_faces_apply_schematic` |
-| `helpers/orbit_*.py`, `ui/widgets/orbit_preview_widget.py`, `ui/mesh_build_worker.py` | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_partial_mesh.py tests/test_orbit_attachable_mesh.py tests/test_orbit_preview.py -q` |
+| `helpers/orbit_*.py`, `ui/widgets/orbit_preview_widget.py`, `ui/mesh_build_worker.py` | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_partial_mesh.py tests/test_orbit_attachable_mesh.py tests/test_orbit_render_class.py tests/test_orbit_preview.py -q` |
+| `helpers/orbit_render_class.py` (agent render-class taxonomy) | `pytest tests/test_orbit_render_class.py -q` — Signature: `orbit-render-class-routing`; trapdoor open/closed both `block_model` |
 | C4 attachables / multi-cell (`orbit_attachable_mesh.py`) | `pytest tests/test_orbit_attachable_mesh.py -q` |
+| C4 torch/lantern/trapdoor block-model faces (`orbit_block_model_mesh.py`) | `pytest tests/test_orbit_attachable_mesh.py -q -k "wall_torch or block_model_faces or door_plate_rotates"` — Signature: `orbit-attachable-block-model-faces` |
+| C4 attachable direction rotation (`normalize_direction` → N/S/E/W) | `pytest tests/test_orbit_attachable_mesh.py -q -k "rotation_follows_token or door_plate_rotates or tip_leans"` — Signature: `orbit-attachable-direction-rotation-keys` |
+| `helpers/orbit_partial_mesh.py` `iter_solid_neighbor_face_restore_rects` (stair L-void; Signature: `orbit-stair-solid-face-restore`) | `pytest tests/test_orbit_partial_mesh.py -q -k "open_half or restored_face"` |
+| `helpers/orbit_face_textures.py` water/lava catalog tint (`_apply_orbit_catalog_schematic_tint`) | `pytest tests/test_orbit_greedy_mesh.py -q -k water_orbit_faces` |
 | C4 attachable routing drift (`orbit_partial_mesh` without `attachable_boxes_for_cell`) | `pytest tests/test_orbit_attachable_mesh.py -q` — Signature: `c4-attachable-partial-mesh-routing` |
+| Copper/soul lantern hanging model (`_resolve_lantern_model_name`) | `pytest tests/test_orbit_attachable_mesh.py -q -k copper_lantern` — Signature: `orbit-lantern-hanging-variant` |
 | C4 door lower+upper gap (QA) | `pytest tests/test_orbit_attachable_mesh.py -q -k door_lower_upper` |
 | C4 lantern/fence wall hole (`partial_worlds`) | `pytest tests/test_orbit_attachable_mesh.py -q -k "plank_face_toward or greedy_mesh_plank_beside_fence or slab_neighbor"` |
 | Stair L-void beside solid (`partial_worlds` strip) | `pytest tests/test_orbit_partial_mesh.py -q -k "open_half_strip or restored_face_toward_partial_stair or solid_emits_upper_strip"` |
 | Fence/wall masked orbit textures + shader discard | `pytest tests/test_orbit_partial_mesh.py -q -k "fence or wall"` |
 | Slab deck / partial occlusion (`orbit_partial_mesh`, `orbit_greedy_mesh` strip faces) | `pytest tests/test_orbit_partial_mesh.py -q -k slab` |
 | `helpers/block_picker.py`, `ui/widgets/properties_panel.py` (brush/direction) | `pytest tests/test_block_picker.py tests/test_properties_panel.py -q` |
+| Properties inspector live-apply (`brush_inspector_changed`, `_apply_inspector_to_selected_cell`) | `pytest tests/test_properties_panel.py tests/test_main_window.py -q -k "inspector or brush_inspector or apply_inspector"` — Signature: `properties-inspector-live-apply` |
 | `helpers/orbit_greedy_mesh.py` (solid shell culling) | `pytest tests/test_orbit_greedy_mesh.py::test_solid_face_visible_at_material_boundary tests/test_orbit_greedy_mesh.py::test_embedded_crafting_table_has_vertical_faces -q` |
-| Orbit top/side face seam (`expand_orbit_quad_corners`, side texture path) | `pytest tests/test_orbit_greedy_mesh.py -q -k "quad_corner_face_uv or expand_orbit or dirt_path_side or cobblestone_orbit_side"` |
+| Orbit top/side face seam (`expand_orbit_quad_corners`, side texture path) | `pytest tests/test_orbit_greedy_mesh.py -q -k "expand_orbit or dirt_path_side or cobblestone_orbit_side"` — Signature: `orbit-top-side-seam-geometry` |
 | Orbit shader / `aFaceUv` attribute changes | **Manual QA required** — partial attribute adds black out preview; run full `test_orbit_greedy_mesh.py` + `test_orbit_preview.py` after widget shader edits (Signature: `orbit-shader-attribute-blackout`) |
 | `registries/behaviors/functional.yaml` (SMOKER, BLAST_FURNACE facing_block) | `pytest tests/test_orbit_greedy_mesh.py -k 'smoker or blast_furnace or minecraft_smoker or furnace_lit' -q` |
 | `helpers/block_texture_load.py`, `helpers/facing_block_textures.py` (animated lit front) | `pytest tests/test_block_texture_load.py tests/test_orbit_greedy_mesh.py -k 'block_texture or furnace_lit or smoker_lit' -q` |
+| `helpers/utils_schematics.py` 2D stair `@direction` / `_prepare_topdown_texture` | `pytest tests/test_utils_schematics.py -q -k "straight_stair or corner_stair or paste_straight or paste_corner"` — Signature: `2d-stair-facing-rotation` |
 
 **Animated strip assertions:** golden images for `_on` lit fronts must use `load_block_texture_image` (frame 0), not `Image.open(...).resize(...)` on the full PNG — otherwise tests pass while the app tiles multiple openings (Signature: `orbit-animated-texture-strip`).
 | `structures/`      | Run tests covering the affected structures or builders          |
 | `scripts/`         | Run tests covering the affected workflow or utility             |
 | `scripts/build_lessons_index.py`, `scripts/resolve_prior_lessons.py` | `pytest tests/test_build_lessons_index.py tests/test_resolve_prior_lessons.py -q` |
+| `resolve_prior_lessons.py` inline `` `sig:…` `` on Lessons captured bullets | `pytest tests/test_build_lessons_index.py -q -k inline_sig` — Signature: `lessons-index-inline-sig-backtick` |
+| `scripts/check_lessons_coverage.py`, `scripts/lessons_coverage_lib.py` | `pytest tests/test_check_lessons_coverage.py tests/test_resolve_prior_lessons.py -q` — Signature: `lessons-coverage-c2-c3-audit`. **C4 fixture:** `test_c4_application_coverage_prior_lessons`, `test_extract_prior_lessons_citations_commit_issue_and_hash_ids`. **CLI:** exit 1 when composite &lt; 75% is expected threshold behavior, not a traceback failure |
+| `scripts/sync_agents_area_table.py`, `check_agents_area_table_parity` | `pytest tests/test_sync_agents_area_table.py tests/test_check_governance_parity.py -q -k area_table` — Signature: `governance-area-schema-agents-table-sync` |
+| `scripts/check_governance_parity.py` classify SSOT (`check_classify_parity`, `REFERENCE_CLASSIFY_FINGERPRINT`) | `pytest tests/test_check_governance_parity.py -q -k classify` — Signature: `governance-compact-classify-ssot` |
+| `scripts/check_governance_parity.py` kanban rule globs (`check_kanban_rule_globs`, gc3) | `pytest tests/test_check_governance_parity.py -q -k kanban_rule` — Signature: `governance-compact-kanban-rule-globs` |
+| gc5 forward-feedback format (`kanban-markdown/reference.md` § Forward-looking feedback) | `pytest tests/test_check_governance_parity.py tests/test_check_lessons_coverage.py -q`; grep `Impact Scope` in reference — Signature: `card-done-forward-feedback` |
+| `test_run_checks_integration_pass` / missing kanban rules in tmp_path fixture | same + `-k integration_pass` — Signature: `governance-compact-kanban-rule-globs` |
 | `scripts/check_governance_parity.py`, `scripts/resolve_feature_areas.py`, `docs/feature-areas.yaml` | `pytest tests/test_check_governance_parity.py tests/test_resolve_feature_areas.py -q -k agents_parity` (Signature: `governance-area-schema-parity-tests`) |
+| `check_governance_parity.py` `_SCHEMA_INTERNAL_PATHS` / `is_schema_internal_registry_path` / `check_registry_parity` (lc1 lessons-coverage paths on Agent Workflow) | `pytest tests/test_check_governance_parity.py -q -k "schema_internal or registry_parity_ignores_lessons"` — Signature: `governance-area-schema-parity-tests` |
+| `scripts/pre-commit-lessons-coverage.sh` (optional hook) | `pytest tests/test_check_lessons_coverage.py tests/test_check_governance_parity.py -q -k "lessons_coverage or threshold"` — Signature: `lessons-coverage-ci-drift` |
 | `parse_artifacts_line`, `artifacts:` on Card Done bullets | same + grep `artifacts:` in `docs/development.md` and kanban-markdown § Card Done; `doc:` yaml paths need explicit `.yaml`/`.yml` (Signature: `artifacts-doc-yaml-normalize`) |
 
 For uncommon cases, consult:
@@ -111,9 +128,11 @@ scripts/record-pytest-pass.sh
 
 to allow the hook to skip pytest for 30 minutes.
 
-Ruff and palette checks still run. Python line length: **100** characters (E501).
+Ruff and palette checks still run. Python line length: **100** characters (E501). **Agents:** run
+`.venv/bin/ruff check --select E501` on every edited `.py`/`.pyi` before handoff — Signature:
+`ruff-e501-line-length` ([pre-commit-workflow/SKILL.md](../skills/pre-commit-workflow/SKILL.md) § Before committing).
 
-On hook failure, a **`commit-issue`** kanban card may be created under `.devtool/features/` (hook prints `commit-issue card created: …`; `SKIP_COMMIT_ISSUE_CARD=1` to disable). No card → stage hook infra — signature `precommit-stash-old-hooks` in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). Mass ruff in `site-packages` / `.tmp-venv/` → `precommit-ruff-staged-venv`. Agents: never create `.tmp-venv` — signature `agent-no-tmp-venv`. Agent **review** workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc).
+On hook failure during **`git commit`**, a **`commit-issue`** kanban card may be created under `.devtool/features/` (hook prints `commit-issue card created: …`; `SKIP_COMMIT_ISSUE_CARD=1` to disable). **Not** on manual `scripts/pre-commit-pytest.sh` runs — Signature: `precommit-no-card-on-manual-hook`. No card → stage hook infra — signature `precommit-stash-old-hooks` in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). Mass ruff in `site-packages` / `.tmp-venv/` → `precommit-ruff-staged-venv`. Agents: never create `.tmp-venv` — signature `agent-no-tmp-venv`. Agent **review** workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc).
 
 ## Before PRs or Large Changes
 

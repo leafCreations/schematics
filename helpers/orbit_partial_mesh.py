@@ -517,6 +517,109 @@ def solid_face_strip_half_toward_neighbor(
     return None
 
 
+def iter_solid_neighbor_face_restore_rects(
+    world: tuple[int, int, int],
+    normal: tuple[int, int, int],
+    boxes_by_world: dict[tuple[int, int, int], list[OrbitBox]],
+    neighbor_world: tuple[int, int, int],
+) -> list[tuple[tuple[float, float, float], ...]]:
+    """Emit 2×2 sub-face quads on solids beside partial neighbors (stairs open-half)."""
+    neighbor_boxes = boxes_by_world.get(neighbor_world)
+    if not neighbor_boxes:
+        return []
+
+    rects: list[tuple[tuple[float, float, float], ...]] = []
+    for u_half in (0, 1):
+        for v_half in (0, 1):
+            corners = _solid_face_quadrant_corners(
+                world,
+                normal,
+                u_half=u_half,
+                v_half=v_half,
+            )
+            probe = _quadrant_probe_toward_neighbor(corners, normal)
+            if any(point_inside_box(probe, box) for box in neighbor_boxes):
+                continue
+            rects.append(corners)
+
+    return rects
+
+
+def _solid_face_quadrant_corners(
+    world: tuple[int, int, int],
+    normal: tuple[int, int, int],
+    *,
+    u_half: int,
+    v_half: int,
+) -> tuple[tuple[float, float, float], ...]:
+    wx, wy, wz = world
+    u0 = 0.0 if u_half == 0 else 0.5
+    u1 = 0.5 if u_half == 0 else 1.0
+    v0 = 0.0 if v_half == 0 else 0.5
+    v1 = 0.5 if v_half == 0 else 1.0
+
+    min_y = float(wy + v0)
+    max_y = float(wy + v1)
+
+    if normal == (1, 0, 0):
+        x = float(wx + 1)
+        min_z = float(wz + u0)
+        max_z = float(wz + u1)
+        return (
+            (x, min_y, min_z),
+            (x, max_y, min_z),
+            (x, max_y, max_z),
+            (x, min_y, max_z),
+        )
+    if normal == (-1, 0, 0):
+        x = float(wx)
+        min_z = float(wz + u0)
+        max_z = float(wz + u1)
+        return (
+            (x, min_y, min_z),
+            (x, min_y, max_z),
+            (x, max_y, max_z),
+            (x, max_y, min_z),
+        )
+    if normal == (0, 0, 1):
+        z = float(wz + 1)
+        min_x = float(wx + u0)
+        max_x = float(wx + u1)
+        return (
+            (min_x, min_y, z),
+            (max_x, min_y, z),
+            (max_x, max_y, z),
+            (min_x, max_y, z),
+        )
+    if normal == (0, 0, -1):
+        z = float(wz)
+        min_x = float(wx + u0)
+        max_x = float(wx + u1)
+        return (
+            (min_x, min_y, z),
+            (min_x, max_y, z),
+            (max_x, max_y, z),
+            (max_x, min_y, z),
+        )
+
+    raise ValueError(f"Unsupported face normal for solid restore: {normal}")
+
+
+def _quadrant_probe_toward_neighbor(
+    corners: tuple[tuple[float, float, float], ...],
+    normal: tuple[int, int, int],
+) -> tuple[float, float, float]:
+    cx = sum(corner[0] for corner in corners) / len(corners)
+    cy = sum(corner[1] for corner in corners) / len(corners)
+    cz = sum(corner[2] for corner in corners) / len(corners)
+    eps = 1e-3
+    return (
+        cx + normal[0] * eps,
+        cy + normal[1] * eps,
+        cz + normal[2] * eps,
+    )
+
+
 def _slab_behavior(box: OrbitBox) -> bool:
     parsed = parse_structure_token(box.cell.token)
     if parsed is None:

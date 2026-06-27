@@ -54,7 +54,7 @@ Every kanban card **must** have a recognized type in frontmatter `labels` (inlin
 
 | Label | User says **Done** |
 | ----- | ------------------ |
-| `feature`, `bug`, `agent`, `commit-issue` | Run § Card Done — lessons learned ([kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md)) |
-| `inquiry` | **Do not** run lessons capture |
+| `feature`, `bug`, `agent`, `commit-issue` | Run § Card Done — lessons + forward feedback ([kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); Signature: `card-done-forward-feedback`) |
+| `inquiry` | **Do not** run lessons capture **or** forward feedback |
 
-Signature: `kanban-lessons-label-scope`
+Signature: `kanban-lessons-label-scope`. Forward feedback skip on inquiry: `card-done-forward-feedback`.

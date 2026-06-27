@@ -35,6 +35,10 @@ When the user says the card is **Done** (user moves file to `done/`):
 1. Run [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
 2. Update **≥1 skill** + **≥1 rule** + relevant **`docs/`** / registry.
 3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card.
+4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
+   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
+   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
+   when tied; top-3 in chat on Card Done turn).
 
 **Do not** skip lessons capture because AC were already `[x]`.
 
@@ -53,7 +57,11 @@ When the user says the card is **Done** (user moves file to `done/`):
 - Implement without an assigned kanban card ([agent-routing.mdc](agent-routing.mdc))
 - Leave **`## Decisions`** as `TBD` before `in-progress`
 - Skip **Label Methods** when Feature Areas are set
+- **Superseded GovernanceDriftAlert siblings** — when fix landed on a parent `done/` card (same `_SCHEMA_INTERNAL_PATHS` / shared root cause), update sibling with **Decisions** `Superseded` + link, AC `[x]`, `review`; close without re-implementing — cite parent **Lessons captured** (kanban-markdown reference § Card Done artifact table)
+- **Parity spawn (GovernanceDriftAlert)** — `check_governance_parity.py` must create **Label Methods**, **Decisions**, **Acceptance Criteria** placeholders — not **Corrective Action**; kanban-markdown reference § Drift spawn card skeleton
 
 ## Full workflow
 
-[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Feature cards + implementation gates.
+Lifecycle + gates: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md). Card templates and
+section-order examples: [kanban-markdown/reference.md](../skills/kanban-markdown/reference.md) § Feature cards.
+Signature: `governance-compact-kanban-split` — scoped `kanban-*.mdc` authoritative for label constraints.

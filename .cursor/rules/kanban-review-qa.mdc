@@ -39,13 +39,22 @@ Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. W
 
 ## Card Done — lessons learned (mandatory)
 
-When the user says a **`feature`**, **`bug`**, or **`agent`** card is **Done** (user moves file to `done/`):
+When the user says a **`feature`**, **`bug`**, **`agent`**, or **`commit-issue`** card is **Done**
+(user moves file to `done/`):
 
 1. Read all **Corrective Action** / **Decisions** + **QA follow-up** bullets on the card.
 2. Capture durable lessons in **≥1 area skill** + **≥1 scoped rule** + **`docs/`** (and `feature-areas.yaml` / `registries/` when applicable).
 3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card with links to updated artifacts.
+4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** on the card **after** Lessons captured —
+   six categories; Impact Scope, References, Mitigation on max tier, Importance when tied;
+   card-specific not boilerplate. Signature: `card-done-forward-feedback` — format in
+   [kanban-markdown/reference.md](../skills/kanban-markdown/reference.md)
+   § Forward-looking feedback; top-3 in chat on Card Done turn (agent-self-evaluation §7).
+5. When reference § Forward-looking feedback changes, grep all scoped `kanban-*-cards.mdc` Card Done
+   bullets in one pass (feature / bug / agent / commit-issue).
 
-**`inquiry` cards:** user **Done** → **no** lessons capture ([kanban-card-gates.mdc](kanban-card-gates.mdc)).
+**`inquiry` cards:** user **Done** → **no** lessons capture **and no** forward feedback
+([kanban-card-gates.mdc](kanban-card-gates.mdc)).
 
 Full checklist: kanban-markdown § Card Done — lessons learned capture. **Do not** move the card to Done for the user.
 

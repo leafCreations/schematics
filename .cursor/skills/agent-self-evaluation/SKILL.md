@@ -67,7 +67,7 @@ Before handoff, score the turn against these checks:
 
 | Area touched | Verify |
 | ------------ | ------ |
-| Kanban / card implementation | **Prompt verb gate** ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2); prior lessons gate; Card Done lessons **only** `feature` / `bug` / `agent` / `commit-issue`; registry + **`docs/`**; AC `[x]` before Review; **§6:** ≥1 skill + ≥1 rule |
+| Kanban / card implementation | **Prompt verb gate** ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2); prior lessons gate; Card Done lessons + forward feedback **only** `feature` / `bug` / `agent` / `commit-issue` (Signature: `card-done-forward-feedback` — on card after Lessons captured; top-3 in chat — §7 Card Done); registry + **`docs/`**; AC `[x]` before Review; **GovernanceCompact** Card Done: cite `--line-counts` before/after (Signature: `governance-compact-baseline`); **§6:** ≥1 skill + ≥1 rule |
 | Structure YAML / editor save | Manifest vs `stage.yaml` split correct ([repo-map](../repo-map/SKILL.md)) |
 | UI panel/dialog | [ui-change](../ui-change/SKILL.md) checklist |
 | Registry/palette | `validate_palettes()` if behavior/palette changed; **templated families** use one token + materials, not raw catalog ids in `blocks:` ([repo-map](../repo-map/SKILL.md) § Templated block families) |
@@ -81,7 +81,7 @@ Read-only turns: mark N/A for rows that do not apply.
 | Done? | Evidence |
 | ----- | -------- |
 | Tests run | Name which files ran and result (pass/fail/not run + why) |
-| Ruff clean on touched `.py` | Lines ≤ **100** chars (E501); or pre-commit ruff hook would pass |
+| Ruff E501 on touched `.py` | **Run** `.venv/bin/ruff check --select E501` on every edited `.py`/`.pyi` path before handoff — not optional; hook 1 blocks commit (Signature: `ruff-e501-line-length`) |
 | Pre-commit path | If user will commit: hooks order known ([pre-commit-workflow](../pre-commit-workflow/SKILL.md)) |
 
 **Never claim tests passed if they were not executed.** Read-only: `Tests: n/a (no code changes)`.
@@ -115,9 +115,11 @@ Note anything that cost extra turns, tokens, or user corrections:
 
 **Implementation / fix / refactor turns:** you **must** edit **at least one skill file and at least one rule file** (`.cursor/rules/*.mdc`) in the same turn. Handoff `Skills updated:` and `Rules updated:` must each name a concrete change — not `none`.
 
-**Read-only / Ask turns:** edits optional; handoff may use `none (read-only)` for either line.
+**Read-only / Ask turns:** run the §6 mental check (both questions); **file edits optional**.
+Handoff: one line each — `Skills updated: none (read-only)` / `Rules updated: none (read-only)`.
+Edit only when the learning is urgent and durable.
 
-If a learning applies → **edit in the same turn** before handoff. Do not only promise to update later.
+If a learning applies on **implementation** turns → **edit in the same turn** before handoff. Do not only promise to update later.
 
 Do **not** paste the same bullet into skill and rule — pair a workflow tip (skill) with a path-scoped constraint (rule).
 
@@ -151,6 +153,12 @@ Prefer **`SKILL.md`** for procedures; prefer **`.mdc`** when the learning is a h
 
 ### 6c. What to add
 
+**Consolidate-before-expand (implementation turns):** Before adding skill or rule prose, **grep**
+the target for an existing row or bullet. Prefer a [reference.md](reference.md) §6f row or merge
+into an existing bullet over new paragraphs. At **~15 lines** of accumulated tips in one section,
+**consolidate** or move detail to `reference.md` — do not append without grepping first. Signature:
+`governance-compact-self-eval-handoff`.
+
 **Recurring failures:** add a row to [reference.md](reference.md) § Common failure patterns per **§6f** — do not duplicate **Fix pattern** prose in this skill or in rules.
 
 Good additions (durable, generalizable):
@@ -172,10 +180,10 @@ Bad additions (skip):
 
 ### 6d. How to edit
 
-1. **Grep** the target skill or rule — do not duplicate an existing row or bullet.
+1. **Grep before add** — search target skill, rule, and `reference.md`; do not duplicate rows.
 2. **Minimal diff** — one table row, one bullet, or one short subsection.
 3. **Concrete** — name files, tests, commands, or rule paths; avoid vague advice.
-4. If a skill section grows past ~15 lines of accumulated tips, **consolidate** or move detail to `reference.md`.
+4. **Consolidate at ~15 lines** — merge or move to `reference.md` before expanding a section.
 5. Rules: keep `description` and `globs` accurate; use `alwaysApply: true` only for cross-cutting mandates.
 
 ### 6e. When to skip file edits
@@ -228,65 +236,44 @@ Ask yes/no; any **yes** → update in the **same turn** or flag **AGENTS.md stal
 
 ## 7. Handoff format (required every turn)
 
-**Last sections of every response** — in this order:
+Signature: `governance-compact-self-eval-handoff`. **Last sections only** — in order:
 
-1. **`### Files used`** — ordered list of paths/skills loaded or edited (see below)
-2. **`### Self-evaluation`** — compact checklist; do not repeat the full diff
+1. **`### Top forward feedback`** — **Card Done turns only** (`feature` / `bug` / `agent` /
+   `commit-issue`): up to three items from the card block (Primary + top Secondary; backfill per
+   [kanban-markdown/reference.md](../kanban-markdown/reference.md) § Forward-looking feedback).
+   Omit on all other turns.
+2. **`### Files used`** — load order; one line per path/skill that drove the turn
+3. **`### Self-evaluation`** — compact fields below; **do not** paste §1–§6 checklists
 
-### Files used (required)
+Detail: §2b (context load), §6 (skill/rule loop), §6g (governance drift). More examples:
+[reference.md](reference.md) § Example handoffs.
 
-List **in load order** (discovery → implementation → verify). One line per entry; tag the role.
-
-```markdown
 ### Files used
-1. `AGENTS.md` — routing / classify
-2. `.cursor/skills/agent-triage/SKILL.md` — mode selection
-3. `ui/document.py` (grep) — locate dirty-flag helper
-4. `ui/document.py` (read) — implement fix
-5. `tests/test_ui_document.py` — verify
-```
 
-| Include | Omit |
-| ------- | ---- |
-| Skills/rules read for decisions | Every grep hit path — only paths where content drove the turn |
-| Files read, edited, or created | Terminal/log paths unless user needs them |
-| Primary test files run | Duplicate listing of unchanged siblings |
+Tag `(grep)`, `(read)`, `(edit)`, `(write)` when the same path appears twice. Omit grep-only
+hits that did not drive decisions.
 
-Use `(grep)`, `(read)`, `(edit)`, `(write)` tags when the same path appears more than once.
+### Self-evaluation (compact — one line per field)
 
-### Self-evaluation block
+Expand a field only when that check **failed** or needs a drift line.
 
 ```markdown
 ### Self-evaluation
-- **Scope:** <on-target | read-only | note drift>
-- **Context load:** <ok | note: excess/wrong order/missing triage | drift alert lines> — AGENTS.md <current | updated | stale: …>
-- **Drift alerts:** <none (N/A) | `[severity]` + prefix line(s) from reference § Drift alert examples | `KNOWN_DRIFT: <pair> — <reason>[; expires: …]`>
-- **Tests:** <paths run + result | n/a + why>
-- **Docs:** <paths updated | n/a + why>
-- **Skills used:** <e.g. ui-change, targeted-testing | none>
-- **Skills updated:** <skill name + one-line what added | none + why — not allowed on implementation turns>
-- **Rules updated:** <rule path + one-line what added | none + why — not allowed on implementation turns>
-- **Commit-ready:** <yes | needs pre-commit | n/a>
+- **Scope:** on-target | read-only | note
+- **Context load:** ok | note — AGENTS.md current|updated|stale: …
+- **Drift alerts:** none (N/A) | `[severity]` + prefix | KNOWN_DRIFT: …
+- **Tests:** path + result | n/a — why
+- **Docs:** paths | n/a — why
+- **Skills used:** slugs | none
+- **Skills updated:** slug — one line | none (read-only) | none (user requested)
+- **Rules updated:** path — one line | none (read-only) | none (user requested)
+- **Commit-ready:** yes | needs pre-commit | n/a
 ```
 
-Read-only example:
+**Read-only:** §6 mental check still required; `Skills updated` / `Rules updated` →
+`none (read-only)` unless urgent durable learning.
 
-```markdown
-### Files used
-1. `AGENTS.md` — routing entry
-2. `registries/loader.py` (read) — explain palette load
-
-### Self-evaluation
-- **Scope:** read-only — explained registry layout
-- **Context load:** ok — classify then single read; AGENTS.md current
-- **Drift alerts:** none (N/A — no governance edits)
-- **Tests:** n/a (no code changes)
-- **Docs:** n/a (read-only, no edits)
-- **Skills used:** repo-map
-- **Skills updated:** none (read-only)
-- **Rules updated:** none (read-only)
-- **Commit-ready:** n/a
-```
+**Implementation:** `Skills updated` and `Rules updated` must name edits — not `none` (§6e).
 
 ## 8. Commit-specific add-on
 

@@ -72,6 +72,9 @@ _CHECKLIST = (
     "[Consistency matrix](../../.cursor/skills/agent-triage/reference.md) rows still accurate\n"
     "- [ ] **Docs:** [docs/development.md](../../docs/development.md) Cursor agent workflow ↔ "
     "AGENTS.md + consistency links\n"
+    "- [ ] **Lessons coverage:** when `.devtool/features/done/` exists, run "
+    "`python3 scripts/check_lessons_coverage.py`; composite &lt; 75% should appear as "
+    "`Lessons coverage drift alert:` from `check_governance_parity.py`\n"
     "- [ ] **Area table:** AGENTS.md area → skills & rules includes current scoped rules "
     "(`agent-consistency`, `kanban-*`, …)\n"
 )

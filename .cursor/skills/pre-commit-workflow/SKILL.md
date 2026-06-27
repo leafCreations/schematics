@@ -22,21 +22,48 @@ Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
 ## Before committing (mandatory)
 
 1. Stage intended files: `git add …`
-2. **Simulate the pytest hook** on staged paths (not a hand-picked subset):
+2. **Ruff E501 on staged Python** (hook 1 — run before pytest):
+
+   ```bash
+   git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|pyi)$' \
+     | xargs -r .venv/bin/ruff check --select E501
+   ```
+
+   Fix every `Line too long` before commit — wrap strings, split f-strings, break call chains.
+   Signature: `ruff-e501-line-length`. Do **not** defer to the hook; agents must run this on
+   every implementation turn that touched `.py` / `.pyi` (self-eval §4).
+3. **Simulate the pytest hook** on staged paths (not a hand-picked subset):
 
    ```bash
    scripts/pre-commit-pytest.sh
    ```
 
    This is the same script the commit hook runs. If it chooses **full suite**, run `.venv/bin/pytest -q` until green. See [targeted-testing](../targeted-testing/SKILL.md) §5–§6 for scope rules and post-fix re-runs.
-3. After a test failure fix, re-run `scripts/pre-commit-pytest.sh` (or full suite if that was the scope) — **not** only the one failing file unless the hook listed a single file.
-4. Optional after green pytest on **same staged hash**:
+4. After a test failure fix, re-run `scripts/pre-commit-pytest.sh` (or full suite if that was the scope) — **not** only the one failing file unless the hook listed a single file.
+5. Optional after green pytest on **same staged hash**:
 
    ```bash
    scripts/record-pytest-pass.sh
    ```
 
    Pre-commit may skip pytest for 30 minutes; ruff and palettes still run.
+
+## Optional — lessons coverage hook (not default)
+
+Epic `LessonsCoverageMetric` lc3 ships `scripts/pre-commit-lessons-coverage.sh`. It is **not** wired in
+`.pre-commit-config.yaml` — add manually only when you want composite &lt; 75% to block commits locally:
+
+```yaml
+      - id: lessons-coverage
+        name: lessons coverage audit (when .devtool done/ exists)
+        entry: scripts/pre-commit-lessons-coverage.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+```
+
+Skips with exit 0 when `.devtool/features/done/` and `archived/` are absent (CI / clean clones). Signature:
+`lessons-coverage-ci-drift`.
 
 ## Hook 1 — Ruff (fix + format, re-stage)
 
@@ -48,7 +75,7 @@ Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
 
 | Failure | Fix |
 | ------- | --- |
-| E501 line too long | Wrap strings/signatures; keep lines ≤ **100** chars (`pyproject.toml`); split long markdown-in-Python |
+| E501 line too long | Wrap strings/signatures; keep lines ≤ **100** chars (`pyproject.toml`); split long markdown-in-Python; break multi-arg `OccupiedVoxel(...)` / tuple literals across lines before staging |
 | B007 unused loop var | Prefix with `_` |
 | Import sort | Usually auto-fixed |
 | Hook passed but commit still dirty | Hook re-staged files — `git add` any you changed after, or commit again |
@@ -98,7 +125,7 @@ See [targeted-testing/reference.md](../targeted-testing/reference.md) for path�
 
 On pytest failure: fix code → rerun `scripts/pre-commit-pytest.sh` (or full suite if hook chose that) → retry commit.
 
-**Commit-issue card:** when a hook fails, `scripts/on_pre_commit_failure.sh` writes a **`commit-issue`** card under `.devtool/features/` with **`## Problem`** and **`## Failed Tests`**. Look for `commit-issue card created: .devtool/features/commit-issue-<hook>-<timestamp>.md` in hook output (cards are gitignored). User asks agent to **review** → agent adds **Root Cause** and **Corrective Action**; user approves → asks to **implement**. Disable capture: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`. No card after failure → grep `precommit-stash-old-hooks` in [reference.md](reference.md) and stage hook infra. See [kanban-commit-issue-cards.mdc](../rules/kanban-commit-issue-cards.mdc).
+**Commit-issue card:** when a **`git commit`** hook fails (requires `PRE_COMMIT=1`), `scripts/on_pre_commit_failure.sh` writes a **`commit-issue`** card under `.devtool/features/` with **`## Problem`** and **`## Failed Tests`**. **Manual runs** of `scripts/pre-commit-pytest.sh` during agent implementation **do not** spawn cards — fix failures in-session. Look for `commit-issue card created: .devtool/features/commit-issue-<hook>-<timestamp>.md` in hook output (cards are gitignored). User asks agent to **review** → agent adds **Root Cause** and **Corrective Action**; user approves → asks to **implement**. Disable capture: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`. Signature: `precommit-no-card-on-manual-hook`. No card after **commit** failure → grep `precommit-stash-old-hooks` in [reference.md](reference.md) and stage hook infra.
 
 ## Retry commit loop
 

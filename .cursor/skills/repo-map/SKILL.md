@@ -85,7 +85,7 @@ After every implementation, agents **must** update `docs/feature-areas.yaml` whe
 | ---- | --- |
 | `ui/main_window.py` | Orchestration; search handler name |
 | `ui/widgets/grid.py` | Grid + tools; read line ranges |
-| `helpers/utils_schematics.py` | Texture resolution |
+| `helpers/utils_schematics.py` | Texture resolution; 2D top-down `stairs_behavior` → `corner_stair_facing_rotation` (straight + corner) |
 | `registries/loader.py` | Registry compile + textures |
 
 ## Common “where is X?”

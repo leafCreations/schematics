@@ -14,30 +14,28 @@ Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
 1. **Run before sending the final message** — not optional, not deferred to a follow-up.
 2. **Include `### Files used`** then **`### Self-evaluation`** as the **last sections** of the response (files in **load order**).
 3. **Context load audit** — every turn: correct files, no excess load, proper order (classify before deep read), **[AGENTS.md](../../AGENTS.md) not stale** (update it when routing drifts); kanban cards: use **Label Methods** before broad grep when Feature Areas are set.
-4. **§6 skill & rule feedback loop** — every turn: ask what to improve in skills and rules. **Implementation / fix / refactor turns:** edit **at least one skill and at least one rule** (`.cursor/rules/*.mdc`) in the same turn; handoff must name both — not `none` for either.
+4. **§6 skill & rule feedback loop** — every turn: mental check (both §6 questions).
+   **Read-only / Ask:** no file writes unless urgent; handoff one line each —
+   `Skills updated: none (read-only)` / `Rules updated: none (read-only)`.
+   **Implementation / fix / refactor:** edit **≥1 skill + ≥1 rule**; handoff names both — not
+   `none`. **Anti-bloat:** grep + consolidate-before-expand per SKILL §6c/§6d — Signature:
+   `governance-compact-self-eval-handoff`. Structured forward feedback (six categories) runs **only**
+   on Card Done — Signature: `card-done-forward-feedback`
+   ([kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done); Card Done turns
+   also surface top 3 items in chat (`### Top forward feedback` before handoff — SKILL §7).
 5. **§6g consistency** — when this turn edited [agent-consistency.mdc](../rules/agent-consistency.mdc) `globs`, run [SKILL.md](../skills/agent-self-evaluation/SKILL.md) §6g before handoff; list drift alert lines or `KNOWN_DRIFT:` when parity not fixed; else N/A.
 6. **Drift alerts in handoff** — governance-edit turns with unresolved parity: include `- **Drift alerts:**` (`[info|warn|critical]` + prefix line, or `KNOWN_DRIFT:` per reference § KNOWN_DRIFT); else `none (N/A)`.
 7. **Failure patterns** — on failure signals at task start, grep per [agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) §1b; on end-of-turn churn, grep [reference.md](../skills/agent-self-evaluation/reference.md) § Common failure patterns. Cite **Signature** in rule edits — do not duplicate **Fix pattern** prose.
 8. **Never skip** because the task was "trivial", "docs-only", "question-only", or "no code changed" (implementation still requires both updates).
+9. **Ruff E501 before handoff** — implementation turns that edit `.py`/`.pyi`: run
+   `.venv/bin/ruff check --select E501` on touched paths before the final message — Signature:
+   `ruff-e501-line-length` ([pre-commit-workflow/SKILL.md](../skills/pre-commit-workflow/SKILL.md)).
 
 ## Handoff block (required format)
 
-```markdown
-### Files used
-1. `AGENTS.md` — …
-2. …
-
-### Self-evaluation
-- **Scope:** …
-- **Context load:** … — AGENTS.md <current | updated | stale: …>
-- **Drift alerts:** …
-- **Tests:** …
-- **Docs:** …
-- **Skills used:** …
-- **Skills updated:** …
-- **Rules updated:** …
-- **Commit-ready:** …
-```
+Canonical compact template: [SKILL.md](../skills/agent-self-evaluation/SKILL.md) §7 — Signature:
+`governance-compact-self-eval-handoff`. Required every turn: `### Files used` then
+`### Self-evaluation` (one line per field). **Do not** duplicate the full template here.
 
 ## Pair with agent-triage
 

@@ -123,3 +123,19 @@ def test_show_picker_entry_trapdoor_brush_token_preserves_open_state(qapp):
     assert panel._direction_combo.currentText() == "west"
     assert panel._open_combo.currentText() == "true"
     assert panel.build_placement_token() == "TRAPDOOR:spruce@west;open=true"
+
+
+def test_brush_inspector_changed_emits_on_variant_combo_not_on_picker_entry(qapp):
+    panel = PropertiesPanel()
+    entry = picker_entry_for_token("SLAB")
+    assert entry is not None
+
+    inspector_signals: list[bool] = []
+    panel.brush_inspector_changed.connect(lambda: inspector_signals.append(True))
+
+    panel.show_picker_entry(entry, brush_token="SLAB:cobblestone#top")
+    assert inspector_signals == []
+
+    panel._variant_combo.setCurrentText("(default)")
+    assert inspector_signals == [True]
+    assert panel.build_placement_token() == "SLAB:cobblestone"

@@ -5,13 +5,20 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Literal
 
+from PIL import Image
+
 import helpers.constants as constants
 import helpers.utils_schematics as schematics_utils
 from helpers import utils
 from helpers.block_texture_load import load_block_texture_image
+from helpers.catalog_texture_exceptions import catalog_block_texture_name
 from helpers.facing_block_textures import load_facing_block_front_texture
 from helpers.registry_blocks import get_block_behavior, resolve_minecraft_block_id
-from helpers.registry_lookup import get_block_entry, load_catalog_texture_image
+from helpers.registry_lookup import (
+    get_block_entry,
+    is_minecraft_block_token,
+    load_catalog_texture_image,
+)
 from helpers.sprite_baker.plank_materials import list_plank_materials
 from helpers.structure_tokens import format_structure_token, parse_structure_token
 from helpers.types import CellGrid, MappedTextureImages, RawToken
@@ -106,9 +113,20 @@ def resolve_orbit_face_texture(
         )
 
     if face_kind == "side":
-        catalog_side = _resolve_orbit_catalog_block_face(raw_token, entry, "side")
-        if catalog_side is not None:
-            return catalog_side
+        side_texture = _resolve_orbit_side_face_texture(
+            raw_token,
+            entry,
+            parsed,
+            textures,
+            layer_cells=layer_cells,
+            cell_x=cell_x,
+            cell_z=cell_z,
+            topdown_textures=topdown_textures,
+            sideview_textures=sideview_textures,
+            side_facing=side_facing,
+        )
+        if side_texture is not None:
+            return side_texture
 
     if face_kind == "top" and _uses_orbit_catalog_cap(parsed):
         catalog_top = _resolve_orbit_catalog_block_face(raw_token, entry, "top")
@@ -140,6 +158,74 @@ def resolve_orbit_face_texture(
         cell_x=cell_x,
         cell_z=cell_z,
     )
+
+
+def _force_opaque_orbit_face(image):
+    """Solid orbit faces must not alpha-discard (e.g. dirt_path_side transparent rows)."""
+    if image is None:
+        return None
+
+    rgba = image.convert("RGBA")
+    red, green, blue, _alpha = rgba.split()
+    opaque = Image.new("L", rgba.size, 255)
+    return Image.merge("RGBA", (red, green, blue, opaque))
+
+
+def _finalize_orbit_solid_face_texture(raw_token: RawToken, entry: dict, image):
+    if image is None:
+        return None
+
+    behavior = get_block_behavior(entry)
+    if behavior in {"fence", "wall"}:
+        return image
+
+    return _force_opaque_orbit_face(image)
+
+
+def _resolve_orbit_side_face_texture(
+    raw_token: RawToken,
+    entry: dict,
+    parsed,
+    textures: MappedTextureImages,
+    *,
+    layer_cells: CellGrid | None,
+    cell_x: int | None,
+    cell_z: int | None,
+    topdown_textures: MappedTextureImages | None,
+    sideview_textures: MappedTextureImages | None,
+    side_facing: str | None,
+) -> Image.Image | None:
+    """Side faces: prefer schematic/unified catalog (cobblestone path) before per-face PNGs."""
+    token_for_resolve = _token_with_side_facing(raw_token, "side", side_facing)
+    side_map = pick_textures_for_face_kind("side", topdown_textures, sideview_textures)
+    if side_map is None:
+        side_map = textures
+
+    if parsed is not None and is_minecraft_block_token(parsed):
+        baked = schematics_utils.resolve_cell_texture(
+            token_for_resolve,
+            side_map,
+            view="side",
+            layer_cells=layer_cells,
+            cell_x=cell_x,
+            cell_z=cell_z,
+        )
+        if baked is not None:
+            return _finalize_orbit_solid_face_texture(raw_token, entry, baked)
+
+        unified = load_catalog_texture_image(parsed, "side", constants.BLOCK_PX)
+        if unified is not None:
+            return _finalize_orbit_solid_face_texture(
+                raw_token,
+                entry,
+                _apply_orbit_catalog_schematic_tint(raw_token, entry, unified),
+            )
+
+    catalog_side = _resolve_orbit_catalog_block_face(raw_token, entry, "side")
+    if catalog_side is not None:
+        return _finalize_orbit_solid_face_texture(raw_token, entry, catalog_side)
+
+    return None
 
 
 def pick_textures_for_face_kind(
@@ -396,6 +482,29 @@ def _uses_orbit_catalog_cap(parsed) -> bool:
     return parsed is not None and parsed.token == "minecraft" and bool(parsed.material)
 
 
+def _apply_orbit_catalog_schematic_tint(
+    raw_token: RawToken,
+    entry: dict,
+    image,
+):
+    """Apply schematic tint (water/lava/grass) to a catalog block texture."""
+    parsed = parse_structure_token(raw_token)
+    block_id = None
+    try:
+        if parsed is not None:
+            block_id = resolve_minecraft_block_id(entry, parsed)
+    except Exception:
+        block_id = None
+
+    if not block_id and parsed is not None and parsed.token == "minecraft" and parsed.material:
+        block_id = f"minecraft:{parsed.material}"
+
+    if not block_id:
+        return image
+
+    return schematics_utils.get_texture_for_render(block_id, image.copy())
+
+
 def _resolve_orbit_catalog_block_face(
     raw_token: RawToken,
     entry: dict,
@@ -423,7 +532,16 @@ def _resolve_orbit_catalog_block_face(
     texture_path = find_block_texture_path(BLOCK_TEXTURES_FOLDER, filename)
 
     if texture_path is not None:
-        return _load_orbit_texture_file(filename)
+        image = _load_orbit_texture_file(filename)
+        if image is None:
+            return None
+        return _apply_orbit_catalog_schematic_tint(raw_token, entry, image)
+
+    fallback_name = catalog_block_texture_name(block_id)
+    if fallback_name is not None:
+        image = _load_orbit_texture_file(fallback_name)
+        if image is not None:
+            return _apply_orbit_catalog_schematic_tint(raw_token, entry, image)
 
     if face_kind != "top":
         return None
@@ -432,11 +550,15 @@ def _resolve_orbit_catalog_block_face(
     if catalog_parsed is None:
         return None
 
-    return load_catalog_texture_image(
+    image = load_catalog_texture_image(
         catalog_parsed,
         "top",
         constants.BLOCK_PX,
     )
+    if image is None:
+        return None
+
+    return _apply_orbit_catalog_schematic_tint(raw_token, entry, image)
 
 
 def _token_with_side_facing(

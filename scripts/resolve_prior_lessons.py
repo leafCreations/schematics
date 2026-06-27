@@ -114,6 +114,7 @@ def extract_feature_area_labels(text: str) -> list[str]:
 _SIGNATURE_PATTERNS = (
     re.compile(r"Signature[`:\s(]+`([^`]+)`"),
     re.compile(r"^\s*-\s*\*\*`([^`]+)`:\*\*", re.MULTILINE),
+    re.compile(r"`sig:([^`]+)`"),
 )
 
 
@@ -331,8 +332,15 @@ def find_done_lessons(
     epic: str | None,
     labels: list[str],
     path_prefixes: list[str],
+    strict: bool = False,
 ) -> list[tuple[Path, str]]:
     """Match ``## Lessons captured`` on cards under ``done/`` and ``archived/``."""
+    if strict:
+        return find_done_lessons_strict(
+            epic=epic,
+            labels=labels,
+            path_prefixes=path_prefixes,
+        )
     hits: list[tuple[Path, str]] = []
     label_set = {label.strip() for label in labels if label.strip()}
 
@@ -347,6 +355,35 @@ def find_done_lessons(
         matched = False
         if epic and card_epic == epic:
             matched = True
+        if label_set and any(label in text for label in label_set):
+            matched = True
+        if path_prefixes and _path_overlaps(_card_paths(text), path_prefixes):
+            matched = True
+
+        if matched:
+            hits.append((card_path, lessons))
+
+    return hits
+
+
+def find_done_lessons_strict(
+    *,
+    epic: str | None,
+    labels: list[str],
+    path_prefixes: list[str],
+) -> list[tuple[Path, str]]:
+    """Like ``find_done_lessons`` but epic alone does not match."""
+    del epic  # epic-only match disabled; labels or path overlap required
+    hits: list[tuple[Path, str]] = []
+    label_set = {label.strip() for label in labels if label.strip()}
+
+    for card_path in _iter_cards(closed_only=True):
+        text = card_path.read_text(encoding="utf-8")
+        lessons = _lessons_excerpt(text)
+        if lessons is None:
+            continue
+
+        matched = False
         if label_set and any(label in text for label in label_set):
             matched = True
         if path_prefixes and _path_overlaps(_card_paths(text), path_prefixes):
@@ -423,7 +460,18 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="Path prefixes for commit-issue / done-card overlap (optional)",
     )
+    parser.add_argument(
+        "--audit",
+        choices=("capture", "application", "all"),
+        help="Run lessons coverage audit (delegates to check_lessons_coverage)",
+    )
     args = parser.parse_args(argv)
+
+    if args.audit:
+        from scripts.check_lessons_coverage import run_audit
+
+        mode = None if args.audit == "all" else args.audit
+        return run_audit(mode=mode)
 
     labels = list(args.labels)
     path_prefixes = list(args.paths or [])

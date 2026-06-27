@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Kanban commit-issue cards
 
-When frontmatter `labels` includes **`commit-issue`**, the card was created automatically by `scripts/on_pre_commit_failure.sh` after a failed `git commit`.
+When frontmatter `labels` includes **`commit-issue`**, the card was created automatically by `scripts/on_pre_commit_failure.sh` after a failed **`git commit`** pre-commit hook (`PRE_COMMIT=1`). Manual agent runs of hook scripts during implementation **do not** create cards — Signature: `precommit-no-card-on-manual-hook`.
 
 Full workflow: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Commit-issue cards.
 
@@ -47,7 +47,15 @@ When the user moves a **commit-issue** card to **Done**:
 1. Read **Problem**, **Corrective Action**, and promoted **Signature** (if any).
 2. Ensure durable patterns live in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md) § Failure patterns and [testing.mdc](testing.mdc) when hook-level (e.g. `precommit-ruff-staged-venv`, `agent-no-tmp-venv`).
 3. Add **`## Lessons captured (YYYY-MM-DD)`** on `done/{id}.md` listing updated artifacts; run `python3 scripts/build_lessons_index.py`.
-4. Area-specific fixes (UI, helpers) → matching skill + rule per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done.
+4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
+   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
+   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
+   when tied; top-3 in chat on Card Done turn).
+5. Area-specific fixes (UI, helpers) → matching skill + rule per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done.
+6. **Co-dependent staged paths** — if pytest fails on `test_orbit_attachable_mesh.py` after a partial revert, grep `attachable_boxes_for_cell` in `orbit_partial_mesh.py` before re-diagnosing (Signature: `c4-attachable-partial-mesh-routing`).
+7. **Governance parity integration fixture** — `test_run_checks_integration_pass` must seed gc3 kanban rules and Classify SSOT in tmp_path; grep `governance-compact-kanban-rule-globs` in pre-commit-workflow reference (Signature: `governance-compact-kanban-rule-globs`).
+8. **Recurring E501 commit-issue** — pre-handoff `.venv/bin/ruff check --select E501` on touched `.py`/`.pyi`; grep `ruff-e501-line-length` in pre-commit-workflow reference (Signature: `ruff-e501-line-length`).
+9. **Spurious manual-hook pytest cards** — if Problem shows segfault during agent verify, not user `git commit`, close after `PRE_COMMIT=1` gate lands; grep `precommit-no-card-on-manual-hook` (Signature: `precommit-no-card-on-manual-hook`).
 
 ## Do not
 

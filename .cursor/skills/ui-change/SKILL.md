@@ -58,6 +58,23 @@ Start with [agent-triage](../agent-triage/SKILL.md) and [repo-map](../repo-map/S
 - **Viewer preview zoom:** persisted in `viewer.preview_zoom_percent` (`editor_settings.yaml`); restored on **Viewer** tab open via `PreviewPanel.restore_saved_zoom()`. Toolbar **slider** + **Reset** + wheel; **Viewer** menu (after **Structure** in menu bar; Zoom In/Out/Reset) enabled on Viewer tab only.
 - **3D orbit preview:** **2D | 3D** toggle on `PreviewPanel`; lazy `OrbitPreviewWidget` (`QOpenGLWidget`); mesh via `helpers/orbit_mesh.py` + `MeshBuildWorker`; stale refresh in `MainWindow._ensure_orbit_mesh`. Do not instantiate GL widgets at import time (headless pytest). **`QMatrix4x4.lookAt`** in Qt6/PySide6 takes three **`QVector3D`** (eye, center, up) — not nine floats.
 
+### Orbit render class (four tiers)
+
+Classify tokens with `helpers.orbit_render_class.orbit_render_class(raw_token)` before editing orbit geometry — Signature: `orbit-render-class-routing`. Full glossary: `docs/render-types.md` § Orbit render class.
+
+| Class | Edit here | Do not |
+| ----- | --------- | ------ |
+| `solid_cube` | `orbit_greedy_mesh.py` greedy pass | — |
+| `partial_box` | `orbit_partial_mesh.py` AABB + atlas | Edit greedy mesh for slab/stair boxes |
+| `attachable_box` | `orbit_attachable_mesh.py` custom AABBs | Put attachables in `partial_worlds` |
+| `block_model` | `orbit_block_model_mesh.py` JSON element faces | Edit greedy mesh or sprite-bake torch/lantern on AABBs |
+
+**Trapdoor taxonomy:** `orbit_render_class("TRAPDOOR:…")` is always `block_model` (open and closed).
+Sub-geometry (open plate vs closed half) is resolved in attachable/block-model helpers — not a
+separate render class.
+
+**Do not edit `orbit_greedy_mesh.py` for torch/lantern/trapdoor** — those are `block_model`, not `solid_cube`.
+
 ### Orbit preview — lessons learned (C3b partial blocks)
 
 Before adding geometry for “transparent” or “missing” partial-block faces, **check textures first**:
@@ -71,8 +88,10 @@ Before adding geometry for “transparent” or “missing” partial-block face
 8. **Catalog functionals** — `SMOKER` / `BLAST_FURNACE` are registry **`facing_block`** tokens (`facing` + `lit` blockstates), not bare `minecraft:*` solids. Orbit front/side/top like `FURNACE`; `;lit=true` → `_front_on.png`. Animated `_on` strips (`smoker_front_on.png` + `.mcmeta`) load **frame 0 only** via `helpers/block_texture_load.py` (2D + 3D). Legacy `minecraft:smoker` cells resolve to registry picker entries (`requires_direction`, **Lit**) via `_ensure_picker_entry_indexes` + `cell_token_matches_picker_entry`.
 9. **Slab roof decks** — bottom `SLAB` layers use neighbor-cell `box_face_occluded` + `_slab_deck_bottom_face_occluded` (hide −Y and shared vertical faces). Isolated single slab keeps exterior −Y. Tests: `test_slab_deck_7x7_minus_y_faces_culled`, `test_slab_deck_mesh_has_no_minus_y_normals`.
 10. **Solid beside slab/stair** — greedy shell skips full faces toward `partial_worlds`; `_collect_solid_slab_neighbor_strip_faces` restores strips via `iter_solid_neighbor_face_restore_rects` (slab upper/lower half; stair open-half via 2×2 face probe). Tests: `test_solid_emits_upper_strip_face_toward_bottom_slab`, `test_solid_emits_open_half_strip_beside_cobblestone_and_stair`.
-11. **C4 attachables** — `helpers/orbit_attachable_mesh.py` must ship with `orbit_partial_mesh.py` routing (`attachable_boxes_for_cell`, `is_orbit_box_behavior`, `is_partial_volume_behavior`) and `orbit_greedy_mesh.py` `solid_cells` / `partial_worlds` updates — Signature: `c4-attachable-partial-mesh-routing`. Bed/chest neighbor pairing; trapdoor open models + `@direction` rotation. **Doors:** `#lower` / `#upper` are **separate layer cells**. **Greedy `partial_worlds`:** `slab` + `stairs` only. Tests: `tests/test_orbit_attachable_mesh.py`.
-12. **Orbit shader** — committed baseline uses `tileFrac(worldPos)` only (no `aFaceUv` attribute). Do **not** add per-vertex UV attributes without matching VBO upload and full manual QA — partial shader/buffer changes black out the entire preview. Re-apply C4 attachables via `orbit_attachable_mesh.py` + `orbit_partial_mesh.py` routing separately from UV work.
+11. **C4 attachables** — `helpers/orbit_attachable_mesh.py` must ship with `orbit_partial_mesh.py` routing (`attachable_boxes_for_cell`, `is_orbit_box_behavior`, `is_partial_volume_behavior`) and `orbit_greedy_mesh.py` `solid_cells` / `partial_worlds` updates — Signature: `c4-attachable-partial-mesh-routing`. Bed/chest neighbor pairing; trapdoor open models + `@direction` rotation. **Doors:** `#lower` / `#upper` are **separate layer cells**. **Greedy `partial_worlds`:** `slab` + `stairs` only. **Torch/lantern/trapdoor:** JSON element faces via `orbit_block_model_mesh.py` — Signature: `orbit-attachable-block-model-faces` — not 2D `compose_*` bakes on AABB faces. **Direction Y-rotation:** tables keyed `N`/`S`/`E`/`W` from `normalize_direction()` — Signature: `orbit-attachable-direction-rotation-keys`. **Hanging lanterns:** `{variant_model}_hanging` (`_resolve_lantern_model_name`) — not hardcoded `lantern_hanging` — Signature: `orbit-lantern-hanging-variant`. Tests: `tests/test_orbit_attachable_mesh.py`.
+12. **Orbit shader** — committed baseline uses `tileFrac(worldPos)` only (no `aFaceUv` attribute). Do **not** add per-vertex UV attributes without matching VBO upload and full manual QA — partial shader/buffer changes black out the entire preview (Signature: `orbit-shader-attribute-blackout`). Re-apply C4 attachables via `orbit_attachable_mesh.py` + `orbit_partial_mesh.py` routing separately from UV work.
+13. **Top/side crease seam** — grass/dirt_path gaps: `expand_orbit_quad_corners` (+Y on side tops), `_resolve_orbit_side_face_texture`, `_force_opaque_orbit_face` — Signature: `orbit-top-side-seam-geometry`. Do **not** rely on `aFaceUv` / hybrid shader UV (reverted QA retries 1–4).
+14. **Block-model compose order** — `element_face_corners_in_block_space`: element tilt first, then block Y around `(8,8,8)`; rotate emitted normals — wall torches lean correctly for all facings.
 
 Details: `docs/render-types.md` § Orbit partial blocks — lessons learned; § Attachables & functionals (C4).
 - Update `docs/ui.md` Viewer table and `docs/feature-areas.yaml` when adding preview controls.
@@ -103,6 +122,20 @@ Details: `docs/structure-tokens.md`, `docs/editor-properties.md`.
 | `facing_block` (furnace, smoker, …) | `"false"` | Unlit front unless user toggles |
 
 Test: `test_campfire_facing_and_lit_in_build_placement_token` in `tests/test_properties_panel.py`.
+
+## Properties brush — live apply to selected cell
+
+When a **Grid cell** is selected and matches the active palette entry (`cell_token_matches_picker_entry`):
+
+- **Material**, **Direction**, **Variant** combo changes emit `brush_inspector_changed` (from `_on_brush_option_changed` only — **not** from `show_picker_entry`).
+- **Hanging**, **Open**, **Lit** emit `brush_blockstate_changed` (unchanged).
+- `MainWindow._apply_inspector_to_selected_cell` builds `build_placement_token()` and calls `_set_cell` when the token differs.
+
+**Do not** emit `brush_inspector_changed` from `show_picker_entry` / `sync_brush_from_cell` — palette switches must not overwrite unrelated selected cells.
+
+Signature: `properties-inspector-live-apply`.
+
+Tests: `test_brush_inspector_changed_emits_on_variant_combo_not_on_picker_entry`, `test_apply_inspector_to_selected_slab_variant_updates_cell`, `test_apply_inspector_skips_when_palette_entry_does_not_match_cell`, `test_apply_inspector_trapdoor_open_uses_build_placement_token`.
 
 ## main_window.py
 

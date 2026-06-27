@@ -9,6 +9,14 @@ from helpers.context import SchematicContext
 from helpers.grid import get_offset_x, get_offset_z
 from helpers.layer_groups import is_layer_render_visible
 from helpers.layer_management import layer_worldgen_index
+from helpers.orbit_attachable_mesh import (
+    is_block_model_face_behavior,
+    resolve_attachable_block_model,
+)
+from helpers.orbit_block_model_mesh import (
+    block_model_face_neighbor_occluded,
+    iter_block_model_face_quads,
+)
 from helpers.orbit_face_textures import (
     orbit_face_kind_for_normal,
     pick_textures_for_face_kind,
@@ -16,7 +24,7 @@ from helpers.orbit_face_textures import (
     side_facing_for_normal,
     texture_signature,
 )
-from helpers.orbit_mesh import OccupiedVoxel, OrbitMeshData, _token_color
+from helpers.orbit_mesh import ORBIT_FACE_OVERLAP, OccupiedVoxel, OrbitMeshData, _token_color
 from helpers.orbit_partial_mesh import (
     OrbitBox,
     box_face_occluded,
@@ -24,9 +32,12 @@ from helpers.orbit_partial_mesh import (
     is_orbit_box_behavior,
     is_partial_volume_behavior,
     iter_all_orbit_boxes,
+    iter_solid_neighbor_face_restore_rects,
     solid_face_strip_half_toward_neighbor,
 )
 from helpers.orbit_texture_atlas import OrbitAtlasLayout, OrbitTextureAtlas
+from helpers.registry_lookup import get_block_entry
+from helpers.structure_tokens import parse_structure_token
 from helpers.types import CellGrid, MappedTextureImages
 
 _MERGE_NONE = -1
@@ -132,7 +143,12 @@ def greedy_merge(mask: list[list[int]]) -> list[tuple[int, int, int, int, int]]:
 
 
 def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData:
-    """Build a greedy-meshed exterior shell with catalog textures and partial blocks."""
+    """Build a greedy-meshed exterior shell with catalog textures and partial blocks.
+
+    Per-cell dispatch taxonomy: ``helpers.orbit_render_class.orbit_render_class`` —
+    ``solid_cube`` → greedy ``solid_cells``; ``partial_box`` / ``attachable_box`` /
+    ``block_model`` → ``iter_all_orbit_boxes`` + partial face passes (not full cubes).
+    """
     cells = iter_occupied_voxel_cells(ctx)
     if not cells:
         return _empty_mesh()
@@ -180,6 +196,16 @@ def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData
         layer_cells_cache,
         ctx.topdown_textures,
         ctx.sideview_textures,
+        atlas,
+        merge_id_to_atlas,
+        signature_to_merge_id,
+        pending_quads,
+    )
+
+    _collect_block_model_element_faces(
+        cells,
+        voxel_map,
+        layer_cells_cache,
         atlas,
         merge_id_to_atlas,
         signature_to_merge_id,
@@ -390,6 +416,8 @@ def _collect_partial_box_faces(
     for index, box in enumerate(all_boxes):
         if not is_orbit_box_behavior(box.cell.token):
             continue
+        if is_block_model_face_behavior(box.cell.token):
+            continue
 
         for face_pass in _FACE_PASSES:
             if box_face_occluded(
@@ -421,6 +449,64 @@ def _collect_partial_box_faces(
             )
 
 
+def _collect_block_model_element_faces(
+    cells: list[OccupiedVoxel],
+    voxel_map: dict[tuple[int, int, int], OccupiedVoxel],
+    layer_cells_cache: dict[int, CellGrid],
+    atlas: OrbitTextureAtlas,
+    merge_id_to_atlas: list[int],
+    signature_to_merge_id: dict[str, int],
+    pending_quads: list[_PendingQuad],
+) -> None:
+    """Emit JSON element faces for torch/lantern/trapdoor — not 2D sprite bakes on AABBs."""
+    for cell in cells:
+        if not is_block_model_face_behavior(cell.token):
+            continue
+
+        parsed = parse_structure_token(cell.token)
+        if parsed is None:
+            continue
+        entry = get_block_entry(parsed) or {}
+        spec = resolve_attachable_block_model(
+            cell,
+            entry,
+            parsed,
+            layer_cells_cache=layer_cells_cache,
+        )
+        if spec is None:
+            continue
+
+        model_name, rotation_y = spec
+        wx, wy, wz = (float(cell.world[0]), float(cell.world[1]), float(cell.world[2]))
+        for face_quad in iter_block_model_face_quads(
+            model_name,
+            wx,
+            wy,
+            wz,
+            rotation_y=rotation_y,
+        ):
+            if block_model_face_neighbor_occluded(cell, face_quad.normal, voxel_map):
+                continue
+
+            existing = signature_to_merge_id.get(face_quad.signature)
+            if existing is None:
+                fallback = _token_color(cell.token)
+                atlas_id = atlas.register(face_quad.texture, fallback_rgb=fallback)
+                merge_id = len(merge_id_to_atlas)
+                merge_id_to_atlas.append(atlas_id)
+                signature_to_merge_id[face_quad.signature] = merge_id
+            else:
+                merge_id = existing
+
+            pending_quads.append(
+                _PendingQuad(
+                    normal=face_quad.normal,
+                    corners=face_quad.corners,
+                    atlas_id=merge_id_to_atlas[merge_id],
+                ),
+            )
+
+
 def _collect_solid_slab_neighbor_strip_faces(
     voxel_map: dict[tuple[int, int, int], OccupiedVoxel],
     partial_worlds: frozenset[tuple[int, int, int]],
@@ -445,27 +531,34 @@ def _collect_solid_slab_neighbor_strip_faces(
                 continue
 
             half = solid_face_strip_half_toward_neighbor(boxes_by_world, neighbor)
-            if half is None:
-                continue
+            if half is not None:
+                corner_sets = [_solid_strip_quad_corners(world, normal, half=half)]
+            else:
+                corner_sets = iter_solid_neighbor_face_restore_rects(
+                    world,
+                    normal,
+                    boxes_by_world,
+                    neighbor,
+                )
 
-            corners = _solid_strip_quad_corners(world, normal, half=half)
-            merge_id = _register_face_signature(
-                cell,
-                normal,
-                layer_cells_cache,
-                topdown_textures,
-                sideview_textures,
-                atlas,
-                merge_id_to_atlas,
-                signature_to_merge_id,
-            )
-            pending_quads.append(
-                _PendingQuad(
-                    normal=normal,
-                    corners=corners,
-                    atlas_id=merge_id_to_atlas[merge_id],
-                ),
-            )
+            for corners in corner_sets:
+                merge_id = _register_face_signature(
+                    cell,
+                    normal,
+                    layer_cells_cache,
+                    topdown_textures,
+                    sideview_textures,
+                    atlas,
+                    merge_id_to_atlas,
+                    signature_to_merge_id,
+                )
+                pending_quads.append(
+                    _PendingQuad(
+                        normal=normal,
+                        corners=corners,
+                        atlas_id=merge_id_to_atlas[merge_id],
+                    ),
+                )
 
 
 def _solid_strip_quad_corners(
@@ -602,14 +695,53 @@ def _emit_pending_quad(
         u0 = v0 = u1 = v1 = 0.0
         color = _token_color(f"atlas-{quad.atlas_id}")
 
+    expanded_corners = expand_orbit_quad_corners(quad.corners, quad.normal)
     tri_indices = (0, 1, 2, 0, 2, 3)
     for index in tri_indices:
-        corner = quad.corners[index]
+        corner = expanded_corners[index]
         positions.extend(corner)
         normals.extend((float(nx), float(ny), float(nz)))
         colors.extend(color)
         uvs.extend((0.0, 0.0))
         tile_rects.extend((u0, v0, u1, v1))
+
+
+_UV_EPS = 1e-6
+
+
+def expand_orbit_quad_corners(
+    corners: tuple[tuple[float, float, float], ...],
+    normal: tuple[int, int, int],
+) -> tuple[tuple[float, float, float], ...]:
+    """Outset full-height vertical side quads; raise top edge (+Y) to meet top faces."""
+    _, ny, _ = normal
+    if ny != 0:
+        return corners
+
+    y_max = max(corner[1] for corner in corners)
+    y_min = min(corner[1] for corner in corners)
+    if (y_max - y_min) < 1.0 - _UV_EPS:
+        return corners
+
+    nx, _, nz = normal
+    expanded: list[tuple[float, float, float]] = []
+    for x, y, z in corners:
+        if not (
+            _is_integer_block_coord(x) and _is_integer_block_coord(y) and _is_integer_block_coord(z)
+        ):
+            expanded.append((x, y, z))
+            continue
+        px = x + nx * ORBIT_FACE_OVERLAP
+        py = y
+        pz = z + nz * ORBIT_FACE_OVERLAP
+        if abs(y - y_max) < _UV_EPS:
+            py += ORBIT_FACE_OVERLAP
+        expanded.append((px, py, pz))
+    return tuple(expanded)
+
+
+def _is_integer_block_coord(value: float) -> bool:
+    return abs(value - round(value)) < _UV_EPS
 
 
 def _box_face_corners(

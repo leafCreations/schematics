@@ -28,8 +28,11 @@ from PySide6.QtWidgets import (
 )
 
 import helpers.constants as constants
-from helpers.block_picker import homogeneous_picker_entry_for_positions, picker_entry_for_cell
-from helpers.campfire_state import with_campfire_lit
+from helpers.block_picker import (
+    cell_token_matches_picker_entry,
+    homogeneous_picker_entry_for_positions,
+    picker_entry_for_cell,
+)
 from helpers.cell_clipboard import CellRegionClipboard, copy_region, move_region, paste_region
 from helpers.grid import resolve_site_dimensions
 from helpers.grid_brush import rect_cell_indices, region_cell_indices, square_cell_indices
@@ -96,7 +99,7 @@ from helpers.pipeline import renders_include_worldgen
 from helpers.site_ground import resize_site_ground
 from helpers.structure_loader import build_schematic_context
 from helpers.structure_metadata import identity_from_structure_path, resolve_structure_version
-from helpers.trapdoor_state import with_trapdoor_open
+from helpers.structure_tokens import parse_structure_token
 from ui.app_settings import (
     add_recent_structure,
     clear_recent_structures,
@@ -635,8 +638,11 @@ class MainWindow(QMainWindow):
         self._site_path_panel.clear_all_paths_requested.connect(self._on_clear_all_paths)
         self._palette_panel.entry_selected.connect(self._on_palette_entry_selected)
         self._properties_panel.brush_changed.connect(self._on_brush_changed)
+        self._properties_panel.brush_inspector_changed.connect(
+            self._apply_inspector_to_selected_cell,
+        )
         self._properties_panel.brush_blockstate_changed.connect(
-            self._apply_blockstate_to_selected_cell
+            self._apply_inspector_to_selected_cell,
         )
         self._properties_panel.active_cell_changed.connect(self._structure_grid.set_active_cell)
         self._properties_panel.active_cell_cleared.connect(self._structure_grid.clear_active_cell)
@@ -3338,7 +3344,7 @@ class MainWindow(QMainWindow):
     def _on_brush_changed(self) -> None:
         self._update_window_title()
 
-    def _apply_blockstate_to_selected_cell(self) -> None:
+    def _apply_inspector_to_selected_cell(self) -> None:
         if self._eraser_active or not self._structure_tab_active():
             return
 
@@ -3356,20 +3362,17 @@ class MainWindow(QMainWindow):
         layer = self._document.layers[self._current_layer_index]
         raw_token = layer["cells"][row][col]
 
-        if entry.behavior == "trapdoor":
-            new_token = with_trapdoor_open(
-                raw_token,
-                self._properties_panel.selected_trapdoor_open(),
-            )
-        elif entry.behavior == "campfire":
-            new_token = with_campfire_lit(
-                raw_token,
-                self._properties_panel.selected_campfire_lit(),
-            )
-        else:
+        if raw_token == ".":
             return
 
-        if new_token == raw_token:
+        parsed = parse_structure_token(raw_token)
+
+        if parsed is None or not cell_token_matches_picker_entry(parsed, entry):
+            return
+
+        new_token = self._properties_panel.build_placement_token()
+
+        if new_token is None or new_token == raw_token:
             return
 
         self._set_cell(row, col, new_token)

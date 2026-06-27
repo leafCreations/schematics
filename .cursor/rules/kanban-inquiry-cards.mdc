@@ -21,14 +21,16 @@ When a feature file has frontmatter `labels` including **`inquiry`** (case-insen
 
 ## Spawn feature cards (mandatory when user asks)
 
-When the user requests implementation of inquiry recommendations, spawn **todo** feature (or bug) cards per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § **Spawn feature cards from inquiry**:
+When the user requests implementation of inquiry recommendations, spawn **todo** child cards per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § **Spawn feature cards from inquiry**:
 
-- `status: "todo"`, `labels: []` (feature) or `["bug"]`
-- `epic: "{EpicName}"` — PascalCase theme (e.g. `DesignFailureMemorySystem`, `GovernanceDriftAlerts`)
-- Body sections: **Acceptance Criteria**, **Out of Scope**, **Feature Areas**, **Label Paths**, **Label Methods**, **Decisions**, **Context**
-- Parent inquiry: **`## Spawned feature cards`** table + matching `epic`
+- `status: "todo"`, `labels: ["feature"]` or `["bug"]` or **`["agent"]`** (governance/skills/rules — e.g. epic `GovernanceCompact`)
+- `epic: "{EpicName}"` — PascalCase theme (e.g. `DesignFailureMemorySystem`, `GovernanceDriftAlerts`, `GovernanceCompact`)
+- Body sections: **Acceptance Criteria**, **Out of Scope**, **Feature Areas** / **Feature Area**, **Label Paths**, **Label Methods**, **Decisions**, **Context**
+- Parent inquiry: **`## Spawned feature cards`** table + matching `epic`; set global **todo** `order` for execution sequence when user asks
 
 Do **not** start implementation on spawned cards until user assigns work (pre-implementation review still applies).
+
+**Out of Scope follow-ups** — when spawning from a parent card’s Out of Scope list, use the correct label per work type: `inquiry` (research), `agent` (governance), `feature` (product geometry). Add **`## Spawned follow-up cards`** on the parent with epic/order links.
 
 ## Workflow
 
@@ -38,17 +40,20 @@ Do **not** start implementation on spawned cards until user assigns work (pre-im
 4. Write **Response** on the card → `review`
 5. User asks to spawn → create **todo** child cards with `epic` + review-ready sections
 6. User moves inquiry → `done` when satisfied — **no** Card Done lessons capture
+7. **Spawn table on parent** — after spawn, add `## Spawned feature cards` with order, path, label, status; bump parent `modified`
 
 ## Card Done
 
-**Do not** run lessons learned capture when the user closes an **inquiry** card. Inquiry **Done** = user moves to `done/` only ([kanban-card-gates.mdc](../rules/kanban-card-gates.mdc)).
+**Do not** run lessons learned capture when the user closes an **inquiry** card. Inquiry **Done** =
+user moves to `done/` only — **no** `## Lessons captured` **and no** `## Forward-looking feedback`
+([kanban-card-gates.mdc](../rules/kanban-card-gates.mdc)).
 
 ## Do not
 
 - Use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on the **inquiry** card itself
 - Implement application code on the inquiry card unless user explicitly asks
 - Spawn cards in **Backlog** — always **todo**
-- Skip **Decisions** / **Label Paths** / **Label Methods** on spawned **feature** cards when Feature Areas are set
+- Skip **Decisions** / **Label Paths** / **Label Methods** on spawned **feature** / **agent** cards when Feature Areas are set
 - Orbit / render **2D vs 3D parity** questions surfaced during bug QA → spawn **`inquiry`** card (not a bug on the parent unless AC contradicts shipped behavior); link from parent **Context** or handoff
 
 ## Full workflow

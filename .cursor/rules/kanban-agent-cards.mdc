@@ -22,7 +22,56 @@ When a feature file has frontmatter `labels` including **`agent`** (case-insensi
 
 ## Phased epics
 
-Multi-card governance work uses shared `epic: "{PascalCase}"` and series `order` (`lc0`, `lc1`, … or `li0`, `li1`, …). User provides **Description** + **Feature Area** on each card; agent may pre-fill **Label Paths**, **Label Methods**, **Acceptance Criteria**, **Decisions**, and **Context** at spawn. Examples: `LessonsCoverageMetric` (lc0–lc3); `LessonsReferenceIndex` (li0–li3); `GovernanceAreaSchema` (gs0–gs3); `ArtifactsDocYaml` (ap0–ap1, `doc:` yaml parser).
+**GovernanceAreaSchema** (gs0–gs4): yaml `agents_skill` / `agents_rules` / `lesson_routing_row` on seeded
+areas; `check_area_schema_parity` + `--agents-parity` (gs2–gs3). **gs4 (complete):**
+`scripts/sync_agents_area_table.py` `--check` / `--write` syncs AGENTS § Area → skills & rules from
+yaml — Signature: `governance-area-schema-agents-table-sync`; run `--write` after seeding governance
+keys on a new area.
+
+**GovernanceCompact** (gc0–gc7): measure before/after with `python3 scripts/check_governance_parity.py --line-counts`
+(exit 0 — Signature: `governance-compact-baseline`). Record before/after line counts in **Decisions** or Card Done
+handoff when closing compaction phases. Examples: `LessonsCoverageMetric` (lc0–lc3); `LessonsReferenceIndex` (li0–li3);
+`GovernanceAreaSchema` (gs0–gs3); `ArtifactsDocYaml` (ap0–ap1, `doc:` yaml parser); `GovernanceCompact` (gc0–gc7);
+`OrbitRenderClass` (or0 — **complete:** agent taxonomy + `helpers/orbit_render_class.py`; **or1 complete:**
+trapdoor doc/test parity — all `TRAPDOOR:*` → `block_model`, open/closed sub-geometry only). **gc2 (complete):** Classify
+signals canonical in triage reference § Classify only; AGENTS ≤5-row summary; triage §1 pointer;
+`check_classify_parity` fingerprint — Signature: `governance-compact-classify-ssot`. **gc3
+(complete):** card-type `kanban-*-cards.mdc` scoped `.devtool/features/**`; triage §1 pointer to
+agent-routing § Kanban card type (no §1 table — `TRIAGE_CLASSIFY_MAX_ROWS=0`); `check_kanban_rule_globs`
+— Signature: `governance-compact-kanban-rule-globs`. **gc4 (complete):** compact §7 handoff template;
+read-only §6 one-line handoff; consolidate-before-expand gate — Signature:
+`governance-compact-self-eval-handoff`. **gc5 extension (complete):** forward-feedback tightening
+— Impact Scope, References, Mitigation, Importance, top-3 chat; reference § SSOT — Signature:
+`card-done-forward-feedback`. **gc6
+(complete):** task-type first-read rows in triage reference § Task types — Signature:
+`governance-compact-classify-task-types`; triage §2 summary (no full table duplication).
+
+**LessonsCoverageMetric lc0 (complete):** metric spec SSOT —
+[docs/development.md](../../docs/development.md) § **Lessons Coverage Metric** under Cursor agent
+workflow (C1–C4 formulas, **Inputs** table, interpretation bands, gitignored `done/` caveat, audit
+CLI pointers). Not a separate top-level doc.
+
+**LessonsCoverageMetric lc1 (complete):** `scripts/check_lessons_coverage.py` +
+`scripts/lessons_coverage_lib.py`; `resolve_prior_lessons.py --audit capture|application|all`;
+`tests/test_check_lessons_coverage.py` uses `tmp_path` + monkeypatch `FEATURES_DIR` / `REPO_ROOT`
+(no gitignored `.devtool/` in CI). Signature: `lessons-coverage-c2-c3-audit` (C4 Prior-lessons fixture).
+
+**LessonsCoverageMetric lc2+:** `check_lessons_coverage.py` scores full C1–C4; `--strict` uses
+`find_done_lessons_strict()` (epic alone does not match C3). Signature: `lessons-coverage-strict-consumption`.
+Card Done: optional ``artifacts:`` tail improves C2 — Signature: `lessons-coverage-c2-c3-audit`
+([testing.mdc](testing.mdc)).
+
+**LessonsCoverageMetric lc3 (complete):** `check_governance_parity.py` calls `check_lessons_coverage_drift`
+when `.devtool/features/done/` or `archived/` exists; composite &lt; 75% → `Lessons coverage drift alert:` with
+C1–C4 breakdown; spawns `lessons-coverage-drift-YYYY-MM-DD` (epic `LessonsCoverageMetric`, label `agent`).
+Spawn cards must run the prior lessons gate and add `**Prior lessons (YYYY-MM-DD):**` under **Decisions**
+before `review` (no `\n**` line breaks inside the block — C4 parser boundary). Optional hook:
+`scripts/pre-commit-lessons-coverage.sh` (not in default `.pre-commit-config.yaml`). Clean clones
+skip gracefully. Signature: `lessons-coverage-ci-drift` ([testing.mdc](testing.mdc)). **Spawn skeleton:**
+all **agent** sections at create with `_TBD_` placeholders — kanban-markdown reference § Drift spawn
+card skeleton; not **Corrective Action** alone.
+
+**Hybrid agent cards** (e.g. orbit render-class routing): **Feature Area** may be product-facing (`Render Preview`); AC may include a small `helpers/` resolver + docs/skill glossary — still `labels: ["agent"]`, not `feature`.
 
 ## Workflow
 
@@ -33,6 +82,18 @@ Multi-card governance work uses shared `epic: "{PascalCase}"` and series `order`
 5. `todo` → `in-progress` → implement per **Decisions**
 6. Staged pytests green; update `docs/feature-areas.yaml` and `docs/` when registry or user docs change
 7. Mark **Acceptance Criteria** `[x]` → `review` → user: `done`
+
+## Card Done — lessons learned
+
+When the user says the agent card is **Done** (user moves file to `done/`):
+
+1. Run [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
+2. Update **≥1 skill** + **≥1 rule** + relevant **`docs/`** / registry.
+3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card.
+4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
+   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
+   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
+   when tied; top-3 in chat on Card Done turn).
 
 ## Card Done `artifacts:` — registry yaml
 

@@ -9,6 +9,9 @@ from helpers.grid import get_offset_x, get_offset_z
 from helpers.layer_groups import is_layer_render_visible
 from helpers.layer_management import layer_worldgen_index
 
+# Outset exterior quads so perpendicular faces overlap at block edges (T-junction cracks).
+ORBIT_FACE_OVERLAP = 0.005
+
 # Unit-cube face quads at block origin (x, y, z) → (x+1, y+1, z+1).
 # Each entry: normal, then four corner offsets from block min corner.
 _CUBE_FACES: tuple[tuple[tuple[int, int, int], tuple[tuple[float, float, float], ...]], ...] = (

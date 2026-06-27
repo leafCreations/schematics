@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 import helpers.constants as constants
 from helpers.context import SchematicContext
 from helpers.orbit_face_textures import (
@@ -11,6 +13,7 @@ from helpers.orbit_face_textures import (
 )
 from helpers.orbit_greedy_mesh import (
     build_orbit_greedy_mesh_from_context,
+    expand_orbit_quad_corners,
     greedy_merge,
     iter_occupied_voxel_cells,
 )
@@ -355,6 +358,94 @@ def test_solid_face_visible_at_material_boundary():
     assert _solid_face_visible((1, 0, 0), (0, 0, 1), mixed, frozenset())
 
 
+def test_expand_orbit_quad_corners_raises_side_top_edge():
+    corners = (
+        (1.0, 0.0, 0.0),
+        (1.0, 1.0, 0.0),
+        (1.0, 1.0, 1.0),
+        (1.0, 0.0, 1.0),
+    )
+    expanded = expand_orbit_quad_corners(corners, (1, 0, 0))
+    assert expanded[1][1] > 1.0
+    assert expanded[2][1] > 1.0
+    assert expanded[0][1] == 0.0
+
+
+def test_expand_orbit_quad_corners_skips_partial_height_faces():
+    corners = (
+        (0.0, 0.0, 0.0),
+        (1.0, 0.0, 0.0),
+        (1.0, 0.5, 1.0),
+        (0.0, 0.5, 1.0),
+    )
+    assert expand_orbit_quad_corners(corners, (0, 0, 1)) == corners
+
+
+def test_dirt_path_side_texture_is_opaque_for_orbit():
+    from helpers.orbit_face_textures import (
+        _force_opaque_orbit_face,
+        _load_orbit_texture_file,
+        resolve_orbit_face_texture,
+    )
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    side = _force_opaque_orbit_face(_load_orbit_texture_file("dirt_path_side.png"))
+    assert side is not None
+    alpha = side.convert("RGBA").getchannel("A")
+    assert min(alpha.getdata()) == 255
+
+    ctx = _ctx_from_layers([{"index": 0, "cells": [["minecraft:dirt_path"]]}])
+    ctx.sideview_textures = compile_texture_set(
+        "side",
+        str(BLOCK_TEXTURES_FOLDER),
+        constants.BLOCK_PX,
+    )
+    resolved = resolve_orbit_face_texture(
+        "minecraft:dirt_path",
+        ctx.sideview_textures,
+        face_kind="side",
+        side_facing="east",
+        topdown_textures=ctx.topdown_textures,
+        sideview_textures=ctx.sideview_textures,
+    )
+    assert resolved is not None
+    assert min(resolved.convert("RGBA").getchannel("A").getdata()) == 255
+
+
+def test_cobblestone_orbit_side_matches_top_texture_bytes():
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    ctx = _ctx_from_layers([{"index": 0, "cells": [["minecraft:cobblestone"]]}])
+    ctx.topdown_textures = compile_texture_set(
+        "top",
+        str(BLOCK_TEXTURES_FOLDER),
+        constants.BLOCK_PX,
+    )
+    ctx.sideview_textures = compile_texture_set(
+        "side",
+        str(BLOCK_TEXTURES_FOLDER),
+        constants.BLOCK_PX,
+    )
+    top = resolve_orbit_face_texture(
+        "minecraft:cobblestone",
+        ctx.topdown_textures,
+        face_kind="top",
+        topdown_textures=ctx.topdown_textures,
+        sideview_textures=ctx.sideview_textures,
+    )
+    side = resolve_orbit_face_texture(
+        "minecraft:cobblestone",
+        ctx.sideview_textures,
+        face_kind="side",
+        side_facing="east",
+        topdown_textures=ctx.topdown_textures,
+        sideview_textures=ctx.sideview_textures,
+    )
+    assert top is not None and side is not None
+    assert top.tobytes() == side.tobytes()
+
+
 def test_crafting_table_orbit_side_uses_catalog_side_texture():
     from pathlib import Path
 
@@ -524,3 +615,27 @@ def test_iter_occupied_voxel_cells_tracks_layer_indices():
 
     assert tokens == {"A", "B"}
     assert all(cell.layer_list_index == 0 for cell in cells)
+
+
+def test_water_orbit_faces_apply_schematic_blue_tint():
+    from helpers.catalog_texture_exceptions import catalog_block_background_color
+    from helpers.orbit_face_textures import _resolve_orbit_catalog_block_face
+    from helpers.paths import BLOCK_TEXTURES_FOLDER
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
+
+    if not (BLOCK_TEXTURES_FOLDER / "water_still.png").is_file():
+        pytest.skip("water_still.png not available")
+
+    parsed = parse_structure_token("minecraft:water")
+    entry = get_block_entry(parsed) or {}
+    side = _resolve_orbit_catalog_block_face("minecraft:water", entry, "side")
+    assert side is not None
+
+    expected = catalog_block_background_color("minecraft:water")
+    assert expected is not None
+    center = side.getpixel((side.width // 2, side.height // 2))
+    assert center[3] > 0
+    assert center[:3] != (128, 128, 128)
+    assert center[0] < 100
+    assert center[2] > 150

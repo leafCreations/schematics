@@ -19,13 +19,13 @@ alwaysApply: true
 ## Turn lifecycle
 
 ```text
-START → agent-triage/SKILL.md (classify; card + label + prompt-verb gate; §1b on failure signals only)
+START → agent-triage/SKILL.md (classify; card + label + prompt-verb gate; one scoped kanban-*-cards.mdc; §1b on failure signals only)
 WORK  → card Label Paths + Label Methods → prior lessons gate (feature/bug/agent/commit-issue)
         → Decisions / Corrective Action → implement
         → Review QA fix: **QA follow-up** + refresh Feature Areas / Label Paths / Label Methods
-VERIFY → targeted pytest; pre-commit-pytest.sh before Review/commit
-DONE  → user says card Done → lessons learned **only** for feature / bug / agent / commit-issue
-        → inquiry Done: **no** lessons capture
+VERIFY → ruff E501 on touched `.py`/`.pyi` before handoff; targeted pytest; pre-commit-pytest.sh before Review/commit
+DONE  → user says card Done → lessons + forward feedback **only** for feature / bug / agent / commit-issue
+        → top-3 forward feedback in chat before handoff; inquiry Done: **no** lessons or forward feedback
         → build_lessons_index.py when lessons ran; curate feature-areas lesson_* when applicable
 END   → agent-self-evaluation/SKILL.md + handoff block
 ```
@@ -47,7 +47,11 @@ Resolve **Feature Areas** (or agent card **Feature Area**) → **Label Paths** +
 
 ## Code style (Python)
 
-All agent edits to `.py` / `.pyi` files must keep lines ≤ **100** characters (`pyproject.toml` `line-length = 100`). Pre-commit ruff fails on E501 — wrap strings, split imports, break call chains before commit.
+All agent edits to `.py` / `.pyi` files must keep lines ≤ **100** characters (`pyproject.toml`
+`line-length = 100`). **Before handoff** on implementation turns, run
+`.venv/bin/ruff check --select E501` on every touched path — Signature: `ruff-e501-line-length`.
+Pre-commit ruff is hook 1; E501 failures must not reach commit. Wrap strings, split imports,
+break call chains while editing — not only after hook failure.
 
 ## Load skills (on demand — not all every turn)
 
@@ -65,8 +69,8 @@ All agent edits to `.py` / `.pyi` files must keep lines ≤ **100** characters (
 - **Kanban + Feature Areas** → `docs/lessons-index.yaml` area block + [agent-triage/reference.md](../skills/agent-triage/reference.md) § Lessons by area before broad `.devtool/features/done/` grep ([kanban-prior-lessons-gate.mdc](kanban-prior-lessons-gate.mdc))
 - **Failure signals** (hook, pytest, UI wiring, handoff) → [agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) §1b grep before broad reads
 - **Governance edits** → [agent-triage/reference.md](../skills/agent-triage/reference.md) § Consistency matrix
-- **Governance audit card** → [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit ([AGENTS.md](../../AGENTS.md) Classify quickly)
-- **Classify signal rows** — keep [AGENTS.md](../../AGENTS.md) § Classify quickly, triage §1, and reference § Classify in sync
+- **Governance audit card** → [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit (reference § Classify)
+- **Classify signals** — canonical [agent-triage/reference.md](../skills/agent-triage/reference.md) § Classify; AGENTS § Classify quickly ≤5-row summary only; new signal → reference + bump `REFERENCE_CLASSIFY_FINGERPRINT` — Signature: `governance-compact-classify-ssot`
 - **Grep** before opening `ui/main_window.py` or other large files
 - After **3** full file reads → prefer grep or semantic search
 - **No card or review-only prompt** → Ask-only — do not edit (Signature: `kanban-prompt-ask-vs-agent`)
@@ -74,6 +78,8 @@ All agent edits to `.py` / `.pyi` files must keep lines ≤ **100** characters (
 ## Handoff (last sections — every response)
 
 1. **`### Files used`** — load order; role tags — see [agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §7
-2. **`### Self-evaluation`** — include **Context load** and **AGENTS.md** freshness; `Skills updated:` and `Rules updated:` on implementation turns. See [agent-self-evaluation.mdc](agent-self-evaluation.mdc).
+2. **`### Self-evaluation`** — compact one-line fields; **Context load** + **AGENTS.md** freshness;
+   `Skills updated:` / `Rules updated:` on implementation turns. Signature:
+   `governance-compact-self-eval-handoff`. See [agent-self-evaluation.mdc](agent-self-evaluation.mdc).
 
 **[AGENTS.md](../../AGENTS.md):** evaluate for staleness every turn; update when routing, card types, or handoff format changes.

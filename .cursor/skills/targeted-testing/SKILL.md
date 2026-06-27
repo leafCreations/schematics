@@ -48,6 +48,17 @@ Use `git diff --name-only` (staged or working tree) or the files you just edited
 
 **Test file edited** → run **that file** (and only add related files if the test imports shared fixtures you changed).
 
+**Lessons coverage audit (lc1):** after edits under `scripts/check_lessons_coverage.py`,
+`scripts/lessons_coverage_lib.py`, or `scripts/resolve_prior_lessons.py`:
+
+```bash
+.venv/bin/pytest tests/test_check_lessons_coverage.py tests/test_resolve_prior_lessons.py -q
+```
+
+Fixture tests must monkeypatch `FEATURES_DIR` on `resolve_prior_lessons` and `check_lessons_coverage`,
+and `REPO_ROOT` on `lessons_coverage_lib` when `build_report` stores paths via `relative_to`.
+Signature: `lessons-coverage-c2-c3-audit` — see [reference.md](reference.md) and [testing.mdc](../../rules/testing.mdc).
+
 ### 3. Run targeted tests
 
 ```bash
@@ -72,6 +83,18 @@ Options:
 ### 5. Before commit — match pre-commit scope (mandatory)
 
 **Do not** rely on “I ran some tests earlier.” Re-verify against **staged** paths right before commit.
+
+Hook order: **ruff** → palettes → pytest ([pre-commit-workflow](../pre-commit-workflow/SKILL.md)).
+
+0. **Ruff E501** on every touched `.py`/`.pyi` before handoff or commit:
+
+   ```bash
+   .venv/bin/ruff check --select E501 path/to/edited.py
+   ```
+
+   Signature: `ruff-e501-line-length` — not optional on implementation turns.
+
+**Commit-issue cards:** manual runs of this script or `scripts/pre-commit-pytest.sh` do **not** create kanban cards — only failed **`git commit`** hooks do (`PRE_COMMIT=1`). Fix pytest failures in-session; Signature: `precommit-no-card-on-manual-hook`.
 
 1. `git diff --cached --name-only` — list what will be committed.
 2. Run the hook script (same selection logic as commit):

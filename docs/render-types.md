@@ -99,6 +99,15 @@ Each editor process gets one UUID. Preview files use fixed names (not the `{name
 
 **Export Render** on the Viewer tab writes the matching export file(s) under `output/schematics/{output_folder}/` (see table above). Preview session folders are deleted when the app closes, when you open a different structure/stage, when you open a newly created structure, or when you reload the window.
 
+### 2D Top Down preview (Viewer tab)
+
+Top-down cells use `helpers/utils_schematics.py` → `resolve_cell_texture` / `paste_topdown_token` with baked sprites from `compile_texture_set()`.
+
+| Aspect | Behavior |
+| ------ | -------- |
+| Stairs (`behavior: stairs`) | Masks from `build_stair_top_mask` are baked **south-facing** (straight clears the north half). At paste time, **straight and corner** shapes rotate with `corner_stair_facing_rotation` + `rotate_texture_by_degrees` — **not** `rotate_directional_texture`. Matches 3D orbit tread placement and worldgen. Tests: `test_paste_straight_stair_matches_worldgen_facing`, `test_paste_corner_stair_matches_worldgen_facing`. **Known gap:** tread-only opaque half can look like a **slab** — planned riser ghost fill at bake time ([feature-2d-stair-riser-ghost-fill-2026-06-27.md](../.devtool/features/feature-2d-stair-riser-ghost-fill-2026-06-27.md)). |
+| Fences / walls | Adjacency-mask variants from `resolve_fence_connections` at paste time. |
+
 ### 3D orbit preview (Viewer tab)
 
 Toggle **3D** on the preview panel to view a greedy-meshed exterior shell built from the **in-memory** editor document via `SchematicContext` (not from session PNGs or exported schematics).
@@ -111,12 +120,33 @@ Toggle **3D** on the preview panel to view a greedy-meshed exterior shell built 
 | Greedy shell (C2+) | Solid cells merge coplanar faces for performance. **Vertical faces** emit when the neighbor is **air** or a **different token** (material boundary) — embedded functionals (e.g. `CRAFTING_TABLE` in a plank floor) show side quads at token boundaries. Same-token neighbors still cull mutual faces. ±Y uses the same rule across layers. |
 | Textures (C3a) | `helpers/orbit_face_textures.py` — face-normal-aware `resolve_cell_texture()`; atlas tiles at `BLOCK_PX` (30); greedy merge keyed by texture signature. **`minecraft:*` catalog caps** (water, lava, grass): `{block}_top.png` on ±Y; fluids without `{block}_side.png` fall back to `catalog_block_texture_name` (`water_still.png`) on vertical faces; **`get_texture_for_render`** schematic tint on catalog loads. **`facing_block`** (`FURNACE`, `SMOKER`, `BLAST_FURNACE`): `facing` + `lit` blockstates; vertical face matching `@direction` → `{block}_front.png` or `{block}_front_on.png` when `;lit=true` (animated `_on` PNGs: crop **first frame** via companion `.mcmeta` — `helpers/block_texture_load.py`); other vertical faces → `render.side`; orbit **`+Y`/`-Y`** → `{block}_top.png`. 2D top-down and structure/site facades (when `@direction` matches the elevation) use `helpers/facing_block_textures.py`. Legacy `minecraft:smoker` aliases to `SMOKER`. **Solid/catalog functionals** without facing (e.g. `CRAFTING_TABLE`): `{block}_side.png` on vertical faces. |
 | Partial blocks (C3b) | `slab`, `stairs`, `fence`, `wall` — simplified axis-aligned boxes (half slabs, stair treads, fence post/arms). Orbit **slabs** and **stairs** use **full solid-block tiles** on box faces (`_orbit_solid_material_face_token`), not 2D half/L-mask bakes. Orbit **fences** and **walls** keep **2D masked adjacency bakes** on thin box faces; fragment shader **alpha-discards** low-α atlas samples (`sample.a < 0.05`) so rail gaps show background (stairs/slabs stay opaque tiles — safe with discard). Orbit **stairs** mirror south-authored boxes on **+Z** then rotate by `@direction` (`corner_stair_facing_rotation`, same as 2D worldgen); `;half=top` flips tread Y placement. Straight stairs add a thin **riser box** at the tread/void boundary. **Culling:** partial `box_face_occluded` uses **same-cell** boxes; **slab** faces also consult **neighbor-cell** boxes (`group_orbit_boxes_by_world`). Bottom-slab **−Y** is culled when the cell below has occupancy or when the slab shares a horizontal edge with another bottom slab of the same token (roof-deck / ceiling policy). **Solids** beside half-slabs emit a **vertical strip** (`_collect_solid_slab_neighbor_strip_faces`) — upper half beside bottom slab, lower beside `#top`. Stairs still use same-cell culling only. Horizontal slab faces use corner probes; coplanar tread tops drop duplicate riser `+Y`; greedy solids skip full faces toward other `partial_worlds`. |
-| Attachables & functionals (C4) | `torch`, `lantern` — JSON block-model element boxes (`helpers/orbit_attachable_mesh.py`); wall torch rotates with `@direction`; hanging `LANTERN` inferred from support in the layer above. `bed` / `chest` — neighbor pairing merges head+foot or left+right into one low-profile AABB (secondary cell skipped). `trapdoor` — open/closed block models + `{material}_trapdoor.png`; `door` — full-height thin plate per layer cell (`#lower` / `#upper`). Uses partial-box face pass, not greedy full cubes. **Greedy `partial_worlds`:** `slab` + `stairs` only — solids keep faces beside fence/wall/attachables. |
+| Attachables & functionals (C4) | `torch`, `lantern`, `trapdoor` — JSON block-model **element faces** with per-face UV crops (`helpers/orbit_block_model_mesh.py`); AABB bounds from `orbit_attachable_mesh.py` are for culling/bounds only — **not** 2D sprite bakes on box faces. Wall torch rotates with `@direction`; hanging `LANTERN` / `COPPER_LANTERN` use `{variant_model}_hanging` (not hardcoded `lantern_hanging`). `bed` / `chest` — neighbor pairing merges head+foot or left+right into one low-profile AABB (secondary cell skipped). `door` — full-height thin plate per layer cell (`#lower` / `#upper`). Uses partial-box face pass, not greedy full cubes. **Greedy `partial_worlds`:** `slab` + `stairs` only — solids keep faces beside fence/wall/attachables. |
 | Interaction | Drag to orbit; scroll to zoom |
 | Performance | An 8×8 flat layer merges to **12 triangles** (six merged quads) vs **768** for C1 per-block boxes — see `tests/test_orbit_greedy_mesh.py` |
 | Deferred | Campfire, sign, banner, animated chest lid / door swing; full JSON for every block type |
 
-Unit tests: `tests/test_orbit_preview.py`, `tests/test_orbit_greedy_mesh.py`, `tests/test_orbit_partial_mesh.py`, `tests/test_orbit_attachable_mesh.py` (no GPU required in CI).
+#### Orbit render class (agent glossary)
+
+Before editing orbit preview geometry, classify each token with
+`helpers.orbit_render_class.orbit_render_class(raw_token)` — **do not** conflate with
+Minecraft blockstate “block” or a generic “mesh” label. Stairs are non-cube but **not**
+attachables.
+
+| Class | Examples | Primary module | Signatures / tests |
+| ----- | -------- | -------------- | ------------------ |
+| `solid_cube` | `minecraft:cobblestone`, planks, `CRAFTING_TABLE` | `helpers/orbit_greedy_mesh.py` — greedy `solid_cells` pass | Greedy shell culling tests in `tests/test_orbit_greedy_mesh.py` |
+| `partial_box` | `SLAB:*`, `STAIRS:*`, `FENCE:*`, `WALL:*` | `helpers/orbit_partial_mesh.py` — AABB boxes + atlas faces | `orbit-stair-mask-transparency`, `orbit-fence-mask-transparency`; `tests/test_orbit_partial_mesh.py` |
+| `attachable_box` | `BED:*`, `CHEST:*`, `DOOR:*` | `helpers/orbit_attachable_mesh.py` — custom AABBs, neighbor pairing | `c4-attachable-partial-mesh-routing`; `tests/test_orbit_attachable_mesh.py` |
+| `block_model` | `TORCH`, `LANTERN`, `COPPER_LANTERN#*`, `TRAPDOOR:*` (open and closed) | `helpers/orbit_block_model_mesh.py` — JSON element faces; closed trapdoor may use thin AABB bounds in attachable helper for culling only | `orbit-attachable-block-model-faces`, `orbit-lantern-hanging-variant`; `tests/test_orbit_attachable_mesh.py -k block_model`; `tests/test_orbit_render_class.py` |
+
+Open vs closed trapdoor (`;open=true` / `;open=false`) changes **model and rotation** inside the
+`block_model` path — not the taxonomy class. Signature: `orbit-render-class-routing`.
+
+**Routing mistakes to avoid:** sprite bakes on torch/lantern AABBs (use `block_model`); attachables in
+greedy `partial_worlds` (slab + stairs only); editing `orbit_greedy_mesh.py` for torch/lantern geometry.
+Signature: `orbit-render-class-routing`.
+
+Unit tests: `tests/test_orbit_preview.py`, `tests/test_orbit_greedy_mesh.py`, `tests/test_orbit_partial_mesh.py`, `tests/test_orbit_attachable_mesh.py`, `tests/test_orbit_render_class.py` (no GPU required in CI).
 
 ### Orbit partial blocks — lessons learned (C3b QA, 2026-06)
 
@@ -135,7 +165,11 @@ Shipped after `residence` stage 1 + `structures/test/stage1` manual Verify. Use 
 | Mossy bleed through L-void at oblique angles | No geometry in open half (expected for 2-box model) | Greedy solids skip faces toward `partial_worlds`; same-cell riser box | Filling void with solid boxes + masked textures |
 | Solid face hole above bottom slab | Full solid face culled toward `partial_worlds` | `_collect_solid_slab_neighbor_strip_faces` — upper strip beside bottom slab, lower beside `#top` | Emitting full solid faces through slabs (z-fight) |
 | Solid face hole beside stairs (L-void) | Full solid face culled toward stair in `partial_worlds`; strip pass was slab-only | `iter_solid_neighbor_face_restore_rects` — 2×2 face probe restores open-half UV rects | Emitting full solid faces through tread (z-fight) |
-| Dark seam between top and side on solid blocks | Multi-face catalog PNGs vs unified cobblestone texture; side normal outset skips +Y; transparent side PNG rows | `expand_orbit_quad_corners` +Y on side tops; `_resolve_orbit_side_face_texture` unified path; `_force_opaque_orbit_face` | Normal-only shader outset; per-face PNG before schematic bake |
+| Attachables render as 1×1 cubes / attachable pytest fails after partial revert | `orbit_attachable_mesh.py` staged without `orbit_partial_mesh.py` routing | `attachable_boxes_for_cell` dispatch; `is_orbit_box_behavior` / `is_partial_volume_behavior`; greedy `solid_cells` excludes attachables | Staging attachable helper alone; `git checkout HEAD` on partial mesh without re-wiring |
+| Dark seam between top and side on solid blocks | Multi-face catalog PNGs vs unified cobblestone texture; side normal outset skips +Y; transparent side PNG rows | `expand_orbit_quad_corners` +Y on side tops; `_resolve_orbit_side_face_texture` unified path; `_force_opaque_orbit_face` | `aFaceUv` / hybrid shader UV (Signature: `orbit-top-side-seam-geometry`) |
+| Six torch sprites / wrong attachable texture on AABB faces | 2D `compose_torch` bake tiled on every AABB face | `_collect_block_model_element_faces` + `orbit_block_model_mesh.py` per-face UV crops | Sprite bakes on attachable box faces (Signature: `orbit-attachable-block-model-faces`) |
+| Wall torches same direction / upside-down lean | Y-rotation keyed `south`/`north` or compose order wrong | `_WALL_TORCH_Y_ROTATION` on `N`/`S`/`E`/`W`; element rotation before block Y in `block_model.py` | Lowercase direction keys (Signature: `orbit-attachable-direction-rotation-keys`) |
+| Copper lantern renders as iron lantern | Hanging hardcoded `lantern_hanging` | `_resolve_lantern_model_name` → `{model}_hanging` | Single hanging model for all lantern tokens (Signature: `orbit-lantern-hanging-variant`) |
 | Wrong stair facing | South-authored boxes not mirrored before rotation | `_mirror_stair_boxes_local_z` then `corner_stair_facing_rotation` | Rotating boxes without Z mirror |
 | Stacked fire openings on lit smoker / blast furnace front | Full animated PNG strip resized to one face | `helpers/block_texture_load.py` — crop frame 0 when `.mcmeta` has `animation`; lit filename via `helpers/facing_block_textures.py` | Resizing `smoker_front_on.png` / `blast_furnace_front_on.png` without mcmeta check |
 

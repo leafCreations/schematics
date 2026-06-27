@@ -142,6 +142,13 @@ def test_extract_signatures_from_lesson_heading():
     assert extract_signatures(text) == ["precommit-mainwindow-__new__-test"]
 
 
+def test_extract_signatures_from_inline_sig_backtick():
+    lessons = (
+        "- **Direction rotation** — N/S/E/W keys — `sig:orbit-attachable-direction-rotation-keys`\n"
+    )
+    assert extract_signatures(lessons) == ["orbit-attachable-direction-rotation-keys"]
+
+
 def test_extract_governance_artifacts_normalizes_relative_links():
     lessons = (
         "- **Governance:** [testing.mdc](../../.cursor/rules/testing.mdc) "

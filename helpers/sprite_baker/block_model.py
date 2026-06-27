@@ -58,6 +58,174 @@ def load_block_model(path: Path) -> dict:
     return {"textures": textures, "elements": elements}
 
 
+FACE_NORMALS: dict[str, tuple[int, int, int]] = {
+    "down": (0, -1, 0),
+    "up": (0, 1, 0),
+    "north": (0, 0, -1),
+    "south": (0, 0, 1),
+    "east": (1, 0, 0),
+    "west": (-1, 0, 0),
+}
+
+
+def load_block_model_texture(ref: str, textures: dict[str, str]) -> Image.Image:
+    """Load a texture reference from a parsed block model."""
+    return _load_texture(ref, textures)
+
+
+def crop_model_face_texture(face: dict, textures: dict[str, str]) -> Image.Image:
+    """Crop and orient the UV region for one block-model element face."""
+    texture = _load_texture(face["texture"], textures)
+    u1, v1, u2, v2 = face["uv"]
+    left, right = sorted((u1, u2))
+    top, bottom = sorted((v1, v2))
+    crop = texture.crop((left, top, right, bottom))
+    if u2 < u1:
+        crop = crop.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    if v2 < v1:
+        crop = crop.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+
+    face_rotation = face.get("rotation", 0)
+    if face_rotation:
+        crop = crop.rotate(-face_rotation, expand=True)
+
+    return crop
+
+
+_BLOCK_ROTATION_ORIGIN = (8.0, 8.0, 8.0)
+
+
+def rotate_block_space_y(
+    corner: tuple[float, float, float],
+    degrees: int,
+    *,
+    origin: tuple[float, float, float] = _BLOCK_ROTATION_ORIGIN,
+) -> tuple[float, float, float]:
+    """Rotate a point in 0–16 block space around Y (Minecraft blockstate yaw)."""
+    if degrees == 0:
+        return corner
+
+    x, y, z = corner
+    ox, _, oz = origin
+    radians = math.radians(degrees)
+    cos_a = math.cos(radians)
+    sin_a = math.sin(radians)
+    local_x = x - ox
+    local_z = z - oz
+    return (
+        ox + local_x * cos_a - local_z * sin_a,
+        y,
+        oz + local_x * sin_a + local_z * cos_a,
+    )
+
+
+def rotate_block_space_y_normal(
+    normal: tuple[int, int, int],
+    degrees: int,
+) -> tuple[int, int, int]:
+    """Rotate a face normal with block Y rotation."""
+    if degrees == 0:
+        return normal
+
+    x, y, z = float(normal[0]), float(normal[1]), float(normal[2])
+    rotated = rotate_block_space_y((x, y, z), degrees, origin=(0.0, 0.0, 0.0))
+    rx, ry, rz = rotated
+    return (int(round(rx)), int(round(ry)), int(round(rz)))
+
+
+def _element_box_corners_unrotated(
+    element: dict,
+) -> list[tuple[float, float, float]]:
+    x1, y1, z1 = element["from"]
+    x2, y2, z2 = element["to"]
+    return [
+        (x1, y1, z1),
+        (x2, y1, z1),
+        (x1, y2, z1),
+        (x2, y2, z1),
+        (x1, y1, z2),
+        (x2, y1, z2),
+        (x1, y2, z2),
+        (x2, y2, z2),
+    ]
+
+
+def _transform_element_corners(
+    element: dict,
+    rotation_y: int,
+) -> list[tuple[float, float, float]]:
+    """Element rotation first, then block Y — matches Minecraft blockstate compose."""
+    corners = _element_box_corners_unrotated(element)
+    corners = [_apply_element_rotation(corner, element) for corner in corners]
+    if rotation_y:
+        corners = [rotate_block_space_y(corner, rotation_y) for corner in corners]
+    return corners
+
+
+def element_face_corners_in_block_space(
+    element: dict,
+    face_name: str,
+    *,
+    rotation_y: int = 0,
+) -> tuple[tuple[float, float, float], ...]:
+    """Return four oriented corners for one axis-aligned element face (0–16 space)."""
+    x1, y1, z1 = element["from"]
+    x2, y2, z2 = element["to"]
+    min_x, max_x = sorted((x1, x2))
+    min_y, max_y = sorted((y1, y2))
+    min_z, max_z = sorted((z1, z2))
+
+    if face_name == "up":
+        raw = (
+            (min_x, max_y, min_z),
+            (min_x, max_y, max_z),
+            (max_x, max_y, max_z),
+            (max_x, max_y, min_z),
+        )
+    elif face_name == "down":
+        raw = (
+            (min_x, min_y, min_z),
+            (max_x, min_y, min_z),
+            (max_x, min_y, max_z),
+            (min_x, min_y, max_z),
+        )
+    elif face_name == "east":
+        raw = (
+            (max_x, min_y, max_z),
+            (max_x, max_y, max_z),
+            (max_x, max_y, min_z),
+            (max_x, min_y, min_z),
+        )
+    elif face_name == "west":
+        raw = (
+            (min_x, min_y, min_z),
+            (min_x, min_y, max_z),
+            (min_x, max_y, max_z),
+            (min_x, max_y, min_z),
+        )
+    elif face_name == "south":
+        raw = (
+            (min_x, min_y, max_z),
+            (max_x, min_y, max_z),
+            (max_x, max_y, max_z),
+            (min_x, max_y, max_z),
+        )
+    elif face_name == "north":
+        raw = (
+            (min_x, min_y, min_z),
+            (min_x, max_y, min_z),
+            (max_x, max_y, min_z),
+            (max_x, min_y, min_z),
+        )
+    else:
+        raise ValueError(f"Unknown block model face: {face_name}")
+
+    transformed = [
+        rotate_block_space_y(_apply_element_rotation(corner, element), rotation_y) for corner in raw
+    ]
+    return tuple(transformed)
+
+
 def _load_texture(ref: str, textures: dict[str, str]) -> Image.Image:
     if ref.startswith("#"):
         ref = textures[ref[1:]]

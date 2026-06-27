@@ -60,6 +60,32 @@ def test_lantern_standing_vs_hanging_differ_in_height():
     assert hanging_top > standing_top
 
 
+def test_copper_lantern_hanging_uses_variant_hanging_model():
+    from helpers.orbit_attachable_mesh import resolve_attachable_block_model
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
+
+    ctx = _ctx_from_layers(
+        [
+            {"index": 0, "cells": [["COPPER_LANTERN#exposed"]]},
+            {"index": 1, "cells": [["PLANKS:oak"]]},
+        ],
+    )
+    cell = iter_occupied_voxel_cells(ctx)[0]
+    parsed = parse_structure_token("COPPER_LANTERN#exposed")
+    entry = get_block_entry(parsed) or {}
+    cache = {0: ctx.layers[0]["cells"], 1: ctx.layers[1]["cells"]}
+    model_name, rotation_y = resolve_attachable_block_model(
+        cell,
+        entry,
+        parsed,
+        layer_cells_cache=cache,
+    )
+
+    assert model_name == "exposed_copper_lantern_hanging"
+    assert rotation_y == 0
+
+
 def test_bed_pair_spans_two_cells_from_head():
     ctx = _ctx_from_layers(
         [
@@ -207,3 +233,106 @@ def test_attachables_excluded_from_greedy_full_cube_shell():
     mesh = build_orbit_greedy_mesh_from_context(ctx)
     y_values = [mesh.positions[index] for index in range(1, len(mesh.positions), 3)]
     assert max(y_values) < 1.0
+
+
+def test_wall_torch_uses_block_model_faces_not_sprite_bake_on_aabb():
+    from helpers.orbit_block_model_mesh import iter_block_model_face_quads
+
+    quads = iter_block_model_face_quads("wall_torch", 0.0, 0.0, 0.0, rotation_y=0)
+    assert len(quads) == 6
+    assert all(quad.signature.startswith("bm:wall_torch:") for quad in quads)
+    assert all(quad.texture.width > 0 for quad in quads)
+
+
+def test_wall_torch_rotation_follows_token_direction():
+    from helpers.orbit_attachable_mesh import resolve_attachable_block_model
+    from helpers.orbit_block_model_mesh import iter_block_model_face_quads
+    from helpers.orbit_mesh import OccupiedVoxel
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
+
+    def center_xz(token: str) -> tuple[float, float]:
+        parsed = parse_structure_token(token)
+        entry = get_block_entry(parsed) or {}
+        cell = OccupiedVoxel(world=(0, 0, 0), token=token, layer_list_index=0, local_x=0, local_z=0)
+        model_name, rotation_y = resolve_attachable_block_model(cell, entry, parsed)
+        quads = iter_block_model_face_quads(model_name, 0.0, 0.0, 0.0, rotation_y=rotation_y)
+        xs = [corner[0] for quad in quads for corner in quad.corners]
+        zs = [corner[2] for quad in quads for corner in quad.corners]
+        return (sum(xs) / len(xs), sum(zs) / len(zs))
+
+    centers = {
+        token: center_xz(token)
+        for token in (
+            "TORCH@north#wall",
+            "TORCH@south#wall",
+            "TORCH@east#wall",
+            "TORCH@west#wall",
+        )
+    }
+    assert len(set(centers.values())) == 4
+
+
+def test_wall_torch_tip_leans_in_facing_direction():
+    from helpers.orbit_attachable_mesh import resolve_attachable_block_model
+    from helpers.orbit_block_model_mesh import iter_block_model_face_quads
+    from helpers.orbit_mesh import OccupiedVoxel
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
+
+    facing_axis = {"east": (1, 0), "south": (0, 1), "west": (-1, 0), "north": (0, -1)}
+    wall_side = {"east": "west", "west": "east", "north": "south", "south": "north"}
+
+    for facing, (fx, fz) in facing_axis.items():
+        token = f"TORCH@{facing}#wall"
+        parsed = parse_structure_token(token)
+        entry = get_block_entry(parsed) or {}
+        cell = OccupiedVoxel(world=(5, 1, 5), token=token, layer_list_index=0, local_x=5, local_z=5)
+        model_name, rotation_y = resolve_attachable_block_model(cell, entry, parsed)
+        quads = iter_block_model_face_quads(model_name, 5.0, 1.0, 5.0, rotation_y=rotation_y)
+        points = [corner for quad in quads for corner in quad.corners]
+        mount = min(points, key=lambda point: point[1])
+        tip = max(points, key=lambda point: point[1])
+        lean = (tip[0] - mount[0], tip[2] - mount[2])
+        assert lean[0] * fx + lean[1] * fz > 0.0
+
+        mx = mount[0] - 5.5
+        mz = mount[2] - 5.5
+        on_wall = {
+            "west": mx < -0.05,
+            "east": mx > 0.05,
+            "north": mz < -0.05,
+            "south": mz > 0.05,
+        }[wall_side[facing]]
+        assert on_wall
+
+
+def test_door_plate_rotates_with_direction():
+    ctx_n = _ctx_from_layers([{"index": 0, "cells": [["DOOR:oak@north#lower"]]}])
+    ctx_s = _ctx_from_layers([{"index": 0, "cells": [["DOOR:oak@south#lower"]]}])
+    north = iter_orbit_boxes_for_cell(
+        iter_occupied_voxel_cells(ctx_n)[0],
+        ctx_n.layers[0]["cells"],
+    )[0]
+    south = iter_orbit_boxes_for_cell(
+        iter_occupied_voxel_cells(ctx_s)[0],
+        ctx_s.layers[0]["cells"],
+    )[0]
+    assert north.min_corner != south.min_corner
+
+
+def test_wall_torch_against_plank_culls_back_face():
+    alone_ctx = _ctx_from_layers([{"index": 0, "cells": [["TORCH@north#wall"]]}])
+    pair_ctx = _ctx_from_layers(
+        [{"index": 0, "cells": [["PLANKS:oak", "TORCH@north#wall"]]}],
+    )
+    plank_ctx = _ctx_from_layers([{"index": 0, "cells": [["PLANKS:oak"]]}])
+
+    alone_mesh = build_orbit_greedy_mesh_from_context(alone_ctx)
+    pair_mesh = build_orbit_greedy_mesh_from_context(pair_ctx)
+    plank_mesh = build_orbit_greedy_mesh_from_context(plank_ctx)
+
+    assert alone_mesh.triangle_count == 12
+    assert plank_mesh.triangle_count == 12
+    # Plank keeps six exterior faces; torch loses the face against the plank (−2 tris).
+    assert pair_mesh.triangle_count == plank_mesh.triangle_count + alone_mesh.triangle_count - 2

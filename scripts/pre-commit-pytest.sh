@@ -47,6 +47,7 @@ _run_pytest() {
   local log
   log="$(mktemp)"
   if ! "$PYTEST" -q "$@" 2>&1 | tee "$log"; then
+    # commit-issue cards only when PRE_COMMIT=1 (actual git commit) — see on_pre_commit_failure.sh
     "$ROOT/scripts/on_pre_commit_failure.sh" pytest "$log" || true
     rm -f "$log"
     return 1
@@ -263,9 +264,19 @@ for file in "${STAGED[@]}"; do
       add tests/test_resolve_feature_areas.py tests/test_check_governance_parity.py
       ;;
 
-    scripts/check_governance_parity.py | scripts/resolve_feature_areas.py)
+    scripts/check_governance_parity.py | scripts/sync_agents_area_table.py | scripts/resolve_feature_areas.py)
       CODE_TOUCHED=1
-      add tests/test_resolve_feature_areas.py tests/test_check_governance_parity.py
+      add tests/test_sync_agents_area_table.py tests/test_resolve_feature_areas.py tests/test_check_governance_parity.py
+      ;;
+
+    scripts/check_lessons_coverage.py | scripts/lessons_coverage_lib.py)
+      CODE_TOUCHED=1
+      add tests/test_check_lessons_coverage.py tests/test_resolve_prior_lessons.py
+      ;;
+
+    scripts/resolve_prior_lessons.py)
+      CODE_TOUCHED=1
+      add tests/test_resolve_prior_lessons.py tests/test_check_lessons_coverage.py tests/test_build_lessons_index.py
       ;;
 
     scripts/bake_sprites.py | scripts/generate_catalog.py | scripts/prune_minecraft_assets.py | scripts/migrate_project_assets.py | scripts/dedupe_minecraft_assets.py)

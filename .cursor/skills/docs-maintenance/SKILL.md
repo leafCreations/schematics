@@ -18,7 +18,9 @@ description: >-
 
 **No exceptions** — not for “small” diffs, not for “internal only”, not deferred to a follow-up turn. Read-only Q&A turns do not edit docs unless the user asks to fix incorrect documentation.
 
-Pair with [kanban-markdown](../kanban-markdown/SKILL.md) (`docs/feature-areas.yaml`) and [ui-change](../ui-change/SKILL.md) (UI surfaces).
+Pair with [kanban-markdown](../kanban-markdown/SKILL.md) (`docs/feature-areas.yaml`) and
+[kanban-markdown/reference.md](../kanban-markdown/reference.md) (card templates on demand) and
+[ui-change](../ui-change/SKILL.md) (UI surfaces).
 
 ## When mandatory
 
@@ -54,7 +56,9 @@ rg -i 'Viewer tab|Materials List|_preview' docs/
 | Structure package layout / loader | [structure-tokens.md](../../docs/structure-tokens.md), [project-structure.md](../../docs/project-structure.md) |
 | Worldgen | [worldgen.md](../../docs/worldgen.md), [project-info.md](../../docs/project-info.md) if version targets change |
 | Sprite baker / block icons | [sprite-baker.md](../../docs/sprite-baker.md), [assets.md](../../docs/assets.md) |
+| 2D top-down stairs (`utils_schematics`, `compose_stairs`) | [render-types.md](../../docs/render-types.md) § 2D Top Down — facing via `corner_stair_facing_rotation` (Signature: `2d-stair-facing-rotation`); riser ghost vs slab parity in sprite-baker docs when compositor changes |
 | Dev setup, pytest, pre-commit | [development.md](../../docs/development.md) |
+| Lessons coverage metric (`check_lessons_coverage.py`, `lessons_coverage_lib.py`, Card Done / prior-lessons workflow) | [development.md](../../docs/development.md) § **Lessons Coverage Metric** + § Lessons captured `artifacts:` schema; [kanban-prior-lessons-gate.mdc](../../.cursor/rules/kanban-prior-lessons-gate.mdc) when gate behavior changes |
 | Kanban feature areas, new modules/tests | [feature-areas.yaml](../../docs/feature-areas.yaml) — **mandatory** per kanban skill |
 | Shipped roadmap-scale capability | [roadmap.md](../../docs/roadmap.md) — mark completed / remove “not yet” claims; **do not** add new queue items (kanban is the queue) |
 

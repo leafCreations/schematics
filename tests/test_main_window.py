@@ -328,6 +328,94 @@ def test_open_recent_entry_informs_when_already_editing_target(monkeypatch):
     assert "Already editing residence stage 1" in messages[0]
 
 
+def _inspector_apply_stub_window():
+    from PySide6.QtWidgets import QApplication
+
+    from ui.main_window import MainWindow
+    from ui.widgets.properties_panel import PropertiesPanel
+
+    if QApplication.instance() is None:
+        QApplication([])
+
+    window = MainWindow.__new__(MainWindow)
+    window._eraser_active = False
+    window._current_layer_index = 0
+    window._document = type(
+        "_Doc",
+        (),
+        {"layers": [{"cells": [["SLAB:cobblestone#top"]]}]},
+    )()
+    window._properties_panel = PropertiesPanel()
+    window._structure_tab_active = lambda: True
+    return window
+
+
+def test_apply_inspector_to_selected_slab_variant_updates_cell():
+    from helpers.block_picker import picker_entry_for_token
+    from ui.main_window import MainWindow
+
+    window = _inspector_apply_stub_window()
+    set_cell_calls: list[tuple[int, int, str]] = []
+    window._set_cell = lambda row, col, token, **kwargs: set_cell_calls.append((row, col, token))
+
+    entry = picker_entry_for_token("SLAB")
+    assert entry is not None
+    window._properties_panel.show_picker_entry(entry, emit_brush=False)
+    window._properties_panel.show_grid_cell(0, 0, "SLAB:cobblestone#top")
+    window._properties_panel.sync_brush_from_cell("SLAB:cobblestone#top")
+
+    window._properties_panel._variant_combo.setCurrentText("(default)")
+    MainWindow._apply_inspector_to_selected_cell(window)
+
+    assert set_cell_calls == [(0, 0, "SLAB:cobblestone")]
+
+
+def test_apply_inspector_skips_when_palette_entry_does_not_match_cell():
+    from helpers.block_picker import picker_entry_for_token
+    from ui.main_window import MainWindow
+
+    window = _inspector_apply_stub_window()
+    set_cell_calls: list[tuple[int, int, str]] = []
+    window._set_cell = lambda row, col, token, **kwargs: set_cell_calls.append((row, col, token))
+
+    slab_entry = picker_entry_for_token("SLAB")
+    planks_entry = picker_entry_for_token("PLANKS")
+    assert slab_entry is not None and planks_entry is not None
+
+    window._properties_panel.show_picker_entry(slab_entry, emit_brush=False)
+    window._properties_panel.show_grid_cell(0, 0, "SLAB:cobblestone#top")
+    window._properties_panel.show_picker_entry(planks_entry, emit_brush=True)
+
+    window._properties_panel._material_combo.setCurrentIndex(1)
+    MainWindow._apply_inspector_to_selected_cell(window)
+
+    assert set_cell_calls == []
+
+
+def test_apply_inspector_trapdoor_open_uses_build_placement_token():
+    from helpers.block_picker import picker_entry_for_token
+    from ui.main_window import MainWindow
+
+    window = _inspector_apply_stub_window()
+    window._document.layers[0]["cells"][0][0] = "TRAPDOOR:oak@south;open=false"
+    set_cell_calls: list[tuple[int, int, str]] = []
+    window._set_cell = lambda row, col, token, **kwargs: set_cell_calls.append((row, col, token))
+
+    entry = picker_entry_for_token("TRAPDOOR")
+    assert entry is not None
+    window._properties_panel.show_picker_entry(
+        entry,
+        emit_brush=False,
+        brush_token="TRAPDOOR:oak@south;open=false",
+    )
+    window._properties_panel.show_grid_cell(0, 0, "TRAPDOOR:oak@south;open=false")
+
+    window._properties_panel._open_combo.setCurrentText("true")
+    MainWindow._apply_inspector_to_selected_cell(window)
+
+    assert set_cell_calls == [(0, 0, "TRAPDOOR:oak@south;open=true")]
+
+
 @pytest.mark.skipif(
     os.environ.get("STRUCTURE_SCRIPTS_UI_TESTS", "") != "1",
     reason="Set STRUCTURE_SCRIPTS_UI_TESTS=1 for full Qt window smoke test",

@@ -22,19 +22,72 @@ from helpers.types import BlockRegistryEntry, CellGrid
 from helpers.utils import normalize_direction
 
 ATTACHABLE_BEHAVIORS = frozenset({"torch", "lantern", "bed", "chest", "trapdoor", "door"})
+BLOCK_MODEL_FACE_BEHAVIORS = frozenset({"torch", "lantern", "trapdoor"})
 
 _MODEL_SCALE = 1.0 / 16.0
 _BED_HEIGHT = 9.0 / 16.0
 _CHEST_HEIGHT = 14.0 / 16.0
 _DOOR_THICKNESS = 3.0 / 16.0
 
-_DIRECTION_ROTATION = {"south": 0, "west": 90, "north": 180, "east": 270}
+# Y-rotation (degrees) keyed by normalize_direction() → N/S/E/W.
+_BOX_Y_ROTATION = {"S": 0, "W": 90, "N": 180, "E": 270}
+_WALL_TORCH_Y_ROTATION = {"E": 0, "S": 90, "W": 180, "N": 270}
+_TRAPDOOR_OPEN_Y_ROTATION = {"N": 0, "E": 90, "S": 180, "W": 270}
 
 _TORCH_MODELS = {"normal": "torch", "soul": "soul_torch", "wall": "wall_torch"}
 
 
 def is_attachable_behavior(behavior: str) -> bool:
     return behavior in ATTACHABLE_BEHAVIORS
+
+
+def is_block_model_face_behavior(token: str) -> bool:
+    parsed = parse_structure_token(token)
+    if parsed is None:
+        return False
+    entry = get_block_entry(parsed) or {}
+    return get_block_behavior(entry) in BLOCK_MODEL_FACE_BEHAVIORS
+
+
+def resolve_attachable_block_model(
+    cell: OccupiedVoxel,
+    entry: BlockRegistryEntry,
+    parsed: ParsedToken,
+    *,
+    layer_cells_cache: dict[int, CellGrid] | None = None,
+) -> tuple[str, int] | None:
+    """Return (model_name, rotation_y) for attachables that use JSON element faces."""
+    behavior = get_block_behavior(entry)
+    if behavior not in BLOCK_MODEL_FACE_BEHAVIORS:
+        return None
+
+    if behavior == "torch":
+        variant = resolve_torch_variant(parsed.variant, entry)
+        model_name = _TORCH_MODELS.get(variant, "torch")
+        rotation = _wall_torch_rotation_y(parsed.direction) if variant == "wall" else 0
+        return model_name, rotation
+
+    if behavior == "lantern":
+        model_name = _resolve_lantern_model_name(
+            cell,
+            entry,
+            parsed,
+            layer_cells_cache=layer_cells_cache,
+        )
+        return model_name, 0
+
+    if behavior == "trapdoor":
+        material = _trapdoor_material(parsed, entry)
+        is_open = explicit_open(parsed)
+        if is_open is None:
+            is_open = bool(entry.get("defaults", {}).get("open", False))
+        if is_open:
+            return f"{material}_trapdoor_open", _trapdoor_open_rotation_y(parsed.direction)
+        half = resolve_trapdoor_half(parsed.variant, entry)
+        suffix = "top" if half == "top" else "bottom"
+        return f"{material}_trapdoor_{suffix}", 0
+
+    return None
 
 
 def attachable_boxes_for_cell(
@@ -90,8 +143,20 @@ def _fallback_unit_box(
     ]
 
 
+def _box_direction_rotation_y(direction: str | None) -> int:
+    return _BOX_Y_ROTATION.get(normalize_direction(direction) or "S", 0)
+
+
+def _wall_torch_rotation_y(direction: str | None) -> int:
+    return _WALL_TORCH_Y_ROTATION.get(normalize_direction(direction) or "N", 0)
+
+
+def _trapdoor_open_rotation_y(direction: str | None) -> int:
+    return _TRAPDOOR_OPEN_Y_ROTATION.get(normalize_direction(direction) or "N", 0)
+
+
 def _direction_rotation_y(direction: str | None) -> int:
-    return _DIRECTION_ROTATION.get(normalize_direction(direction) or "south", 0)
+    return _box_direction_rotation_y(direction)
 
 
 def _boxes_from_block_model(
@@ -155,7 +220,7 @@ def _torch_boxes(
 ) -> list[OrbitBox]:
     variant = resolve_torch_variant(parsed.variant, entry)
     model_name = _TORCH_MODELS.get(variant, "torch")
-    rotation = _direction_rotation_y(parsed.direction) if variant == "wall" else 0
+    rotation = _wall_torch_rotation_y(parsed.direction) if variant == "wall" else 0
     return _boxes_from_block_model(cell, model_name, wx, wy, wz, rotation_y=rotation)
 
 
@@ -169,17 +234,34 @@ def _lantern_boxes(
     *,
     layer_cells_cache: dict[int, CellGrid] | None,
 ) -> list[OrbitBox]:
+    model_name = _resolve_lantern_model_name(
+        cell,
+        entry,
+        parsed,
+        layer_cells_cache=layer_cells_cache,
+    )
+    return _boxes_from_block_model(cell, model_name, wx, wy, wz)
+
+
+def _resolve_lantern_model_name(
+    cell: OccupiedVoxel,
+    entry: BlockRegistryEntry,
+    parsed: ParsedToken,
+    *,
+    layer_cells_cache: dict[int, CellGrid] | None,
+) -> str:
     variant = resolve_lantern_variant(parsed.variant, entry)
     model_name = resolve_lantern_model_name(entry, variant)
     hanging = explicit_hanging(parsed)
-
     if hanging is None and layer_cells_cache is not None:
         hanging = _infer_lantern_hanging(cell, layer_cells_cache)
-
     if hanging:
-        model_name = "lantern_hanging"
-
-    return _boxes_from_block_model(cell, model_name, wx, wy, wz)
+        hanging_name = f"{model_name}_hanging"
+        if has_block_model(hanging_name):
+            return hanging_name
+        if has_block_model("lantern_hanging"):
+            return "lantern_hanging"
+    return model_name
 
 
 def _infer_lantern_hanging(

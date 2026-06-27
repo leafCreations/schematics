@@ -17,6 +17,8 @@ except ImportError:  # pragma: no cover
     yaml = None  # type: ignore[assignment]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 AGENTS_MD = REPO_ROOT / "AGENTS.md"
 TRIAGE_SKILL = REPO_ROOT / ".cursor/skills/agent-triage/SKILL.md"
@@ -38,6 +40,7 @@ PREFIX_ROUTING = "Routing drift alert:"
 PREFIX_CARD = "Card-type drift alert:"
 PREFIX_FAILURE = "Failure-pattern drift alert:"
 PREFIX_REGISTRY = "Registry drift alert:"
+PREFIX_LESSONS = "Lessons coverage drift alert:"
 
 SEVERITY_INFO = "info"
 SEVERITY_WARN = "warn"
@@ -48,9 +51,11 @@ DEFAULT_SEVERITY_BY_PREFIX: dict[str, str] = {
     PREFIX_CARD: SEVERITY_WARN,
     PREFIX_FAILURE: SEVERITY_CRITICAL,
     PREFIX_REGISTRY: SEVERITY_WARN,
+    PREFIX_LESSONS: SEVERITY_WARN,
 }
 
 EPIC_GOVERNANCE_DRIFT = "GovernanceDriftAlert"
+EPIC_LESSONS_COVERAGE = "LessonsCoverageMetric"
 
 SEVERITY_PRIORITY: dict[str, str] = {
     SEVERITY_INFO: "low",
@@ -68,6 +73,7 @@ LABEL_PATHS_BY_PREFIX: dict[str, list[str]] = {
     PREFIX_CARD: [
         "AGENTS.md",
         ".cursor/skills/kanban-markdown/SKILL.md",
+        ".cursor/skills/kanban-markdown/reference.md",
         ".cursor/rules/kanban-card-gates.mdc",
         ".cursor/rules/kanban-feature-cards.mdc",
         ".cursor/rules/kanban-bug-cards.mdc",
@@ -85,6 +91,14 @@ LABEL_PATHS_BY_PREFIX: dict[str, list[str]] = {
         "docs/feature-areas.yaml",
         "AGENTS.md",
         ".cursor/skills/kanban-markdown/SKILL.md",
+        ".cursor/skills/kanban-markdown/reference.md",
+    ],
+    PREFIX_LESSONS: [
+        "scripts/check_lessons_coverage.py",
+        "scripts/lessons_coverage_lib.py",
+        "scripts/check_governance_parity.py",
+        "docs/development.md",
+        ".cursor/skills/agent-triage/reference.md",
     ],
 }
 
@@ -106,17 +120,56 @@ _SCHEMA_INTERNAL_PATHS = frozenset(
         "scripts/build_lessons_index.py",
         "tests/test_resolve_prior_lessons.py",
         "tests/test_build_lessons_index.py",
+        "scripts/check_lessons_coverage.py",
+        "scripts/lessons_coverage_lib.py",
+        "scripts/pre-commit-lessons-coverage.sh",
+        "tests/test_check_lessons_coverage.py",
     }
 )
 _LABELS_RE = re.compile(r"^labels:\s*\[(.*?)\]", re.MULTILINE)
 _AGENTS_RULE_LINK_RE = re.compile(r"\[([^\]]+)\]\((\.cursor/rules/[a-z0-9_-]+\.mdc)\)")
-_AGENTS_SKILL_LINK_RE = re.compile(
-    r"\[([^\]]+)\]\((\.cursor/skills/(?:agent|kanban|pre-commit-workflow)[^)]*)\)"
-)
+_AGENTS_SKILL_LINK_RE = re.compile(r"\[([^\]]+)\]\((\.cursor/skills/[^)]+)\)")
 
 _HANDLER_SYMBOL_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*(?:\*)?$")
 
 # Anchor phrases for Classify quickly ↔ triage §1 parity (order matters for messages).
+# Baseline artifacts for GovernanceCompact gc0 (Signature: governance-compact-baseline).
+GOVERNANCE_COMPACT_BASELINE_GLOBS: tuple[str, ...] = (
+    "AGENTS.md",
+    ".cursor/rules/agent-routing.mdc",
+    ".cursor/skills/agent-triage/SKILL.md",
+    ".cursor/skills/agent-triage/reference.md",
+    ".cursor/skills/kanban-markdown/SKILL.md",
+    ".cursor/skills/kanban-markdown/reference.md",
+    ".cursor/skills/agent-self-evaluation/SKILL.md",
+    ".cursor/rules/kanban-*.mdc",
+    ".cursor/rules/agent-*.mdc",
+)
+
+# Named section pairs tracked for duplication (Classify trio; card-type overlap).
+DUPLICATION_PAIR_SECTIONS: tuple[tuple[str, str, str], ...] = (
+    ("Classify quickly", "AGENTS.md", "## Classify quickly"),
+    ("triage §1 Classify", ".cursor/skills/agent-triage/SKILL.md", "## 1. Classify the request"),
+    (
+        "reference Classify signals",
+        ".cursor/skills/agent-triage/reference.md",
+        "## Classify the request (signals)",
+    ),
+    ("AGENTS card types", "AGENTS.md", "### Card types"),
+)
+
+_ALWAYS_APPLY_RE = re.compile(r"^alwaysApply:\s*true\b", re.MULTILINE)
+_GLOBS_RE = re.compile(r"^globs:\s*(.+)$", re.MULTILINE)
+
+KANBAN_CARD_TYPE_RULE_NAMES: tuple[str, ...] = (
+    "kanban-feature-cards.mdc",
+    "kanban-bug-cards.mdc",
+    "kanban-agent-cards.mdc",
+    "kanban-inquiry-cards.mdc",
+    "kanban-commit-issue-cards.mdc",
+)
+KANBAN_ALWAYS_ON_RULE = "kanban-card-gates.mdc"
+
 CLASSIFY_ANCHORS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("review card only", ("review card", "review …", "bare `@path`")),
     (
@@ -141,6 +194,13 @@ CLASSIFY_ANCHORS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("run tests / commit-ready", ("run tests", "commit-ready", '"run tests"')),
     ("area lesson lookup", ("area lesson lookup", "lessons by area")),
 )
+
+REFERENCE_CLASSIFY_HEADING = "## Classify the request (signals)"
+AGENTS_CLASSIFY_MAX_ROWS = 5
+TRIAGE_CLASSIFY_MAX_ROWS = 0
+# Fingerprint of reference § Classify signal first-column cells (normalized).
+# Update REFERENCE_CLASSIFY_FINGERPRINT when adding rows.
+REFERENCE_CLASSIFY_FINGERPRINT = "4a0154190d07273e"
 
 
 def _section_after(text: str, heading: str) -> str:
@@ -253,9 +313,10 @@ def corrective_action_for_issue(issue: DriftIssue) -> str:
     prefix = _alert_prefix(issue.message)
     actions = {
         PREFIX_ROUTING: (
-            "Restore Classify quickly ↔ agent-triage §1 parity per "
+            "Restore reference § Classify as canonical per "
             "[agent-triage/reference.md](../../.cursor/skills/agent-triage/reference.md) "
-            "§ Consistency matrix and § Drift alert examples."
+            "§ Classify the request (signals) — Signature: governance-compact-classify-ssot; "
+            "AGENTS ≤5-row summary; triage §1 pointer only."
         ),
         PREFIX_CARD: (
             "Align AGENTS.md card types table, `kanban-*.mdc` rules, and "
@@ -273,11 +334,19 @@ def corrective_action_for_issue(issue: DriftIssue) -> str:
             "malformed symbols, or kanban **Label Methods** symbols missing from the "
             "registry."
         ),
+        PREFIX_LESSONS: (
+            "Raise Card Done promotion quality (C2 `artifacts:` tails), run the "
+            "prior lessons gate on active cards (C3/C4), and re-audit with "
+            "`python3 scripts/check_lessons_coverage.py`. See "
+            "[docs/development.md](../../docs/development.md) § Lessons Coverage Metric."
+        ),
     }
     return actions.get(prefix, actions[PREFIX_ROUTING])
 
 
 def card_title_for_issue(issue: DriftIssue) -> str:
+    if issue.message.startswith(PREFIX_LESSONS):
+        return f"lessons-coverage-drift-{datetime.now(UTC).date().isoformat()}"
     summary = issue.message
     if ":" in summary:
         summary = summary.split(":", 1)[1].strip()
@@ -292,6 +361,8 @@ def _slugify(text: str, *, max_len: int = 36) -> str:
 
 
 def issue_card_id(issue: DriftIssue) -> str:
+    if issue.message.startswith(PREFIX_LESSONS):
+        return f"lessons-coverage-drift-{datetime.now(UTC).date().isoformat()}"
     digest = hashlib.sha256(issue.message.encode("utf-8")).hexdigest()[:10]
     kind = _slugify(_alert_prefix(issue.message).replace(" drift alert:", ""))
     return f"governance-drift-{kind}-{digest}"
@@ -345,15 +416,88 @@ def _find_existing_card_for_alert(features_dir: Path, alert_line: str) -> Path |
     return None
 
 
+def card_label_for_issue(issue: DriftIssue) -> str:
+    if issue.message.startswith(PREFIX_LESSONS):
+        return "agent"
+    return "feature"
+
+
+_SPAWN_TBD_LABEL_METHODS = "- _TBD — agent fills at pre-implementation review._"
+_SPAWN_TBD_DECISIONS = "- _TBD — fill after prior lessons gate and card-type review._"
+_SPAWN_TBD_AC = "- [ ] _TBD_"
+
+
+def _spawn_review_sections(label: str, issue: DriftIssue) -> str:
+    """Label-type sections required before in-progress — placeholders when auto-spawned."""
+    if label == "agent":
+        description = corrective_action_for_issue(issue)
+        return f"""## Description
+
+{description}
+
+## Feature Area
+
+`Agent Workflow`
+
+## Label Methods
+
+{_SPAWN_TBD_LABEL_METHODS}
+
+## Decisions
+
+{_SPAWN_TBD_DECISIONS}
+
+## Acceptance Criteria
+
+{_SPAWN_TBD_AC}
+"""
+    return f"""## Label Methods
+
+{_SPAWN_TBD_LABEL_METHODS}
+
+## Decisions
+
+{_SPAWN_TBD_DECISIONS}
+
+## Acceptance Criteria
+
+{_SPAWN_TBD_AC}
+"""
+
+
 def build_drift_card_body(issue: DriftIssue) -> str:
     label_paths = label_paths_for_issue(issue)
     feature_areas = feature_areas_for_issue(issue)
     title = card_title_for_issue(issue)
     paths_md = "\n".join(f"- `{path}`" for path in label_paths)
     areas_md = "\n".join(f"`{area}`" for area in feature_areas)
+    label = card_label_for_issue(issue)
+    if issue.message.startswith(PREFIX_LESSONS):
+        spawned = (
+            f"Spawned by `scripts/check_governance_parity.py` (epic **{EPIC_LESSONS_COVERAGE}**)."
+        )
+    else:
+        spawned = (
+            f"Spawned by `scripts/check_governance_parity.py` (epic **{EPIC_GOVERNANCE_DRIFT}**)."
+        )
+    review = _spawn_review_sections(label, issue)
+    if label == "agent":
+        return f"""# {title}
+
+{spawned}
+
+## Alert
+
+{issue.message}
+
+## Label Paths
+
+{paths_md}
+
+{review}"""
     return f"""# {title}
 
-Spawned by `scripts/check_governance_parity.py` (epic **{EPIC_GOVERNANCE_DRIFT}**).
+{spawned}
 
 ## Alert
 
@@ -367,10 +511,7 @@ Spawned by `scripts/check_governance_parity.py` (epic **{EPIC_GOVERNANCE_DRIFT}*
 
 {paths_md}
 
-## Corrective Action
-
-{corrective_action_for_issue(issue)}
-"""
+{review}"""
 
 
 def create_drift_alert_cards(
@@ -396,17 +537,23 @@ def create_drift_alert_cards(
 
         priority = priority_for_severity(issue.severity)
         order = _next_order(features_dir)
+        epic = (
+            EPIC_LESSONS_COVERAGE
+            if issue.message.startswith(PREFIX_LESSONS)
+            else EPIC_GOVERNANCE_DRIFT
+        )
+        labels = '["agent"]' if issue.message.startswith(PREFIX_LESSONS) else '["feature"]'
         frontmatter = f"""---
 id: "{card_id}"
 status: "todo"
 priority: "{priority}"
 assignee: null
-epic: "{EPIC_GOVERNANCE_DRIFT}"
+epic: "{epic}"
 dueDate: null
 created: "{now}"
 modified: "{now}"
 completedAt: null
-labels: ["feature"]
+labels: {labels}
 order: "{order}"
 ---
 """
@@ -416,22 +563,80 @@ order: "{order}"
     return created
 
 
+def _agents_classify_section(text: str) -> str:
+    section = _section_after(text, "## Classify quickly")
+    for marker in ("\n### Card types", "\n## Area"):
+        idx = section.find(marker)
+        if idx >= 0:
+            section = section[:idx]
+    next_h2 = re.search(r"\n## ", section)
+    if next_h2:
+        section = section[: next_h2.start()]
+    return section
+
+
+def _classify_signals_section(text: str) -> str:
+    section = _section_after(text, REFERENCE_CLASSIFY_HEADING)
+    task_idx = section.find("### Task types")
+    if task_idx >= 0:
+        section = section[:task_idx]
+    return section
+
+
+def _classify_signal_fingerprint(rows: list[str]) -> str:
+    normalized = [re.sub(r"\*\*", "", row).strip().lower() for row in rows]
+    digest = hashlib.sha256("\n".join(normalized).encode()).hexdigest()
+    return digest[:16]
+
+
 def check_classify_parity(
     agents_text: str,
     triage_text: str,
+    reference_text: str,
 ) -> list[str]:
-    agents_section = _section_after(agents_text, "## Classify quickly")
+    ref_section = _classify_signals_section(reference_text)
+    agents_section = _agents_classify_section(agents_text)
     triage_section = _section_after(triage_text, "## 1. Classify the request")
     issues: list[str] = []
-    for name, phrases in CLASSIFY_ANCHORS:
-        in_agents = _contains_anchor(agents_section, phrases)
-        in_triage = _contains_anchor(triage_section, phrases)
-        if in_agents and not in_triage:
-            issues.append(f'{PREFIX_ROUTING} AGENTS Classify row "{name}" missing in triage §1')
-        elif in_triage and not in_agents:
+
+    ref_rows = _table_first_column(ref_section)
+    if not ref_rows:
+        issues.append(
+            f"{PREFIX_ROUTING} reference § Classify has no signal rows — "
+            f"restore {REFERENCE_CLASSIFY_HEADING}"
+        )
+    else:
+        fingerprint = _classify_signal_fingerprint(ref_rows)
+        if fingerprint != REFERENCE_CLASSIFY_FINGERPRINT:
             issues.append(
-                f'{PREFIX_ROUTING} triage §1 row "{name}" missing in AGENTS Classify quickly'
+                f"{PREFIX_ROUTING} reference § Classify fingerprint drift "
+                f"(got {fingerprint}, expected {REFERENCE_CLASSIFY_FINGERPRINT}) — "
+                f"{len(ref_rows)} signal rows; update REFERENCE_CLASSIFY_FINGERPRINT "
+                f"when intentional"
             )
+
+    for name, phrases in CLASSIFY_ANCHORS:
+        if ref_section and not _contains_anchor(ref_section, phrases):
+            issues.append(
+                f'{PREFIX_ROUTING} reference Classify row "{name}" missing '
+                f"(anchor phrases: {', '.join(phrases[:2])}…)"
+            )
+
+    agents_rows = _table_first_column(agents_section)
+    if len(agents_rows) > AGENTS_CLASSIFY_MAX_ROWS:
+        issues.append(
+            f"{PREFIX_ROUTING} AGENTS Classify quickly has {len(agents_rows)} rows "
+            f"(max {AGENTS_CLASSIFY_MAX_ROWS}) — move signals to reference § Classify only"
+        )
+
+    triage_rows = _table_first_column(triage_section)
+    if len(triage_rows) > TRIAGE_CLASSIFY_MAX_ROWS:
+        issues.append(
+            f"{PREFIX_ROUTING} triage §1 has {len(triage_rows)} Classify table rows "
+            f"(max {TRIAGE_CLASSIFY_MAX_ROWS}) — link reference § Classify only "
+            f"(Signature: governance-compact-classify-ssot)"
+        )
+
     return issues
 
 
@@ -750,11 +955,25 @@ def _skill_link_to_path(link: str) -> str:
     return _normalize_path(link)
 
 
-def extract_agents_governance_paths(agents_text: str) -> set[str]:
+def extract_agents_governance_paths(
+    agents_text: str,
+    schema_entries: list[AreaSchemaEntry] | None = None,
+) -> set[str]:
+    from scripts.sync_agents_area_table import row_matches_area
+
     section = _section_after(agents_text, "## Area → skills & rules")
     paths: set[str] = {"AGENTS.md"}
     for line in section.splitlines():
-        if "Agent / routing" not in line and "Kanban /" not in line:
+        if not line.strip().startswith("|"):
+            continue
+        if re.match(r"^\|\s*[-:]+", line):
+            continue
+        cells = [cell.strip() for cell in line.split("|")[1:-1]]
+        if not cells or cells[0].lower().strip("*") in {"area", "label"}:
+            continue
+        if schema_entries is not None and not any(
+            row_matches_area(cells[0], entry) for entry in schema_entries
+        ):
             continue
         for _name, rule_path in _AGENTS_RULE_LINK_RE.findall(line):
             paths.add(_normalize_path(rule_path))
@@ -772,15 +991,21 @@ def check_registry_parity(
     yaml_paths: set[str],
     agents_paths: set[str],
 ) -> list[str]:
-    """Compare Agent Workflow paths (minus schema-internal) with AGENTS Agent/Kanban rows."""
-    yaml_compare = filter_registry_compare_paths(yaml_paths)
+    """Compare Agent Workflow skill/doc paths with AGENTS workflow row links.
+
+    Rule files (`.mdc`) are verified by ``check_agents_area_table_parity`` — excluded here.
+    """
+    yaml_compare = filter_registry_compare_paths(
+        {path for path in yaml_paths if not path.endswith(".mdc")}
+    )
+    agents_compare = {path for path in agents_paths if not path.endswith(".mdc")}
     issues: list[str] = []
-    for path in sorted(yaml_compare - agents_paths):
+    for path in sorted(yaml_compare - agents_compare):
         issues.append(
             f"{PREFIX_REGISTRY} feature-areas.yaml lists `{path}` not reflected in "
             "AGENTS Agent/Kanban area rows"
         )
-    for path in sorted(agents_paths - yaml_compare):
+    for path in sorted(agents_compare - yaml_compare):
         if path == "AGENTS.md":
             continue
         issues.append(
@@ -833,11 +1058,215 @@ def check_card_type_parity(
     return issues
 
 
+def check_kanban_rule_globs(repo_root: Path) -> list[str]:
+    """gc3 — card-type kanban rules scoped; kanban-card-gates always-on."""
+    issues: list[str] = []
+    rules_dir = repo_root / ".cursor/rules"
+    gates_path = rules_dir / KANBAN_ALWAYS_ON_RULE
+    if gates_path.is_file():
+        gates_text = gates_path.read_text(encoding="utf-8")
+        if not _ALWAYS_APPLY_RE.search(gates_text):
+            issues.append(
+                f"{PREFIX_ROUTING} `{KANBAN_ALWAYS_ON_RULE}` must have "
+                "`alwaysApply: true` (kanban label + prompt verb gate)"
+            )
+        if _GLOBS_RE.search(gates_text):
+            issues.append(
+                f"{PREFIX_ROUTING} `{KANBAN_ALWAYS_ON_RULE}` must not use `globs` when always-on"
+            )
+    else:
+        issues.append(f"{PREFIX_ROUTING} missing always-on rule `{KANBAN_ALWAYS_ON_RULE}`")
+
+    for name in KANBAN_CARD_TYPE_RULE_NAMES:
+        path = rules_dir / name
+        if not path.is_file():
+            issues.append(f"{PREFIX_ROUTING} missing scoped kanban rule `{name}`")
+            continue
+        text = path.read_text(encoding="utf-8")
+        if _ALWAYS_APPLY_RE.search(text):
+            issues.append(
+                f"{PREFIX_ROUTING} `{name}` must not have `alwaysApply: true` — "
+                "scope with `.devtool/features/**` globs (gc3)"
+            )
+        globs_match = _GLOBS_RE.search(text)
+        if not globs_match or ".devtool/features" not in globs_match.group(1):
+            issues.append(
+                f"{PREFIX_ROUTING} `{name}` must set `globs` under `.devtool/features/**`"
+            )
+    return issues
+
+
 def collect_governance_rule_paths(repo_root: Path) -> list[Path]:
     paths: list[Path] = []
     for pattern in GOVERNANCE_RULE_GLOBS:
         paths.extend(sorted(repo_root.glob(pattern)))
     return paths
+
+
+def _resolve_baseline_glob(repo_root: Path, pattern: str) -> list[Path]:
+    if "*" in pattern:
+        return sorted(repo_root.glob(pattern))
+    path = repo_root / pattern
+    return [path] if path.is_file() else []
+
+
+def collect_baseline_artifact_paths(repo_root: Path) -> list[tuple[str, Path]]:
+    """Return (relative path, absolute path) for gc0 baseline artifacts."""
+    seen: set[str] = set()
+    results: list[tuple[str, Path]] = []
+    for pattern in GOVERNANCE_COMPACT_BASELINE_GLOBS:
+        for path in _resolve_baseline_glob(repo_root, pattern):
+            rel = path.relative_to(repo_root).as_posix()
+            if rel in seen:
+                continue
+            seen.add(rel)
+            results.append((rel, path))
+    return results
+
+
+def line_count_for_path(path: Path) -> int:
+    return len(path.read_text(encoding="utf-8").splitlines())
+
+
+def section_line_count(text: str, heading: str) -> int:
+    body = _section_after(text, heading)
+    if not body:
+        return 0
+    return len([line for line in body.splitlines() if line.strip()])
+
+
+def collect_duplication_pair_counts(repo_root: Path) -> list[tuple[str, str, int]]:
+    rows: list[tuple[str, str, int]] = []
+    for label, rel_path, heading in DUPLICATION_PAIR_SECTIONS:
+        path = repo_root / rel_path
+        if not path.is_file():
+            rows.append((label, rel_path, 0))
+            continue
+        count = section_line_count(path.read_text(encoding="utf-8"), heading)
+        rows.append((label, rel_path, count))
+    kanban_skill = repo_root / ".cursor/skills/kanban-markdown/SKILL.md"
+    kanban_rules = sorted(repo_root.glob(".cursor/rules/kanban-*.mdc"))
+    if kanban_skill.is_file():
+        skill_lines = line_count_for_path(kanban_skill)
+        rule_lines = sum(line_count_for_path(path) for path in kanban_rules)
+        skill_rel = kanban_skill.relative_to(repo_root).as_posix()
+        rows.append(("kanban-markdown SKILL (lifecycle)", skill_rel, skill_lines))
+        kanban_ref = repo_root / ".cursor/skills/kanban-markdown/reference.md"
+        if kanban_ref.is_file():
+            ref_lines = line_count_for_path(kanban_ref)
+            rows.append(
+                (
+                    "kanban-markdown reference",
+                    kanban_ref.relative_to(repo_root).as_posix(),
+                    ref_lines,
+                )
+            )
+        rows.append(
+            (
+                "kanban-*.mdc (sum)",
+                ".cursor/rules/kanban-*.mdc",
+                rule_lines,
+            )
+        )
+    return rows
+
+
+def _is_governance_always_on_rule(rel_path: str) -> bool:
+    name = Path(rel_path).name
+    if name.startswith("agent-") or name.startswith("kanban-"):
+        return True
+    return name in {"testing.mdc", "agent-routing.mdc"}
+
+
+def collect_always_apply_rules(repo_root: Path) -> list[tuple[str, int, bool]]:
+    rules_dir = repo_root / ".cursor/rules"
+    if not rules_dir.is_dir():
+        return []
+    rows: list[tuple[str, int, bool]] = []
+    for path in sorted(rules_dir.glob("*.mdc")):
+        text = path.read_text(encoding="utf-8")
+        if not _ALWAYS_APPLY_RE.search(text):
+            continue
+        rel = path.relative_to(repo_root).as_posix()
+        rows.append((rel, line_count_for_path(path), _is_governance_always_on_rule(rel)))
+    return rows
+
+
+def format_line_count_report(repo_root: Path) -> str:
+    """Human-readable gc0 baseline: artifact sizes, duplication pairs, always-on rules."""
+    artifacts = collect_baseline_artifact_paths(repo_root)
+    sized = [(rel, line_count_for_path(path)) for rel, path in artifacts if path.is_file()]
+    sized.sort(key=lambda item: (-item[1], item[0]))
+    total = sum(count for _rel, count in sized)
+
+    lines = [
+        "Governance compaction baseline (gc0)",
+        f"Artifacts: {len(sized)} files, {total} lines total",
+        "",
+        "Top artifacts by line count:",
+    ]
+    for rel, count in sized:
+        lines.append(f"  {count:5d}  {rel}")
+
+    dup_rows = collect_duplication_pair_counts(repo_root)
+    lines.extend(["", "Duplication pairs (section line counts):"])
+    for label, rel_path, count in dup_rows:
+        lines.append(f"  {count:5d}  {label} — {rel_path}")
+
+    always_on = collect_always_apply_rules(repo_root)
+    gov_lines = sum(count for _rel, count, is_gov in always_on if is_gov)
+    all_lines = sum(count for _rel, count, _is_gov in always_on)
+    lines.extend(
+        [
+            "",
+            f"Always-on rules ({len(always_on)} files, {all_lines} lines; "
+            f"{gov_lines} governance-related):",
+        ]
+    )
+    for rel, count, is_gov in always_on:
+        tag = "governance" if is_gov else "other"
+        lines.append(f"  {count:5d}  {rel} ({tag})")
+
+    return "\n".join(lines)
+
+
+def check_lessons_coverage_drift(
+    features_dir: Path,
+    *,
+    threshold: float = 75.0,
+    include_severity: bool = True,
+) -> list[str]:
+    """Emit drift alert when composite lessons coverage is below threshold."""
+    from scripts.lessons_coverage_lib import (
+        build_report,
+        format_lessons_coverage_drift_message,
+        kanban_done_data_available,
+        lessons_coverage_drift_severity,
+    )
+    from scripts.resolve_prior_lessons import find_done_lessons
+
+    if not kanban_done_data_available(features_dir):
+        return []
+
+    report = build_report(features_dir, find_lessons=find_done_lessons)
+    if report.composite is None:
+        return []
+    composite_pct = report.composite * 100
+    if composite_pct >= threshold:
+        return []
+
+    message = format_lessons_coverage_drift_message(report, threshold=threshold)
+    severity = lessons_coverage_drift_severity(report.composite)
+    if include_severity:
+        return [format_drift_line(message, severity=severity)]
+    return [message]
+
+
+def report_governance_line_counts(repo_root: Path) -> str:
+    """Print and return the gc0 baseline report (Signature: governance-compact-baseline)."""
+    report = format_line_count_report(repo_root)
+    print(report)
+    return report
 
 
 def run_checks(
@@ -863,7 +1292,7 @@ def run_checks(
         lessons_index_text = lessons_index_path.read_text(encoding="utf-8")
 
     issues: list[str] = []
-    issues.extend(check_classify_parity(agents_text, triage_text))
+    issues.extend(check_classify_parity(agents_text, triage_text, triage_reference_text))
 
     reference_sigs = extract_reference_signatures(
         *reference_paths,
@@ -883,8 +1312,13 @@ def run_checks(
         )
     )
 
+    from scripts.sync_agents_area_table import check_agents_area_table_parity
+
+    issues.extend(check_agents_area_table_parity(agents_text, schema_entries, feature_areas_text))
+
     yaml_paths = load_agent_workflow_paths(feature_areas_text)
-    agents_paths = extract_agents_governance_paths(agents_text)
+    workflow_entries = [entry for entry in schema_entries if entry.name == "Agent Workflow"]
+    agents_paths = extract_agents_governance_paths(agents_text, workflow_entries)
     issues.extend(check_registry_parity(yaml_paths, agents_paths))
 
     handlers_by_area = load_area_handlers(feature_areas_text)
@@ -894,8 +1328,14 @@ def run_checks(
     card_labels = collect_feature_card_labels(features_dir)
     agents_card_labels = parse_agents_card_type_labels(agents_text)
     issues.extend(check_card_type_parity(card_labels, agents_card_labels))
+    issues.extend(check_kanban_rule_globs(repo_root))
 
-    return apply_severity(issues, include_severity=include_severity)
+    parity_issues = apply_severity(issues, include_severity=include_severity)
+    lessons_issues = check_lessons_coverage_drift(
+        features_dir,
+        include_severity=include_severity,
+    )
+    return parity_issues + lessons_issues
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -927,9 +1367,19 @@ def main(argv: list[str] | None = None) -> int:
         default=REPO_ROOT,
         help="Repository root (default: parent of scripts/)",
     )
+    parser.add_argument(
+        "--line-counts",
+        action="store_true",
+        help="Print gc0 governance artifact line-count baseline and exit 0",
+    )
     args = parser.parse_args(argv)
     root = args.repo_root
     features_dir = args.features_dir or (root / ".devtool" / "features")
+
+    if args.line_counts:
+        if not args.quiet:
+            report_governance_line_counts(root)
+        return 0
 
     if yaml is None:
         print("check_governance_parity: PyYAML not installed", file=sys.stderr)
