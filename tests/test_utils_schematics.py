@@ -136,37 +136,47 @@ def test_straight_stairs_still_rotate_with_direction(tmp_path):
 def test_paste_straight_stair_matches_worldgen_facing():
     textures = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
 
-    def cutout_corner(token: str) -> str:
+    def riser_corner(token: str) -> str:
         img = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (0, 0, 0, 0))
         schematics_utils.paste_topdown_token(img, textures, token, (0, 0), constants.BLOCK_PX)
         corners = {(2, 2): "TL", (27, 2): "TR", (2, 27): "BL", (27, 27): "BR"}
+        best_name = "?"
+        best_alpha = 256
         for point, name in corners.items():
-            if img.getpixel(point)[3] == 0:
-                return name
-        return "?"
+            alpha = img.getpixel(point)[3]
+            if alpha < best_alpha:
+                best_alpha = alpha
+                best_name = name
+        assert best_alpha < 255, f"{token}: expected riser ghost, got opaque corners"
+        return best_name
 
-    assert cutout_corner("STAIRS:oak@south") == "TL"
-    assert cutout_corner("STAIRS:oak@north") == "BL"
-    assert cutout_corner("STAIRS:oak@east") == "TL"
-    assert cutout_corner("STAIRS:oak@west") == "TR"
+    assert riser_corner("STAIRS:oak@south") == "TL"
+    assert riser_corner("STAIRS:oak@north") == "BL"
+    assert riser_corner("STAIRS:oak@east") == "TL"
+    assert riser_corner("STAIRS:oak@west") == "TR"
 
 
 def test_paste_corner_stair_matches_worldgen_facing():
     textures = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
 
-    def cutout_corner(token: str) -> str:
+    def riser_corner(token: str) -> str:
         img = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (0, 0, 0, 0))
         schematics_utils.paste_topdown_token(img, textures, token, (0, 0), constants.BLOCK_PX)
         corners = {(2, 2): "TL", (27, 2): "TR", (2, 27): "BL", (27, 27): "BR"}
+        best_name = "?"
+        best_alpha = 256
         for point, name in corners.items():
-            if img.getpixel(point)[3] == 0:
-                return name
-        return "?"
+            alpha = img.getpixel(point)[3]
+            if alpha < best_alpha:
+                best_alpha = alpha
+                best_name = name
+        assert best_alpha < 255, f"{token}: expected riser ghost, got opaque corners"
+        return best_name
 
-    assert cutout_corner("STAIRS:oak@south#outer_left") == "TL"
-    assert cutout_corner("STAIRS:oak@south#outer_right") == "TR"
-    assert cutout_corner("STAIRS:oak@north#outer_right") == "BL"
-    assert cutout_corner("STAIRS:oak@north#outer_left") == "BR"
+    assert riser_corner("STAIRS:oak@south#outer_left") == "TL"
+    assert riser_corner("STAIRS:oak@south#outer_right") == "TR"
+    assert riser_corner("STAIRS:oak@north#outer_right") == "BL"
+    assert riser_corner("STAIRS:oak@north#outer_left") == "BR"
 
 
 @pytest.mark.requires_assets

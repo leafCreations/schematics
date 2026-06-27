@@ -105,7 +105,7 @@ Top-down cells use `helpers/utils_schematics.py` → `resolve_cell_texture` / `p
 
 | Aspect | Behavior |
 | ------ | -------- |
-| Stairs (`behavior: stairs`) | Masks from `build_stair_top_mask` are baked **south-facing** (straight clears the north half). At paste time, **straight and corner** shapes rotate with `corner_stair_facing_rotation` + `rotate_texture_by_degrees` — **not** `rotate_directional_texture`. Matches 3D orbit tread placement and worldgen. Tests: `test_paste_straight_stair_matches_worldgen_facing`, `test_paste_corner_stair_matches_worldgen_facing`. **Known gap:** tread-only opaque half can look like a **slab** — planned riser ghost fill at bake time ([feature-2d-stair-riser-ghost-fill-2026-06-27.md](../.devtool/features/feature-2d-stair-riser-ghost-fill-2026-06-27.md)). |
+| Stairs (`behavior: stairs`) | Top bakes composite **tread** (full α) + **riser ghost** (~45% α, RGB lightened toward white on L-void) via `compose_stairs` / `build_stair_riser_top_mask`. Masks are **south-facing** at bake time. At paste time, **straight and corner** shapes rotate with `corner_stair_facing_rotation` + `rotate_texture_by_degrees` — **not** `rotate_directional_texture`. Matches 3D orbit tread placement and worldgen. Tests: `test_paste_straight_stair_matches_worldgen_facing`, `test_paste_corner_stair_matches_worldgen_facing`, `test_stair_riser_ghost_distinct_from_slab_void`. Rebake top stairs after compositor changes (`scripts/bake_sprites.py --type stairs --view top --all --force`). |
 | Fences / walls | Adjacency-mask variants from `resolve_fence_connections` at paste time. |
 
 ### 3D orbit preview (Viewer tab)

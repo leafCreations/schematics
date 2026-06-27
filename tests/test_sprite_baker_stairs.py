@@ -5,9 +5,13 @@ from PIL import Image
 
 from helpers import constants
 from helpers.paths import BLOCK_TEXTURES_FOLDER
+from helpers.sprite_baker.compose_slab import compose_slab
 from helpers.sprite_baker.compose_stairs import compose_stairs, list_stairs_bake_keys
 from helpers.sprite_baker.demo import SpriteBakeError
-from helpers.sprite_baker.stair_shapes import build_stair_top_mask
+from helpers.sprite_baker.stair_shapes import (
+    STAIR_RISER_GHOST_ALPHA,
+    build_stair_top_mask,
+)
 from registries.loader import BLOCK_REGISTRY, build_registry_texture_mapping
 
 
@@ -86,9 +90,9 @@ def test_compose_stairs_shapes_differ(tmp_path: Path):
         textures_dir=textures_dir,
     )
 
-    assert straight.getpixel((4, 4))[3] == 0
+    assert straight.getpixel((4, 4))[3] == STAIR_RISER_GHOST_ALPHA
     assert straight.getpixel((12, 12))[3] == 255
-    assert outer_left.getpixel((4, 4))[3] == 0
+    assert outer_left.getpixel((4, 4))[3] == STAIR_RISER_GHOST_ALPHA
 
 
 def test_compose_stairs_falls_back_to_base_material_texture(tmp_path: Path):
@@ -157,8 +161,150 @@ def test_bake_stairs_integration(tmp_path: Path):
         )
 
     assert textures["STAIRS"].getpixel((5, 20))[3] == 255
-    assert textures["STAIRS"].getpixel((5, 5))[3] == 0
-    assert textures["STAIRS#outer_left"].getpixel((5, 5))[3] == 0
+    assert textures["STAIRS"].getpixel((5, 5))[3] == STAIR_RISER_GHOST_ALPHA
+    assert textures["STAIRS#outer_left"].getpixel((5, 5))[3] == STAIR_RISER_GHOST_ALPHA
 
     entry = BLOCK_REGISTRY["STAIRS"]
     assert entry.get("behavior") == "stairs"
+
+
+def _stairs_texture_dir(tmp_path: Path) -> Path:
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+    Image.new("RGBA", (16, 16), (200, 100, 50, 255)).save(textures_dir / "oak_planks.png")
+    return textures_dir
+
+
+def test_compose_stairs_riser_ghost_alpha_between_void_and_tread(tmp_path: Path):
+    textures_dir = _stairs_texture_dir(tmp_path)
+    stair = compose_stairs(key="STAIRS", view="top", size=16, textures_dir=textures_dir)
+    tread_alpha = stair.getpixel((12, 12))[3]
+    riser_alpha = stair.getpixel((4, 4))[3]
+    assert tread_alpha == 255
+    assert 0 < riser_alpha < tread_alpha
+    assert riser_alpha == STAIR_RISER_GHOST_ALPHA
+
+
+def test_riser_ghost_lightened_brighter_than_unlightened(tmp_path: Path):
+    from helpers.sprite_baker.stair_shapes import (
+        STAIR_RISER_GHOST_LIGHTEN,
+        apply_texture_mask_alpha,
+        build_stair_riser_top_mask,
+        lighten_texture_for_riser_ghost,
+    )
+
+    size = 16
+    mask = build_stair_riser_top_mask(size, "straight")
+    dark = Image.new("RGBA", (size, size), (100, 100, 100, 255))
+    point = (4, 4)
+    raw = apply_texture_mask_alpha(dark, mask, STAIR_RISER_GHOST_ALPHA).getpixel(point)
+    lit = apply_texture_mask_alpha(
+        lighten_texture_for_riser_ghost(dark, STAIR_RISER_GHOST_LIGHTEN),
+        mask,
+        STAIR_RISER_GHOST_ALPHA,
+    ).getpixel(point)
+    assert sum(lit[:3]) > sum(raw[:3])
+
+
+def test_stair_riser_ghost_distinct_from_slab_void(tmp_path: Path):
+    textures_dir = _stairs_texture_dir(tmp_path)
+    size = 16
+    half = size // 2
+    stair = compose_stairs(key="STAIRS", view="top", size=size, textures_dir=textures_dir)
+    slab = compose_slab(key="SLAB", view="top", size=size, textures_dir=textures_dir)
+    # South-facing straight stair: north half is riser ghost; bottom slab void is transparent.
+    assert stair.getpixel((4, 4))[3] == STAIR_RISER_GHOST_ALPHA
+    assert slab.getpixel((4, 4))[3] == 0
+    assert slab.getpixel((4, half + 2))[3] == 255
+
+
+def test_compose_stairs_brick_material_uses_bricks_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+    Image.new("RGBA", (16, 16), (180, 80, 70, 255)).save(textures_dir / "bricks.png")
+
+    image = compose_stairs(
+        key="STAIRS:brick",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((12, 12))[3] == 255
+    assert image.getpixel((4, 4))[3] == STAIR_RISER_GHOST_ALPHA
+
+
+def test_compose_stairs_cinnabar_brick_uses_bricks_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+    Image.new("RGBA", (16, 16), (200, 50, 50, 255)).save(textures_dir / "cinnabar_bricks.png")
+
+    image = compose_stairs(
+        key="STAIRS:cinnabar_brick",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((12, 12))[3] == 255
+
+
+def test_compose_stairs_purpur_uses_purpur_block_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+    Image.new("RGBA", (16, 16), (170, 90, 180, 255)).save(textures_dir / "purpur_block.png")
+
+    image = compose_stairs(
+        key="STAIRS:purpur",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((12, 12))[3] == 255
+    assert image.getpixel((4, 4))[3] == STAIR_RISER_GHOST_ALPHA
+
+
+def test_compose_stairs_quartz_uses_block_top_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+    Image.new("RGBA", (16, 16), (230, 225, 220, 255)).save(textures_dir / "quartz_block_top.png")
+
+    image = compose_stairs(
+        key="STAIRS:quartz",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((12, 12))[3] == 255
+
+
+def test_compose_stairs_smooth_quartz_uses_bottom_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+    Image.new("RGBA", (16, 16), (220, 220, 215, 255)).save(textures_dir / "quartz_block_bottom.png")
+
+    image = compose_stairs(
+        key="STAIRS:smooth_quartz",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((12, 12))[3] == 255
+
+
+def test_compose_stairs_waxed_cut_copper_uses_cut_copper_texture(tmp_path: Path):
+    textures_dir = tmp_path / "textures"
+    textures_dir.mkdir()
+    Image.new("RGBA", (16, 16), (190, 120, 90, 255)).save(textures_dir / "cut_copper.png")
+
+    image = compose_stairs(
+        key="STAIRS:waxed_cut_copper",
+        view="top",
+        size=16,
+        textures_dir=textures_dir,
+    )
+
+    assert image.getpixel((12, 12))[3] == 255

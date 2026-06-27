@@ -158,6 +158,8 @@ def test_compile_texture_set_runtime_bakes_missing_sprite(tmp_path: Path):
 
     from sprite_baker_test_utils import compile_texture_tokens, generated_assets_root
 
+    from helpers.sprite_baker.stair_shapes import STAIR_RISER_GHOST_ALPHA
+
     generated_root = tmp_path / "generated"
     assert not generated_root.exists()
 
@@ -171,5 +173,5 @@ def test_compile_texture_set_runtime_bakes_missing_sprite(tmp_path: Path):
 
     assert "STAIRS" in textures
     assert textures["STAIRS"].getpixel((5, 20))[3] == 255
-    assert textures["STAIRS"].getpixel((5, 5))[3] == 0
+    assert textures["STAIRS"].getpixel((5, 5))[3] == STAIR_RISER_GHOST_ALPHA
     assert (generated_root / "top" / "STAIRS.png").exists()

@@ -623,6 +623,10 @@ areas:
       - renderers/layer_panel.py
     tests:
       - tests/test_render_panel.py
+      - tests/test_utils_schematics.py
+    handlers:
+      - test_paste_corner_stair_matches_worldgen_facing
+      - test_paste_straight_stair_matches_worldgen_facing
     related:
       - Render Panel
       - Render Preview
@@ -702,6 +706,17 @@ areas:
       - scripts/bake_sprites.py
     tests:
       - tests/test_sprite_baker_campfire.py
+      - tests/test_sprite_baker_stairs.py
+    handlers:
+      - apply_texture_mask
+      - build_stair_riser_top_mask
+      - build_stair_top_mask
+      - compose_stairs
+      - lighten_texture_for_riser_ghost
+      - stairs_texture_material
+      - stairs_texture_filename_candidates
+      - test_bake_stairs_integration
+      - test_compose_stairs_shapes_differ
     docs:
       - docs/sprite-baker.md
 

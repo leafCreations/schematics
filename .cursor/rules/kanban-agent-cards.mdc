@@ -42,7 +42,8 @@ agent-routing § Kanban card type (no §1 table — `TRIAGE_CLASSIFY_MAX_ROWS=0`
 read-only §6 one-line handoff; consolidate-before-expand gate — Signature:
 `governance-compact-self-eval-handoff`. **gc5 extension (complete):** forward-feedback tightening
 — Impact Scope, References, Mitigation, Importance, top-3 chat; reference § SSOT — Signature:
-`card-done-forward-feedback`. **gc6
+`card-done-forward-feedback`. **gc8 (todo):** agent moves `review` → `done` on user QA-complete signal;
+same-turn Card Done — Signature: `card-done-agent-move-qa-complete`. **gc6
 (complete):** task-type first-read rows in triage reference § Task types — Signature:
 `governance-compact-classify-task-types`; triage §2 summary (no full table duplication).
 
@@ -70,6 +71,20 @@ before `review` (no `\n**` line breaks inside the block — C4 parser boundary).
 skip gracefully. Signature: `lessons-coverage-ci-drift` ([testing.mdc](testing.mdc)). **Spawn skeleton:**
 all **agent** sections at create with `_TBD_` placeholders — kanban-markdown reference § Drift spawn
 card skeleton; not **Corrective Action** alone.
+
+**LessonsCoverageMetric lc4 (todo — C + partial B):** aM lc4c parser/stub/C1b (`lessons-coverage-c1b-forward-feedback`);
+aN lc4b C4 per-card drift threshold (`lessons-coverage-c4-per-card-threshold`); after gc8 aK.
+Supersedes monolithic aL `agent-lessons-coverage-enforcement-option-b-2026-06-27.md`.
+
+**GovernanceEpicLifecycle (todo — Q3 Option C):** gel0 epic-completion audit
+(`governance-epic-completion-audit`); gel1 handoff duplication pair
+(`governance-gc7-handoff-duplication-pair`); gel2 forward-feedback audit flag
+(`governance-gc7-forward-feedback-audit`); gel3 cross-epic archive group batch
+(`governance-archive-group-batch`). Anchor **`## Epic cards`** (gel0) + **`## Archive group`**
+(gel3). Epic audit ≠ batch archive when `archiveGroup:` set — kanban-markdown reference § Epic audit
++ § Archive group. Orders aO → aP; aQ after lc4c aM; aR last (`CardDoneGovernanceLoop2026` aK–aR).
+**Drift spawn consolidation (shipped 2026-06-27):** registry Label Methods alerts group per source
+kanban card — Signature: `governance-drift-spawn-consolidate-by-source-card`.
 
 **Hybrid agent cards** (e.g. orbit render-class routing): **Feature Area** may be product-facing (`Render Preview`); AC may include a small `helpers/` resolver + docs/skill glossary — still `labels: ["agent"]`, not `feature`.
 

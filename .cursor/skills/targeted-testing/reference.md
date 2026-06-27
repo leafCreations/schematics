@@ -34,6 +34,8 @@ Also: unmapped `*.py` changes, or >20 targeted test files accumulated.
 | `helpers/landscape_utils.py`, `path_geometry.py`, `path_strip.py` | `test_landscape_utils`, `test_path_geometry`, `test_path_strip`, `test_path_lighting`, `test_site_display_lighting` |
 | `helpers/utils_schematics.py`, `facade_projection.py` | `test_utils_schematics`, `test_facade_projection`, `test_utils_schematics_*` |
 | `helpers/sprite_baker/*` | `test_sprite_baker_*`, `test_sprite_baker_cache` |
+| `helpers/sprite_baker/plank_materials.py` (`stairs_texture_material`, `stairs_texture_filename_candidates`; Signature: `stairs-texture-material-aliases`) | `test_sprite_baker_stairs.py -q -k "brick or purpur or quartz or copper"` |
+| `helpers/sprite_baker/compose_stairs.py`, `stair_shapes.py` (riser ghost; Signature: `2d-stair-riser-ghost`, `2d-stair-riser-runtime-cache-test`) | `test_sprite_baker_stairs.py`, `test_sprite_baker_cache.py::test_compile_texture_set_runtime_bakes_missing_sprite`, `test_utils_schematics.py -k stair` |
 | `helpers/block_catalog.py` | `test_block_catalog`, `test_block_picker` |
 | `helpers/pipeline.py`, `paths.py`, `render_image.py`, `fonts.py` | `test_paths`, `test_pipeline`, `test_fonts` |
 | `helpers/site_ground.py`, `structure_metadata.py` | `test_ui_document`, `test_site_cells`, `test_structure_metadata` |

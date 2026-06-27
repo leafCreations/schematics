@@ -305,6 +305,10 @@ placeholders, not omit sections. Signature: `lessons-coverage-ci-drift`.
 | `feature` (GovernanceDriftAlert) | **Feature Areas**, **Label Paths**, **Label Methods**, **Decisions**, **Acceptance Criteria** |
 | `agent` (LessonsCoverageMetric drift) | **Description** (from corrective-action text), **Feature Area**, **Label Paths**, **Label Methods**, **Decisions**, **Acceptance Criteria** |
 
+**Registry Label Methods drift:** `create_drift_alert_cards` consolidates multiple missing-handler
+alerts for the **same source kanban card** into one todo card (bullet list of symbols). Card id:
+`governance-drift-registry-{hash:card}` — Signature: `governance-drift-spawn-consolidate-by-source-card`.
+
 Do **not** use **Corrective Action** on spawned `feature`/`agent` cards — bug/commit-issue only.
 
 **Spawn inquiry from render QA:** 2D vs 3D parity questions → `labels: ["inquiry"]` todo card; link from parent.
@@ -312,6 +316,82 @@ Do **not** use **Corrective Action** on spawned `feature`/`agent` cards — bug/
 **Spawn from inquiry (OrbitRenderClass example):** parent inquiry Response + implementation plan →
 `agent` todo (doc/test parity) + deferred `feature` todo (registry YAML when trigger fires); parent
 `## Spawned feature cards` table with epic `OrbitRenderClass` order a0/a1.
+
+**Spawn from epic review (Card Done enforcement, 2026-06-27):** user discussion → implement queue:
+
+| order | card | epic |
+| ----- | ---- | ---- |
+| aK | `agent-card-done-agent-move-qa-complete-2026-06-27` | GovernanceCompact (gc8) |
+| aM | `agent-lessons-coverage-lc4c-parser-templates-c1b-2026-06-27` | LessonsCoverageMetric (lc4c — Option C) |
+| aN | `agent-lessons-coverage-lc4b-c4-per-card-threshold-2026-06-27` | LessonsCoverageMetric (lc4b — partial B) |
+
+Supersedes monolithic `agent-lessons-coverage-enforcement-option-b-2026-06-27` (aL). Link queue in
+**Context**; no parent inquiry table required.
+
+**Spawn from Q3 Option C (2026-06-27):** epic-completion audit + gc7 file checks — epic
+`GovernanceEpicLifecycle`:
+
+| order | card | phase |
+| ----- | ---- | ----- |
+| aO | `agent-governance-epic-completion-audit-2026-06-27` | gel0 — epic audit workflow, closed-epic names |
+| aP | `agent-governance-gc7-handoff-duplication-pair-2026-06-27` | gel1 — parity handoff dup check |
+| aQ | `agent-governance-gc7-forward-feedback-audit-2026-06-27` | gel2 — `--forward-feedback-audit` |
+
+**Implement order (full Q3 queue):** aK → aM → aN → aO → aP → aQ → aR (gel3 archive batch).
+Anchor card maintains **`## Epic cards`** table; on epic complete run § Epic audit (gel0). Cross-epic
+initiative **`CardDoneGovernanceLoop2026`** — manifest on gel3; batch archive § Archive group.
+
+| order | card | phase |
+| ----- | ---- | ----- |
+| aR | `agent-governance-gel3-archive-group-batch-2026-06-27` | gel3 — cross-epic archive group batch |
+
+### Epic audit (gel0 — agent turn)
+
+When user confirms epic complete (no active cards with that `epic:`):
+
+1. Verify **`## Epic cards`** manifest — all rows `done` / archived / superseded.
+2. Run `python3 scripts/check_governance_parity.py` (spawn fix cards unless audit-only).
+3. When `done/` exists: `python3 scripts/check_lessons_coverage.py --json`.
+4. Governance epics: `--line-counts`; optional `--forward-feedback-audit` after gel2.
+5. Agent runtime smoke: `@` bug card → **Corrective Action** (not Decisions).
+6. Write **`## Epic audit (YYYY-MM-DD)`** on anchor; append epic to closed registry.
+7. **Do not** reuse closed `epic:` on new cards — new PascalCase epic for follow-ups.
+8. **Do not** batch-move to `archived/` when members have open **`archiveGroup:`** — defer to § Archive group.
+
+Quarterly `create_governance_audit_card.py` is optional backstop only (not primary cadence).
+Signature: `governance-epic-completion-audit`.
+
+### Archive group (gel3 — cross-epic batch)
+
+When a feature spans **multiple epics**, **epic audit** and **batch archive** are separate gates.
+
+| Gate | Trigger | Cards move to `archived/`? |
+| ---- | ------- | -------------------------- |
+| Epic audit | No active cards for one `epic:` + user confirms | **No** — stay in `done/` if `archiveGroup:` set |
+| Archive group complete | All manifest rows `done` / archived / superseded + user confirms | **Yes** — batch listed members only |
+
+**Manifest SSOT:** anchor card **`## Archive group: {PascalCaseName}`** table (order, card, epic,
+status). Members carry matching **`archiveGroup:`** frontmatter (optional `epic:` between
+`assignee` and `dueDate`).
+
+**CardDoneGovernanceLoop2026** (2026-06-27): aK (GovernanceCompact gc8), aM/aN (LessonsCoverageMetric
+lc4), aO–aR (GovernanceEpicLifecycle gel0–gel3). Queue scope only — not historical done cards under
+the same epic names.
+
+**Archive group turn (agent):**
+
+1. Verify manifest — every row `done` / `archived` / `superseded`.
+2. User confirms `archive group {Name} complete`.
+3. Move `done/{id}.md` → `archived/{id}.md` for **listed members**; keep `status: "done"`.
+4. Refresh active card links (`done/` → `archived/`); Signature `kanban-card-stale-dependency-links`.
+5. Write **`## Archive batch (YYYY-MM-DD)`** on anchor; retire archive group name for new spawns.
+
+**Card Done:** move to `done/` only — never archive on the same turn.
+
+**Superseded never-implemented** cards may go to `archived/` early; remove from manifest or mark
+`superseded`.
+
+Signature: `governance-archive-group-batch`.
 
 ## Prior lessons gate
 
@@ -570,6 +650,7 @@ order: "a0"
 - `labels`: inline JSON array on one line — `["feature"]`, `["bug"]`, `["inquiry"]`, `["agent"]`, `["commit-issue"]`
 - Field order: `id`, `status`, `priority`, `assignee`, `dueDate`, `created`, `modified`, `completedAt`, `labels`, `order`
 - Optional `epic` between `assignee` and `dueDate` on existing cards
+- Optional `archiveGroup` after `epic` — cross-epic initiative; batch archive per § Archive group
 
 ### Fractional index ordering
 

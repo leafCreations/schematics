@@ -363,6 +363,10 @@ def _slugify(text: str, *, max_len: int = 36) -> str:
 def issue_card_id(issue: DriftIssue) -> str:
     if issue.message.startswith(PREFIX_LESSONS):
         return f"lessons-coverage-drift-{datetime.now(UTC).date().isoformat()}"
+    card = _kanban_card_from_registry_label_message(issue.message)
+    if card and issue.message.startswith(PREFIX_REGISTRY) and "Label Methods" in issue.message:
+        digest = hashlib.sha256(f"registry-label-methods:{card}".encode()).hexdigest()[:10]
+        return f"governance-drift-registry-{digest}"
     digest = hashlib.sha256(issue.message.encode("utf-8")).hexdigest()[:10]
     kind = _slugify(_alert_prefix(issue.message).replace(" drift alert:", ""))
     return f"governance-drift-{kind}-{digest}"
@@ -413,7 +417,68 @@ def _find_existing_card_for_alert(features_dir: Path, alert_line: str) -> Path |
     for path in features_dir.glob("*.md"):
         if needle in path.read_text(encoding="utf-8"):
             return path
+    card = _kanban_card_from_registry_label_message(alert_line)
+    if card is None:
+        return None
+    for path in features_dir.glob("*.md"):
+        text = path.read_text(encoding="utf-8")
+        if "## Alert" not in text:
+            continue
+        alert_block = text.split("## Alert", 1)[1].split("\n## ", 1)[0]
+        if PREFIX_REGISTRY in alert_block and f"kanban `{card}`" in alert_block:
+            return path
     return None
+
+
+_REGISTRY_LABEL_SINGLE_RE = re.compile(
+    rf"^{re.escape(PREFIX_REGISTRY)} kanban `([^`]+)` Label Methods `([^`]+)` "
+    r"missing from feature-areas\.yaml `handlers:`$"
+)
+
+
+def _kanban_card_from_registry_label_message(message: str) -> str | None:
+    if not message.startswith(PREFIX_REGISTRY):
+        return None
+    single = _REGISTRY_LABEL_SINGLE_RE.match(message)
+    if single:
+        return single.group(1)
+    grouped = re.match(
+        rf"^{re.escape(PREFIX_REGISTRY)} kanban `([^`]+)` — Label Methods symbols "
+        r"missing from feature-areas\.yaml `handlers:`",
+        message,
+    )
+    return grouped.group(1) if grouped else None
+
+
+def consolidate_drift_issues_for_spawn(issues: list[str]) -> list[str]:
+    """Merge registry Label Methods alerts per source kanban card into one spawn line."""
+    registry_by_card: dict[str, list[tuple[str, str]]] = {}
+    merged: list[str] = []
+
+    for line in issues:
+        issue = parse_drift_line(line)
+        single = _REGISTRY_LABEL_SINGLE_RE.match(issue.message)
+        if single:
+            card_name, symbol = single.group(1), single.group(2)
+            registry_by_card.setdefault(card_name, []).append((line, symbol))
+        else:
+            merged.append(line)
+
+    for card_name in sorted(registry_by_card):
+        entries = registry_by_card[card_name]
+        if len(entries) == 1:
+            merged.append(entries[0][0])
+            continue
+        symbols = sorted({symbol for _line, symbol in entries})
+        quoted = ", ".join(f"`{symbol}`" for symbol in symbols)
+        body = (
+            f"{PREFIX_REGISTRY} kanban `{card_name}` — Label Methods symbols "
+            f"missing from feature-areas.yaml `handlers:`: {quoted}"
+        )
+        severity = parse_drift_line(entries[0][0]).severity
+        merged.append(format_drift_line(body, severity=severity))
+
+    return merged
 
 
 def card_label_for_issue(issue: DriftIssue) -> str:
@@ -519,12 +584,12 @@ def create_drift_alert_cards(
     *,
     features_dir: Path,
 ) -> list[Path]:
-    """Create one todo kanban card per drift issue; skip duplicates by ## Alert text."""
+    """Create todo kanban cards for drift issues; skip duplicates by ## Alert text."""
     features_dir.mkdir(parents=True, exist_ok=True)
     created: list[Path] = []
     now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
-    for line in issues:
+    for line in consolidate_drift_issues_for_spawn(issues):
         issue = parse_drift_line(line)
         existing = _find_existing_card_for_alert(features_dir, issue.message)
         if existing is not None:

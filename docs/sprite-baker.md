@@ -67,6 +67,40 @@ The **3D orbit preview** reuses the same `compile_texture_set()` top/side maps (
 
 Pre-baking with the CLI is still useful for CI, bulk updates, and verifying output before commit.
 
+### Stair top-down riser ghost
+
+Straight and corner stair **top** bakes composite two layers at bake time:
+
+1. **Tread** — full opacity (`build_stair_top_mask`)
+2. **Riser ghost** — tread-complement (L-void) at ~45% alpha; RGB lightened ~28% toward white
+   (`STAIR_RISER_GHOST_LIGHTEN`) so gray stone/brick risers read lighter on Top Down grids.
+
+Side and inventory stair bakes are unchanged. After changing `compose_stairs`, rebake top stairs:
+
+```bash
+.venv/bin/python scripts/bake_sprites.py --type stairs --view top --all --force
+```
+
+Runtime `compile_texture_set()` will compose missing cache entries on demand; pre-bake avoids first-open lag.
+
+Catalog materials ending in ``_brick`` (and plain ``brick`` from ``minecraft:brick_stairs``)
+resolve to ``*_bricks.png`` via ``stairs_texture_material()`` in ``plank_materials.py``.
+
+Non-plank catalog stems (``purpur``, ``quartz``, smooth variants, waxed cut copper) use
+``stairs_texture_filename_candidates()`` — tries ``{alias}.png``, ``{material}_block.png``,
+``{material}_block_top.png``, plus explicit aliases (``purpur`` → ``purpur_block.png``,
+``smooth_quartz`` → ``quartz_block_bottom.png``, ``waxed_cut_copper`` → ``cut_copper.png``, …).
+
+**QA gate:** after changing stair texture resolution, run full catalog rebake — oak-only tests miss
+non-wood filename gaps (``brick`` → ``bricks.png``, ``purpur`` → ``purpur_block.png``):
+
+```bash
+.venv/bin/python scripts/bake_sprites.py --type stairs --view top --all --force
+```
+
+Signature: ``stairs-rebake-all-texture-qa``. Long-term: material-family taxonomy
+(``inquiry-material-family-taxonomy-2026-06-27``) may replace heuristic aliases.
+
 ## Source code
 
 * `helpers/sprite_baker/` — composers, cache, block model renderer

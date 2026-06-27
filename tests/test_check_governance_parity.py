@@ -31,6 +31,7 @@ from scripts.check_governance_parity import (
     collect_always_apply_rules,
     collect_baseline_artifact_paths,
     collect_duplication_pair_counts,
+    consolidate_drift_issues_for_spawn,
     create_drift_alert_cards,
     default_severity_for_line,
     extract_agents_governance_paths,
@@ -747,6 +748,45 @@ def test_create_drift_alert_cards_skips_duplicate_alert(tmp_path: Path):
     second = create_drift_alert_cards([line], features_dir=features)
     assert len(first) == 1
     assert len(second) == 0
+
+
+def test_consolidate_registry_label_methods_per_kanban_card():
+    card = "feature-stair-2026-06-27.md"
+    lines = [
+        format_drift_line(
+            f"{PREFIX_REGISTRY} kanban `{card}` Label Methods `compose_stairs` "
+            "missing from feature-areas.yaml `handlers:`"
+        ),
+        format_drift_line(
+            f"{PREFIX_REGISTRY} kanban `{card}` Label Methods `build_stair_top_mask` "
+            "missing from feature-areas.yaml `handlers:`"
+        ),
+    ]
+    merged = consolidate_drift_issues_for_spawn(lines)
+    assert len(merged) == 1
+    assert "`compose_stairs`" in merged[0]
+    assert "`build_stair_top_mask`" in merged[0]
+    assert f"kanban `{card}` — Label Methods symbols" in merged[0]
+
+
+def test_create_drift_alert_cards_one_card_for_multiple_registry_symbols(tmp_path: Path):
+    features = tmp_path / "features"
+    card = "feature-stair-2026-06-27.md"
+    lines = [
+        format_drift_line(
+            f"{PREFIX_REGISTRY} kanban `{card}` Label Methods `sym_a` "
+            "missing from feature-areas.yaml `handlers:`"
+        ),
+        format_drift_line(
+            f"{PREFIX_REGISTRY} kanban `{card}` Label Methods `sym_b` "
+            "missing from feature-areas.yaml `handlers:`"
+        ),
+    ]
+    paths = create_drift_alert_cards(lines, features_dir=features)
+    assert len(paths) == 1
+    text = paths[0].read_text(encoding="utf-8")
+    assert "`sym_a`" in text
+    assert "`sym_b`" in text
 
 
 def test_issue_card_id_is_stable_for_same_message():

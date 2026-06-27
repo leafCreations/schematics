@@ -67,11 +67,69 @@ WAXED_COPPER_TEXTURE_ALIASES: dict[str, str] = {
     "waxed_exposed_copper": "exposed_copper",
     "waxed_weathered_copper": "weathered_copper",
     "waxed_oxidized_copper": "oxidized_copper",
+    "waxed_cut_copper": "cut_copper",
+    "waxed_exposed_cut_copper": "exposed_cut_copper",
+    "waxed_weathered_cut_copper": "weathered_cut_copper",
+    "waxed_oxidized_cut_copper": "oxidized_cut_copper",
 }
 
 
 def copper_family_texture_material(material: str) -> str:
     return WAXED_COPPER_TEXTURE_ALIASES.get(material, material)
+
+
+# Catalog ``minecraft:{material}_stairs`` stems that do not match ``{material}.png`` on disk.
+STAIRS_TEXTURE_MATERIAL_ALIASES: dict[str, str] = {
+    "smooth_quartz": "quartz_block_bottom",
+    "smooth_sandstone": "sandstone_top",
+    "smooth_red_sandstone": "red_sandstone_top",
+}
+
+
+def stairs_texture_material(material: str) -> str:
+    copper_alias = copper_family_texture_material(material)
+    if copper_alias != material:
+        return copper_alias
+    explicit = STAIRS_TEXTURE_MATERIAL_ALIASES.get(material)
+    if explicit is not None:
+        return explicit
+    if material.endswith("bricks") or material.endswith("_tiles"):
+        return material
+    if material == "brick" or material.endswith("_brick"):
+        return f"{material}s"
+    if material.endswith("_tile"):
+        return f"{material}s"
+    return material
+
+
+def stairs_texture_filename_candidates(material: str) -> tuple[str, ...]:
+    """Ordered PNG filenames to try when baking ``STAIRS:{material}`` top/side sprites."""
+    texture_material = stairs_texture_material(material)
+    seen: set[str] = set()
+    ordered: list[str] = []
+
+    def add(*names: str) -> None:
+        for name in names:
+            if name not in seen:
+                seen.add(name)
+                ordered.append(name)
+
+    add(
+        f"{texture_material}_planks.png",
+        f"{texture_material}.png",
+        f"{texture_material}_stairs.png",
+    )
+    if texture_material != material:
+        add(
+            f"{material}_planks.png",
+            f"{material}.png",
+            f"{material}_stairs.png",
+        )
+    add(
+        f"{material}_block_top.png",
+        f"{material}_block.png",
+    )
+    return tuple(ordered)
 
 
 def list_trapdoor_materials(*, textures_dir: Path | None = None) -> list[str]:
