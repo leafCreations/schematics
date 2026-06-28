@@ -833,6 +833,135 @@ def test_orbit_chest_side_latch_only_on_front():
     assert _chest_latch_pixel_count(back) == 0
 
 
+def test_orbit_chest_top_and_bottom_use_top_template():
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.sprite_baker.chest_schematic import (
+        CHEST_TOP_TEMPLATE_PATH,
+        compose_chest_top_schematic,
+    )
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    if not CHEST_TOP_TEMPLATE_PATH.exists():
+        pytest.skip("chest templates not available")
+
+    side_tex = compile_texture_set("side", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    top_tex = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    token = "CHEST@north#single"
+    expected = compose_chest_top_schematic(part="single", size=constants.BLOCK_PX)
+
+    top = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="top",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+    bottom = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="bottom",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+
+    assert top is not None and bottom is not None
+    assert top.tobytes() == expected.tobytes()
+    assert bottom.tobytes() == expected.tobytes()
+    assert _chest_latch_pixel_count(top) == 0
+    assert _chest_latch_pixel_count(bottom) == 0
+
+
+def test_orbit_double_chest_merged_top_uses_left_and_right_textures():
+    from helpers.orbit_attachable_mesh import chest_right_token
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.orbit_greedy_mesh import _iter_chest_face_parts
+    from helpers.orbit_mesh import OccupiedVoxel
+    from helpers.orbit_partial_mesh import OrbitBox
+    from helpers.sprite_baker.chest_schematic import CHEST_TOP_LEFT_TEMPLATE_PATH
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    if not CHEST_TOP_LEFT_TEMPLATE_PATH.exists():
+        pytest.skip("chest templates not available")
+
+    left_token = "CHEST@west#left"
+    right_token = chest_right_token(left_token)
+    cell = OccupiedVoxel(
+        world=(0, 0, 0),
+        token=left_token,
+        layer_list_index=0,
+        local_x=0,
+        local_z=0,
+    )
+    box = OrbitBox(
+        cell=cell,
+        min_corner=(0.0, 0.0, 0.0),
+        max_corner=(2.0, 14.0 / 16.0, 1.0),
+        role="chest",
+        chest_span=(1, 0),
+    )
+    parts = _iter_chest_face_parts(box, (0, 1, 0))
+    assert len(parts) == 2
+    assert parts[0][0] == left_token
+    assert parts[1][0] == right_token
+
+    textures = compile_texture_set(
+        "top",
+        str(BLOCK_TEXTURES_FOLDER),
+        constants.BLOCK_PX,
+    )
+    left_top = resolve_orbit_face_texture(left_token, textures, face_kind="top")
+    right_top = resolve_orbit_face_texture(right_token, textures, face_kind="top")
+    assert left_top is not None
+    assert right_top is not None
+    assert left_top.tobytes() != right_top.tobytes()
+
+
+def test_orbit_double_chest_back_uses_left_and_right_templates():
+    from helpers.orbit_attachable_mesh import chest_right_token
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.sprite_baker.chest_schematic import (
+        CHEST_BACK_LEFT_TEMPLATE_PATH,
+        compose_chest_side_schematic,
+    )
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    if not CHEST_BACK_LEFT_TEMPLATE_PATH.exists():
+        pytest.skip("chest back templates not available")
+
+    left_token = "CHEST@west#left"
+    right_token = chest_right_token(left_token)
+    side_tex = compile_texture_set("side", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    top_tex = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+
+    back_left = resolve_orbit_face_texture(
+        left_token,
+        side_tex,
+        face_kind="side",
+        side_facing="east",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+    back_right = resolve_orbit_face_texture(
+        right_token,
+        side_tex,
+        face_kind="side",
+        side_facing="east",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+    expected_left = compose_chest_side_schematic(part="left", size=constants.BLOCK_PX, face="back")
+    expected_right = compose_chest_side_schematic(
+        part="right",
+        size=constants.BLOCK_PX,
+        face="back",
+    )
+
+    assert back_left is not None and back_right is not None
+    assert back_left.tobytes() == expected_left.tobytes()
+    assert back_right.tobytes() == expected_right.tobytes()
+    assert back_left.tobytes() != back_right.tobytes()
+
+
 def test_orbit_bed_side_faces_differ_by_world_facing():
     from helpers.orbit_face_textures import resolve_orbit_face_texture
     from helpers.paths import GENERATED_ASSETS_FOLDER, resolve_entity_bed_textures_folder

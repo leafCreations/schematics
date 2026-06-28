@@ -121,6 +121,13 @@ def try_runtime_bake_sprite(
             behavior=behavior,
             textures_dir=textures_dir,
             generated_root=generated_root,
+            force=_chest_runtime_bake_is_stale(view, key, generated_root=generated_root),
         )
     except SpriteBakeError:
         return None
+
+
+def _chest_runtime_bake_is_stale(view: str, key: str, *, generated_root: Path) -> bool:
+    from registries.loader import _chest_generated_cache_is_stale
+
+    return _chest_generated_cache_is_stale(view, key, generated_root=generated_root)

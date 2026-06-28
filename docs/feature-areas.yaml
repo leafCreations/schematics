@@ -583,6 +583,9 @@ areas:
       - orbit-top-side-seam-geometry
       - orbit-lantern-hanging-variant
       - orbit-render-class-routing
+      - orbit-bed-colored-texture-keys
+      - orbit-chest-schematic-face-templates
+      - chest-generated-top-cache-stale
     lesson_docs:
       - docs/render-types.md
     agents_skill: ui-change
@@ -598,6 +601,8 @@ areas:
       - testing.mdc#orbit-top-side-seam-geometry
       - testing.mdc#orbit-lantern-hanging-variant
       - testing.mdc#orbit-render-class-routing
+      - testing.mdc#orbit-chest-schematic-face-templates
+      - testing.mdc#chest-generated-top-cache-stale
     lesson_routing_row: Render Preview
 
   Render Selection:

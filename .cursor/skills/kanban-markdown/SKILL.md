@@ -382,7 +382,8 @@ Full artifact table: [reference.md § Card Done](reference.md#card-done--lessons
 - Run § Card Done on `done/{id}.md` **same turn** (`feature`/`bug`/`agent`/`commit-issue` only)
 - **Not** `archived/` — batch archive is a separate gate (reference § Archive group)
 
-**Agent** (`done/` → `archived/`) — on user **archive group {Name} complete** only:
+**Agent** (`done/` → `archived/`) — on user **archive group {Name} complete** only (or **epic done
+archive** on a single-epic product group — gel0 + gel3 same turn; set `archiveGroup:` on all members):
 
 - Verify manifest via `resolve_archive_group.py --group {Name} --status`
 - Move listed members `done/{id}.md` → `archived/{id}.md`; keep `status: "done"`; bump `modified`

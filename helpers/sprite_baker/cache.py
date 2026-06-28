@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from PIL import Image
@@ -63,6 +63,15 @@ def save_cached(
     return path
 
 
+def is_cache_stale(cache_file: Path, source_paths: Sequence[Path]) -> bool:
+    """True when any source template is newer than the cached bake."""
+    if not cache_file.exists():
+        return True
+
+    cache_mtime = cache_file.stat().st_mtime
+    return any(source.exists() and source.stat().st_mtime > cache_mtime for source in source_paths)
+
+
 def load_or_bake(
     view: str,
     key: str,
@@ -70,8 +79,13 @@ def load_or_bake(
     *,
     generated_root: Path | None = None,
     force: bool = False,
+    source_paths: Sequence[Path] | None = None,
 ) -> Image.Image:
     root = _generated_root(generated_root)
+    cached_file = cache_path(view, key, generated_root=root)
+
+    if not force and source_paths and is_cache_stale(cached_file, source_paths):
+        force = True
 
     if not force:
         cached = load_cached(view, key, generated_root=root)

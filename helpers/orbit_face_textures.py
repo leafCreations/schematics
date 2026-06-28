@@ -212,27 +212,18 @@ def _resolve_chest_orbit_side_texture(
     raw_token: RawToken,
     textures: MappedTextureImages,
     *,
-    include_latch: bool,
+    face: Literal["front", "back", "end"],
     layer_cells: CellGrid | None,
     cell_x: int | None,
     cell_z: int | None,
 ):
-    if include_latch:
-        return schematics_utils.resolve_cell_texture(
-            raw_token,
-            textures,
-            view="side",
-            layer_cells=layer_cells,
-            cell_x=cell_x,
-            cell_z=cell_z,
-        )
+    del textures, layer_cells, cell_x, cell_z
 
     parsed = parse_structure_token(raw_token)
     if parsed is None:
         return None
 
     entry = get_block_entry(parsed) or {}
-    from helpers.paths import ENTITY_CHEST_TEXTURES_FOLDER
     from helpers.sprite_baker.chest_schematic import compose_chest_side_schematic
     from helpers.sprite_baker.compose_chest import resolve_chest_part
 
@@ -240,9 +231,26 @@ def _resolve_chest_orbit_side_texture(
     return compose_chest_side_schematic(
         part=part,
         size=constants.BLOCK_PX,
-        chest_textures_dir=ENTITY_CHEST_TEXTURES_FOLDER,
-        include_latch=False,
+        face=face,
     )
+
+
+def _resolve_chest_orbit_top_texture(raw_token: RawToken):
+    parsed = parse_structure_token(raw_token)
+    if parsed is None:
+        return None
+
+    entry = get_block_entry(parsed) or {}
+    from helpers.sprite_baker.chest_schematic import compose_chest_top_schematic
+    from helpers.sprite_baker.compose_chest import resolve_chest_part
+
+    part = resolve_chest_part(parsed.variant, entry)
+    tex = compose_chest_top_schematic(part=part, size=constants.BLOCK_PX)
+    _, resolved_direction = schematics_utils.resolve_token_for_render(raw_token)
+    direction = parsed.direction or resolved_direction or entry.get("defaults", {}).get("direction")
+    if direction:
+        tex = utils.rotate_directional_texture(tex, direction)
+    return tex
 
 
 def _resolve_orbit_attachable_bake_face_texture(
@@ -282,7 +290,7 @@ def _resolve_orbit_attachable_bake_face_texture(
                 tex = _resolve_chest_orbit_side_texture(
                     raw_token,
                     side_map,
-                    include_latch=True,
+                    face="front",
                     layer_cells=layer_cells,
                     cell_x=cell_x,
                     cell_z=cell_z,
@@ -291,18 +299,16 @@ def _resolve_orbit_attachable_bake_face_texture(
                 tex = _resolve_chest_orbit_side_texture(
                     raw_token,
                     side_map,
-                    include_latch=False,
+                    face="back",
                     layer_cells=layer_cells,
                     cell_x=cell_x,
                     cell_z=cell_z,
                 )
-                if tex is not None:
-                    tex = tex.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
             else:
                 tex = _resolve_chest_orbit_side_texture(
                     raw_token,
                     side_map,
-                    include_latch=False,
+                    face="end",
                     layer_cells=layer_cells,
                     cell_x=cell_x,
                     cell_z=cell_z,
@@ -351,6 +357,10 @@ def _resolve_orbit_attachable_bake_face_texture(
                 cell_z=cell_z,
             )
 
+        return _force_opaque_orbit_face(tex)
+
+    if behavior == "chest" and face_kind in {"top", "bottom"}:
+        tex = _resolve_chest_orbit_top_texture(raw_token)
         return _force_opaque_orbit_face(tex)
 
     view: Literal["top", "side"] = "top" if face_kind in {"top", "bottom"} else "side"

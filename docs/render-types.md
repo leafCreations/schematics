@@ -147,10 +147,10 @@ faces per part (`_iter_bed_face_parts` in `helpers/orbit_greedy_mesh.py`).
 (`helpers/orbit_face_textures.py`) maps world side normals to front / back / end roles from block
 `@direction` (same compass policy as `facing_block`). **Bed** side faces use cached schematic
 bakes via `resolve_cell_texture`; merged top uses head vs foot bakes per cell half. **Chest**
-side faces: front keeps the cached side bake with latch; back and ends call
-`compose_chest_side_schematic(..., include_latch=False)` (back mirrored). Top uses the rotated
-2D top bake via `resolve_cell_texture` — not JSON block-model element faces. Entity atlas crops
-for 2D bakes: `helpers/sprite_baker/chest_atlas.py`. Tests: `test_orbit_bed_blue_resolves_face_texture`,
+side faces compose from `chest_front*.png` (front, latch), `chest_back_left.png` /
+`chest_back_right.png` (double back halves), and `chest_side.png` (single back + ends). Top and
+bottom compose from `chest_top*.png`; merged double-chest AABBs split top/front/back along
+`chest_span`. Tests: `test_orbit_bed_blue_resolves_face_texture`,
 `test_orbit_bed_merged_top_head_and_foot_bakes`, `test_orbit_chest_side_front_differs_from_end`,
 `test_orbit_chest_side_latch_only_on_front`, `test_chest_is_attachable_box`.
 

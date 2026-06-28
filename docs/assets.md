@@ -9,7 +9,7 @@ assets/
   icons/                      # UI toolbar icons
   ui/                         # UI SVG assets
   project/
-    custom/                   # Bed/chest schematic templates (project-owned)
+    custom/                   # Bed/chest schematic templates (chest_top/front/side.png)
     generated/                # Sprite bake cache (regeneratable)
   versions/
     base/                     # Shared vanilla files across game versions
@@ -73,8 +73,8 @@ Project-owned paths live under `assets/project/`:
 
 | Path | Used for |
 | ---- | -------- |
-| `project/custom/` | Bed/chest schematic PNG templates |
-| `project/generated/` | Baked sprite cache |
+| `project/custom/` | Bed/chest schematic PNG templates (`chest_top*.png`, `chest_front*.png`, `chest_back_*.png`, `chest_side.png`) |
+| `project/generated/` | Baked sprite cache (chest 2D bakes refresh when `project/custom/chest_*.png` is newer) |
 
 ## Scripts
 

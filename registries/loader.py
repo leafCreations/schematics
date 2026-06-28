@@ -447,6 +447,37 @@ def _generated_bake_keys(texture_type: TextureType) -> set[str]:
     return keys
 
 
+def _chest_generated_cache_is_stale(
+    texture_type: TextureType,
+    token: str,
+    *,
+    generated_root: Path,
+) -> bool:
+    from helpers.registry_blocks import get_block_behavior
+    from helpers.sprite_baker.chest_schematic import chest_compose_source_paths
+    from helpers.sprite_baker.compose_chest import resolve_chest_part
+    from helpers.sprite_baker.compose_simple import parse_bake_key
+    from helpers.sprite_baker.demo import SpriteBakeError
+
+    try:
+        parsed = parse_bake_key(token)
+    except SpriteBakeError:
+        return False
+
+    entry = BLOCK_REGISTRY.get(parsed.token)
+    if entry is None or get_block_behavior(entry) != "chest":
+        return False
+
+    part = resolve_chest_part(parsed.variant, entry)
+    sources = chest_compose_source_paths(part=part, view=texture_type)
+    if not sources:
+        return False
+
+    from helpers.sprite_baker.cache import cache_path, is_cache_stale
+
+    return is_cache_stale(cache_path(texture_type, token, generated_root=generated_root), sources)
+
+
 def _load_token_texture(
     texture_type: TextureType,
     token: str,
@@ -457,18 +488,17 @@ def _load_token_texture(
     generated_keys: set[str],
     generated_root: Path = GENERATED_ASSETS_FOLDER,
 ) -> Image.Image | None:
-    generated = load_generated_sprite(
-        texture_type,
-        token,
-        block_px,
-        generated_root=generated_root,
-    )
+    if not _chest_generated_cache_is_stale(texture_type, token, generated_root=generated_root):
+        generated = load_generated_sprite(
+            texture_type,
+            token,
+            block_px,
+            generated_root=generated_root,
+        )
 
-    if generated is not None:
-        return generated
+        if generated is not None:
+            return generated
 
-    # Bake procedurally composed sprites for registry keys (including variant keys
-    # listed by _generated_bake_keys() that are not in the flat texture mapping).
     if token in generated_keys:
         from helpers.sprite_baker.runtime_bake import try_runtime_bake_sprite
 

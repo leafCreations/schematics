@@ -410,6 +410,7 @@ def _chest_boxes(
                 min_corner=(min_x, wy, min_z),
                 max_corner=(max_x, wy + _CHEST_HEIGHT, max_z),
                 role="chest",
+                chest_span=(dx, dz),
             ),
         ]
 
@@ -534,3 +535,16 @@ def bed_foot_token(head_token: str) -> str:
     from dataclasses import replace
 
     return format_structure_token(replace(parsed, variant="foot"))
+
+
+def chest_right_token(left_token: str) -> str:
+    """Return the right-half token paired with a left double-chest token."""
+    parsed = parse_structure_token(left_token)
+    if parsed is None or parsed.token != "CHEST":
+        return left_token
+    if parsed.variant == "right":
+        return left_token
+
+    from dataclasses import replace
+
+    return format_structure_token(replace(parsed, variant="right"))

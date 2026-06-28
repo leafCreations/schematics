@@ -44,8 +44,10 @@ def test_compose_chest_rejects_non_chest(tmp_path: Path):
         )
 
 
-def test_compose_chest_top_parts_differ():
-    if not CHEST_SINGLE_TEMPLATE_PATH.exists():
+def test_compose_chest_top_parts_differ_for_double_halves():
+    from helpers.sprite_baker.chest_schematic import CHEST_TOP_LEFT_TEMPLATE_PATH
+
+    if not CHEST_TOP_LEFT_TEMPLATE_PATH.exists():
         pytest.skip("chest templates not available")
 
     single = compose_chest(
@@ -73,8 +75,8 @@ def test_compose_chest_top_parts_differ():
     assert single.size == (16, 16)
     assert left.size == (16, 16)
     assert right.size == (16, 16)
-    assert single.getpixel((8, 8)) != left.getpixel((8, 8))
-    assert left.getpixel((8, 8)) != right.getpixel((8, 8))
+    assert single.tobytes() != left.tobytes()
+    assert left.tobytes() != right.tobytes()
 
 
 def test_compose_chest_fills_cell():
@@ -96,9 +98,11 @@ def test_compose_chest_fills_cell():
                 assert alpha == 255, (part, x, y)
 
 
-def test_compose_chest_side_parts_differ():
-    if not (ENTITY_CHEST_TEXTURES_FOLDER / "normal.png").exists():
-        pytest.skip("chest entity textures not available")
+def test_compose_chest_front_parts_differ_for_double_halves():
+    from helpers.sprite_baker.chest_schematic import CHEST_FRONT_LEFT_TEMPLATE_PATH
+
+    if not CHEST_FRONT_LEFT_TEMPLATE_PATH.exists():
+        pytest.skip("chest templates not available")
 
     single = compose_chest(
         key="CHEST#single",
@@ -114,37 +118,101 @@ def test_compose_chest_side_parts_differ():
         textures_dir=Path("."),
         chest_textures_dir=ENTITY_CHEST_TEXTURES_FOLDER,
     )
+    right = compose_chest(
+        key="CHEST#right",
+        view="side",
+        size=16,
+        textures_dir=Path("."),
+        chest_textures_dir=ENTITY_CHEST_TEXTURES_FOLDER,
+    )
 
-    assert single.getpixel((8, 8)) != left.getpixel((8, 8))
+    assert left.tobytes() != right.tobytes()
+    assert single.tobytes() != left.tobytes()
 
 
-def test_compose_chest_west_faces_left():
+def test_compose_chest_front_and_side_templates_differ():
+    from helpers.sprite_baker.chest_schematic import (
+        CHEST_FRONT_TEMPLATE_PATH,
+        CHEST_SIDE_TEMPLATE_PATH,
+        compose_chest_side_schematic,
+    )
+
+    if not CHEST_FRONT_TEMPLATE_PATH.exists() or not CHEST_SIDE_TEMPLATE_PATH.exists():
+        pytest.skip("chest templates not available")
+
+    front = compose_chest_side_schematic(part="single", size=16, face="front")
+    side = compose_chest_side_schematic(part="single", size=16, face="end")
+
+    assert front.getpixel((8, 8)) != side.getpixel((8, 8))
+
+
+def test_compose_chest_back_parts_differ_for_double_halves():
+    from helpers.sprite_baker.chest_schematic import (
+        CHEST_BACK_LEFT_TEMPLATE_PATH,
+        compose_chest_side_schematic,
+    )
+
+    if not CHEST_BACK_LEFT_TEMPLATE_PATH.exists():
+        pytest.skip("chest back templates not available")
+
+    back_left = compose_chest_side_schematic(part="left", size=16, face="back")
+    back_right = compose_chest_side_schematic(part="right", size=16, face="back")
+    front_left = compose_chest_side_schematic(part="left", size=16, face="front")
+
+    assert back_left.tobytes() != back_right.tobytes()
+    assert back_left.tobytes() != front_left.tobytes()
+
+
+def test_chest_generated_top_cache_refreshes_when_template_newer(tmp_path: Path):
+    import os
+    import time
+
+    from PIL import Image
+    from sprite_baker_test_utils import generated_assets_root
+
+    from helpers.sprite_baker.cache import cache_path, save_cached
+    from helpers.sprite_baker.chest_schematic import CHEST_TOP_LEFT_TEMPLATE_PATH
+    from registries.loader import compile_texture_set
+
+    if not CHEST_TOP_LEFT_TEMPLATE_PATH.exists():
+        pytest.skip("chest templates not available")
+
+    generated_root = tmp_path / "generated"
+    stale = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (1, 2, 3, 255))
+    save_cached("top", "CHEST#left", stale, generated_root=generated_root)
+    cached_file = cache_path("top", "CHEST#left", generated_root=generated_root)
+    old_mtime = time.time() - 10_000
+    os.utime(cached_file, (old_mtime, old_mtime))
+
+    fresh = compose_chest(
+        key="CHEST#left",
+        view="top",
+        size=constants.BLOCK_PX,
+        textures_dir=Path("."),
+        chest_textures_dir=ENTITY_CHEST_TEXTURES_FOLDER,
+    )
+
+    with generated_assets_root(generated_root):
+        textures = compile_texture_set("top", str(Path(".")), constants.BLOCK_PX)
+
+    assert textures["CHEST#left"].tobytes() == fresh.tobytes()
+    assert textures["CHEST#left"].getpixel((0, 0)) != stale.getpixel((0, 0))
+
+
+def test_compose_chest_front_side_has_latch():
     if not CHEST_SINGLE_TEMPLATE_PATH.exists():
         pytest.skip("chest templates not available")
 
-    from helpers import utils
-
-    single = compose_chest(
+    front = compose_chest(
         key="CHEST#single",
-        view="top",
+        view="side",
         size=30,
         textures_dir=Path("."),
         chest_textures_dir=ENTITY_CHEST_TEXTURES_FOLDER,
     )
-    west = utils.rotate_directional_texture(single, "W")
+    from tests.test_orbit_greedy_mesh import _chest_latch_pixel_count
 
-    latch_pixels = [
-        (x, y)
-        for y in range(west.size[1])
-        for x in range(west.size[0])
-        if west.getpixel((x, y))[3] > 128
-        and 100 < max(west.getpixel((x, y))[:3]) < 200
-        and min(west.getpixel((x, y))[:3]) > 80
-    ]
-
-    assert latch_pixels
-    latch_x = sum(point[0] for point in latch_pixels) / len(latch_pixels)
-    assert latch_x < west.size[0] / 2
+    assert _chest_latch_pixel_count(front) > 0
 
 
 def test_compose_chest_inventory_matches_single():

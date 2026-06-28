@@ -104,6 +104,7 @@ Skips with exit 0 when `.devtool/features/done/` and `archived/` are absent (CI 
 | ------- | --- |
 | E501 line too long | Wrap strings/signatures; keep lines ≤ **100** chars (`pyproject.toml`); split long markdown-in-Python; break multi-arg `OccupiedVoxel(...)` / tuple literals across lines before staging |
 | B007 unused loop var | Prefix with `_` |
+| SIM110 early-return loop | `return any(pred(x) for x in xs)` — Signature: `precommit-ruff-sim110` |
 | Import sort | Usually auto-fixed |
 | Hook passed but commit still dirty | Hook re-staged files — `git add` any you changed after, or commit again |
 | Mass errors in `site-packages` / `.tmp-venv/` | Signature: `precommit-ruff-staged-venv` — unstage venv, `.gitignore`, hook filter |

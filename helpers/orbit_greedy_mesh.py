@@ -11,6 +11,7 @@ from helpers.layer_groups import is_layer_render_visible
 from helpers.layer_management import layer_worldgen_index
 from helpers.orbit_attachable_mesh import (
     bed_foot_token,
+    chest_right_token,
     is_block_model_face_behavior,
     resolve_attachable_block_model,
 )
@@ -430,7 +431,7 @@ def _collect_partial_box_faces(
             ):
                 continue
 
-            face_parts = _iter_bed_face_parts(box, face_pass.normal)
+            face_parts = _iter_attachable_face_parts(box, face_pass.normal)
             for texture_token, corners in face_parts:
                 merge_id = _register_face_signature(
                     box.cell,
@@ -660,6 +661,7 @@ def _bed_subbox(
         ),
         role=box.role,
         bed_span=box.bed_span,
+        chest_span=box.chest_span,
     )
 
 
@@ -716,6 +718,75 @@ def _bed_split_along_span(
         (head_token, _box_face_corners(head_box, normal)),
         (foot_token, _box_face_corners(foot_box, normal)),
     ]
+
+
+def _iter_attachable_face_parts(
+    box: OrbitBox,
+    normal: tuple[int, int, int],
+) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
+    if box.role == "bed" and box.bed_span is not None:
+        return _iter_bed_face_parts(box, normal)
+    if box.role == "chest" and box.chest_span is not None:
+        return _iter_chest_face_parts(box, normal)
+    return [(box.cell.token, _box_face_corners(box, normal))]
+
+
+def _chest_split_along_span(
+    box: OrbitBox,
+    normal: tuple[int, int, int],
+    span: tuple[int, int],
+    left_token: str,
+    right_token: str,
+) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
+    dx, dz = span
+    min_x, _, min_z = box.min_corner
+    max_x, _, max_z = box.max_corner
+
+    if dz != 0:
+        mid_z = (min_z + max_z) / 2.0
+        if dz > 0:
+            left_box = _bed_subbox(box, max_z=mid_z)
+            right_box = _bed_subbox(box, min_z=mid_z)
+        else:
+            left_box = _bed_subbox(box, min_z=mid_z)
+            right_box = _bed_subbox(box, max_z=mid_z)
+    else:
+        mid_x = (min_x + max_x) / 2.0
+        if dx > 0:
+            left_box = _bed_subbox(box, max_x=mid_x)
+            right_box = _bed_subbox(box, min_x=mid_x)
+        else:
+            left_box = _bed_subbox(box, min_x=mid_x)
+            right_box = _bed_subbox(box, max_x=mid_x)
+
+    return [
+        (left_token, _box_face_corners(left_box, normal)),
+        (right_token, _box_face_corners(right_box, normal)),
+    ]
+
+
+def _iter_chest_face_parts(
+    box: OrbitBox,
+    normal: tuple[int, int, int],
+) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
+    left_token = box.cell.token
+    right_token = chest_right_token(left_token)
+    span = box.chest_span
+    if span is None:
+        return [(left_token, _box_face_corners(box, normal))]
+
+    dx, dz = span
+
+    if normal[1] != 0:
+        return _chest_split_along_span(box, normal, span, left_token, right_token)
+
+    if dz != 0 and normal[0] != 0:
+        return _chest_split_along_span(box, normal, span, left_token, right_token)
+
+    if dx != 0 and normal[2] != 0:
+        return _chest_split_along_span(box, normal, span, left_token, right_token)
+
+    return [(left_token, _box_face_corners(box, normal))]
 
 
 def _iter_bed_face_parts(
