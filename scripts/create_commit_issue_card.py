@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Create a kanban commit-issue card when pre-commit fails."""
+"""Create a kanban commit-issue card when pre-commit fails.
+
+Ruff hook failures: parse rule ids (e.g. SIM110) into frontmatter `ruffRules` and `## Ruff rules`.
+"""
 
 from __future__ import annotations
 
@@ -19,6 +22,8 @@ _HOOK_TITLES = {
 }
 
 _FAILED_TEST_RE = re.compile(r"^FAILED (tests/[^\s:]+\.py)", re.MULTILINE)
+_RUFF_RULE_LINE_RE = re.compile(r"^([A-Z]+\d+)\s", re.MULTILINE)
+_RUFF_RULE_LOCATION_RE = re.compile(r":\d+:\d+:\s*([A-Z]+\d+)\b")
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 _ORDER_RE = re.compile(r'^order:\s*"([^"]+)"', re.MULTILINE)
 _STATUS_RE = re.compile(r'^status:\s*"([^"]+)"', re.MULTILINE)
@@ -70,6 +75,18 @@ def _extract_failed_test_files(log_text: str) -> list[str]:
         if path not in seen:
             seen.add(path)
             ordered.append(path)
+    return ordered
+
+
+def _extract_ruff_rule_ids(log_text: str) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for pattern in (_RUFF_RULE_LINE_RE, _RUFF_RULE_LOCATION_RE):
+        for match in pattern.finditer(log_text):
+            code = match.group(1)
+            if code not in seen:
+                seen.add(code)
+                ordered.append(code)
     return ordered
 
 
@@ -128,6 +145,7 @@ def build_card_body(
     hook: str,
     log_text: str,
     failed_test_files: list[str] | None = None,
+    ruff_rules: list[str] | None = None,
 ) -> tuple[str, str, str]:
     title = _HOOK_TITLES.get(hook, f"Pre-commit {hook} failed")
     problem = _problem_excerpt(log_text)
@@ -140,15 +158,29 @@ def build_card_body(
         else:
             failed_test_files = []
 
+    if ruff_rules is None and hook == "ruff":
+        ruff_rules = _extract_ruff_rule_ids(log_text)
+    elif ruff_rules is None:
+        ruff_rules = []
+
     if failed_test_files:
         failed_tests = "\n".join(f"- `{path}`" for path in failed_test_files)
     else:
         failed_tests = "- _(none identified — see Problem)_"
 
+    ruff_rules_section = ""
+    if ruff_rules:
+        bullets = "\n".join(f"- `{code}`" for code in ruff_rules)
+        ruff_rules_section = f"""
+## Ruff rules
+
+{bullets}
+"""
+
     body = f"""# {title}
 
 Captured automatically when `git commit` failed on the **{hook}** pre-commit hook.
-
+{ruff_rules_section}
 ## Problem
 
 ```
@@ -179,9 +211,15 @@ def create_commit_issue_card(
     stamp = now.strftime("%Y-%m-%dT%H%M%S")
     card_id = f"commit-issue-{hook}-{stamp}"
     title, _, body = build_card_body(hook=hook, log_text=log_text)
+    ruff_rules = _extract_ruff_rule_ids(log_text) if hook == "ruff" else []
 
     created = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     order = _next_order(features_dir)
+
+    ruff_rules_line = ""
+    if ruff_rules:
+        quoted = ", ".join(f'"{code}"' for code in ruff_rules)
+        ruff_rules_line = f"ruffRules: [{quoted}]\n"
 
     frontmatter = f"""---
 id: "{card_id}"
@@ -193,7 +231,7 @@ created: "{created}"
 modified: "{created}"
 completedAt: null
 labels: ["commit-issue"]
-order: "{order}"
+{ruff_rules_line}order: "{order}"
 ---
 """
 

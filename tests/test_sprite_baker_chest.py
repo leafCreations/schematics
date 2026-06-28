@@ -165,7 +165,6 @@ def test_compose_chest_back_parts_differ_for_double_halves():
 
 def test_chest_generated_top_cache_refreshes_when_template_newer(tmp_path: Path):
     import os
-    import time
 
     from PIL import Image
     from sprite_baker_test_utils import generated_assets_root
@@ -181,7 +180,8 @@ def test_chest_generated_top_cache_refreshes_when_template_newer(tmp_path: Path)
     stale = Image.new("RGBA", (constants.BLOCK_PX, constants.BLOCK_PX), (1, 2, 3, 255))
     save_cached("top", "CHEST#left", stale, generated_root=generated_root)
     cached_file = cache_path("top", "CHEST#left", generated_root=generated_root)
-    old_mtime = time.time() - 10_000
+    template_mtime = CHEST_TOP_LEFT_TEMPLATE_PATH.stat().st_mtime
+    old_mtime = template_mtime - 10_000
     os.utime(cached_file, (old_mtime, old_mtime))
 
     fresh = compose_chest(

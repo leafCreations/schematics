@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, Qt, QThread, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QMouseEvent
+from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QMouseEvent, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -128,10 +128,18 @@ from ui.editor_materials import build_editor_materials_context, structure_materi
 from ui.editor_prefs import (
     block_tooltips_enabled,
     grid_axis_labels_enabled,
+    orbit_camera_hud_crosshair_visible,
+    orbit_camera_hud_placement,
+    orbit_camera_hud_visible,
+    orbit_camera_move_speed,
     panel_compass_visible,
     panel_materials_visible,
     set_block_tooltips_enabled,
     set_grid_axis_labels_enabled,
+    set_orbit_camera_hud_crosshair_visible,
+    set_orbit_camera_hud_placement,
+    set_orbit_camera_hud_visible,
+    set_orbit_camera_move_speed,
     set_panel_compass_visible,
     set_panel_materials_visible,
 )
@@ -159,6 +167,7 @@ from ui.site_cells import build_site_display_grid, site_preview_layer_index, str
 from ui.texture_cache import GridTextureCache
 from ui.tooltip_style import configure_ui_tooltips
 from ui.widgets.add_layer_dialog import AddLayerDialog
+from ui.widgets.camera_hud_settings_dialog import CameraHudSettingsDialog
 from ui.widgets.compass_panel import CompassPanel
 from ui.widgets.edit_group_dialog import EditGroupDialog
 from ui.widgets.grid import LayerGridViewport, LayerGridWidget
@@ -668,6 +677,7 @@ class MainWindow(QMainWindow):
         self._preview_panel.preview_render_requested.connect(self._on_preview_render_requested)
         self._preview_panel.preview_group_changed.connect(self._on_preview_group_changed)
         self._preview_panel.view_mode_changed.connect(self._on_preview_view_mode_changed)
+        self._preview_panel.hud_settings_requested.connect(self._on_viewer_hud_properties)
 
         palette_column = QWidget()
         self._palette_column_layout = QVBoxLayout(palette_column)
@@ -767,6 +777,7 @@ class MainWindow(QMainWindow):
         self._tabs.addTab(site_splitter, "Site")
         self._tabs.addTab(render_tab, "Viewer")
         self._tabs.currentChanged.connect(self._on_tab_changed)
+        self._last_tab_index = 0
 
         self.setCentralWidget(self._tabs)
         QApplication.instance().installEventFilter(self)
@@ -775,6 +786,7 @@ class MainWindow(QMainWindow):
         self._structure_settings_panel.load_from_metadata(document.metadata)
         self._sync_palette_from_metadata()
         self._sync_render_output_hint()
+        self._sync_preview_orbit_pose_scope()
         self._site_settings_panel.load_from_metadata(document.metadata, document.layers)
         self._sync_path_panel_from_metadata()
         self._refresh_layer_panels()
@@ -820,7 +832,35 @@ class MainWindow(QMainWindow):
         self._viewer_zoom_reset_action.triggered.connect(self._on_viewer_zoom_reset)
         viewer_menu.addAction(self._viewer_zoom_reset_action)
 
-        self._sync_viewer_zoom_actions(enabled=False)
+        viewer_menu.addSeparator()
+
+        self._viewer_camera_hud_action = QAction("HUD &Panel", self)
+        self._viewer_camera_hud_action.setToolTip("Show HUD panel")
+        self._viewer_camera_hud_action.setCheckable(True)
+        self._viewer_camera_hud_action.setChecked(orbit_camera_hud_visible())
+        self._viewer_camera_hud_action.triggered.connect(self._on_viewer_camera_hud_toggled)
+        viewer_menu.addAction(self._viewer_camera_hud_action)
+
+        self._viewer_hud_properties_action = QAction("HUD &Properties…", self)
+        self._viewer_hud_properties_action.setToolTip("HUD Properties")
+        self._viewer_hud_properties_action.triggered.connect(self._on_viewer_hud_properties)
+        viewer_menu.addAction(self._viewer_hud_properties_action)
+
+        self._viewer_hud_f3_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F3), self)
+        self._viewer_hud_f3_shortcut.activated.connect(self._on_viewer_camera_hud_f3_toggle)
+
+        self._sync_viewer_menu_actions(enabled=False)
+
+    def _sync_viewer_menu_actions(self, *, enabled: bool | None = None) -> None:
+        if enabled is None:
+            enabled = self._tabs.currentIndex() == 2
+        in_3d = enabled and self._preview_panel.is_3d_mode()
+        self._sync_viewer_zoom_actions(enabled=enabled and not in_3d)
+        self._viewer_camera_hud_action.setEnabled(in_3d)
+        self._viewer_hud_properties_action.setEnabled(in_3d)
+        self._viewer_camera_hud_action.blockSignals(True)
+        self._viewer_camera_hud_action.setChecked(orbit_camera_hud_visible())
+        self._viewer_camera_hud_action.blockSignals(False)
 
     def _sync_viewer_zoom_actions(self, *, enabled: bool | None = None) -> None:
         if enabled is None:
@@ -837,6 +877,45 @@ class MainWindow(QMainWindow):
 
     def _on_viewer_zoom_reset(self) -> None:
         self._preview_panel.reset_zoom_to_default()
+
+    def _on_viewer_camera_hud_toggled(self, checked: bool) -> None:
+        set_orbit_camera_hud_visible(checked)
+        self._preview_panel.set_camera_hud_visible(checked)
+
+    def _on_viewer_camera_hud_f3_toggle(self) -> None:
+        if self._tabs.currentIndex() != 2 or not self._preview_panel.is_3d_mode():
+            return
+        checked = not orbit_camera_hud_visible()
+        self._viewer_camera_hud_action.blockSignals(True)
+        self._viewer_camera_hud_action.setChecked(checked)
+        self._viewer_camera_hud_action.blockSignals(False)
+        self._on_viewer_camera_hud_toggled(checked)
+
+    def _on_viewer_hud_properties(self) -> None:
+        if self._tabs.currentIndex() != 2 or not self._preview_panel.is_3d_mode():
+            return
+        dialog = CameraHudSettingsDialog(
+            self,
+            hud_visible=orbit_camera_hud_visible(),
+            placement=orbit_camera_hud_placement(),
+            crosshair_visible=orbit_camera_hud_crosshair_visible(),
+            move_speed=orbit_camera_move_speed(),
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        values = dialog.values()
+        set_orbit_camera_hud_visible(values.hud_visible)
+        set_orbit_camera_hud_placement(values.placement)
+        set_orbit_camera_hud_crosshair_visible(values.crosshair_visible)
+        set_orbit_camera_move_speed(values.move_speed)
+        self._viewer_camera_hud_action.blockSignals(True)
+        self._viewer_camera_hud_action.setChecked(values.hud_visible)
+        self._viewer_camera_hud_action.blockSignals(False)
+        self._preview_panel.set_camera_hud_visible(values.hud_visible)
+        self._preview_panel.set_hud_placement(values.placement)
+        self._preview_panel.set_crosshair_visible(values.crosshair_visible)
+        self._preview_panel.set_orbit_move_speed(values.move_speed)
+        self._persist_editor_settings()
 
     def _init_structure_menu(self) -> None:
         structure_menu = self.menuBar().addMenu("&Structure")
@@ -2346,6 +2425,8 @@ class MainWindow(QMainWindow):
         return header
 
     def _on_tab_changed(self, index: int) -> None:
+        if self._last_tab_index == 2 and index != 2:
+            self._preview_panel.save_orbit_camera_pose()
         self._update_cell_clipboard_actions()
 
         if index == 0:
@@ -2371,8 +2452,9 @@ class MainWindow(QMainWindow):
             self._preview_panel.restore_saved_zoom()
             self._ensure_viewer_preview()
 
-        self._sync_viewer_zoom_actions()
+        self._sync_viewer_menu_actions()
         self._update_save_actions()
+        self._last_tab_index = index
 
     def _on_palette_entry_selected(self, entry) -> None:
         if self._eraser_active:
@@ -3715,6 +3797,7 @@ class MainWindow(QMainWindow):
             preview_panel.set_orbit_mesh(None)
 
     def _on_preview_view_mode_changed(self, mode: str) -> None:
+        self._sync_viewer_menu_actions()
         if mode == "3d":
             self._ensure_orbit_mesh()
         elif self._viewer_tab_active():
@@ -3836,6 +3919,7 @@ class MainWindow(QMainWindow):
         if self._block_if_render_in_progress(opening_structure=True):
             return
 
+        self._persist_editor_settings()
         self._clear_preview_session()
         open_structure_in_editor_process(structure, stage)
 
@@ -3852,6 +3936,11 @@ class MainWindow(QMainWindow):
 
         self._clear_preview_session()
         reload_editor_process()
+
+    def _sync_preview_orbit_pose_scope(self) -> None:
+        structure = str(self._document.metadata.get("structure", self._structure))
+        stage = int(self._document.metadata.get("stage", self._stage))
+        self._preview_panel.set_orbit_pose_scope(structure, stage)
 
     def _sync_preview_groups(self) -> None:
         groups = preview_floor_groups(
@@ -4189,6 +4278,12 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def _persist_editor_settings(self) -> None:
+        preview_panel = getattr(self, "_preview_panel", None)
+        structure_grid = getattr(self, "_structure_grid", None)
+        if preview_panel is None or structure_grid is None:
+            return
+
+        preview_panel.save_orbit_camera_pose()
         sync_editor_settings_from_ui(
             block_tooltips=self._structure_grid.show_block_tooltips(),
             grid_axis_labels=self._structure_grid.show_axis_labels(),

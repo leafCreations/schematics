@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -27,7 +28,102 @@ _PREVIEW_ZOOM_MIN = 25
 _PREVIEW_ZOOM_MAX = 400
 _DEFAULT_PREVIEW_ZOOM_PERCENT = 100
 
+_ORBIT_CAMERA_MOVE_SPEED_MIN = 0.2
+_ORBIT_CAMERA_MOVE_SPEED_MAX = 1.0
+_DEFAULT_ORBIT_CAMERA_MOVE_SPEED = 0.65
+ORBIT_CAMERA_MOVE_SPEED_WHEEL_STEP = 0.05
+
+_DEFAULT_ORBIT_CAMERA_HUD_PLACEMENT = "top_right"
+_ORBIT_CAMERA_HUD_PLACEMENTS = frozenset(
+    {
+        "top_left",
+        "top_center",
+        "top_right",
+        "middle_left",
+        "middle_right",
+        "bottom_left",
+        "bottom_center",
+        "bottom_right",
+    },
+)
+
+_ORBIT_ELEVATION_MIN = -1.4
+_ORBIT_ELEVATION_MAX = 1.4
+
 _cached: EditorSettings | None = None
+
+
+@dataclass(frozen=True)
+class OrbitCameraPose:
+    position: tuple[float, float, float]
+    azimuth: float
+    elevation: float
+
+
+def parse_orbit_camera_position(value: object) -> tuple[float, float, float] | None:
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        return None
+    try:
+        coords = tuple(float(item) for item in value)
+    except (TypeError, ValueError):
+        return None
+    if not all(math.isfinite(item) for item in coords):
+        return None
+    return coords
+
+
+def parse_orbit_camera_azimuth(value: object) -> float | None:
+    try:
+        azimuth = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(azimuth):
+        return None
+    return azimuth
+
+
+def parse_orbit_camera_elevation(value: object) -> float | None:
+    try:
+        elevation = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(elevation):
+        return None
+    if elevation < _ORBIT_ELEVATION_MIN or elevation > _ORBIT_ELEVATION_MAX:
+        return None
+    return elevation
+
+
+def orbit_camera_pose_storage_key(structure: str, stage: int) -> str:
+    normalized = str(structure).strip().lower()
+    return f"{normalized}/{int(stage)}"
+
+
+def _parse_orbit_camera_pose_entry(entry: object) -> OrbitCameraPose | None:
+    if not isinstance(entry, dict):
+        return None
+    position = parse_orbit_camera_position(entry.get("position"))
+    azimuth = parse_orbit_camera_azimuth(entry.get("azimuth"))
+    elevation = parse_orbit_camera_elevation(entry.get("elevation"))
+    if position is None or azimuth is None or elevation is None:
+        return None
+    return OrbitCameraPose(position=position, azimuth=azimuth, elevation=elevation)
+
+
+def orbit_camera_poses_from_mapping(viewer: dict[str, Any]) -> dict[str, OrbitCameraPose]:
+    raw = viewer.get("orbit_camera_poses")
+    if not isinstance(raw, dict):
+        return {}
+
+    poses: dict[str, OrbitCameraPose] = {}
+    for key, entry in raw.items():
+        storage_key = str(key).strip().lower()
+        if not storage_key:
+            continue
+        pose = _parse_orbit_camera_pose_entry(entry)
+        if pose is not None:
+            poses[storage_key] = pose
+    return poses
 
 
 def clamp_preview_zoom_percent(percent: object) -> int:
@@ -38,6 +134,27 @@ def clamp_preview_zoom_percent(percent: object) -> int:
     return max(_PREVIEW_ZOOM_MIN, min(_PREVIEW_ZOOM_MAX, value))
 
 
+def parse_orbit_camera_hud_placement(value: object) -> str:
+    if isinstance(value, str):
+        key = value.strip().lower()
+        if key in _ORBIT_CAMERA_HUD_PLACEMENTS:
+            return key
+    return _DEFAULT_ORBIT_CAMERA_HUD_PLACEMENT
+
+
+def clamp_orbit_camera_move_speed(value: object) -> float:
+    try:
+        speed = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return _DEFAULT_ORBIT_CAMERA_MOVE_SPEED
+    if not math.isfinite(speed):
+        return _DEFAULT_ORBIT_CAMERA_MOVE_SPEED
+    return max(
+        _ORBIT_CAMERA_MOVE_SPEED_MIN,
+        min(_ORBIT_CAMERA_MOVE_SPEED_MAX, speed),
+    )
+
+
 @dataclass
 class EditorSettings:
     block_tooltips: bool = True
@@ -46,6 +163,11 @@ class EditorSettings:
     panel_materials: bool = True
     panel_structure_settings: bool = True
     preview_zoom_percent: int = _DEFAULT_PREVIEW_ZOOM_PERCENT
+    orbit_camera_poses: dict[str, OrbitCameraPose] = field(default_factory=dict)
+    orbit_camera_hud_visible: bool = True
+    orbit_camera_hud_placement: str = _DEFAULT_ORBIT_CAMERA_HUD_PLACEMENT
+    orbit_camera_hud_crosshair_visible: bool = True
+    orbit_camera_move_speed: float = _DEFAULT_ORBIT_CAMERA_MOVE_SPEED
     recent_structures: list[tuple[str, int]] = field(default_factory=list)
 
 
@@ -115,6 +237,18 @@ def _settings_from_mapping(data: dict[str, Any]) -> EditorSettings:
         preview_zoom_percent=clamp_preview_zoom_percent(
             viewer.get("preview_zoom_percent", _DEFAULT_PREVIEW_ZOOM_PERCENT)
         ),
+        orbit_camera_poses=orbit_camera_poses_from_mapping(viewer),
+        orbit_camera_hud_visible=_coerce_bool(viewer.get("orbit_camera_hud"), True),
+        orbit_camera_hud_placement=parse_orbit_camera_hud_placement(
+            viewer.get("orbit_camera_hud_placement", _DEFAULT_ORBIT_CAMERA_HUD_PLACEMENT),
+        ),
+        orbit_camera_hud_crosshair_visible=_coerce_bool(
+            viewer.get("orbit_camera_hud_crosshair"),
+            True,
+        ),
+        orbit_camera_move_speed=clamp_orbit_camera_move_speed(
+            viewer.get("orbit_camera_move_speed", _DEFAULT_ORBIT_CAMERA_MOVE_SPEED),
+        ),
         recent_structures=parsed_recent,
     )
 
@@ -134,6 +268,26 @@ def _load_yaml_mapping(path: Path) -> dict[str, Any]:
     return raw
 
 
+def _viewer_settings_mapping(settings: EditorSettings) -> dict[str, Any]:
+    viewer: dict[str, Any] = {
+        "preview_zoom_percent": settings.preview_zoom_percent,
+        "orbit_camera_hud": settings.orbit_camera_hud_visible,
+        "orbit_camera_hud_placement": settings.orbit_camera_hud_placement,
+        "orbit_camera_hud_crosshair": settings.orbit_camera_hud_crosshair_visible,
+        "orbit_camera_move_speed": settings.orbit_camera_move_speed,
+    }
+    if settings.orbit_camera_poses:
+        viewer["orbit_camera_poses"] = {
+            key: {
+                "azimuth": pose.azimuth,
+                "elevation": pose.elevation,
+                "position": list(pose.position),
+            }
+            for key, pose in settings.orbit_camera_poses.items()
+        }
+    return viewer
+
+
 def settings_to_mapping(settings: EditorSettings) -> dict[str, Any]:
     return {
         "display": {
@@ -145,9 +299,7 @@ def settings_to_mapping(settings: EditorSettings) -> dict[str, Any]:
             "materials": settings.panel_materials,
             "structure_settings": settings.panel_structure_settings,
         },
-        "viewer": {
-            "preview_zoom_percent": settings.preview_zoom_percent,
-        },
+        "viewer": _viewer_settings_mapping(settings),
         "recent": {
             "opened": [
                 {"structure": structure, "stage": stage}
@@ -261,6 +413,11 @@ def sync_editor_settings_from_ui(
         panel_materials=panel_materials,
         panel_structure_settings=panel_structure_settings,
         preview_zoom_percent=zoom,
+        orbit_camera_poses=dict(current.orbit_camera_poses),
+        orbit_camera_hud_visible=current.orbit_camera_hud_visible,
+        orbit_camera_hud_placement=current.orbit_camera_hud_placement,
+        orbit_camera_hud_crosshair_visible=current.orbit_camera_hud_crosshair_visible,
+        orbit_camera_move_speed=current.orbit_camera_move_speed,
         recent_structures=list(current.recent_structures),
     )
     save_user_editor_settings(settings)

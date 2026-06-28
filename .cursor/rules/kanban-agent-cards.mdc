@@ -30,6 +30,17 @@ areas; `check_area_schema_parity` + `--agents-parity` (gs2–gs3). **gs4 (comple
 yaml — Signature: `governance-area-schema-agents-table-sync`; run `--write` after seeding governance
 keys on a new area.
 
+**PrecommitRuffSim110** (p0–p1, **closed** 2026-06-29): SIM110 §1b routing +
+commit-issue `ruffRules` / `## Ruff rules` capture — anchor
+`archived/agent-precommit-ruff-sim110-triage-2026-06-28.md`; do not reuse epic name — Signature:
+`precommit-ruff-sim110`.
+
+**GovernanceDriftSpawnConsolidate** (p0 **complete**, archived 2026-06-29): `consolidate_drift_issues_for_spawn`
+merges registry drift by root cause before spawn; epic **`GovernanceDriftFix`** on new spawns (
+**`GovernanceDriftAlert` closed** ) — anchor
+`archived/agent-governance-drift-spawn-consolidate-2026-06-28.md`; do not reuse epic name —
+Signature: `governance-drift-spawn-consolidate-by-root-cause`.
+
 **GovernanceCompact** (gc0–gc7): measure before/after with `python3 scripts/check_governance_parity.py --line-counts`
 (exit 0 — Signature: `governance-compact-baseline`). Record before/after line counts in **Decisions** or Card Done
 handoff when closing compaction phases. Examples: `LessonsCoverageMetric` (lc0–lc3); `LessonsReferenceIndex` (li0–li3);
@@ -148,9 +159,10 @@ Epic **`KanbanCursorModeGates`** (aY–b1 **complete**): Plan/Inquire Cursor mod
 `docs/epics-closed.yaml`. Signatures: `kanban-cursor-mode-gates`, `governance-compact-classify-ssot`,
 `governance-compact-kanban-rule-globs`.
 
-## ForwardFeedbackRegistry epic (complete — 2026-06-27)
+## ForwardFeedbackRegistry epic (complete — 2026-06-27; archived — 2026-06-29)
 
-Epic **`ForwardFeedbackRegistry`** (ff0–ff3 **complete**) — generated
+Epic **`ForwardFeedbackRegistry`** (ff0–ff3 **complete**; hold-fly forward-feedback follow-ups ff1b/ff2b
+**archived** 2026-06-29) — generated
 `docs/forward-feedback-index.yaml`, `resolve_forward_feedback.py` top-N by gc5 category, Card Done
 ingest (ff1), resolution links (ff2), stale metrics (ff3). Closed via gel0 audit on ff0 anchor;
 registry: `docs/epics-closed.yaml`. Build:

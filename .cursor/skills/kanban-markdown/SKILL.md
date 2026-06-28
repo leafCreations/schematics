@@ -176,13 +176,14 @@ Signature: `kanban-cursor-mode-gates`.
 ### Commit-issue cards
 
 Rule: [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc). Auto-created on failed
-commit. Review → user approves → implement.
+commit. Review → user approves → **implement**; one-shot trivial fixes → **`review and implement`**
+(not **`implement` alone**) — Signature: `commit-issue-review-and-implement-one-shot`.
 
 ## Spawn from inquiry
 
 When spawning from a forward-feedback **`ff-*`** item, add **`Forward feedback:`** `` `ff-*` `` to
-child **Context** and run `resolve_forward_feedback.py --link` after creating the card — Signature:
-`forward-feedback-resolution-tracking`.
+child **Context** and run `resolve_forward_feedback.py --link` + `--set-status answered` after
+closing the spawn card — Signature: `forward-feedback-resolution-tracking`.
 
 When the user asks to **implement recommendations**, **spawn follow-ups**, or **create cards from inquiry**:
 
@@ -424,6 +425,9 @@ Signature: `governance-epic-completion-audit`.
 | Finishing implementation | Pytests → registry → docs → AC `[x]` → `review` |
 | QA on Review card | Fix + record + stay in **Review** |
 | User **QA-complete / Done** (card named) | Move to **done/** + Card Done same turn — reference § QA-complete triggers |
+
+**Qt hold-fly (Floating Camera):** on Review QA “moves once then stops”, check
+`keyReleaseEvent` ignores `event.isAutoRepeat()` — Signature: `floating-camera-fc0-hold-fly`.
 | New card request | Create in **todo** with Feature Areas / Description |
 | Backlog | **Do not** unless user asks |
 

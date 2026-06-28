@@ -8,6 +8,7 @@ from pathlib import Path
 
 from scripts.create_commit_issue_card import (
     _extract_failed_test_files,
+    _extract_ruff_rule_ids,
     build_card_body,
     create_commit_issue_card,
 )
@@ -35,6 +36,45 @@ def test_build_card_body_includes_problem_and_failed_tests():
     assert "## Failed Tests" in body
     assert "`tests/test_worldgen.py`" in body
     assert "Pre-commit pytest failed" in body
+
+
+def test_extract_ruff_rule_ids_from_sim110_log():
+    log = """
+SIM110 Use `return any(source.exists() and source.stat().st_mtime > cache_mtime
+for source in source_paths)` instead of `for` loop
+  --> helpers/sprite_baker/cache.py:72:5
+Found 2 errors (1 fixed, 1 remaining).
+"""
+    assert _extract_ruff_rule_ids(log) == ["SIM110"]
+
+
+def test_build_card_body_ruff_includes_ruff_rules_section():
+    log = """
+SIM110 Use `return any(x for x in xs)` instead of `for` loop
+  --> helpers/foo.py:1:1
+"""
+    _, _, body = build_card_body(hook="ruff", log_text=log, failed_test_files=["helpers/foo.py"])
+    assert "## Ruff rules" in body
+    assert "`SIM110`" in body
+    assert "## Problem" in body
+
+
+def test_create_commit_issue_card_ruff_writes_ruff_rules_frontmatter(tmp_path: Path):
+    features = tmp_path / "features"
+    log = """
+SIM110 Use `return any(x for x in xs)` instead of `for` loop
+  --> helpers/foo.py:1:1
+"""
+    path = create_commit_issue_card(
+        hook="ruff",
+        log_text=log,
+        features_dir=features,
+    )
+    text = path.read_text(encoding="utf-8")
+    assert path.name.startswith("commit-issue-ruff-")
+    assert 'ruffRules: ["SIM110"]' in text
+    assert "## Ruff rules" in text
+    assert "`SIM110`" in text
 
 
 def test_create_commit_issue_card_writes_todo_card(tmp_path: Path):

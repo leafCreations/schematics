@@ -58,6 +58,10 @@ accurate before **in-progress → review** (mandatory at implementation gates).
 - [ ] Add `test_preview_panel_zoom_scales_pixmap`
 ```
 
+**Floating Camera keyboard:** when Feature Areas include **`Floating Camera`**, add a hold-to-fly AC
+bullet — see [kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc) § Floating Camera
+keyboard movement; Signature: `floating-camera-fc0-hold-fly`.
+
 ### Product Paths and Product Methods
 
 Repo-relative paths in **`## Product Paths`**; symbols in **`## Product Methods`** — card body, not
@@ -383,6 +387,8 @@ If hook/pytest pattern is reusable:
 git commit fails → todo commit-issue card
 User: review → Root Cause + Corrective Action (no code)
 User approves → implement → review → done
+User: review and implement → same-turn plan + fix (trivial hook failures only)
+  — not implement alone; Signature: commit-issue-review-and-implement-one-shot
 ```
 
 Skip card: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`
@@ -544,6 +550,13 @@ placeholders for Product/Tests/Docs when unknown at spawn time.
 **Registry Product Methods drift:** `create_drift_alert_cards` consolidates multiple missing-handler
 alerts for the **same source kanban card** into one todo card (bullet list of symbols). Card id:
 `governance-drift-registry-{hash:card}` — Signature: `governance-drift-spawn-consolidate-by-source-card`.
+**Consolidated (epic `GovernanceDriftSpawnConsolidate`, p0 — archived 2026-06-29):** `consolidate_drift_issues_for_spawn`
+also merges by root cause — same-area `lesson_signatures`, schema-internal AGENTS path batch,
+cross-area duplicate handlers — one card per group; stable id from `consolidation_group_key`; spawn
+epic **`GovernanceDriftFix`** ( **`GovernanceDriftAlert` closed** ); anchor
+`archived/agent-governance-drift-spawn-consolidate-2026-06-28.md`; Signature:
+`governance-drift-spawn-consolidate-by-root-cause`. See
+[docs/governance/feature-areas-parity.md](../../docs/governance/feature-areas-parity.md) § Registry drift spawn consolidation.
 Parsers dual-read **Label Methods** until ks2; spawn output uses **Product Methods** (ks1).
 **Parser SSOT (ks1):** `scripts/resolve_prior_lessons.py` `extract_label_paths()` — Product Paths,
 legacy Label Paths, and **Tests → Files**; `check_governance_parity.extract_label_method_symbols()`
@@ -561,6 +574,15 @@ Do **not** use **Corrective Action** on spawned `feature`/`agent` cards — bug/
 `update`/`spawn` → two **`bug`** todos (a0 texture resolution, a1 facing faces + merged bed
 head/foot top split); parent **`## Spawned feature cards`** + child **Product** / **Tests** /
 **Docs** / **Corrective Action**; epic on parent + children; implement a0 before a1 when ordered.
+
+**Spawn from plan (RenderEngineFloatingCamera example):** plan
+[interior-view-for-3d-rendering-2026-06-24.md](../../../.devtool/features/interior-view-for-3d-rendering-2026-06-24.md)
+`plan approved` + spawn → epic `RenderEngineFloatingCamera` children **a8a** feature fc0 (core
+navigation), **a8b** feature fc1 (reset + near-plane), **a8b1** feature fc1b (look-direction
+forward/back), **a8b2** feature fc1c (pose persistence), **a8c** inquiry fc2 (UX modes),
+**a8d** feature fc3 (3-line camera HUD — facing, position, looking at); seed **`Floating Camera`**
+in `docs/feature-areas.yaml`; parent **`## Spawned feature cards`** table; implement fc0 before fc3,
+fc1/fc2 after user review.
 
 **Spawn from epic review (Card Done enforcement, 2026-06-27):** user discussion → implement queue:
 
@@ -965,6 +987,7 @@ Canonical summary: [SKILL.md § Card Done](SKILL.md#card-done--lessons-learned-c
 | Epic-completion audit (gel0) | `resolve_epic_cards.py`; `docs/epics-closed.yaml`; reference § Epic audit — Signature `governance-epic-completion-audit`; epic audit ≠ archive when `archiveGroup:` set; chat **`### Epic summary`** — Signature `governance-epic-completion-summary` |
 | Archive group batch (gel3) | `resolve_archive_group.py`; reference § Archive group — Signature `governance-archive-group-batch`; Card Done → `done/` only; chat **`### Initiative summary`** — Signature `governance-epic-completion-summary` |
 | Superseded GovernanceDriftAlert sibling | Mark **Decisions** `Superseded` + link to parent `done/{id}.md`; AC `[x]`; `review` → user/agent `done/` — no code; cite parent **Lessons captured** |
+| GovernanceDriftAlert batch close | Group spawns by root cause (`_SCHEMA_INTERNAL_PATHS`, § Lessons by area rows, handler dedup, kanban Product Methods → yaml `handlers:`); one anchor **Lessons captured**; siblings **Superseded** — Signature: `governance-area-schema-parity-tests` |
 
 ### Lessons captured example
 

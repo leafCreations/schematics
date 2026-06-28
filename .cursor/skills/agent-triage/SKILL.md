@@ -77,6 +77,15 @@ Match precommit-stash-old-hooks → stage all scripts/pre-commit-*.sh + on_pre_c
 Then pre-commit-workflow/SKILL.md hook order
 ```
 
+**Example — ruff SIM110 on commit:**
+
+```text
+Classify → Commit / pre-commit failed (ruff hook)
+Grep pre-commit-workflow/reference.md for SIM110 or precommit-ruff-sim110
+Match → return any(...) rewrite — no broad exploration
+Commit-issue card: read `## Ruff rules` / frontmatter `ruffRules` → grep Signature in pre-commit-workflow reference
+```
+
 **Example — dialog OK but layer not saved:**
 
 ```text

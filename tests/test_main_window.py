@@ -416,6 +416,32 @@ def test_apply_inspector_trapdoor_open_uses_build_placement_token():
     assert set_cell_calls == [(0, 0, "TRAPDOOR:oak@south;open=true")]
 
 
+def test_main_window_viewer_hud_properties_and_f3_wired():
+    from unittest.mock import MagicMock
+
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+
+    from ui.main_window import MainWindow
+
+    application = QApplication.instance() or QApplication([])
+    _ = application
+
+    window = MainWindow.__new__(MainWindow)
+    QMainWindow.__init__(window)
+    window._preview_panel = MagicMock()
+    window._preview_panel.is_3d_mode.return_value = False
+    window._tabs = MagicMock()
+    window._tabs.currentIndex.return_value = 0
+    MainWindow._init_viewer_menu(window)
+
+    assert hasattr(window, "_viewer_hud_properties_action")
+    assert window._viewer_hud_properties_action.toolTip() == "HUD Properties"
+    assert window._viewer_camera_hud_action.toolTip() == "Show HUD panel"
+    assert hasattr(window, "_viewer_hud_f3_shortcut")
+    assert window._viewer_hud_f3_shortcut.key() == Qt.Key.Key_F3
+
+
 @pytest.mark.skipif(
     os.environ.get("STRUCTURE_SCRIPTS_UI_TESTS", "") != "1",
     reason="Set STRUCTURE_SCRIPTS_UI_TESTS=1 for full Qt window smoke test",

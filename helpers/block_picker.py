@@ -603,6 +603,26 @@ def format_entry_label(
     return display or f"{material} {entry.label}".strip()
 
 
+def format_hud_block_label(token: str, *, mode: str = "name") -> str:
+    """Resolve a structure cell token to a HUD label (default human name)."""
+    if mode == "id":
+        parsed = parse_structure_token(token)
+        if parsed is not None and is_minecraft_block_token(parsed):
+            return minecraft_block_id(parsed)
+        entry = picker_entry_for_cell(token)
+        if entry is not None and entry.is_catalog_block:
+            return entry.token
+        return token
+
+    entry = picker_entry_for_cell(token)
+    if entry is not None:
+        parsed = parse_structure_token(token)
+        material = parsed.material if parsed is not None else None
+        return format_entry_label(entry, material)
+
+    return token.replace("_", " ").title()
+
+
 def _picker_entry_available_for_version(
     entry: PickerEntry,
     *,

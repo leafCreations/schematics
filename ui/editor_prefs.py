@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from ui.app_settings import (
     EditorSettings,
+    OrbitCameraPose,
+    clamp_orbit_camera_move_speed,
     clamp_preview_zoom_percent,
     load_editor_settings,
+    orbit_camera_pose_storage_key,
+    parse_orbit_camera_hud_placement,
     reset_editor_settings_cache,
     save_user_editor_settings,
 )
@@ -87,6 +91,70 @@ def set_preview_zoom_percent(percent: int) -> None:
         return
 
     settings.preview_zoom_percent = clamped
+    save_user_editor_settings(settings)
+
+
+def orbit_camera_pose(structure: str, stage: int) -> OrbitCameraPose | None:
+    key = orbit_camera_pose_storage_key(structure, stage)
+    return _settings().orbit_camera_poses.get(key)
+
+
+def set_orbit_camera_pose(structure: str, stage: int, pose: OrbitCameraPose) -> None:
+    key = orbit_camera_pose_storage_key(structure, stage)
+    settings = _settings()
+    if settings.orbit_camera_poses.get(key) == pose:
+        return
+    settings.orbit_camera_poses[key] = pose
+    save_user_editor_settings(settings)
+
+
+def orbit_camera_hud_visible() -> bool:
+    return _settings().orbit_camera_hud_visible
+
+
+def set_orbit_camera_hud_visible(visible: bool) -> None:
+    settings = _settings()
+    if settings.orbit_camera_hud_visible == visible:
+        return
+    settings.orbit_camera_hud_visible = visible
+    save_user_editor_settings(settings)
+
+
+def orbit_camera_move_speed() -> float:
+    return _settings().orbit_camera_move_speed
+
+
+def set_orbit_camera_move_speed(speed: float) -> None:
+    settings = _settings()
+    clamped = clamp_orbit_camera_move_speed(speed)
+    if settings.orbit_camera_move_speed == clamped:
+        return
+    settings.orbit_camera_move_speed = clamped
+    save_user_editor_settings(settings)
+
+
+def orbit_camera_hud_placement() -> str:
+    return _settings().orbit_camera_hud_placement
+
+
+def set_orbit_camera_hud_placement(placement: str) -> None:
+    settings = _settings()
+    parsed = parse_orbit_camera_hud_placement(placement)
+    if settings.orbit_camera_hud_placement == parsed:
+        return
+    settings.orbit_camera_hud_placement = parsed
+    save_user_editor_settings(settings)
+
+
+def orbit_camera_hud_crosshair_visible() -> bool:
+    return _settings().orbit_camera_hud_crosshair_visible
+
+
+def set_orbit_camera_hud_crosshair_visible(visible: bool) -> None:
+    settings = _settings()
+    if settings.orbit_camera_hud_crosshair_visible == visible:
+        return
+    settings.orbit_camera_hud_crosshair_visible = visible
     save_user_editor_settings(settings)
 
 

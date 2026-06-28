@@ -49,7 +49,28 @@ All three call `add_panel_title_row`, which sets the title `QLabel` font to **bo
 - `layer_list_panel.py` / `groups_panel.py` — `create_titled_panel_layout` + four actions
 - `properties_panel.py` — nested `create_nested_group_layout` for Selected Block / Grid cell; inspector combo changes live-apply via `brush_inspector_changed` / `brush_blockstate_changed` → `MainWindow._apply_inspector_to_selected_cell` (Signature: `properties-inspector-live-apply`)
 - `preview_toolbar.py` — compact `QWidget` row (not a `QGroupBox`); Previous/Next + trailing zoom label for Viewer preview (2D only)
-- `orbit_preview_widget.py` — lazy-loaded `QOpenGLWidget` for 3D orbit; created on first **3D** toggle, not at `PreviewPanel` import; `QMatrix4x4.lookAt` uses `QVector3D` (Qt6 API). **Render class:** classify tokens with `orbit_render_class()` before editing orbit geometry — Signature: `orbit-render-class-routing`; glossary `docs/render-types.md` § Orbit render class. **Partial blocks:** stairs/slabs → opaque atlas tiles in `orbit_face_textures.py` (not 2D masks); fences/walls → masked bakes + `sample.a < 0.05` discard in `_FRAGMENT_SHADER_TEXTURED` (not solid `PLANKS:*` on post faces). **C4 attachables:** block-model element faces (`orbit_block_model_mesh.py`) — Signature: `orbit-attachable-block-model-faces`; merged **bed** pairs split head/foot face quads — Signature: `orbit-bed-colored-texture-keys`; shader stays `tileFrac(worldPos)` only — Signature: `orbit-shader-attribute-blackout`. See `docs/render-types.md` § lessons learned
+- `orbit_preview_widget.py` — lazy-loaded `QOpenGLWidget` for 3D orbit inside **`_OrbitViewHost`**
+  (`preview_panel.py`); created on first **3D** toggle, not at `PreviewPanel` import; `QMatrix4x4.lookAt`
+  uses `QVector3D` (Qt6 API). **Free camera (fc0):** `helpers/orbit_camera.py` — eye position +
+  azimuth/elevation look; **fc2a (Signature: `floating-camera-fc2a-mouse-look`):** click to capture focus;
+  `setMouseTracking(True)` + pointer capture; `BlankCursor` while captured; **Esc** releases; **fc2b
+  (Signature: `floating-camera-fc2b-scroll-move-speed`):** scroll/**+**/**−** adjusts fly speed pref
+  (not mouse look); transient speed label on **host sibling QLabel** via `move_speed_feedback` — **never**
+  child QLabel on GL widget or QPainter in `paintGL` (Signature: `orbit-shader-attribute-blackout`);
+  **hold** **WASD** / arrows / Space / Shift via `_movement_timer` (Signature: `floating-camera-fc0-hold-fly`).
+  **fc1b (Signature: `floating-camera-fc1b-look-forward`):** W/S/↑/↓ `move_along_look`; A/D/←/→ strafe via
+  `move_on_plane` + `cross(forward, up)` right vector — Signature: `floating-camera-fc0-strafe-right`.
+  **fc1 reset (Signature: `floating-camera-fc1-reset-projection`):** **R** → `reset_camera_to_default()`;
+  near/far clip from `bounds_radius`. **Floating camera HUD (fc3):** top-right 3-line QLabel (`Facing` /
+  `Position: X / Y / Z` / `Looking at`); voxel DDA + `format_hud_block_label` → `format_entry_label` for
+  materialized catalog names; pref `viewer.orbit_camera_hud` (default on). **Render class:** classify tokens
+  with `orbit_render_class()` before editing orbit geometry — Signature: `orbit-render-class-routing`;
+  glossary `docs/render-types.md` § Orbit render class. **Partial blocks:** stairs/slabs → opaque atlas
+  tiles in `orbit_face_textures.py` (not 2D masks); fences/walls → masked bakes + `sample.a < 0.05` discard
+  in `_FRAGMENT_SHADER_TEXTURED`. **C4 attachables:** block-model element faces
+  (`orbit_block_model_mesh.py`) — Signature: `orbit-attachable-block-model-faces`. See `docs/render-types.md`
+  § lessons learned. **Orbit view host overlays (fc2b):** `#orbit-view-host-overlays` — transient HUD on
+  `_OrbitViewHost` sibling, not GL child.
 
 ## Structure tab right column (no gaps when hiding)
 

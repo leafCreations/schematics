@@ -385,3 +385,30 @@ def test_preview_panel_2d_3d_toggle_defaults_to_2d(qapp):
     assert panel.is_3d_mode() is True
     assert modes == ["3d"]
     assert not panel._preview_toolbar.isVisible()
+
+
+def test_preview_panel_orbit_host_shows_move_speed_label(qapp, monkeypatch):
+    from unittest.mock import MagicMock
+
+    from ui.widgets.preview_panel import _OrbitViewHost
+
+    monkeypatch.setattr(
+        "ui.widgets.orbit_preview_widget.set_orbit_camera_move_speed",
+        lambda _value: None,
+    )
+
+    host = _OrbitViewHost()
+    host.resize(640, 480)
+    host.show()
+    orbit = host.orbit_widget()
+    orbit._pointer_captured = True
+
+    delta = MagicMock()
+    delta.y.return_value = 120
+    event = MagicMock()
+    event.angleDelta.return_value = delta
+
+    orbit.wheelEvent(event)
+    assert host._speed_label.isVisible()
+    assert "Move speed:" in host._speed_label.text()
+    assert host._speed_timer.isActive()

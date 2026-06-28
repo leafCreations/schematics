@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QPixmap, QWheelEvent
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -24,7 +24,17 @@ from PySide6.QtWidgets import (
 import helpers.constants as constants
 from helpers.orbit_mesh import OrbitMeshData
 from renderers.registry import PREVIEW_RENDER_REGISTRY
-from ui.editor_prefs import preview_zoom_percent, set_preview_zoom_percent
+from ui.app_settings import OrbitCameraPose
+from ui.editor_prefs import (
+    orbit_camera_hud_crosshair_visible,
+    orbit_camera_hud_placement,
+    orbit_camera_hud_visible,
+    orbit_camera_move_speed,
+    orbit_camera_pose,
+    preview_zoom_percent,
+    set_orbit_camera_pose,
+    set_preview_zoom_percent,
+)
 from ui.widgets.panel_header import create_simple_titled_panel_layout
 from ui.widgets.preview_toolbar import PreviewToolbar
 
@@ -62,6 +72,59 @@ def zoom_percent(factor: float) -> int:
     return int(round(factor * 100))
 
 
+class _OrbitViewHost(QWidget):
+    """Hosts the GL orbit widget plus a sibling speed-feedback label (fc2b)."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        from ui.widgets.orbit_preview_widget import (
+            ORBIT_CROSSHAIR_SIZE,
+            ORBIT_SPEED_FEEDBACK_MS,
+            OrbitPreviewWidget,
+        )
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._orbit = OrbitPreviewWidget(self)
+        self._speed_label = QLabel("", self)
+        self._speed_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._speed_label.setStyleSheet(
+            "color: #eee; background-color: rgba(0, 0, 0, 160); padding: 8px 12px;",
+        )
+        self._speed_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self._speed_label.hide()
+        self._speed_timer = QTimer(self)
+        self._speed_timer.setSingleShot(True)
+        self._speed_timer.setInterval(ORBIT_SPEED_FEEDBACK_MS)
+        self._speed_timer.timeout.connect(self._speed_label.hide)
+        self._crosshair_size = ORBIT_CROSSHAIR_SIZE
+        self._orbit.move_speed_feedback.connect(self._on_move_speed_feedback)
+
+    def orbit_widget(self) -> OrbitPreviewWidget:
+        return self._orbit
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._orbit.setGeometry(self.rect())
+        self._layout_speed_label()
+
+    def _on_move_speed_feedback(self, text: str) -> None:
+        self._speed_label.setText(text)
+        self._layout_speed_label()
+        self._speed_label.show()
+        self._speed_label.raise_()
+        self._speed_timer.stop()
+        self._speed_timer.start()
+
+    def _layout_speed_label(self) -> None:
+        self._speed_label.adjustSize()
+        width = self._speed_label.sizeHint().width() + 8
+        height = self._speed_label.sizeHint().height() + 4
+        cx = self.width() // 2
+        cy = self.height() // 2
+        y = cy + self._crosshair_size // 2 + 16
+        self._speed_label.setGeometry(cx - width // 2, y, width, height)
+
+
 class _PreviewScrollWheelFilter(QObject):
     def __init__(self, panel: PreviewPanel) -> None:
         super().__init__(panel)
@@ -80,6 +143,7 @@ class PreviewPanel(QGroupBox):
     preview_render_requested = Signal(str)
     preview_group_changed = Signal(str)
     view_mode_changed = Signal(str)
+    hud_settings_requested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -94,6 +158,8 @@ class PreviewPanel(QGroupBox):
         self._zoom_factor = clamp_zoom_factor(preview_zoom_percent() / 100.0)
         self._view_mode = "2d"
         self._orbit_has_mesh = False
+        self._orbit_pose_structure = ""
+        self._orbit_pose_stage = 0
 
         self._render_combo = QComboBox()
         self._render_combo.setMaximumWidth(_PREVIEW_COMBO_MAX_WIDTH)
@@ -171,6 +237,7 @@ class PreviewPanel(QGroupBox):
         self._scroll.viewport().installEventFilter(_PreviewScrollWheelFilter(self))
 
         self._orbit_widget: OrbitPreviewWidget | None = None
+        self._orbit_host: _OrbitViewHost | None = None
         self._view_stack = QStackedWidget()
         self._view_stack.addWidget(self._scroll)
         self._orbit_placeholder = QWidget()
@@ -197,6 +264,66 @@ class PreviewPanel(QGroupBox):
     def restore_saved_zoom(self) -> None:
         """Apply the persisted preview zoom from editor settings."""
         self._set_zoom_factor(preview_zoom_percent() / 100.0, persist=False)
+
+    def set_orbit_pose_scope(self, structure: str, stage: int) -> None:
+        """Bind 3D pose save/restore to the open structure stage."""
+        self._orbit_pose_structure = str(structure).strip().lower()
+        self._orbit_pose_stage = int(stage)
+
+    def save_orbit_camera_pose(self) -> None:
+        """Persist the current 3D camera pose when leaving 3D or on editor exit."""
+        if not self._orbit_pose_structure or self._orbit_pose_stage < 1:
+            return
+        if not self.is_3d_mode() or self._orbit_widget is None:
+            return
+        exported = self._orbit_widget.export_camera_pose()
+        if exported is None:
+            return
+        position = exported["position"]
+        if not isinstance(position, tuple):
+            return
+        set_orbit_camera_pose(
+            self._orbit_pose_structure,
+            self._orbit_pose_stage,
+            OrbitCameraPose(
+                position=position,
+                azimuth=float(exported["azimuth"]),
+                elevation=float(exported["elevation"]),
+            ),
+        )
+
+    def restore_saved_orbit_pose(self) -> None:
+        """Apply persisted 3D camera pose when entering 3D (invalid prefs → mesh default)."""
+        if not self._orbit_pose_structure or self._orbit_pose_stage < 1:
+            return
+        saved = orbit_camera_pose(self._orbit_pose_structure, self._orbit_pose_stage)
+        if saved is None:
+            return
+        widget = self._ensure_orbit_widget()
+        if not widget.apply_camera_pose(
+            position=saved.position,
+            azimuth=saved.azimuth,
+            elevation=saved.elevation,
+        ):
+            return
+        widget.update()
+
+    def set_camera_hud_visible(self, visible: bool) -> None:
+        """Show or hide the 3D orientation HUD."""
+        if self._orbit_widget is not None:
+            self._orbit_widget.set_camera_hud_visible(visible)
+
+    def set_hud_placement(self, placement: str) -> None:
+        if self._orbit_widget is not None:
+            self._orbit_widget.set_hud_placement(placement)
+
+    def set_crosshair_visible(self, visible: bool) -> None:
+        if self._orbit_widget is not None:
+            self._orbit_widget.set_crosshair_visible(visible)
+
+    def set_orbit_move_speed(self, speed: float) -> None:
+        if self._orbit_widget is not None:
+            self._orbit_widget.set_move_speed_multiplier(speed)
 
     def reset_zoom_to_default(self) -> None:
         """Reset zoom to 100% (tests and explicit reset)."""
@@ -244,13 +371,19 @@ class PreviewPanel(QGroupBox):
     def _ensure_orbit_widget(self) -> OrbitPreviewWidget:
         if self._orbit_widget is not None:
             return self._orbit_widget
-        from ui.widgets.orbit_preview_widget import OrbitPreviewWidget
 
-        self._orbit_widget = OrbitPreviewWidget()
+        self._orbit_host = _OrbitViewHost()
+        self._orbit_widget = self._orbit_host.orbit_widget()
+        self._orbit_widget.set_orbit_view_active(self.is_3d_mode())
+        self._orbit_widget.set_camera_hud_visible(orbit_camera_hud_visible())
+        self._orbit_widget.set_hud_placement(orbit_camera_hud_placement())
+        self._orbit_widget.set_crosshair_visible(orbit_camera_hud_crosshair_visible())
+        self._orbit_widget.set_move_speed_multiplier(orbit_camera_move_speed())
+        self._orbit_widget.hud_settings_requested.connect(self.hud_settings_requested.emit)
         placeholder_index = self._view_stack.indexOf(self._orbit_placeholder)
         self._view_stack.removeWidget(self._orbit_placeholder)
         self._orbit_placeholder.deleteLater()
-        self._view_stack.insertWidget(placeholder_index, self._orbit_widget)
+        self._view_stack.insertWidget(placeholder_index, self._orbit_host)
         return self._orbit_widget
 
     def selected_render(self) -> str:
@@ -317,11 +450,18 @@ class PreviewPanel(QGroupBox):
         mode = "3d" if button_id == 1 else "2d"
         if mode == self._view_mode:
             return
+        if self._view_mode == "3d":
+            self.save_orbit_camera_pose()
         self._view_mode = mode
         if mode == "3d":
-            self._ensure_orbit_widget()
-            self._view_stack.setCurrentWidget(self._orbit_widget)
+            orbit = self._ensure_orbit_widget()
+            orbit.set_orbit_view_active(True)
+            self.restore_saved_orbit_pose()
+            assert self._orbit_host is not None
+            self._view_stack.setCurrentWidget(self._orbit_host)
         else:
+            if self._orbit_widget is not None:
+                self._orbit_widget.set_orbit_view_active(False)
             self._view_stack.setCurrentWidget(self._scroll)
         self._update_view_mode_chrome()
         self.view_mode_changed.emit(mode)

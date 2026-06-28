@@ -323,6 +323,10 @@ def test_is_schema_internal_registry_path():
     assert is_schema_internal_registry_path("scripts/lessons_coverage_lib.py")
     assert is_schema_internal_registry_path("scripts/pre-commit-lessons-coverage.sh")
     assert is_schema_internal_registry_path("tests/test_check_lessons_coverage.py")
+    assert is_schema_internal_registry_path("docs/governance/kanban-workflow.md")
+    assert is_schema_internal_registry_path("scripts/pre-commit-pytest.sh")
+    assert is_schema_internal_registry_path("scripts/agent-commit-ready.sh")
+    assert is_schema_internal_registry_path("tests/test_resolve_card_tests.py")
     assert not is_schema_internal_registry_path(".cursor/skills/agent-triage/")
 
 
@@ -893,6 +897,105 @@ def test_create_drift_alert_cards_one_card_for_multiple_registry_symbols(tmp_pat
     text = paths[0].read_text(encoding="utf-8")
     assert "`sym_a`" in text
     assert "`sym_b`" in text
+
+
+def test_consolidate_lesson_signatures_per_feature_area():
+    lines = [
+        format_drift_line(
+            f"{PREFIX_REGISTRY} feature-areas.yaml **Floating Camera** "
+            "`lesson_signatures` `floating-camera-fc0-hold-fly` — not in "
+            "lessons-index.yaml or agent-triage reference § Lessons by area / "
+            "Failure pattern routing"
+        ),
+        format_drift_line(
+            f"{PREFIX_REGISTRY} feature-areas.yaml **Floating Camera** "
+            "`lesson_signatures` `floating-camera-fc3a-crosshair` — not in "
+            "lessons-index.yaml or agent-triage reference § Lessons by area / "
+            "Failure pattern routing"
+        ),
+    ]
+    merged = consolidate_drift_issues_for_spawn(lines)
+    assert len(merged) == 1
+    assert "Floating Camera" in merged[0]
+    assert "`floating-camera-fc0-hold-fly`" in merged[0]
+    assert "`floating-camera-fc3a-crosshair`" in merged[0]
+
+
+def test_consolidate_schema_internal_agents_paths():
+    lines = [
+        format_drift_line(
+            f"{PREFIX_REGISTRY} feature-areas.yaml lists "
+            "`docs/governance/kanban-workflow.md` not reflected in "
+            "AGENTS Agent/Kanban area rows"
+        ),
+        format_drift_line(
+            f"{PREFIX_REGISTRY} feature-areas.yaml lists "
+            "`scripts/pre-commit-pytest.sh` not reflected in "
+            "AGENTS Agent/Kanban area rows"
+        ),
+    ]
+    merged = consolidate_drift_issues_for_spawn(lines)
+    assert len(merged) == 1
+    assert "_SCHEMA_INTERNAL_PATHS" in merged[0]
+    assert "`docs/governance/kanban-workflow.md`" in merged[0]
+    assert "`scripts/pre-commit-pytest.sh`" in merged[0]
+
+
+def test_consolidate_handler_duplicates_batch():
+    lines = [
+        format_drift_line(
+            f"{PREFIX_REGISTRY} handler `orbit_camera_pose` listed in both "
+            "**Editor Settings** and **Floating Camera**"
+        ),
+        format_drift_line(
+            f"{PREFIX_REGISTRY} handler `set_orbit_camera_pose` listed in both "
+            "**Editor Settings** and **Floating Camera**"
+        ),
+    ]
+    merged = consolidate_drift_issues_for_spawn(lines)
+    assert len(merged) == 1
+    assert "duplicate `handlers:` across feature areas" in merged[0]
+    assert "`orbit_camera_pose`" in merged[0]
+    assert "`set_orbit_camera_pose`" in merged[0]
+
+
+def test_issue_card_id_stable_for_consolidation_group():
+    area = "Floating Camera"
+    sig_a = (
+        f"{PREFIX_REGISTRY} feature-areas.yaml **{area}** "
+        "`lesson_signatures` `sig-a` — not in lessons-index.yaml or "
+        "agent-triage reference § Lessons by area / Failure pattern routing"
+    )
+    sig_b = (
+        f"{PREFIX_REGISTRY} feature-areas.yaml **{area}** — "
+        "`lesson_signatures` missing from lessons-index.yaml or "
+        "agent-triage reference § Lessons by area / Failure pattern routing: "
+        "`sig-a`, `sig-b`"
+    )
+    assert issue_card_id(parse_drift_line(sig_a)) == issue_card_id(parse_drift_line(sig_b))
+
+
+def test_create_drift_alert_cards_dedupes_consolidated_group(tmp_path: Path):
+    features = tmp_path / "features"
+    lines = [
+        format_drift_line(
+            f"{PREFIX_REGISTRY} feature-areas.yaml **Render Preview** "
+            "`lesson_signatures` `orbit-chest-schematic-face-templates` — not in "
+            "lessons-index.yaml or agent-triage reference § Lessons by area / "
+            "Failure pattern routing"
+        ),
+        format_drift_line(
+            f"{PREFIX_REGISTRY} feature-areas.yaml **Render Preview** "
+            "`lesson_signatures` `chest-generated-top-cache-stale` — not in "
+            "lessons-index.yaml or agent-triage reference § Lessons by area / "
+            "Failure pattern routing"
+        ),
+    ]
+    first = create_drift_alert_cards(lines, features_dir=features)
+    second = create_drift_alert_cards(lines, features_dir=features)
+    assert len(first) == 1
+    assert len(second) == 0
+    assert EPIC_GOVERNANCE_DRIFT == "GovernanceDriftFix"
 
 
 def test_issue_card_id_is_stable_for_same_message():

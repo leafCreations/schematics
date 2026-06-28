@@ -59,6 +59,9 @@ pattern):
 - Parent plan: **`## Spawned feature cards`** table + bump `modified`
 - Example: plan `render-bed-2026-06-27` → epic `OrbitFunctionalFaceTextures` bug a0/a1 — reference
   § Spawn from plan (OrbitFunctionalFaceTextures example)
+- Example: plan `interior-view-for-3d-rendering-2026-06-24` → epic `RenderEngineFloatingCamera`
+  fc0/fc1/fc1b/fc1c feature + fc2 inquiry (done) + fc2a/fc2b + **fc3** HUD (a8a–a8d, a8b1–a8b2, a8c1, a8h); seed `Floating Camera`
+  `feature-areas.yaml` — reference § Spawn from plan (RenderEngineFloatingCamera example)
 
 Do **not** start implementation on spawned cards until user assigns work.
 

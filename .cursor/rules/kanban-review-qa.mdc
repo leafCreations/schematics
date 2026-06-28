@@ -33,6 +33,19 @@ Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. W
 
 - Bump card `modified` in the **same turn** as the fix.
 - Do **not** rely on chat history as the only record.
+- **Settings modals:** menu toggle text and tooltips must match modal checkbox labels (fc3b: **HUD Panel**
+  ↔ **Show HUD panel**) — Signature: `floating-camera-fc3b-hud-settings`.
+
+## Floating Camera keyboard review
+
+Before **review** on **`Floating Camera`** / orbit keyboard cards, run the hold-to-fly checklist in
+[ui-change/SKILL.md](../skills/ui-change/SKILL.md) § **3D orbit camera — pre-review QA** — Signature:
+`floating-camera-fc0-hold-fly`. Confirm `keyReleaseEvent` ignores auto-repeat releases (QA regression:
+one step then stop).
+
+**Pose persistence (fc1c):** when the card saves 3D camera pose, manual QA must include **Open Recent**
+stage A → stage B → return to stage A with distinct **3D** poses — Signature:
+`floating-camera-fc1c-pose-persistence`.
 
 ## Do not
 

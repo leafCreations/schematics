@@ -67,10 +67,16 @@ class OrbitMeshData:
     bounds_center: tuple[float, float, float]
     bounds_radius: float
     triangle_count: int
+    offset_x: int = 0
+    offset_z: int = 0
+    hud_voxel_map: tuple[tuple[tuple[int, int, int], str], ...] = ()
 
     @property
     def uses_texture_atlas(self) -> bool:
         return self.atlas_rgba is not None and self.atlas_width > 0 and len(self.tile_rects) > 0
+
+    def hud_voxel_dict(self) -> dict[tuple[int, int, int], str]:
+        return dict(self.hud_voxel_map)
 
 
 def _token_color(token: str) -> tuple[float, float, float]:
@@ -127,10 +133,19 @@ def iter_occupied_voxels(
     return occupied
 
 
+def hud_voxel_entries_from_cells(
+    cells: list[OccupiedVoxel],
+) -> tuple[tuple[tuple[int, int, int], str], ...]:
+    return tuple((cell.world, cell.token) for cell in cells)
+
+
 def build_box_orbit_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData:
     """C1 per-block exterior faces (baseline for greedy mesh comparisons)."""
     occupied = iter_occupied_voxels(ctx)
     voxel_map = dict(occupied)
+    offset_x = get_offset_x(ctx)
+    offset_z = get_offset_z(ctx)
+    hud_voxel_map = tuple(occupied)
 
     if not voxel_map:
         return OrbitMeshData(
@@ -146,6 +161,9 @@ def build_box_orbit_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData:
             bounds_center=(0.0, 0.0, 0.0),
             bounds_radius=1.0,
             triangle_count=0,
+            offset_x=offset_x,
+            offset_z=offset_z,
+            hud_voxel_map=hud_voxel_map,
         )
 
     positions: list[float] = []
@@ -209,6 +227,9 @@ def build_box_orbit_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData:
         bounds_center=center,
         bounds_radius=radius,
         triangle_count=vertex_count // 3,
+        offset_x=offset_x,
+        offset_z=offset_z,
+        hud_voxel_map=hud_voxel_map,
     )
 
 

@@ -70,7 +70,7 @@ DEFAULT_SEVERITY_BY_PREFIX: dict[str, str] = {
     PREFIX_LESSONS: SEVERITY_WARN,
 }
 
-EPIC_GOVERNANCE_DRIFT = "GovernanceDriftAlert"
+EPIC_GOVERNANCE_DRIFT = "GovernanceDriftFix"
 EPIC_LESSONS_COVERAGE = "LessonsCoverageMetric"
 
 SEVERITY_PRIORITY: dict[str, str] = {
@@ -135,14 +135,25 @@ _SCHEMA_INTERNAL_PATHS = frozenset(
     {
         "docs/lessons-index.yaml",
         "docs/forward-feedback-index.yaml",
+        "docs/governance/README.md",
+        "docs/governance/overview.md",
+        "docs/governance/kanban-workflow.md",
+        "docs/governance/lessons-and-coverage.md",
+        "docs/governance/forward-feedback.md",
+        "docs/governance/feature-areas-parity.md",
+        "docs/governance/audit-and-compaction.md",
         "scripts/build_lessons_index.py",
         "scripts/build_forward_feedback_index.py",
         "scripts/forward_feedback_index_lib.py",
         "scripts/resolve_forward_feedback.py",
+        "scripts/resolve_card_tests.py",
+        "scripts/pre-commit-pytest.sh",
+        "scripts/agent-commit-ready.sh",
         "tests/test_resolve_prior_lessons.py",
         "tests/test_build_lessons_index.py",
         "tests/test_build_forward_feedback_index.py",
         "tests/test_resolve_forward_feedback.py",
+        "tests/test_resolve_card_tests.py",
         "scripts/check_lessons_coverage.py",
         "scripts/lessons_coverage_lib.py",
         "scripts/pre-commit-lessons-coverage.sh",
@@ -397,14 +408,9 @@ def _slugify(text: str, *, max_len: int = 36) -> str:
 def issue_card_id(issue: DriftIssue) -> str:
     if issue.message.startswith(PREFIX_LESSONS):
         return f"lessons-coverage-drift-{datetime.now(UTC).date().isoformat()}"
-    card = _kanban_card_from_registry_label_message(issue.message)
-    if (
-        card
-        and issue.message.startswith(PREFIX_REGISTRY)
-        and ("Product Methods" in issue.message or "Label Methods" in issue.message)
-    ):
-        digest = hashlib.sha256(f"registry-label-methods:{card}".encode()).hexdigest()[:10]
-        return f"governance-drift-registry-{digest}"
+    group_key = consolidation_group_key(issue.message)
+    if group_key is not None:
+        return _card_id_for_group_key(group_key)
     digest = hashlib.sha256(issue.message.encode("utf-8")).hexdigest()[:10]
     kind = _slugify(_alert_prefix(issue.message).replace(" drift alert:", ""))
     return f"governance-drift-{kind}-{digest}"
@@ -455,6 +461,14 @@ def _find_existing_card_for_alert(features_dir: Path, alert_line: str) -> Path |
     for path in features_dir.glob("*.md"):
         if needle in path.read_text(encoding="utf-8"):
             return path
+    group_key = consolidation_group_key(alert_line)
+    if group_key is not None:
+        marker = consolidation_group_marker(group_key)
+        card_id = _card_id_for_group_key(group_key)
+        for path in features_dir.glob("*.md"):
+            text = path.read_text(encoding="utf-8")
+            if path.stem == card_id or marker in text:
+                return path
     card = _kanban_card_from_registry_label_message(alert_line)
     if card is None:
         return None
@@ -473,6 +487,75 @@ _REGISTRY_METHOD_SINGLE_RE = re.compile(
     r"missing from feature-areas\.yaml `handlers:`$"
 )
 
+_LESSON_SIG_SINGLE_RE = re.compile(
+    rf"^{re.escape(PREFIX_REGISTRY)} feature-areas\.yaml \*\*([^*]+)\*\* "
+    r"`lesson_signatures` `([^`]+)` — not in lessons-index\.yaml or "
+    r"agent-triage reference § Lessons by area / Failure pattern routing$"
+)
+
+_LESSON_SIG_GROUP_RE = re.compile(
+    rf"^{re.escape(PREFIX_REGISTRY)} feature-areas\.yaml \*\*([^*]+)\*\* — "
+    r"`lesson_signatures` missing from lessons-index\.yaml or "
+    r"agent-triage reference § Lessons by area / Failure pattern routing:"
+)
+
+_AGENTS_PATH_SINGLE_RE = re.compile(
+    rf"^{re.escape(PREFIX_REGISTRY)} feature-areas\.yaml lists `([^`]+)` not reflected in "
+    r"AGENTS Agent/Kanban area rows$"
+)
+
+_AGENTS_PATH_GROUP_MARKER = (
+    f"{PREFIX_REGISTRY} feature-areas.yaml paths not reflected in AGENTS Agent/Kanban area rows "
+    "(extend `_SCHEMA_INTERNAL_PATHS`)"
+)
+
+_HANDLER_DUP_SINGLE_RE = re.compile(
+    rf"^{re.escape(PREFIX_REGISTRY)} handler `([^`]+)` listed in both "
+    r"\*\*([^*]+)\*\* and \*\*([^*]+)\*\*$"
+)
+
+_HANDLER_DUP_GROUP_MARKER = f"{PREFIX_REGISTRY} duplicate `handlers:` across feature areas"
+
+
+def consolidation_group_key(message: str) -> str | None:
+    """Stable spawn group id for consolidated registry drift alerts."""
+    if not message.startswith(PREFIX_REGISTRY):
+        return None
+    card = _kanban_card_from_registry_label_message(message)
+    if card and ("Product Methods" in message or "Label Methods" in message):
+        return f"registry-label-methods:{card}"
+    lesson_single = _LESSON_SIG_SINGLE_RE.match(message)
+    if lesson_single:
+        return f"lesson-signatures:{lesson_single.group(1)}"
+    lesson_group = _LESSON_SIG_GROUP_RE.match(message)
+    if lesson_group:
+        return f"lesson-signatures:{lesson_group.group(1)}"
+    if _AGENTS_PATH_SINGLE_RE.match(message) or message.startswith(_AGENTS_PATH_GROUP_MARKER):
+        return "schema-internal-agents-paths"
+    if _HANDLER_DUP_SINGLE_RE.match(message) or message.startswith(_HANDLER_DUP_GROUP_MARKER):
+        return "handler-duplicates"
+    return None
+
+
+def consolidation_group_marker(group_key: str) -> str:
+    """Substring for deduping open cards by consolidation group."""
+    if group_key.startswith("lesson-signatures:"):
+        area = group_key.split(":", 1)[1]
+        return f"feature-areas.yaml **{area}** — `lesson_signatures` missing"
+    if group_key == "schema-internal-agents-paths":
+        return _AGENTS_PATH_GROUP_MARKER
+    if group_key == "handler-duplicates":
+        return _HANDLER_DUP_GROUP_MARKER
+    if group_key.startswith("registry-label-methods:"):
+        card = group_key.split(":", 1)[1]
+        return f"kanban `{card}` — Product Methods symbols"
+    return group_key
+
+
+def _card_id_for_group_key(group_key: str) -> str:
+    digest = hashlib.sha256(group_key.encode("utf-8")).hexdigest()[:10]
+    return f"governance-drift-registry-{digest}"
+
 
 def _kanban_card_from_registry_label_message(message: str) -> str | None:
     if not message.startswith(PREFIX_REGISTRY):
@@ -489,18 +572,39 @@ def _kanban_card_from_registry_label_message(message: str) -> str | None:
 
 
 def consolidate_drift_issues_for_spawn(issues: list[str]) -> list[str]:
-    """Merge registry Product Methods alerts per source kanban card into one spawn line."""
+    """Merge registry drift alerts by root cause before spawning kanban cards."""
     registry_by_card: dict[str, list[tuple[str, str]]] = {}
-    merged: list[str] = []
+    lesson_sigs_by_area: dict[str, list[tuple[str, str]]] = {}
+    agents_paths: list[tuple[str, str]] = []
+    handler_dups: list[tuple[str, str, str, str]] = []
+    passthrough: list[str] = []
 
     for line in issues:
         issue = parse_drift_line(line)
-        single = _REGISTRY_METHOD_SINGLE_RE.match(issue.message)
-        if single:
-            card_name, symbol = single.group(1), single.group(2)
+        message = issue.message
+        single_method = _REGISTRY_METHOD_SINGLE_RE.match(message)
+        if single_method:
+            card_name, symbol = single_method.group(1), single_method.group(2)
             registry_by_card.setdefault(card_name, []).append((line, symbol))
-        else:
-            merged.append(line)
+            continue
+        lesson_match = _LESSON_SIG_SINGLE_RE.match(message)
+        if lesson_match:
+            area_name, sig = lesson_match.group(1), lesson_match.group(2)
+            lesson_sigs_by_area.setdefault(area_name, []).append((line, sig))
+            continue
+        agents_match = _AGENTS_PATH_SINGLE_RE.match(message)
+        if agents_match:
+            agents_paths.append((line, agents_match.group(1)))
+            continue
+        handler_match = _HANDLER_DUP_SINGLE_RE.match(message)
+        if handler_match:
+            handler_dups.append(
+                (line, handler_match.group(1), handler_match.group(2), handler_match.group(3))
+            )
+            continue
+        passthrough.append(line)
+
+    merged: list[str] = list(passthrough)
 
     for card_name in sorted(registry_by_card):
         entries = registry_by_card[card_name]
@@ -514,6 +618,44 @@ def consolidate_drift_issues_for_spawn(issues: list[str]) -> list[str]:
             f"missing from feature-areas.yaml `handlers:`: {quoted}"
         )
         severity = parse_drift_line(entries[0][0]).severity
+        merged.append(format_drift_line(body, severity=severity))
+
+    for area_name in sorted(lesson_sigs_by_area):
+        entries = lesson_sigs_by_area[area_name]
+        if len(entries) == 1:
+            merged.append(entries[0][0])
+            continue
+        sigs = sorted({sig for _line, sig in entries})
+        quoted = ", ".join(f"`{sig}`" for sig in sigs)
+        body = (
+            f"{PREFIX_REGISTRY} feature-areas.yaml **{area_name}** — "
+            "`lesson_signatures` missing from lessons-index.yaml or "
+            "agent-triage reference § Lessons by area / Failure pattern routing: "
+            f"{quoted}"
+        )
+        severity = parse_drift_line(entries[0][0]).severity
+        merged.append(format_drift_line(body, severity=severity))
+
+    if len(agents_paths) == 1:
+        merged.append(agents_paths[0][0])
+    elif len(agents_paths) > 1:
+        paths = sorted({path for _line, path in agents_paths})
+        quoted = ", ".join(f"`{path}`" for path in paths)
+        body = f"{_AGENTS_PATH_GROUP_MARKER}: {quoted}"
+        severity = parse_drift_line(agents_paths[0][0]).severity
+        merged.append(format_drift_line(body, severity=severity))
+
+    if len(handler_dups) == 1:
+        merged.append(handler_dups[0][0])
+    elif len(handler_dups) > 1:
+        parts = sorted(
+            {
+                f"`{handler}` in **{area_a}** and **{area_b}**"
+                for _line, handler, area_a, area_b in handler_dups
+            }
+        )
+        body = f"{_HANDLER_DUP_GROUP_MARKER} — " + "; ".join(parts)
+        severity = parse_drift_line(handler_dups[0][0]).severity
         merged.append(format_drift_line(body, severity=severity))
 
     return merged

@@ -41,8 +41,13 @@ On first run, legacy **QSettings** values (`block_tooltips`, `grid_axis_labels`)
 | `panels.materials` | **View → Materials** | `true` | Materials panel |
 | `panels.structure_settings` | **View → Structure settings** | `true` | Structure identity + size panel |
 | `viewer.preview_zoom_percent` | Viewer preview zoom (wheel / toolbar slider) | `100` | **Viewer** tab main preview (25–400); saved on change and on exit |
+| `viewer.orbit_camera_poses.{structure}/{stage}` | 3D orbit camera per open stage | *(omitted)* | Map of stage keys (e.g. `residence/1`) to `{azimuth, elevation, position}` |
+| `viewer.orbit_camera_hud` | 3D HUD panel (Facing / Position / Looking at) | `true` | Boolean; **Viewer → HUD Panel**, **F3**, or **Show HUD panel** in **HUD Properties…** when **Viewer** tab is in **3D** |
+| `viewer.orbit_camera_hud_placement` | HUD panel anchor | `top_right` | One of `top_left`, `top_center`, `top_right`, `middle_left`, `middle_right`, `bottom_left`, `bottom_center`, `bottom_right` |
+| `viewer.orbit_camera_hud_crosshair` | Center crosshair in **3D** | `true` | Boolean; independent of HUD panel visibility; both hide when HUD panel is off |
+| `viewer.orbit_camera_move_speed` | 3D keyboard fly speed multiplier | `0.65` | Float; scroll wheel or **+** / **-** in **3D** (when orbit widget focused or pointer captured) adjusts in ±0.05 steps; clamped **0.2–1.0**; **HUD Properties…** slider uses the same range; scales hold-fly only — **not** mouse look sensitivity |
 
-Changes save when toggled in the UI; preview zoom saves when adjusted. The full state is also flushed on exit.
+Each stage entry stores `azimuth`, `elevation`, and `position` (`[x, y, z]`). Changes save when switching **3D → 2D**, leaving the **Viewer** tab in 3D, opening another structure/stage, or on exit. Preview zoom saves when adjusted. The full state is also flushed on exit.
 
 ---
 

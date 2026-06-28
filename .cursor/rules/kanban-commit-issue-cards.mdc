@@ -10,11 +10,17 @@ When frontmatter `labels` includes **`commit-issue`**, the card was created auto
 
 Full workflow: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Commit-issue cards.
 
+**Ruff hook capture:** `scripts/create_commit_issue_card.py` parses unique ruff rule codes from the
+hook log into frontmatter `ruffRules: ["SIM110", …]` and a **`## Ruff rules`** section so Review
+agents can grep **Signature** rows (e.g. `precommit-ruff-sim110`) without parsing the Problem block.
+Signature: `precommit-ruff-sim110`.
+
 ## Who writes what
 
 | Section | Who | When |
 | ------- | --- | ---- |
 | **`## Problem`** | **Capture script** | On failed commit (hook log excerpt) |
+| **`## Ruff rules`** | **Capture script** | On **ruff** hook failure — parsed rule ids (e.g. `SIM110`); also in frontmatter `ruffRules: ["SIM110"]` |
 | **`## Failed Tests`** | **Capture script** | On failed commit (pytest test file paths) |
 | **`## Staged files`** | **Capture script** | On failed commit |
 | **`## Root Cause (current code)`** | **Agent** | When user asks to **review** the card |
@@ -38,7 +44,8 @@ After **Root Cause** and **Corrective Action**, ask whether the failure is a **r
 | ---- | ----------- |
 | Card created | `status: todo`, `labels: ["commit-issue"]` — user fixes commit or assigns review |
 | User: **review** | Agent reads code + card; **prior lessons gate**; fills **Root Cause** and **Corrective Action** — **no implementation yet** |
-| User approves plan | User explicitly asks to **implement** |
+| User approves plan | User explicitly asks to **implement** (after a prior review turn) |
+| User: **review and implement** | Same turn: Root Cause + Corrective Action + fix — use for trivial hook failures (e.g. mechanical ruff); **not** bare **`implement` alone** — Signature: `commit-issue-review-and-implement-one-shot` |
 | `todo` → `in-progress` | Only after user approval; follow **Corrective Action** |
 | `in-progress` → `review` | Fix applied; staged `scripts/pre-commit-pytest.sh` green; commit succeeds |
 
@@ -66,5 +73,7 @@ When the user signals **QA-complete / Done** on a **commit-issue** card, the **a
 ## Do not
 
 - Implement on first read — wait for user review approval unless they say **review and implement**
+  (bare **`implement`** alone assumes review already happened — Signature:
+  `commit-issue-review-and-implement-one-shot`)
 - Use **`## Decisions`** — use **Corrective Action**
 - Delete auto-captured **Problem** / **Failed Tests** — append agent sections below them

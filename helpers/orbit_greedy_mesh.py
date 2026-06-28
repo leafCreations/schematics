@@ -153,7 +153,11 @@ def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData
     """
     cells = iter_occupied_voxel_cells(ctx)
     if not cells:
-        return _empty_mesh()
+        return _empty_mesh(ctx)
+
+    offset_x = get_offset_x(ctx)
+    offset_z = get_offset_z(ctx)
+    hud_voxel_map = tuple((cell.world, cell.token) for cell in cells)
 
     layer_cells_cache: dict[int, CellGrid] = {
         index: ctx.layers[index].get("cells", []) for index in range(len(ctx.layers))
@@ -264,6 +268,9 @@ def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData
             bounds_center=center,
             bounds_radius=radius,
             triangle_count=triangle_count,
+            offset_x=offset_x,
+            offset_z=offset_z,
+            hud_voxel_map=hud_voxel_map,
         )
 
     return OrbitMeshData(
@@ -279,10 +286,15 @@ def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData
         bounds_center=center,
         bounds_radius=radius,
         triangle_count=triangle_count,
+        offset_x=offset_x,
+        offset_z=offset_z,
+        hud_voxel_map=hud_voxel_map,
     )
 
 
-def _empty_mesh() -> OrbitMeshData:
+def _empty_mesh(ctx: SchematicContext | None = None) -> OrbitMeshData:
+    offset_x = get_offset_x(ctx) if ctx is not None else 0
+    offset_z = get_offset_z(ctx) if ctx is not None else 0
     return OrbitMeshData(
         positions=(),
         normals=(),
@@ -296,6 +308,9 @@ def _empty_mesh() -> OrbitMeshData:
         bounds_center=(0.0, 0.0, 0.0),
         bounds_radius=1.0,
         triangle_count=0,
+        offset_x=offset_x,
+        offset_z=offset_z,
+        hud_voxel_map=(),
     )
 
 

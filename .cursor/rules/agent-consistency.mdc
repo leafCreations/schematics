@@ -81,7 +81,7 @@ When you **edit** paths matched by this rule's `globs`, keep workflow artifacts 
 | ------- | ---------- |
 | This turn **edited** a path matching this rule's `globs` | Run matrix + four check types before handoff ([agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) § Governance drift detection) |
 | Parity fails and is **not** fixed same turn | **Context load** note, [agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §6g, handoff `- **Drift alerts:**` (one prefixed line per mismatch) |
-| User runs / pastes `check_governance_parity.py` output | Context load + §6g + handoff `- **Drift alerts:**`; script spawns **todo** fix cards (epic `GovernanceDriftAlert`) unless `--no-spawn-cards` |
+| User runs / pastes `check_governance_parity.py` output | Context load + §6g + handoff `- **Drift alerts:**`; script spawns **todo** fix cards (epic `GovernanceDriftFix`; consolidated by root cause — **`GovernanceDriftAlert` closed**) unless `--no-spawn-cards` |
 | User approved **temporary** drift | `KNOWN_DRIFT: <artifact pair> — <reason>[; expires: <date or note>]` in handoff — see reference § KNOWN_DRIFT |
 
 **Do not** emit drift alerts on every turn — only when governance globs were edited or user runs/pastes `check_governance_parity.py` output. Read-only turns → N/A.

@@ -50,7 +50,23 @@ python3 scripts/check_governance_parity.py --forward-feedback-audit --no-spawn-c
 python3 scripts/check_governance_parity.py --forward-feedback-stale --stale-days 30 --no-spawn-cards
 ```
 
-Options: `--quiet` (exit code only). `--plain` omits `[severity]` prefixes. **`--no-spawn-cards`** skips kanban card creation. By default, each new drift issue spawns a **todo** card under `.devtool/features/` (epic `GovernanceDriftAlert`, priority from severity) with **## Alert**, **## Feature Areas**, **## Product Paths**, **Product Methods**, **Tests**, **Docs**, **Decisions**, and **Acceptance Criteria** — duplicates skipped when the same alert already has an open card. **Lessons coverage** drift (when `.devtool/features/done/` or `archived/` exists) uses epic `LessonsCoverageMetric`, label `agent`, and card id `lessons-coverage-drift-YYYY-MM-DD`. Registry checks include optional `handlers:` symbols (malformed lines, duplicates across areas, kanban **Product Methods** missing from yaml; legacy **Label Methods** headings still read).
+Options: `--quiet` (exit code only). `--plain` omits `[severity]` prefixes. **`--no-spawn-cards`** skips kanban card creation. By default, consolidated drift issues spawn **todo** kanban cards under `.devtool/features/` (epic `GovernanceDriftFix` — **`GovernanceDriftAlert` closed**; priority from severity) with **## Alert**, **## Feature Areas**, **## Product Paths**, **Product Methods**, **Tests**, **Docs**, **Decisions**, and **Acceptance Criteria** — duplicates skipped when the same consolidation group already has an open card. **Lessons coverage** drift (when `.devtool/features/done/` or `archived/` exists) uses epic `LessonsCoverageMetric`, label `agent`, and card id `lessons-coverage-drift-YYYY-MM-DD`. Registry checks include optional `handlers:` symbols (malformed lines, duplicates across areas, kanban **Product Methods** missing from yaml; legacy **Label Methods** headings still read).
+
+### Registry drift spawn consolidation
+
+`consolidate_drift_issues_for_spawn` merges alerts before card creation — Signature:
+`governance-drift-spawn-consolidate-by-root-cause` (extends
+`governance-drift-spawn-consolidate-by-source-card` for kanban Product Methods only):
+
+| Root cause | Group key | One card lists |
+| ---------- | --------- | -------------- |
+| Missing `lesson_signatures` routing/index | `lesson-signatures:{Area}` | All signatures for that feature area |
+| Agent Workflow paths vs AGENTS table | `schema-internal-agents-paths` | All yaml paths needing `_SCHEMA_INTERNAL_PATHS` |
+| Duplicate `handlers:` across areas | `handler-duplicates` | All handler symbols + area pairs |
+| Kanban Product Methods missing from yaml | `registry-label-methods:{card}` | All symbols for one source kanban card |
+
+Card ids hash the **group key** (stable when alert text shrinks as fixes land). Re-runs dedupe via
+`consolidation_group_marker` on open cards.
 
 **`--forward-feedback-audit` (gc7 gel2 — advisory):** scans `done/` and `archived/` cards with
 `labels` in `feature` / `bug` / `agent` / `commit-issue`, lessons captured, and `completedAt` on or

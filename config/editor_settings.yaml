@@ -18,6 +18,16 @@ panels:
 viewer:
   # Viewer tab preview zoom (25–400); persisted to user editor_settings.yaml
   preview_zoom_percent: 100
+  # Bottom-left 3-line orientation HUD in Viewer 3D (Facing / Position / Looking at)
+  orbit_camera_hud: true
+  # HUD panel anchor: top_left | top_center | top_right | middle_left | middle_right |
+  # bottom_left | bottom_center | bottom_right
+  orbit_camera_hud_placement: top_right
+  # Center crosshair in Viewer 3D (independent of HUD panel visibility pref)
+  orbit_camera_hud_crosshair: true
+  # Keyboard fly speed multiplier in Viewer 3D (scroll wheel adjusts; default 0.65)
+  orbit_camera_move_speed: 0.65
+  # Per structure/stage 3D orbit poses under orbit_camera_poses (keys like residence/1)
 
 recent:
   opened: []

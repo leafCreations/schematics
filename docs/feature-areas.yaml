@@ -605,6 +605,105 @@ areas:
       - testing.mdc#chest-generated-top-cache-stale
     lesson_routing_row: Render Preview
 
+  Floating Camera:
+    summary: Free-camera navigation and 3-line orientation HUD in Viewer 3D orbit preview
+    tab: Render Tab
+    paths:
+      - helpers/orbit_camera.py
+      - helpers/orbit_mesh.py
+      - ui/widgets/camera_hud_settings_dialog.py
+      - ui/widgets/orbit_preview_widget.py
+      - ui/widgets/preview_panel.py
+      - ui/mesh_build_worker.py
+      - ui/editor_prefs.py
+      - ui/app_settings.py
+      - config/editor_settings.yaml
+      - helpers/block_picker.py
+      - helpers/block_catalog.py
+    wiring:
+      - ui/main_window.py
+    handlers:
+      - OrbitPreviewWidget._view_matrix
+      - OrbitPreviewWidget.keyPressEvent
+      - OrbitPreviewWidget.keyReleaseEvent
+      - OrbitPreviewWidget.reset_camera_to_default
+      - OrbitPreviewWidget.export_camera_pose
+      - OrbitPreviewWidget.apply_camera_pose
+      - PreviewPanel.save_orbit_camera_pose
+      - PreviewPanel.restore_saved_orbit_pose
+      - set_orbit_camera_pose
+      - orbit_camera_pose
+      - orbit_camera_pose_storage_key
+      - PreviewPanel.set_orbit_pose_scope
+      - OrbitPreviewWidget._movement_timer
+      - OrbitPreviewWidget._apply_movement_for_keys
+      - move_along_look
+      - OrbitPreviewWidget._projection_matrix
+      - PreviewPanel._on_view_mode_changed
+      - compass_facing_name
+      - raycast_voxel
+      - format_camera_hud_lines
+      - grid_cell_from_world
+      - format_hud_block_label
+      - orbit_camera_hud_visible
+      - orbit_camera_hud_placement
+      - orbit_camera_hud_crosshair_visible
+      - CameraHudSettingsDialog
+      - OrbitPreviewWidget._layout_camera_hud
+      - OrbitPreviewWidget.hud_settings_requested
+      - _mouse_look_enabled
+      - _CrosshairOverlay
+      - _layout_crosshair
+      - _hide_pointer_cursor
+      - _show_pointer_cursor
+      - _capture_pointer
+      - _release_pointer
+      - set_orbit_view_active
+      - setMouseTracking
+      - OrbitPreviewWidget.wheelEvent
+      - OrbitPreviewWidget.move_speed_feedback
+      - _OrbitViewHost
+      - OrbitPreviewWidget._set_move_speed_multiplier
+      - OrbitPreviewWidget._movement_step
+      - orbit_camera_move_speed
+      - set_orbit_camera_move_speed
+      - clamp_orbit_camera_move_speed
+      - MainWindow._persist_editor_settings
+      - MainWindow._on_viewer_hud_properties
+      - ORBIT_CAMERA_MOVE_SPEED_WHEEL_STEP
+      - QShortcut
+      - QToolButton
+      - make_panel_tool_button
+      - orbit_camera_hud_crosshair
+    tests:
+      - tests/test_orbit_camera.py
+      - tests/test_orbit_preview.py
+      - tests/test_app_settings.py
+    related:
+      - Render Preview
+      - Render Tab
+    docs:
+      - docs/ui.md
+      - docs/editor-properties.md
+      - docs/render-types.md
+    agents_skill: ui-change
+    agents_rules:
+      - ui-panels.mdc
+      - ui-general.mdc
+      - testing.mdc
+    lesson_signatures:
+      - floating-camera-fc0-free-nav
+      - floating-camera-fc1-reset-projection
+      - floating-camera-fc0-hold-fly
+      - floating-camera-fc1b-look-forward
+      - floating-camera-fc3-orientation-hud
+      - floating-camera-fc0-strafe-right
+      - floating-camera-fc2a-mouse-look
+      - floating-camera-fc3a-crosshair
+      - floating-camera-fc2b-scroll-move-speed
+      - floating-camera-fc3b-hud-settings
+    lesson_routing_row: Render Preview
+
   Render Selection:
     summary: Render-type dropdown on preview panel (Top Down, Structure Facades, Site Facades, Site Top Down, Materials List)
     tab: Render Tab

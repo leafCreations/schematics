@@ -77,8 +77,12 @@ UI components should primarily coordinate user interaction and delegate work to 
 ## Viewer preview zoom
 
 - Zoom slider + **Reset** + % label on `PreviewToolbar`; wheel on scroll viewport — all call `PreviewPanel._set_zoom_factor`.
-- **Viewer** menu (`_init_viewer_menu` after **Structure**): Zoom In/Out/Reset — enabled only on Viewer tab (`_sync_viewer_zoom_actions`).
+- **Viewer** menu (`_init_viewer_menu` after **Structure**): Zoom In/Out/Reset — enabled on **Viewer** tab in **2D** only (`_sync_viewer_menu_actions`); **HUD Panel** checkable — enabled in **3D** only (same pref as modal **Show HUD panel**); **HUD Properties…** — fc3b; pref `viewer.orbit_camera_hud`.
 - Persist `viewer.preview_zoom_percent` (25–400) via `set_preview_zoom_percent` on change; restore with `restore_saved_zoom()` when entering **Viewer** tab (not hard 100% reset).
+- Persist 3D orbit camera pose in `viewer.orbit_camera_poses.{structure}/{stage}` via
+  `PreviewPanel.save_orbit_camera_pose()` on **3D→2D**, Viewer tab leave, structure switch, and exit;
+  restore with `restore_saved_orbit_pose()` on **3D** entry — Signature:
+  `floating-camera-fc1c-pose-persistence`.
 
 ## Render panel
 
