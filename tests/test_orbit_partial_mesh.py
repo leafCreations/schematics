@@ -222,7 +222,7 @@ def test_residence_stage1_roof_slab_minus_y_faces_culled():
             visible_minus_y += 1
 
     assert visible_minus_y == 0
-    assert len(boxes) == 49
+    assert len(boxes) == 31
 
 
 def _stair_boxes_for_token(token: str):

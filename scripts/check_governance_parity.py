@@ -25,6 +25,7 @@ TRIAGE_SKILL = REPO_ROOT / ".cursor/skills/agent-triage/SKILL.md"
 FEATURE_AREAS = REPO_ROOT / "docs/feature-areas.yaml"
 FEATURES_DIR = REPO_ROOT / ".devtool/features"
 
+SELF_EVAL_SKILL = REPO_ROOT / ".cursor/skills/agent-self-evaluation/SKILL.md"
 SELF_EVAL_REFERENCE = REPO_ROOT / ".cursor/skills/agent-self-evaluation/reference.md"
 PRE_COMMIT_REFERENCE = REPO_ROOT / ".cursor/skills/pre-commit-workflow/reference.md"
 TRIAGE_REFERENCE = REPO_ROOT / ".cursor/skills/agent-triage/reference.md"
@@ -41,6 +42,21 @@ PREFIX_CARD = "Card-type drift alert:"
 PREFIX_FAILURE = "Failure-pattern drift alert:"
 PREFIX_REGISTRY = "Registry drift alert:"
 PREFIX_LESSONS = "Lessons coverage drift alert:"
+PREFIX_FORWARD_FEEDBACK = "Forward feedback audit:"
+PREFIX_FORWARD_FEEDBACK_STALE = "Forward feedback stale:"
+PREFIX_DOCS_GOVERNANCE_SPLIT = "Docs governance split:"
+
+_STALE_DEV_MD_SECTION_RE = re.compile(
+    r"\]\([^)]*development\.md[^)]*\)\s*§|"
+    r"(?:docs/)?development\.md\s*§\s*[A-Z]",
+)
+_DOCS_GOVERNANCE_SPLIT_SIGNATURE = "docs-governance-split"
+_DOCS_GOVERNANCE_SCAN_SUFFIXES = frozenset({".md", ".mdc", ".py"})
+_DOCS_GOVERNANCE_EXCLUDE_REL = frozenset(
+    {
+        "docs/forward-feedback-index.yaml",
+    }
+)
 
 SEVERITY_INFO = "info"
 SEVERITY_WARN = "warn"
@@ -79,6 +95,7 @@ LABEL_PATHS_BY_PREFIX: dict[str, list[str]] = {
         ".cursor/rules/kanban-bug-cards.mdc",
         ".cursor/rules/kanban-commit-issue-cards.mdc",
         ".cursor/rules/kanban-inquiry-cards.mdc",
+        ".cursor/rules/kanban-plan-cards.mdc",
         ".cursor/rules/kanban-agent-cards.mdc",
     ],
     PREFIX_FAILURE: [
@@ -97,7 +114,7 @@ LABEL_PATHS_BY_PREFIX: dict[str, list[str]] = {
         "scripts/check_lessons_coverage.py",
         "scripts/lessons_coverage_lib.py",
         "scripts/check_governance_parity.py",
-        "docs/development.md",
+        "docs/governance/lessons-and-coverage.md",
         ".cursor/skills/agent-triage/reference.md",
     ],
 }
@@ -117,9 +134,15 @@ _LESSON_ROUTING_SIG_RE = re.compile(r"`([a-z][a-z0-9-]+)`")
 _SCHEMA_INTERNAL_PATHS = frozenset(
     {
         "docs/lessons-index.yaml",
+        "docs/forward-feedback-index.yaml",
         "scripts/build_lessons_index.py",
+        "scripts/build_forward_feedback_index.py",
+        "scripts/forward_feedback_index_lib.py",
+        "scripts/resolve_forward_feedback.py",
         "tests/test_resolve_prior_lessons.py",
         "tests/test_build_lessons_index.py",
+        "tests/test_build_forward_feedback_index.py",
+        "tests/test_resolve_forward_feedback.py",
         "scripts/check_lessons_coverage.py",
         "scripts/lessons_coverage_lib.py",
         "scripts/pre-commit-lessons-coverage.sh",
@@ -166,24 +189,34 @@ KANBAN_CARD_TYPE_RULE_NAMES: tuple[str, ...] = (
     "kanban-bug-cards.mdc",
     "kanban-agent-cards.mdc",
     "kanban-inquiry-cards.mdc",
+    "kanban-plan-cards.mdc",
     "kanban-commit-issue-cards.mdc",
 )
 KANBAN_ALWAYS_ON_RULE = "kanban-card-gates.mdc"
 
 CLASSIFY_ANCHORS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("review card only", ("review card", "review …", "bare `@path`")),
+    ("inquire @card", ("Inquire @card", "Inquire …", "kanban-cursor-mode-gates")),
+    ("plan @card", ("Plan @card", "Plan …", "Plan Mode")),
+    ("plan approved", ("plan approved", "approved", "plan … approved")),
     (
         "agent verb on card",
         (
             "agent verbs",
             "review and update",
+            "plan and update",
             "spawn cards from",
-            "answer inquiry on",
         ),
     ),
+    ("legacy answer inquiry", ("answer inquiry", "Deprecated", "Inquire")),
     ("card missing label", ("missing", "unknown `labels`", "empty / unknown")),
     ("no card implement", ("without", "a card", "implement / fix")),
     ("inquiry done", ("inquiry", "done", "close only")),
+    ("epic complete audit", ("epic complete", "run epic audit", "close epic")),
+    (
+        "archive group complete",
+        ("archive group complete", "archive group {name}"),
+    ),
     ("governance audit", ("governance audit",)),
     ("explain / audit", ("explain", "is this correct")),
     ("pre-commit failed", ("pre-commit failed",)),
@@ -199,8 +232,8 @@ REFERENCE_CLASSIFY_HEADING = "## Classify the request (signals)"
 AGENTS_CLASSIFY_MAX_ROWS = 5
 TRIAGE_CLASSIFY_MAX_ROWS = 0
 # Fingerprint of reference § Classify signal first-column cells (normalized).
-# Update REFERENCE_CLASSIFY_FINGERPRINT when adding rows.
-REFERENCE_CLASSIFY_FINGERPRINT = "4a0154190d07273e"
+# Update REFERENCE_CLASSIFY_FINGERPRINT when adding rows (cm3: fe1e226a461904d1).
+REFERENCE_CLASSIFY_FINGERPRINT = "fe1e226a461904d1"
 
 
 def _section_after(text: str, heading: str) -> str:
@@ -331,14 +364,15 @@ def corrective_action_for_issue(issue: DriftIssue) -> str:
             "`agents_rules`, `lesson_routing_row`, `lesson_signatures`) and "
             "**Agent Workflow** `paths` with AGENTS.md area → skills & rules table "
             "(schema-internal lesson paths are excluded); fix `handlers:` duplicates, "
-            "malformed symbols, or kanban **Label Methods** symbols missing from the "
+            "malformed symbols, or kanban **Product Methods** symbols missing from the "
             "registry."
         ),
         PREFIX_LESSONS: (
             "Raise Card Done promotion quality (C2 `artifacts:` tails), run the "
             "prior lessons gate on active cards (C3/C4), and re-audit with "
             "`python3 scripts/check_lessons_coverage.py`. See "
-            "[docs/development.md](../../docs/development.md) § Lessons Coverage Metric."
+            "[docs/governance/lessons-and-coverage.md](../../docs/governance/"
+            "lessons-and-coverage.md) § Lessons Coverage Metric."
         ),
     }
     return actions.get(prefix, actions[PREFIX_ROUTING])
@@ -364,7 +398,11 @@ def issue_card_id(issue: DriftIssue) -> str:
     if issue.message.startswith(PREFIX_LESSONS):
         return f"lessons-coverage-drift-{datetime.now(UTC).date().isoformat()}"
     card = _kanban_card_from_registry_label_message(issue.message)
-    if card and issue.message.startswith(PREFIX_REGISTRY) and "Label Methods" in issue.message:
+    if (
+        card
+        and issue.message.startswith(PREFIX_REGISTRY)
+        and ("Product Methods" in issue.message or "Label Methods" in issue.message)
+    ):
         digest = hashlib.sha256(f"registry-label-methods:{card}".encode()).hexdigest()[:10]
         return f"governance-drift-registry-{digest}"
     digest = hashlib.sha256(issue.message.encode("utf-8")).hexdigest()[:10]
@@ -430,8 +468,8 @@ def _find_existing_card_for_alert(features_dir: Path, alert_line: str) -> Path |
     return None
 
 
-_REGISTRY_LABEL_SINGLE_RE = re.compile(
-    rf"^{re.escape(PREFIX_REGISTRY)} kanban `([^`]+)` Label Methods `([^`]+)` "
+_REGISTRY_METHOD_SINGLE_RE = re.compile(
+    rf"^{re.escape(PREFIX_REGISTRY)} kanban `([^`]+)` (?:Product|Label) Methods `([^`]+)` "
     r"missing from feature-areas\.yaml `handlers:`$"
 )
 
@@ -439,11 +477,11 @@ _REGISTRY_LABEL_SINGLE_RE = re.compile(
 def _kanban_card_from_registry_label_message(message: str) -> str | None:
     if not message.startswith(PREFIX_REGISTRY):
         return None
-    single = _REGISTRY_LABEL_SINGLE_RE.match(message)
+    single = _REGISTRY_METHOD_SINGLE_RE.match(message)
     if single:
         return single.group(1)
     grouped = re.match(
-        rf"^{re.escape(PREFIX_REGISTRY)} kanban `([^`]+)` — Label Methods symbols "
+        rf"^{re.escape(PREFIX_REGISTRY)} kanban `([^`]+)` — (?:Product|Label) Methods symbols "
         r"missing from feature-areas\.yaml `handlers:`",
         message,
     )
@@ -451,13 +489,13 @@ def _kanban_card_from_registry_label_message(message: str) -> str | None:
 
 
 def consolidate_drift_issues_for_spawn(issues: list[str]) -> list[str]:
-    """Merge registry Label Methods alerts per source kanban card into one spawn line."""
+    """Merge registry Product Methods alerts per source kanban card into one spawn line."""
     registry_by_card: dict[str, list[tuple[str, str]]] = {}
     merged: list[str] = []
 
     for line in issues:
         issue = parse_drift_line(line)
-        single = _REGISTRY_LABEL_SINGLE_RE.match(issue.message)
+        single = _REGISTRY_METHOD_SINGLE_RE.match(issue.message)
         if single:
             card_name, symbol = single.group(1), single.group(2)
             registry_by_card.setdefault(card_name, []).append((line, symbol))
@@ -472,7 +510,7 @@ def consolidate_drift_issues_for_spawn(issues: list[str]) -> list[str]:
         symbols = sorted({symbol for _line, symbol in entries})
         quoted = ", ".join(f"`{symbol}`" for symbol in symbols)
         body = (
-            f"{PREFIX_REGISTRY} kanban `{card_name}` — Label Methods symbols "
+            f"{PREFIX_REGISTRY} kanban `{card_name}` — Product Methods symbols "
             f"missing from feature-areas.yaml `handlers:`: {quoted}"
         )
         severity = parse_drift_line(entries[0][0]).severity
@@ -487,15 +525,69 @@ def card_label_for_issue(issue: DriftIssue) -> str:
     return "feature"
 
 
-_SPAWN_TBD_LABEL_METHODS = "- _TBD — agent fills at pre-implementation review._"
+_SPAWN_TBD_PRODUCT_METHODS = "- _TBD — agent fills at pre-implementation review._"
 _SPAWN_TBD_DECISIONS = "- _TBD — fill after prior lessons gate and card-type review._"
+_SPAWN_PRIOR_LESSONS_STUB = (
+    "**Prior lessons (YYYY-MM-DD):** Review `docs/lessons-index.yaml` **Agent Workflow** "
+    "block; run `python3 scripts/resolve_prior_lessons.py` with this card's epic, "
+    "Feature Area, and Product Paths; cite done-card stems, Signatures, or paths before "
+    "`in-progress`."
+)
 _SPAWN_TBD_AC = "- [ ] _TBD_"
+_SPAWN_TBD_TESTS_FILES = "- _TBD_"
+_SPAWN_TBD_TESTS_METHODS = "- _TBD_"
+_SPAWN_TBD_TESTS_VERIFY = (
+    "- _TBD — `scripts/pre-commit-pytest.sh` on staged paths (authoritative scope)._"
+)
+_SPAWN_TBD_DOCS = "- _TBD_"
+
+_SPAWN_TESTS_DOCS_BLOCK = f"""## Tests
+
+### Files
+
+{_SPAWN_TBD_TESTS_FILES}
+
+### Methods
+
+{_SPAWN_TBD_TESTS_METHODS}
+
+### Verify (agent)
+
+{_SPAWN_TBD_TESTS_VERIFY}
+
+## Docs
+
+{_SPAWN_TBD_DOCS}
+"""
 
 
 def _spawn_review_sections(label: str, issue: DriftIssue) -> str:
     """Label-type sections required before in-progress — placeholders when auto-spawned."""
+    decisions = _SPAWN_TBD_DECISIONS
+    if label == "agent" and issue.message.startswith(PREFIX_LESSONS):
+        decisions = f"- {_SPAWN_PRIOR_LESSONS_STUB}"
+    tail = f"""## Product Methods
+
+{_SPAWN_TBD_PRODUCT_METHODS}
+
+{_SPAWN_TESTS_DOCS_BLOCK}
+
+## Decisions
+
+{decisions}
+
+## Acceptance Criteria
+
+{_SPAWN_TBD_AC}
+"""
     if label == "agent":
         description = corrective_action_for_issue(issue)
+        if issue.message.startswith(PREFIX_LESSONS):
+            description += (
+                " **C4:** active cards with surfaced lessons need "
+                "`**Prior lessons (YYYY-MM-DD):**` cites — "
+                "[kanban-prior-lessons-gate.mdc](../../.cursor/rules/kanban-prior-lessons-gate.mdc)."
+            )
         return f"""## Description
 
 {description}
@@ -504,30 +596,8 @@ def _spawn_review_sections(label: str, issue: DriftIssue) -> str:
 
 `Agent Workflow`
 
-## Label Methods
-
-{_SPAWN_TBD_LABEL_METHODS}
-
-## Decisions
-
-{_SPAWN_TBD_DECISIONS}
-
-## Acceptance Criteria
-
-{_SPAWN_TBD_AC}
-"""
-    return f"""## Label Methods
-
-{_SPAWN_TBD_LABEL_METHODS}
-
-## Decisions
-
-{_SPAWN_TBD_DECISIONS}
-
-## Acceptance Criteria
-
-{_SPAWN_TBD_AC}
-"""
+{tail}"""
+    return tail
 
 
 def build_drift_card_body(issue: DriftIssue) -> str:
@@ -555,7 +625,7 @@ def build_drift_card_body(issue: DriftIssue) -> str:
 
 {issue.message}
 
-## Label Paths
+## Product Paths
 
 {paths_md}
 
@@ -572,7 +642,7 @@ def build_drift_card_body(issue: DriftIssue) -> str:
 
 {areas_md}
 
-## Label Paths
+## Product Paths
 
 {paths_md}
 
@@ -652,6 +722,67 @@ def _classify_signal_fingerprint(rows: list[str]) -> str:
     normalized = [re.sub(r"\*\*", "", row).strip().lower() for row in rows]
     digest = hashlib.sha256("\n".join(normalized).encode()).hexdigest()
     return digest[:16]
+
+
+_HANDOFF_FIELD_LINE_RE = re.compile(r"^-\s+\*\*")
+_HANDOFF_DUP_MIN_RUN = 3
+
+
+def _handoff_field_lines(text: str) -> list[str]:
+    return [
+        line.strip() for line in text.splitlines() if _HANDOFF_FIELD_LINE_RE.match(line.strip())
+    ]
+
+
+def extract_skill_handoff_template_lines(skill_text: str) -> list[str]:
+    """Compact §7 Self-evaluation field lines from the canonical fenced template."""
+    section = _section_after(skill_text, "## 7. Handoff format")
+    compact_idx = section.find("### Self-evaluation (compact")
+    if compact_idx < 0:
+        return []
+    rest = section[compact_idx:]
+    fence = re.search(r"```markdown\n(.*?)```", rest, re.DOTALL)
+    if not fence:
+        return []
+    return _handoff_field_lines(fence.group(1))
+
+
+def extract_agents_end_handoff_field_lines(agents_text: str) -> list[str]:
+    """`- **Field:**` lines under AGENTS ``## End handoff``."""
+    section = _section_after(agents_text, "## End handoff")
+    return _handoff_field_lines(section)
+
+
+def find_handoff_template_duplication_run(
+    candidate_lines: list[str],
+    template_lines: list[str],
+    *,
+    min_run: int = _HANDOFF_DUP_MIN_RUN,
+) -> list[str] | None:
+    """Return the first matching consecutive run (≥ min_run lines)."""
+    if len(template_lines) < min_run or len(candidate_lines) < min_run:
+        return None
+    for start in range(len(candidate_lines) - min_run + 1):
+        chunk = candidate_lines[start : start + min_run]
+        for template_start in range(len(template_lines) - min_run + 1):
+            if chunk == template_lines[template_start : template_start + min_run]:
+                return chunk
+    return None
+
+
+def check_handoff_duplication_pair(agents_text: str, skill_text: str) -> list[str]:
+    """Detect gc4 regression — AGENTS End handoff repeats SKILL §7 compact fields."""
+    template = extract_skill_handoff_template_lines(skill_text)
+    agents_fields = extract_agents_end_handoff_field_lines(agents_text)
+    chunk = find_handoff_template_duplication_run(agents_fields, template)
+    if chunk is None:
+        return []
+    sample = chunk[0][:60]
+    return [
+        f"{PREFIX_ROUTING} AGENTS End handoff duplicates SKILL §7 compact template "
+        f"({len(chunk)} consecutive field lines) — restore pointer-only gc4 handoff; "
+        f"Signature: governance-gc7-handoff-duplication-pair — starts: {sample}…"
+    ]
 
 
 def check_classify_parity(
@@ -962,10 +1093,12 @@ def _handler_symbols_from_label_methods_section(section: str) -> set[str]:
 
 
 def extract_label_method_symbols(card_text: str) -> set[str]:
-    section = _section_after(card_text, "## Label Methods")
-    if not section.strip():
-        return set()
-    return _handler_symbols_from_label_methods_section(section)
+    symbols: set[str] = set()
+    for heading in ("## Product Methods", "## Label Methods"):
+        section = _section_after(card_text, heading)
+        if section.strip():
+            symbols.update(_handler_symbols_from_label_methods_section(section))
+    return symbols
 
 
 def extract_feature_areas_from_card(card_text: str) -> set[str]:
@@ -986,7 +1119,7 @@ def check_kanban_label_methods_handlers(
     features_dir: Path,
     handlers_by_area: dict[str, list[str]],
 ) -> list[str]:
-    """Label Methods symbols on open cards must exist in feature-areas.yaml handlers."""
+    """Product Methods symbols on open cards must exist in feature-areas.yaml handlers."""
     if not features_dir.is_dir():
         return []
 
@@ -1007,7 +1140,7 @@ def check_kanban_label_methods_handlers(
         for symbol in sorted(symbols):
             if symbol not in registry_handlers:
                 issues.append(
-                    f"{PREFIX_REGISTRY} kanban `{path.name}` Label Methods `{symbol}` "
+                    f"{PREFIX_REGISTRY} kanban `{path.name}` Product Methods `{symbol}` "
                     "missing from feature-areas.yaml `handlers:`"
                 )
 
@@ -1334,6 +1467,171 @@ def report_governance_line_counts(repo_root: Path) -> str:
     return report
 
 
+def format_forward_feedback_audit_report(
+    hits: list[tuple[str, list[str]]],
+) -> list[str]:
+    """Format gc7 advisory lines for post-grandfather forward-feedback field gaps."""
+    from scripts.lessons_coverage_lib import C1B_FORWARD_FEEDBACK_GRANDFATHER_DATE
+
+    signature = "governance-gc7-forward-feedback-audit"
+    if not hits:
+        return [
+            f"{PREFIX_FORWARD_FEEDBACK} all post-grandfather closed cards pass gc5 fields "
+            f"(completed on/after {C1B_FORWARD_FEEDBACK_GRANDFATHER_DATE}) — "
+            f"Signature: {signature}",
+        ]
+    lines = [
+        f"{PREFIX_FORWARD_FEEDBACK} {len(hits)} card(s) with gc5 gaps (Signature: {signature}):",
+    ]
+    for rel, card_issues in hits:
+        for issue in card_issues:
+            lines.append(f"  {rel}: {issue}")
+    return lines
+
+
+def run_forward_feedback_audit(
+    *,
+    features_dir: Path,
+    quiet: bool = False,
+) -> int:
+    """Advisory gc7 scan — always exit 0; does not spawn drift cards."""
+    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+
+    hits = audit_forward_feedback_gc5(features_dir=features_dir)
+    lines = format_forward_feedback_audit_report(hits)
+    if not quiet:
+        print("\n".join(lines))
+    return 0
+
+
+def _is_allowed_development_md_section_line(line: str) -> bool:
+    """Meta lines that mention the grep pattern but are not stale governance § links."""
+    lowered = line.lower()
+    if 'rg "' in line and "development.md §" in line:
+        return True
+    if "development.md §" in line and ("zero" in lowered or "no stale" in lowered):
+        return True
+    if "not `development.md §" in line or "not development.md §" in line:
+        return True
+    if "`docs/development.md §` zero" in line:
+        return True
+    return "§ anchors remain" in line
+
+
+def _iter_docs_governance_split_scan_files(repo_root: Path) -> list[Path]:
+    roots: list[Path] = [
+        repo_root / ".cursor",
+        repo_root / "docs",
+        repo_root / "scripts",
+        repo_root / "AGENTS.md",
+    ]
+    files: list[Path] = []
+    for root in roots:
+        if root.is_file():
+            if root.suffix in _DOCS_GOVERNANCE_SCAN_SUFFIXES:
+                files.append(root)
+            continue
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix not in _DOCS_GOVERNANCE_SCAN_SUFFIXES:
+                continue
+            try:
+                rel = path.relative_to(repo_root).as_posix()
+            except ValueError:
+                continue
+            if rel in _DOCS_GOVERNANCE_EXCLUDE_REL:
+                continue
+            files.append(path)
+    return sorted(files)
+
+
+def find_stale_development_md_section_refs(repo_root: Path) -> list[tuple[str, int, str]]:
+    """Return (rel_path, line_no, line_text) for stale development.md § anchors."""
+    hits: list[tuple[str, int, str]] = []
+    for path in _iter_docs_governance_split_scan_files(repo_root):
+        rel = path.relative_to(repo_root).as_posix()
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if not _STALE_DEV_MD_SECTION_RE.search(line):
+                continue
+            if _is_allowed_development_md_section_line(line):
+                continue
+            hits.append((rel, line_no, line.strip()))
+    return hits
+
+
+def format_docs_governance_split_report(
+    hits: list[tuple[str, int, str]],
+    *,
+    repo_root: Path,
+) -> list[str]:
+    """Advisory lines for DocsGovernanceSplit residual § scan (Signature: docs-governance-split)."""
+    dev_md = repo_root / "docs" / "development.md"
+    gov_dir = repo_root / "docs" / "governance"
+    dev_lines = line_count_for_path(dev_md) if dev_md.is_file() else 0
+    gov_lines = sum(
+        line_count_for_path(path) for path in sorted(gov_dir.glob("*.md")) if path.is_file()
+    )
+    summary = (
+        f"development.md {dev_lines} lines; docs/governance/ {gov_lines} lines "
+        f"(Signature: {_DOCS_GOVERNANCE_SPLIT_SIGNATURE})"
+    )
+    if not hits:
+        return [
+            f"{PREFIX_DOCS_GOVERNANCE_SPLIT} no stale development.md § anchors — {summary}",
+        ]
+    lines = [
+        f"{PREFIX_DOCS_GOVERNANCE_SPLIT} {len(hits)} stale development.md § anchor(s) — {summary}:",
+    ]
+    for rel, line_no, text in hits:
+        preview = text if len(text) <= 96 else text[:93] + "..."
+        lines.append(f"  {rel}:{line_no}: {preview}")
+    return lines
+
+
+def run_docs_governance_split_audit(
+    *,
+    repo_root: Path,
+    quiet: bool = False,
+) -> int:
+    """Advisory dg3 scan — always exit 0; does not spawn drift cards."""
+    hits = find_stale_development_md_section_refs(repo_root)
+    lines = format_docs_governance_split_report(hits, repo_root=repo_root)
+    if not quiet:
+        print("\n".join(lines))
+    return 0
+
+
+def run_forward_feedback_stale_audit(
+    *,
+    index_path: Path,
+    stale_days: int,
+    quiet: bool = False,
+) -> int:
+    """Advisory ff3 stale metrics — always exit 0; backlog SSOT not card fields."""
+    from scripts.forward_feedback_index_lib import (
+        find_stale_high_risk_open,
+        format_stale_advisory_lines,
+        load_index,
+    )
+
+    if stale_days < 0:
+        raise ValueError("--stale-days must be >= 0")
+    payload = load_index(index_path)
+    records = payload.get("items") or []
+    if not isinstance(records, list):
+        records = []
+    stale_items = find_stale_high_risk_open(records, stale_days=stale_days)
+    body_lines = format_stale_advisory_lines(stale_items, stale_days=stale_days)
+    lines = [f"{PREFIX_FORWARD_FEEDBACK_STALE} {body_lines[0]}"]
+    lines.extend(body_lines[1:])
+    if not quiet:
+        print("\n".join(lines))
+    return 0
+
+
 def run_checks(
     *,
     repo_root: Path,
@@ -1358,6 +1656,11 @@ def run_checks(
 
     issues: list[str] = []
     issues.extend(check_classify_parity(agents_text, triage_text, triage_reference_text))
+
+    self_eval_skill_path = repo_root / ".cursor/skills/agent-self-evaluation/SKILL.md"
+    if self_eval_skill_path.is_file():
+        skill_text = self_eval_skill_path.read_text(encoding="utf-8")
+        issues.extend(check_handoff_duplication_pair(agents_text, skill_text))
 
     reference_sigs = extract_reference_signatures(
         *reference_paths,
@@ -1437,6 +1740,37 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print gc0 governance artifact line-count baseline and exit 0",
     )
+    parser.add_argument(
+        "--forward-feedback-audit",
+        action="store_true",
+        help=(
+            "Advisory gc5 field scan on post-grandfather done/archived cards (exit 0; "
+            "Signature: governance-gc7-forward-feedback-audit)"
+        ),
+    )
+    parser.add_argument(
+        "--forward-feedback-stale",
+        action="store_true",
+        help=(
+            "Advisory ff3 stale backlog metrics from forward-feedback-index.yaml "
+            "(exit 0; Signature: forward-feedback-stale-metrics)"
+        ),
+    )
+    parser.add_argument(
+        "--docs-governance-split",
+        action="store_true",
+        help=(
+            "Advisory DocsGovernanceSplit residual development.md § scan (exit 0; "
+            "Signature: docs-governance-split)"
+        ),
+    )
+    parser.add_argument(
+        "--stale-days",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Days since completed_at for --forward-feedback-stale (default: 30)",
+    )
     args = parser.parse_args(argv)
     root = args.repo_root
     features_dir = args.features_dir or (root / ".devtool" / "features")
@@ -1445,6 +1779,26 @@ def main(argv: list[str] | None = None) -> int:
         if not args.quiet:
             report_governance_line_counts(root)
         return 0
+
+    if args.forward_feedback_audit:
+        return run_forward_feedback_audit(features_dir=features_dir, quiet=args.quiet)
+
+    if args.forward_feedback_stale:
+        from scripts.forward_feedback_index_lib import DEFAULT_STALE_DAYS
+
+        stale_days = args.stale_days if args.stale_days is not None else DEFAULT_STALE_DAYS
+        try:
+            return run_forward_feedback_stale_audit(
+                index_path=root / "docs" / "forward-feedback-index.yaml",
+                stale_days=stale_days,
+                quiet=args.quiet,
+            )
+        except ValueError as exc:
+            print(f"check_governance_parity: {exc}", file=sys.stderr)
+            return 2
+
+    if args.docs_governance_split:
+        return run_docs_governance_split_audit(repo_root=root, quiet=args.quiet)
 
     if yaml is None:
         print("check_governance_parity: PyYAML not installed", file=sys.stderr)

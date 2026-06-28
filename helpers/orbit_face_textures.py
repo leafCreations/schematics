@@ -112,6 +112,21 @@ def resolve_orbit_face_texture(
             sideview_textures=sideview_textures,
         )
 
+    behavior = get_block_behavior(entry)
+    if behavior in {"bed", "chest"}:
+        return _resolve_orbit_attachable_bake_face_texture(
+            raw_token,
+            textures,
+            behavior=behavior,
+            face_kind=face_kind,
+            side_facing=side_facing,
+            layer_cells=layer_cells,
+            cell_x=cell_x,
+            cell_z=cell_z,
+            topdown_textures=topdown_textures,
+            sideview_textures=sideview_textures,
+        )
+
     if face_kind == "side":
         side_texture = _resolve_orbit_side_face_texture(
             raw_token,
@@ -158,6 +173,211 @@ def resolve_orbit_face_texture(
         cell_x=cell_x,
         cell_z=cell_z,
     )
+
+
+_ATTACHABLE_SIDE_ROLES = Literal["front", "back", "end"]
+_OPPOSITE_COMPASS = {"N": "S", "S": "N", "E": "W", "W": "E"}
+_COMPASS_ORDER = ("N", "E", "S", "W")
+
+
+def _attachable_side_role(
+    side_facing: str | None,
+    block_facing: str | None,
+) -> _ATTACHABLE_SIDE_ROLES | None:
+    if not side_facing or not block_facing:
+        return None
+
+    compass = _SIDE_FACING_TO_COMPASS.get(side_facing.lower())
+    if compass is None:
+        return None
+    if compass == block_facing:
+        return "front"
+    if compass == _OPPOSITE_COMPASS.get(block_facing):
+        return "back"
+    return "end"
+
+
+def _end_cap_rotation_degrees(block_facing: str, end_compass: str) -> int:
+    block_idx = _COMPASS_ORDER.index(block_facing)
+    end_idx = _COMPASS_ORDER.index(end_compass)
+    relative = (end_idx - block_idx) % 4
+    if relative == 1:
+        return 90
+    if relative == 3:
+        return 270
+    return 0
+
+
+def _resolve_chest_orbit_side_texture(
+    raw_token: RawToken,
+    textures: MappedTextureImages,
+    *,
+    include_latch: bool,
+    layer_cells: CellGrid | None,
+    cell_x: int | None,
+    cell_z: int | None,
+):
+    if include_latch:
+        return schematics_utils.resolve_cell_texture(
+            raw_token,
+            textures,
+            view="side",
+            layer_cells=layer_cells,
+            cell_x=cell_x,
+            cell_z=cell_z,
+        )
+
+    parsed = parse_structure_token(raw_token)
+    if parsed is None:
+        return None
+
+    entry = get_block_entry(parsed) or {}
+    from helpers.paths import ENTITY_CHEST_TEXTURES_FOLDER
+    from helpers.sprite_baker.chest_schematic import compose_chest_side_schematic
+    from helpers.sprite_baker.compose_chest import resolve_chest_part
+
+    part = resolve_chest_part(parsed.variant, entry)
+    return compose_chest_side_schematic(
+        part=part,
+        size=constants.BLOCK_PX,
+        chest_textures_dir=ENTITY_CHEST_TEXTURES_FOLDER,
+        include_latch=False,
+    )
+
+
+def _resolve_orbit_attachable_bake_face_texture(
+    raw_token: RawToken,
+    textures: MappedTextureImages,
+    *,
+    behavior: Literal["bed", "chest"],
+    face_kind: OrbitFaceKind,
+    side_facing: str | None,
+    layer_cells: CellGrid | None,
+    cell_x: int | None,
+    cell_z: int | None,
+    topdown_textures: MappedTextureImages | None,
+    sideview_textures: MappedTextureImages | None,
+):
+    parsed = parse_structure_token(raw_token)
+    entry = get_block_entry(parsed) or {} if parsed is not None else {}
+    block_facing = _block_facing_compass(raw_token, entry)
+
+    if face_kind == "side" and side_facing:
+        role = _attachable_side_role(side_facing, block_facing)
+        side_map = _textures_for_view(
+            "side",
+            textures,
+            topdown_textures,
+            sideview_textures,
+        )
+        top_map = _textures_for_view(
+            "top",
+            textures,
+            topdown_textures,
+            sideview_textures,
+        )
+
+        if behavior == "chest":
+            if role == "front":
+                tex = _resolve_chest_orbit_side_texture(
+                    raw_token,
+                    side_map,
+                    include_latch=True,
+                    layer_cells=layer_cells,
+                    cell_x=cell_x,
+                    cell_z=cell_z,
+                )
+            elif role == "back":
+                tex = _resolve_chest_orbit_side_texture(
+                    raw_token,
+                    side_map,
+                    include_latch=False,
+                    layer_cells=layer_cells,
+                    cell_x=cell_x,
+                    cell_z=cell_z,
+                )
+                if tex is not None:
+                    tex = tex.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            else:
+                tex = _resolve_chest_orbit_side_texture(
+                    raw_token,
+                    side_map,
+                    include_latch=False,
+                    layer_cells=layer_cells,
+                    cell_x=cell_x,
+                    cell_z=cell_z,
+                )
+        elif role == "front":
+            tex = schematics_utils.resolve_cell_texture(
+                raw_token,
+                side_map,
+                view="side",
+                layer_cells=layer_cells,
+                cell_x=cell_x,
+                cell_z=cell_z,
+            )
+        elif role == "back":
+            tex = schematics_utils.resolve_cell_texture(
+                raw_token,
+                side_map,
+                view="side",
+                layer_cells=layer_cells,
+                cell_x=cell_x,
+                cell_z=cell_z,
+            )
+            if tex is not None:
+                tex = tex.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        elif role == "end" and block_facing is not None:
+            end_compass = _SIDE_FACING_TO_COMPASS.get(side_facing.lower())
+            tex = schematics_utils.resolve_cell_texture(
+                raw_token,
+                top_map,
+                view="top",
+                layer_cells=layer_cells,
+                cell_x=cell_x,
+                cell_z=cell_z,
+            )
+            if tex is not None and end_compass is not None:
+                degrees = _end_cap_rotation_degrees(block_facing, end_compass)
+                if degrees:
+                    tex = utils.rotate_texture_by_degrees(tex, degrees)
+        else:
+            tex = schematics_utils.resolve_cell_texture(
+                raw_token,
+                side_map,
+                view="side",
+                layer_cells=layer_cells,
+                cell_x=cell_x,
+                cell_z=cell_z,
+            )
+
+        return _force_opaque_orbit_face(tex)
+
+    view: Literal["top", "side"] = "top" if face_kind in {"top", "bottom"} else "side"
+    texture_map = _textures_for_view(
+        view,
+        textures,
+        topdown_textures,
+        sideview_textures,
+    )
+    tex = schematics_utils.resolve_cell_texture(
+        raw_token,
+        texture_map,
+        view=view,
+        layer_cells=layer_cells,
+        cell_x=cell_x,
+        cell_z=cell_z,
+    )
+    if tex is None:
+        return None
+
+    if behavior == "bed" and face_kind in {"top", "bottom"}:
+        # Orbit +Y uses fract(world.z) for atlas v; schematic bakes place head/pillow on
+        # the image top row (north in N-oriented assets). Flip so min-Z world edge
+        # samples the pillow row after @direction rotation in resolve_cell_texture.
+        tex = tex.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+
+    return _force_opaque_orbit_face(tex)
 
 
 def _force_opaque_orbit_face(image):

@@ -18,7 +18,7 @@ def test_build_governance_audit_body_has_fresh_checklist():
     assert "# AGENTS.md governance audit" in body
     assert "## Audit checklist" in body
     assert "## Audit findings" in body
-    assert "## Label Paths" in body
+    assert "## Product Paths" in body
     assert "- [ ] **Routing:**" in body
     assert "- [x]" not in body
     assert "`docs/feature-areas.yaml`" in body

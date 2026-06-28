@@ -73,6 +73,30 @@ def _section_body(text: str, heading: str) -> str | None:
     return body or None
 
 
+def _section_body_aliases(text: str, headings: tuple[str, ...]) -> str | None:
+    """Return the first non-empty ``## heading`` body among *headings*."""
+    for heading in headings:
+        body = _section_body(text, heading)
+        if body is not None:
+            return body
+    return None
+
+
+_PATH_SECTION_HEADINGS = ("Product Paths", "Label Paths")
+
+
+def _tests_files_body(text: str) -> str | None:
+    """Body under ``### Files`` inside ``## Tests``."""
+    tests = _section_body(text, "Tests")
+    if tests is None:
+        return None
+    match = re.search(r"^### Files\s*\n(.*?)(?=^### |\Z)", tests, re.MULTILINE | re.DOTALL)
+    if not match:
+        return None
+    body = match.group(1).strip()
+    return body or None
+
+
 def _card_paths(content: str) -> list[str]:
     paths: list[str] = []
     for line in content.splitlines():
@@ -84,11 +108,24 @@ def _card_paths(content: str) -> list[str]:
 
 
 def extract_label_paths(text: str) -> list[str]:
-    """Paths listed under ``## Label Paths`` on a kanban card."""
-    body = _section_body(text, "Label Paths")
-    if body is None:
-        return []
-    return _card_paths(body)
+    """Paths from Product/Label Paths and Tests → Files on a kanban card."""
+    paths: list[str] = []
+    seen: set[str] = set()
+    for heading in _PATH_SECTION_HEADINGS:
+        body = _section_body(text, heading)
+        if body is None:
+            continue
+        for path in _card_paths(body):
+            if path not in seen:
+                seen.add(path)
+                paths.append(path)
+    files_body = _tests_files_body(text)
+    if files_body:
+        for path in _card_paths(files_body):
+            if path not in seen:
+                seen.add(path)
+                paths.append(path)
+    return paths
 
 
 def extract_feature_area_labels(text: str) -> list[str]:
@@ -116,6 +153,37 @@ _SIGNATURE_PATTERNS = (
     re.compile(r"^\s*-\s*\*\*`([^`]+)`:\*\*", re.MULTILINE),
     re.compile(r"`sig:([^`]+)`"),
 )
+
+# Parser SSOT for C4 / coverage lib — stops at ``\n## `` only (not ``\n**`` mid-block).
+PRIOR_LESSONS_RE = re.compile(
+    r"\*\*Prior lessons(?: \([^)]+\))?:\*\*\s*(.+?)(?=\n## |\Z)",
+    re.DOTALL,
+)
+
+_CITATION_SIG_RE = re.compile(r"`([a-z][a-z0-9-]+)`")
+_CITATION_MD_RE = re.compile(r"`([\w.-]+\.md)`")
+_CITATION_PATH_RE = re.compile(r"`((?:[\w./-]+/[\w./-]+|\w+\.mdc))`")
+_CITATION_DATED_STEM_RE = re.compile(r"([\w-]+-\d{4}-\d{2}-\d{2}(?:T[\d]+)?\.md)")
+_CITATION_DRIFT_STEM_RE = re.compile(r"(governance-drift-registry-[a-f0-9]+\.md)")
+
+
+def extract_prior_lessons_citations(text: str) -> set[str]:
+    """Accepted cite tokens from ``**Prior lessons (YYYY-MM-DD):**`` block."""
+    citations: set[str] = set()
+    match = PRIOR_LESSONS_RE.search(text)
+    if not match:
+        return citations
+    block = match.group(1)
+    for pattern in (
+        _CITATION_SIG_RE,
+        _CITATION_MD_RE,
+        _CITATION_PATH_RE,
+        _CITATION_DATED_STEM_RE,
+        _CITATION_DRIFT_STEM_RE,
+    ):
+        for path_match in pattern.finditer(block):
+            citations.add(path_match.group(1))
+    return citations
 
 
 def extract_signatures(text: str) -> list[str]:

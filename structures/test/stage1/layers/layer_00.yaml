@@ -13,7 +13,7 @@ cells:
   - .
 - - SMOKER@south;lit=true
   - .
-  - CHEST@north
+  - CHEST@south
   - .
   - DOOR:oak@north#lower
 - - .

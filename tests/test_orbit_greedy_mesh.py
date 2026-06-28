@@ -639,3 +639,236 @@ def test_water_orbit_faces_apply_schematic_blue_tint():
     assert center[:3] != (128, 128, 128)
     assert center[0] < 100
     assert center[2] > 150
+
+
+def test_orbit_bed_blue_resolves_face_texture():
+    from pathlib import Path
+
+    from helpers import constants
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.paths import GENERATED_ASSETS_FOLDER, resolve_entity_bed_textures_folder
+    from helpers.sprite_baker.cache import cache_path
+    from helpers.structure_loader import build_schematic_context, load_structure_yaml
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    bed_dir = resolve_entity_bed_textures_folder()
+    head_cache = cache_path("top", "BED:blue#head", generated_root=GENERATED_ASSETS_FOLDER)
+    if not (bed_dir / "blue.png").exists() and not head_cache.exists():
+        pytest.skip("blue bed bake assets not available")
+
+    config = load_structure_yaml(Path("structures/residence/stage1/stage.yaml"))
+    ctx = build_schematic_context(config)
+    assert ctx.topdown_textures is not None
+    assert ctx.sideview_textures is not None
+
+    top = resolve_orbit_face_texture(
+        "BED:blue@north#head",
+        ctx.topdown_textures,
+        face_kind="top",
+        topdown_textures=ctx.topdown_textures,
+        sideview_textures=ctx.sideview_textures,
+    )
+    side = resolve_orbit_face_texture(
+        "BED:blue@north#head",
+        ctx.sideview_textures,
+        face_kind="side",
+        side_facing="north",
+        topdown_textures=ctx.topdown_textures,
+        sideview_textures=ctx.sideview_textures,
+    )
+
+    assert top is not None
+    assert side is not None
+
+    textures = compile_texture_set(
+        "top",
+        str(BLOCK_TEXTURES_FOLDER),
+        constants.BLOCK_PX,
+    )
+    assert "BED:blue#head" in textures
+
+
+def test_orbit_bed_merged_top_uses_head_and_foot_textures():
+    from helpers import constants
+    from helpers.orbit_attachable_mesh import bed_foot_token
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.orbit_greedy_mesh import _iter_bed_face_parts
+    from helpers.orbit_mesh import OccupiedVoxel
+    from helpers.orbit_partial_mesh import OrbitBox
+    from helpers.paths import GENERATED_ASSETS_FOLDER, resolve_entity_bed_textures_folder
+    from helpers.sprite_baker.cache import cache_path
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    bed_dir = resolve_entity_bed_textures_folder()
+    head_cache = cache_path("top", "BED:blue#head", generated_root=GENERATED_ASSETS_FOLDER)
+    if not (bed_dir / "blue.png").exists() and not head_cache.exists():
+        pytest.skip("blue bed bake assets not available")
+
+    head_token = "BED:blue@north#head"
+    foot_token = bed_foot_token(head_token)
+    cell = OccupiedVoxel(
+        world=(0, 0, 0),
+        token=head_token,
+        layer_list_index=0,
+        local_x=0,
+        local_z=0,
+    )
+    box = OrbitBox(
+        cell=cell,
+        min_corner=(0.0, 0.0, 0.0),
+        max_corner=(1.0, 9.0 / 16.0, 2.0),
+        role="bed",
+        bed_span=(0, 1),
+    )
+    parts = _iter_bed_face_parts(box, (0, 1, 0))
+    assert len(parts) == 2
+    assert parts[0][0] == head_token
+    assert parts[1][0] == foot_token
+
+    textures = compile_texture_set(
+        "top",
+        str(BLOCK_TEXTURES_FOLDER),
+        constants.BLOCK_PX,
+    )
+    head_top = resolve_orbit_face_texture(
+        head_token,
+        textures,
+        face_kind="top",
+    )
+    foot_top = resolve_orbit_face_texture(
+        foot_token,
+        textures,
+        face_kind="top",
+    )
+    assert head_top is not None
+    assert foot_top is not None
+    assert head_top.tobytes() != foot_top.tobytes()
+
+
+def _chest_latch_pixel_count(image) -> int:
+    return sum(
+        1
+        for y in range(image.size[1])
+        for x in range(image.size[0])
+        if image.getpixel((x, y))[3] > 128
+        and 100 < max(image.getpixel((x, y))[:3]) < 200
+        and min(image.getpixel((x, y))[:3]) > 80
+    )
+
+
+def test_orbit_chest_side_front_differs_from_end():
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.sprite_baker.chest_schematic import CHEST_SINGLE_TEMPLATE_PATH
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    if not CHEST_SINGLE_TEMPLATE_PATH.exists():
+        pytest.skip("chest templates not available")
+
+    side_tex = compile_texture_set("side", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    top_tex = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    token = "CHEST@west#left"
+
+    front = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="side",
+        side_facing="west",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+    end = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="side",
+        side_facing="north",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+
+    assert front is not None
+    assert end is not None
+    assert front.tobytes() != end.tobytes()
+
+
+def test_orbit_chest_side_latch_only_on_front():
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.sprite_baker.chest_schematic import CHEST_SINGLE_TEMPLATE_PATH
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    if not CHEST_SINGLE_TEMPLATE_PATH.exists():
+        pytest.skip("chest templates not available")
+
+    side_tex = compile_texture_set("side", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    top_tex = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    token = "CHEST@north#single"
+
+    front = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="side",
+        side_facing="north",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+    end = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="side",
+        side_facing="east",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+    back = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="side",
+        side_facing="south",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+
+    assert front is not None and end is not None and back is not None
+    assert _chest_latch_pixel_count(front) > 0
+    assert _chest_latch_pixel_count(end) == 0
+    assert _chest_latch_pixel_count(back) == 0
+
+
+def test_orbit_bed_side_faces_differ_by_world_facing():
+    from helpers.orbit_face_textures import resolve_orbit_face_texture
+    from helpers.paths import GENERATED_ASSETS_FOLDER, resolve_entity_bed_textures_folder
+    from helpers.sprite_baker.cache import cache_path
+    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+
+    bed_dir = resolve_entity_bed_textures_folder()
+    head_cache = cache_path("top", "BED:blue#head", generated_root=GENERATED_ASSETS_FOLDER)
+    if not (bed_dir / "blue.png").exists() and not head_cache.exists():
+        pytest.skip("blue bed bake assets not available")
+
+    side_tex = compile_texture_set("side", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    top_tex = compile_texture_set("top", str(BLOCK_TEXTURES_FOLDER), constants.BLOCK_PX)
+    token = "BED:blue@north#head"
+
+    front = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="side",
+        side_facing="north",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+    end = resolve_orbit_face_texture(
+        token,
+        side_tex,
+        face_kind="side",
+        side_facing="east",
+        topdown_textures=top_tex,
+        sideview_textures=side_tex,
+    )
+
+    assert front is not None
+    assert end is not None
+    assert front.tobytes() != end.tobytes()
+
+
+def test_orbit_bed_merged_top_head_and_foot_bakes():
+    test_orbit_bed_merged_top_uses_head_and_foot_textures()

@@ -40,9 +40,11 @@ def report_to_dict(report: CoverageReport) -> dict:
 
     return {
         "c1": metric_dict(report.c1),
+        "c1b": metric_dict(report.c1b),
         "c2": metric_dict(report.c2),
         "c3": metric_dict(report.c3),
         "c4": metric_dict(report.c4),
+        "c4_per_card": metric_dict(report.c4_per_card),
         "composite_pct": _pct(report.composite),
         "per_card_c3": {key: metric_dict(value) for key, value in report.per_card_c3.items()},
     }
@@ -50,10 +52,13 @@ def report_to_dict(report: CoverageReport) -> dict:
 
 def print_report(report: CoverageReport) -> None:
     print("# Lessons Coverage Metric\n")
-    for metric in (report.c1, report.c2, report.c3, report.c4):
+    for metric in (report.c1, report.c1b, report.c2, report.c3, report.c4, report.c4_per_card):
         print(format_metric_line(metric))
     if report.composite is not None:
-        print(f"\nComposite: {report.composite * 100:.1f}% (0.25 × each of C1–C4)")
+        print(
+            f"\nComposite: {report.composite * 100:.1f}% "
+            f"(equal weight × C1, C1b, C2, C3, C4 per-card)"
+        )
     else:
         print("\nComposite: N/A")
     for path, metric in report.per_card_c3.items():
@@ -78,19 +83,23 @@ def run_audit(
     if mode == "capture":
         report = CoverageReport(
             c1=report.c1,
+            c1b=report.c1b,
             c2=report.c2,
             c3=report.c3,
             c4=report.c4,
+            c4_per_card=report.c4_per_card,
             composite=report.c1.score,
             per_card_c3={},
         )
     elif mode == "application":
         report = CoverageReport(
             c1=report.c1,
+            c1b=report.c1b,
             c2=report.c2,
             c3=report.c3,
             c4=report.c4,
-            composite=report.c4.score,
+            c4_per_card=report.c4_per_card,
+            composite=report.c4_per_card.score,
             per_card_c3={},
         )
 

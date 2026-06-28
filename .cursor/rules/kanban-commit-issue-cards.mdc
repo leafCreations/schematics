@@ -19,8 +19,10 @@ Full workflow: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) §
 | **`## Staged files`** | **Capture script** | On failed commit |
 | **`## Root Cause (current code)`** | **Agent** | When user asks to **review** the card |
 | **`## Corrective Action`** | **Agent** | When user asks to **review** the card |
-| **`## Label Paths`** | **Agent** | Optional during review (from failed tests / staged paths) |
-| **`## Label Methods`** | **Agent** | Optional during review (from traceback, test names, staged paths) |
+| **`## Product Paths`** | **Agent** | Optional during review (from staged paths — no `tests/`) |
+| **`## Product Methods`** | **Agent** | Optional during review (from traceback symbols) |
+| **`## Tests`** | **Agent** | From **Failed Tests** + hook-mapped siblings (`pre-commit-pytest.sh`) |
+| **`## Docs`** | **Agent** | When fix updates user/developer docs |
 
 ## Reusable pattern? (on review)
 
@@ -42,11 +44,14 @@ After **Root Cause** and **Corrective Action**, ask whether the failure is a **r
 
 ## Card Done — lessons learned
 
-When the user moves a **commit-issue** card to **Done**:
+When the user signals **QA-complete / Done** on a **commit-issue** card, the **agent** moves to
+`done/` and runs Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`):
 
 1. Read **Problem**, **Corrective Action**, and promoted **Signature** (if any).
 2. Ensure durable patterns live in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md) § Failure patterns and [testing.mdc](testing.mdc) when hook-level (e.g. `precommit-ruff-staged-venv`, `agent-no-tmp-venv`).
-3. Add **`## Lessons captured (YYYY-MM-DD)`** on `done/{id}.md` listing updated artifacts; run `python3 scripts/build_lessons_index.py`.
+3. Add **`## Lessons captured (YYYY-MM-DD)`** on `done/{id}.md` listing updated artifacts; run
+   `python3 scripts/build_lessons_index.py` then `python3 scripts/build_forward_feedback_index.py`
+   when lessons ran (Signature: `forward-feedback-card-done-ingest`).
 4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
    `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
    § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
@@ -56,6 +61,7 @@ When the user moves a **commit-issue** card to **Done**:
 7. **Governance parity integration fixture** — `test_run_checks_integration_pass` must seed gc3 kanban rules and Classify SSOT in tmp_path; grep `governance-compact-kanban-rule-globs` in pre-commit-workflow reference (Signature: `governance-compact-kanban-rule-globs`).
 8. **Recurring E501 commit-issue** — pre-handoff `.venv/bin/ruff check --select E501` on touched `.py`/`.pyi`; grep `ruff-e501-line-length` in pre-commit-workflow reference (Signature: `ruff-e501-line-length`).
 9. **Spurious manual-hook pytest cards** — if Problem shows segfault during agent verify, not user `git commit`, close after `PRE_COMMIT=1` gate lands; grep `precommit-no-card-on-manual-hook` (Signature: `precommit-no-card-on-manual-hook`).
+10. **Compositor semantic drift** — feature card pytest green but commit hook fails on sibling integration test: grep hook-mapped files (`pre-commit-pytest.sh` cases) and promote **Signature** to pre-commit-workflow reference — e.g. `2d-stair-riser-runtime-cache-test` (`test_sprite_baker_cache.py` after `compose_stairs` change).
 
 ## Do not
 

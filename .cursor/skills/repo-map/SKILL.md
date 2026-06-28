@@ -23,6 +23,7 @@ scripts/           CLI, pre-commit helpers, bake_sprites, generate_catalog
 docs/              User and developer documentation
 config/            Default editor_settings.yaml
 assets/minecraft/  Vanilla textures/models (often gitignored locally)
+                   Chest orbit: entity/chest atlases → attachable schematic bakes (not block/chest/)
 output/            schematics/ and worlds/
 worldgen_templates/  Versioned base worlds for worldgen (v26_1_2/, v26_2/; gitignored)
 assets/project/    Project-owned custom templates + generated sprite cache
@@ -55,7 +56,7 @@ Details: [docs/structure-tokens.md](../../docs/structure-tokens.md#structure-pac
 
 ## Feature areas (kanban cards)
 
-Users tag kanban cards with **`## Feature Areas`** (product labels). Agents resolve labels to file paths and **methods/symbols** using [docs/feature-areas.yaml](../../docs/feature-areas.yaml) during pre-implementation card review — see [kanban-markdown](../kanban-markdown/SKILL.md) § Feature Areas (**Label Paths** + **Label Methods**).
+Users tag kanban cards with **`## Feature Areas`** (product labels). Agents resolve labels to **Product** + **Tests** + **Docs** using [docs/feature-areas.yaml](../../docs/feature-areas.yaml) during pre-implementation card review — see [kanban-markdown](../kanban-markdown/SKILL.md) § Feature Areas vs Product / Tests / Docs.
 
 ```bash
 python scripts/resolve_feature_areas.py "Render Preview" "Render Selection"
@@ -133,7 +134,7 @@ Use `.venv/bin/pytest … -q`. Full map: [reference.md](reference.md) and `scrip
 | [ui-change](../ui-change/SKILL.md) | Editor UI work |
 | [agent-self-evaluation](../agent-self-evaluation/SKILL.md) | End-of-task review + update skills from learnings |
 | [run-ui](../run-ui/SKILL.md) | Launch editor |
-| [kanban-markdown](../kanban-markdown/SKILL.md) | To Do queue; **Feature Areas** → **Label Paths** + **Label Methods**; `docs/feature-areas.yaml` + `docs/` |
+| [kanban-markdown](../kanban-markdown/SKILL.md) | To Do queue; **Feature Areas** → **Product** + **Tests** + **Docs**; `docs/feature-areas.yaml` + `docs/` |
 | [docs-maintenance](../docs-maintenance/SKILL.md) | Mandatory `docs/` review/update after implementation |
 | [optimize-test-suite](../optimize-test-suite/SKILL.md) | Suite optimization only |
 

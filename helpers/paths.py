@@ -22,6 +22,7 @@ BLOCK_TEXTURES_FOLDER = MINECRAFT_ASSETS_FOLDER / "textures" / "block"
 ITEM_TEXTURES_FOLDER = MINECRAFT_ASSETS_FOLDER / "textures" / "item"
 ENTITY_BED_TEXTURES_FOLDER = MINECRAFT_ASSETS_FOLDER / "textures" / "entity" / "bed"
 ENTITY_CHEST_TEXTURES_FOLDER = MINECRAFT_ASSETS_FOLDER / "textures" / "entity" / "chest"
+ENTITY_BED_TEXTURES_REL = Path("textures") / "entity" / "bed"
 OUTPUT_SCHEMATICS_FOLDER = BASE_DIR / "output/schematics"
 OUTPUT_WORLDS_FOLDER = BASE_DIR / "output/worlds"
 STRUCTURES_FOLDER = BASE_DIR / "structures"
@@ -63,6 +64,23 @@ def resolve_generated_assets_folder() -> Path:
         return LEGACY_GENERATED_ASSETS_FOLDER
 
     return GENERATED_ASSETS_FOLDER
+
+
+def resolve_entity_bed_textures_folder() -> Path:
+    """Return entity/bed atlases from the active tree or versioned overlays."""
+    candidates: list[Path] = [ENTITY_BED_TEXTURES_FOLDER]
+
+    for version in (DEFAULT_WORLGEN_VERSION, DEFAULT_MINECRAFT_VERSION):
+        versioned = (
+            VERSIONS_ASSETS_FOLDER / minecraft_version_dir_name(version) / ENTITY_BED_TEXTURES_REL
+        )
+        candidates.append(versioned)
+
+    for folder in candidates:
+        if folder.is_dir() and any(folder.glob("*.png")):
+            return folder
+
+    return ENTITY_BED_TEXTURES_FOLDER
 
 
 def resolve_project_custom_folder() -> Path:

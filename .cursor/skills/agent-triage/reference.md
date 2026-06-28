@@ -17,12 +17,12 @@ Which artifacts must agree after a governance change. **Notes** are grep targets
 | [AGENTS.md](../../AGENTS.md) **Every turn** | [agent-triage/SKILL.md](SKILL.md) §1/§1b, [agent-routing.mdc](../../rules/agent-routing.mdc) lifecycle | Steps `1`–`5`, `1b`; Classify quickly ≤5-row summary |
 | [agent-routing.mdc](../../rules/agent-routing.mdc) | AGENTS.md turn lifecycle, card types | `START →` block; discovery budget |
 | [agent-triage/SKILL.md](SKILL.md) | AGENTS.md Every turn; [reference.md](reference.md) § Classify | §1 pointer only; § Lessons by area |
-| [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 handoff | AGENTS.md End handoff, [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) | Compact one-line fields; AGENTS/mdc **pointer only** — gc4 Signature `governance-compact-self-eval-handoff` |
+| [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 handoff | AGENTS.md End handoff, [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) | Compact one-line fields; AGENTS/mdc **pointer only** — gc4 Signature `governance-compact-self-eval-handoff`; gc7 `check_handoff_duplication_pair` flags ≥3 consecutive duplicated field lines — Signature `governance-gc7-handoff-duplication-pair` |
 | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | Rules (**Signature** only), § Failure pattern routing below, [testing.mdc](../../rules/testing.mdc) | Five columns per §6f |
 | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns | [targeted-testing/reference.md](../targeted-testing/reference.md), testing.mdc `precommit-*` | Area hook patterns |
 | [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) card sections | `kanban-*.mdc`, AGENTS.md card types table, [reference.md](../kanban-markdown/reference.md) | **Card label gate**; lifecycle in SKILL; templates in reference; scoped rules authoritative |
-| [docs/development.md](../../docs/development.md) Cursor agent workflow | AGENTS.md, agent-consistency.mdc | When user-facing agent docs change |
-| [docs/feature-areas.yaml](../../docs/feature-areas.yaml) governance keys | AGENTS.md Maintaining table, docs/development.md § Governance area schema | `agents_skill`, `agents_rules`, `lesson_routing_row`; **gs4 complete** — Signature `governance-area-schema-agents-table-sync` (`sync_agents_area_table.py`); parity via `check_area_schema_parity` + `--agents-parity` + area table check |
+| [docs/governance/overview.md](../../docs/governance/overview.md) agent handbook | AGENTS.md, agent-consistency.mdc | When user-facing agent docs change — Signature: `docs-governance-split` |
+| [docs/feature-areas.yaml](../../docs/feature-areas.yaml) governance keys | AGENTS.md Maintaining table, [docs/governance/feature-areas-parity.md](../../docs/governance/feature-areas-parity.md) § Governance area schema | `agents_skill`, `agents_rules`, `lesson_routing_row`; **gs4 complete** — Signature `governance-area-schema-agents-table-sync` (`sync_agents_area_table.py`); parity via `check_area_schema_parity` + `--agents-parity` + area table check |
 
 ### Four check types → matrix rows
 
@@ -32,7 +32,7 @@ Which artifacts must agree after a governance change. **Notes** are grep targets
 | **Routing** | AGENTS.md Every turn ↔ triage §1/§1b ↔ agent-routing.mdc; Classify signals in § Classify below only |
 | **Card-type** | AGENTS.md `labels` table ↔ kanban-markdown § ↔ each `kanban-*.mdc` |
 | **Failure-pattern** | Signature in rule/triage exists in a reference row; docs/development.md mentions patterns when hook workflow changes |
-| **Registry** | `docs/feature-areas.yaml` **Agent Workflow** `paths` ↔ AGENTS.md area → skills & rules; `handlers:` malformed/duplicate symbols; kanban **Label Methods** ↔ registry `handlers:`; periodic audit **Area table** |
+| **Registry** | `docs/feature-areas.yaml` **Agent Workflow** `paths` ↔ AGENTS.md area → skills & rules; `handlers:` malformed/duplicate symbols; kanban **Product Methods** ↔ registry `handlers:`; periodic audit **Area table** |
 
 ## Drift alert examples
 
@@ -44,8 +44,8 @@ Named warning lines for governance parity (epic **GovernanceDriftAlerts**). **Su
 | `Routing drift alert:` | **Routing** | AGENTS.md Every turn / Classify ↔ triage §1/§1b ↔ agent-routing.mdc; audit **Routing** | `Routing drift alert:` AGENTS Classify row "Agent handoff" missing in triage §1 |
 | `Card-type drift alert:` | **Card-type** | AGENTS card types ↔ `kanban-*.mdc` ↔ kanban-markdown; audit **Card types** | `Card-type drift alert:` Frontmatter label `refactor` on card — add AGENTS card types row + `kanban-refactor-cards.mdc` |
 | `Failure-pattern drift alert:` | **Failure-pattern** | Signature in rule or triage exists in a reference row; audit **Failure patterns** | `Failure-pattern drift alert:` Rule cites `precommit-palette-top-texture` — no row in pre-commit-workflow or self-eval reference |
-| `Registry drift alert:` | **Registry** | `docs/feature-areas.yaml` governance schema (`agents_skill`, `agents_rules`, `lesson_routing_row`, `lesson_signatures`) + **Agent Workflow** `paths` ↔ AGENTS area → skills & rules (`is_schema_internal_registry_path` excludes lesson index, `resolve_*.py`, and lc1 lessons-coverage scripts/tests — see development.md § Governance area schema); `handlers:` malformed/duplicate; kanban **Label Methods** ↔ registry; audit **Area table** | `Registry drift alert:` feature-areas.yaml lists `scripts/check_lessons_coverage.py` not reflected in AGENTS Agent/Kanban area rows |
-| `Lessons coverage drift alert:` | **Lessons coverage** | [docs/development.md](../../docs/development.md) § Lessons Coverage Metric; `check_lessons_coverage.py`; audit **Lessons coverage**; `check_governance_parity.py` when done/ exists | `Lessons coverage drift alert:` composite 62.5% (threshold 75%) — C1 Capture: 0.0% (...); C2 Promotion quality: N/A (...); C3 Consumption: N/A (...); C4 Application: 0.0% (...) |
+| `Registry drift alert:` | **Registry** | `docs/feature-areas.yaml` governance schema (`agents_skill`, `agents_rules`, `lesson_routing_row`, `lesson_signatures`) + **Agent Workflow** `paths` ↔ AGENTS area → skills & rules (`is_schema_internal_registry_path` excludes lesson index, `resolve_*.py`, and lc1 lessons-coverage scripts/tests — see docs/governance/feature-areas-parity.md § Governance area schema); `handlers:` malformed/duplicate; kanban **Product Methods** ↔ registry; audit **Area table** | `Registry drift alert:` feature-areas.yaml lists `scripts/check_lessons_coverage.py` not reflected in AGENTS Agent/Kanban area rows |
+| `Lessons coverage drift alert:` | **Lessons coverage** | [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons Coverage Metric; `check_lessons_coverage.py`; audit **Lessons coverage**; `check_governance_parity.py` when done/ exists | `Lessons coverage drift alert:` composite 62.5% (threshold 75%) — C1 Capture: 0.0% (...); C2 Promotion quality: N/A (...); C3 Consumption: N/A (...); C4 Application (aggregate): 5.3% (...); C4 Application (per-card): 0.0% (...) |
 
 **Use:** paste one line per mismatch when comparing artifacts (manual grep, `python3 scripts/check_governance_parity.py`, or audit findings). Do not invent prefixes outside this table.
 
@@ -59,7 +59,7 @@ Severity is **optional** on hand-written lines — **default `warn`** when omitt
 | `warn` | **Default** — routing, card-type, registry parity not fixed same turn | `[warn] Routing drift alert:` AGENTS Classify row "Agent handoff" missing in triage §1 |
 | `critical` | Broken Signature cites, schema violations, handoff blockers | `[critical] Failure-pattern drift alert:` Rule cites `orphan-sig` — no reference row |
 
-`check_governance_parity.py` emits `[severity]` by default (`--plain` for phase 1–3 format). Script mapping: routing/card-type/registry → `warn`; failure-pattern → `critical`; lessons coverage → `warn` (60–74% composite) or `critical` (&lt;60%). **Spawn:** by default writes one **todo** kanban card per new issue (epic `GovernanceDriftAlert`; lessons coverage uses epic `LessonsCoverageMetric` and label `agent`) with **## Alert**, **## Feature Areas**, **## Label Paths**, **## Corrective Action** — `--no-spawn-cards` to disable; skips duplicate **## Alert** text.
+`check_governance_parity.py` emits `[severity]` by default (`--plain` for phase 1–3 format). Script mapping: routing/card-type/registry → `warn`; failure-pattern → `critical`; lessons coverage → `warn` (60–74% composite) or `critical` (&lt;60%). **Spawn:** by default writes one **todo** kanban card per new issue (epic `GovernanceDriftAlert`; lessons coverage uses epic `LessonsCoverageMetric` and label `agent`) with **## Alert**, **Feature Areas** or **Feature Area**, **Product Paths**, **Product Methods**, **Tests**, **Docs**, **Decisions**, **Acceptance Criteria** — `--no-spawn-cards` to disable; skips duplicate **## Alert** text.
 
 ### KNOWN_DRIFT (temporary waiver)
 
@@ -86,16 +86,22 @@ row count, fingerprint, and summary caps.
 
 | Signal | Mode | First action (short) |
 | ------ | ---- | -------------------- |
-| **Review** kanban card only (`review …`, bare `@path`) | Ask-only | kanban-card-gates §2 — no edits |
+| **Review** kanban card only (`review …`, bare `@path`) | Ask-only | kanban-card-gates §2 — chat only, **never** edit card |
+| **`Inquire @card`** / `Inquire …` | Ask-only | Chat research — no card edits; **`update @inquiry-card`** (Agent) → **Response** — Signature `kanban-cursor-mode-gates` |
+| **`Plan @card`** / `Plan …` | Plan | Chat roadmap — stop if not Plan Mode; **`plan approved`** / **`update`** (Agent) → **Recommendation** — Signature `kanban-cursor-mode-gates` |
+| **`plan approved`** / `approved` / `plan … approved` | Agent | **`plan`** card — write **Recommendation** on card |
+| **`review and update`** / **`plan and update`** (rare compounds) | Agent | Same-turn research/plan + card write — reference § Cursor mode gates |
 | **Update / spawn / implement** card (agent verbs) | Agent | kanban-markdown + prior lessons gate |
-| `Kanban: answer inquiry on …` | Agent | Inquiry **Response** |
+| Legacy `Kanban: answer inquiry on …` | Ask-only → Agent | **Deprecated** — **`Inquire`** (Ask) then **`update`** (Agent); not same-turn **Response** — Signature `kanban-cursor-mode-gates` |
 | Card missing / empty / unknown `labels` | Block | Stop — user fixes frontmatter `labels` |
 | Implement / fix without a card | Ask-only | No product edits — kanban card required |
 | Review QA on assigned card | Review | kanban-review-qa.mdc + **QA follow-up** + refresh card scope |
-| User says feature / bug / agent / commit-issue Done | Governance | kanban-markdown § Card Done — lessons + forward feedback (`card-done-forward-feedback`); top-3 in chat (`### Top forward feedback` before handoff) |
-| User says inquiry Done | Close only | No lessons or forward feedback |
+| User **QA-complete / Done** on `feature`/`bug`/`agent`/`commit-issue` | Agent | Move to `done/` + Card Done same turn — reference § QA-complete triggers; Signature `card-done-agent-move-qa-complete`; top-3 chat |
+| **Epic complete / audit** (`epic complete`, `run epic audit`, `close epic {Name}`) | Agent | Anchor card + reference § Epic audit — parity, lessons, closed registry; not batch archive when `archiveGroup:` set — Signature `governance-epic-completion-audit` |
+| **Archive group complete** (`archive group complete`, `archive group {Name}`) | Agent | Anchor card + reference § Archive group — verify manifest, batch `done/` → `archived/`; not on Card Done — Signature `governance-archive-group-batch` |
+| User says inquiry Done | Close only | Move to `done/` — no lessons or forward feedback |
 | AGENTS.md governance audit | Read-only | kanban-markdown § Periodic AGENTS.md governance audit |
-| Lessons coverage drift / low composite | Governance | docs/development.md § Lessons Coverage Metric; `check_lessons_coverage.py` — Signature: `lessons-coverage-ci-drift` |
+| Lessons coverage drift / low composite | Governance | docs/governance/lessons-and-coverage.md § Lessons Coverage Metric; `check_lessons_coverage.py` — Signature: `lessons-coverage-ci-drift` |
 | Explain / audit / is this correct? | Ask-only | Grep + read |
 | Pre-commit failed | Unblock / Review | §1b pre-commit + self-eval reference |
 | Failing test / pytest / ruff (no card) | Ask-only / Unblock | §1b failure pattern routing |
@@ -106,6 +112,7 @@ row count, fingerprint, and summary caps.
 | Repeated mistake / churn | Grep | §1b failure pattern routing |
 | Run tests / commit-ready | Verify | targeted-testing / pre-commit-pytest.sh |
 | Area lesson lookup (kanban + Feature Areas) | Review first | lessons-index.yaml + § Lessons by area → `resolve_prior_lessons.py` |
+| Forward-feedback backlog query (`top 3 … questions`, `review open … feedback`) | Ask-only | `docs/forward-feedback-index.yaml` + `resolve_forward_feedback.py --category … --top N`; exclude spawned/duplicate by default — Signature `forward-feedback-resolution-tracking` |
 
 **Kanban + agent verb for implementation** — [kanban-markdown](../kanban-markdown/SKILL.md). Signatures: `kanban-prompt-ask-vs-agent`, `kanban-lessons-label-scope`.
 
@@ -118,10 +125,11 @@ first-read column. Signature: `governance-compact-classify-task-types`.
 | --------- | ---- | ---------- |
 | Governance-only edit | Agent / Governance | Assigned card; [agent-consistency.mdc](../../rules/agent-consistency.mdc) + § Consistency matrix below; [agent-agents-md-maintenance.mdc](../../rules/agent-agents-md-maintenance.mdc) when agent/kanban skills change |
 | Docs-only | Agent | [docs-maintenance/SKILL.md](../docs-maintenance/SKILL.md); grep `docs/` for stale refs; pytest only if code also changed |
-| Code implementation (feature / bug) | Agent | Card + `docs/feature-areas.yaml` → area skill from [AGENTS.md](../../AGENTS.md) § Area → skills & rules; **Label Methods** before file reads |
+| Code implementation (feature / bug) | Agent | Card + `docs/feature-areas.yaml` → area skill from [AGENTS.md](../../AGENTS.md) § Area → skills & rules; **Product Methods** before file reads |
 | Refactor | Agent | Same as code implementation + grep callers/tests; [targeted-testing/SKILL.md](../targeted-testing/SKILL.md) |
-| Inquiry / research | Agent | Inquiry card — **Response** only; [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc); no product code unless user asks |
-| Multi-file change | Agent | Card **Label Paths** + grep symbols across listed paths; [repo-map/SKILL.md](../repo-map/SKILL.md) if layout unfamiliar |
+| Inquiry / research | Ask-only → Agent | **`Inquire @card`** (Ask) → **`update @inquiry-card`** (Agent) for **Response** — [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc); Signature `kanban-cursor-mode-gates` |
+| Plan / roadmap | Plan → Agent | **`Plan @card`** (Plan) → **`plan approved`** / **`update`** (Agent) for **Recommendation** — [kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc); Signature `kanban-cursor-mode-gates` |
+| Multi-file change | Agent | Card **Product Paths** + grep symbols across listed paths; [repo-map/SKILL.md](../repo-map/SKILL.md) if layout unfamiliar |
 | Rule / skill update | Agent / Governance | [agent-consistency.mdc](../../rules/agent-consistency.mdc); ≥1 skill + ≥1 rule same turn on implementation; `check_governance_parity.py` before handoff |
 
 ## Lessons by area (read before card grep)
@@ -144,20 +152,32 @@ After resolving **`## Feature Areas`** or agent **`## Feature Area`** — **befo
 | Pre-commit / hook / pytest scope | `lessons-index.yaml` `Agent Workflow` or `_uncategorized`; [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns; `precommit-stash-old-hooks`, `precommit-ruff-staged-venv`, `agent-no-tmp-venv` |
 | **Properties Panel** — `MainWindow.__new__` tests | `lessons-index.yaml` `Properties Panel`; Signature `precommit-mainwindow-__new__-test` → [testing.mdc](../../rules/testing.mdc) |
 | **Properties Panel** — inspector live-apply / Save Layer | `lessons-index.yaml` `Properties Panel`; Signature `properties-inspector-live-apply` → [ui-change/SKILL.md](../ui-change/SKILL.md) § Properties brush — live apply; `pytest tests/test_properties_panel.py tests/test_main_window.py -q -k inspector` |
-| **Agent Workflow** — routing / kanban / index | `lessons-index.yaml` `Agent Workflow`; Signatures `feature-areas-lesson-pointers`, `kanban-prompt-ask-vs-agent`; [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2; [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Prior lessons gate |
+| **Agent Workflow** — routing / kanban / index | `lessons-index.yaml` `Agent Workflow`; Signatures `feature-areas-lesson-pointers`, `kanban-prompt-ask-vs-agent`, `kanban-cursor-mode-gates`; [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2; [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Prior lessons gate |
 | **Agent Workflow** — governance area schema (gs0–gs4) | `lessons-index.yaml` `Agent Workflow`; `resolve_feature_areas.py --agents-parity`; `check_area_schema_parity`; `sync_agents_area_table.py --check`; Signatures `governance-area-schema-agents-table-sync`, `governance-area-schema-parity-tests` |
-| **Agent Workflow** — GovernanceCompact compaction (gc0+) | `lessons-index.yaml` `Agent Workflow`; Signature `governance-compact-baseline` → `check_governance_parity.py --line-counts` (exit 0); [docs/development.md](../../docs/development.md) § Governance compaction; record before/after counts on Card Done |
+| **Agent Workflow** — handoff duplication pair (gc7) | Signature `governance-gc7-handoff-duplication-pair` → `check_handoff_duplication_pair` in `check_governance_parity.py`; AGENTS End handoff pointer-only vs SKILL §7; `pytest -k handoff` |
+| **Agent Workflow** — forward-feedback question index (ff0) | `docs/forward-feedback-index.yaml`; `resolve_forward_feedback.py --category … --top N`; Signature `forward-feedback-index` — questions backlog, not prior-lessons citations |
+| **Agent Workflow** — Card Done index ingest (ff1) | `build_forward_feedback_index.py` after `build_lessons_index.py`; `duplicate_of` + dedup chat — Signature `forward-feedback-card-done-ingest` |
+| **Agent Workflow** — resolution tracking (ff2) | `resolve_forward_feedback.py --link` / `--set-status`; overlay merge on rebuild — Signature `forward-feedback-resolution-tracking` |
+| **Agent Workflow** — stale metrics (ff3) | `resolve_forward_feedback.py --report`; `check_governance_parity.py --forward-feedback-stale` — Signature `forward-feedback-stale-metrics` |
+| **Agent Workflow** — forward-feedback query prompts | Classify row: `top 3 … questions`, `review open … feedback` → `resolve_forward_feedback.py` — Signature `forward-feedback-resolution-tracking` |
+| **Agent Workflow** — forward-feedback gc5 audit (gc7 gel2) | Signature `governance-gc7-forward-feedback-audit` → `audit_forward_feedback_gc5` + `--forward-feedback-audit` (advisory exit 0); complements C1b presence; `pytest -k forward_feedback`; distinct from ff0 question index |
+| **Agent Workflow** — GovernanceCompact compaction (gc0+) | `lessons-index.yaml` `Agent Workflow`; Signature `governance-compact-baseline` → `check_governance_parity.py --line-counts` (exit 0); [docs/governance/audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) § Governance compaction; record before/after counts on Card Done |
 | **Agent Workflow** — kanban skill split (gc1) | Signature `governance-compact-kanban-split` → [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) lifecycle only; [reference.md](../kanban-markdown/reference.md) templates; `kanban-*.mdc` authoritative — no Classify table in SKILL |
 | **Agent Workflow** — kanban rule globs (gc3) | Signature `governance-compact-kanban-rule-globs` → card-type `kanban-*-cards.mdc` scoped `.devtool/features/**`; triage §1 → agent-routing § Kanban card type; `kanban-card-gates.mdc` always-on; `check_kanban_rule_globs` |
 | **Agent Workflow** — Classify SSOT (gc2) | Signature `governance-compact-classify-ssot` → reference § Classify canonical; AGENTS ≤5-row summary; triage §1 pointer; `check_classify_parity` fingerprint |
 | **Agent Workflow** — classify task types (gc6) | Signature `governance-compact-classify-task-types` → § Task types above; [SKILL.md](SKILL.md) §2 Task types summary |
-| **Agent Workflow** — Lessons Coverage Metric (lc0–lc3 **complete**) | `docs/development.md` § Lessons Coverage Metric (lc0 spec: **Related workflow**, **Inputs**, v1 rollout); lc1 `check_lessons_coverage.py` + `resolve_prior_lessons.py --audit`; `check_governance_parity.py` `Lessons coverage drift alert:`; Signatures `lessons-coverage-c2-c3-audit`, `lessons-coverage-strict-consumption`, `lessons-coverage-ci-drift`; C2 prefers ``artifacts:`` on Card Done bullets; C4 counts `**Prior lessons**` citations on active cards |
+| **Agent Workflow** — Lessons Coverage Metric (lc0–lc3 **complete**) | [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons Coverage Metric (lc0 spec: **Related workflow**, **Inputs**, v1 rollout); lc1 `check_lessons_coverage.py` + `resolve_prior_lessons.py --audit`; `check_governance_parity.py` `Lessons coverage drift alert:`; Signatures `lessons-coverage-c2-c3-audit`, `lessons-coverage-strict-consumption`, `lessons-coverage-ci-drift`; C2 prefers ``artifacts:`` on Card Done bullets; C4 counts `**Prior lessons**` citations on active cards — Signature: `docs-governance-split` |
+| Closed kanban epics | `docs/epics-closed.yaml`; `resolve_epic_cards.py --validate-new` before spawn; **`KanbanCardScope`** closed 2026-06-28 — Signature: `governance-epic-completion-audit` |
 | **Feature Area Registry** — lesson pointers | `lessons-index.yaml` `Feature Area Registry`; `docs/feature-areas.yaml` `lesson_signatures` / `lesson_docs`; `resolve_feature_areas.py --lessons` |
 | **Palette Registry** — texture / orbit overlap | `lessons-index.yaml` `Palette Registry`; Signature `orbit-animated-texture-strip` |
-| Card **Done** / lessons index refresh | [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:`; `scripts/build_lessons_index.py` |
+| Card **Done** / lessons index refresh | [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons captured `artifacts:`; `scripts/build_lessons_index.py` |
 | Card Done — forward-looking feedback (gc5) | After `## Lessons captured` on done card; six categories; Impact Scope, References, Mitigation on max tier, Importance when tied; Signature `card-done-forward-feedback`; [kanban-markdown/reference.md](../kanban-markdown/reference.md) § Forward-looking feedback; top-3 in chat on Card Done turn; **not** on `inquiry` Done |
-| Card Done `artifacts:` — registry yaml under `docs/` | Signature `artifacts-doc-yaml-normalize` → explicit `doc:…yaml` (not extensionless); [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:` |
-| Card Done inline `` `sig:slug` `` on lesson bullets | Signature `lessons-index-inline-sig-backtick` → `extract_signatures` in `resolve_prior_lessons.py`; re-run `build_lessons_index.py`; [docs/development.md](../../docs/development.md) § Lessons captured `artifacts:` |
+| Card Done agent move (gc8) | Signature `card-done-agent-move-qa-complete` → reference § QA-complete triggers; agent moves `review` → `done/` + same-turn Card Done; not on bare `review @card` |
+| Epic completion audit (gel0) | User `epic complete` / `close epic {Name}` → reference § Epic audit; `resolve_epic_cards.py --status`; append `docs/epics-closed.yaml` (`KanbanCardScope` 2026-06-28); chat **`### Epic summary`** — Signatures `governance-epic-completion-audit`, `governance-epic-completion-summary` |
+| Archive group batch (gel3) | User `archive group {Name} complete` → reference § Archive group; `resolve_archive_group.py --group {Name} --status`; chat **`### Initiative summary`** — Signatures `governance-archive-group-batch`, `governance-epic-completion-summary` |
+| Epic/initiative summary (gel4) | reference § Epic / initiative completion summary; agent-self-evaluation §7 — max 2 paragraphs; not on Card Done — Signature `governance-epic-completion-summary` |
+| Card Done `artifacts:` — registry yaml under `docs/` | Signature `artifacts-doc-yaml-normalize` → explicit `doc:…yaml` (not extensionless); [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons captured `artifacts:` |
+| Card Done inline `` `sig:slug` `` on lesson bullets | Signature `lessons-index-inline-sig-backtick` → `extract_signatures` in `resolve_prior_lessons.py`; re-run `build_lessons_index.py`; [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons captured `artifacts:` |
 | All areas (exhaustive) | [docs/lessons-index.yaml](../../docs/lessons-index.yaml) — grouped Signatures, done cards, artifacts per area |
 
 ## Failure pattern routing (grep on signals only)

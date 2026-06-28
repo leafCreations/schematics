@@ -34,16 +34,24 @@ Pair with [kanban-markdown](../kanban-markdown/SKILL.md) (`docs/feature-areas.ya
 
 ## Process (every mandatory pass)
 
-1. **List changed paths** (from card **Label Paths**, **Label Methods** test symbols, diff, or task scope).
-2. **Map** changed areas → doc files (table below). Include **`docs/feature-areas.yaml`** for kanban/feature work (see kanban skill).
-3. **Grep** `docs/` for stale terms tied to the change (old tab names, removed controls, wrong output paths, “not yet implemented”, obsolete workflows).
-4. **Update every affected file** — minimal accurate diffs; match existing doc tone.
-5. **Handoff** — self-evaluation must include **Docs:** with paths updated or `n/a` + one-line why.
+1. **List changed paths** (from card **Product Paths**, **Tests → Files**, **Product Methods** symbols, diff, or task scope).
+2. **Cross-check** card **`## Docs`** section — every listed doc path must be reviewed/updated in the same turn when behavior changed (pair with [kanban-markdown](../kanban-markdown/SKILL.md) § Feature Areas vs Product / Tests / Docs).
+3. **Map** changed areas → doc files (table below). Include **`docs/feature-areas.yaml`** for kanban/feature work (see kanban skill).
+4. **Grep** `docs/` for stale terms tied to the change (old tab names, removed controls, wrong output paths, “not yet implemented”, obsolete workflows).
+5. **Update every affected file** — minimal accurate diffs; match existing doc tone.
+6. **Handoff** — self-evaluation must include **Docs:** with paths updated or `n/a` + one-line why.
+
+**`docs/governance/` link depth (dg1+):** handbook files live one level below `docs/` — use
+`../../.cursor/`, `../../scripts/`, `../../AGENTS.md` (not `../` as in `docs/development.md`).
+After bulk moves, grep `](../.cursor/` under `docs/governance/` — broken links omit `](` before the
+path (Signature: `docs-governance-split`).
 
 ```bash
 # Stale-term sweep examples (adjust terms to the feature)
 rg -i 'Render tab|Generate Renders|no embedded preview' docs/
 rg -i 'Viewer tab|Materials List|_preview' docs/
+rg "development.md §" .cursor AGENTS.md docs/ --glob '!docs/forward-feedback-index.yaml'
+# post-dg2: zero hits except meta grep lines; dg3: check_governance_parity.py --docs-governance-split
 ```
 
 ## Change → doc map
@@ -57,8 +65,14 @@ rg -i 'Viewer tab|Materials List|_preview' docs/
 | Worldgen | [worldgen.md](../../docs/worldgen.md), [project-info.md](../../docs/project-info.md) if version targets change |
 | Sprite baker / block icons | [sprite-baker.md](../../docs/sprite-baker.md), [assets.md](../../docs/assets.md) |
 | 2D top-down stairs (`utils_schematics`, `compose_stairs`) | [render-types.md](../../docs/render-types.md) § 2D Top Down — facing via `corner_stair_facing_rotation` (Signature: `2d-stair-facing-rotation`); riser ghost vs slab parity in sprite-baker docs when compositor changes (Signature: `2d-stair-riser-ghost`); after `plank_materials` texture resolver edits run `bake_sprites.py --type stairs --view top --all --force` before Review (Signature: `stairs-rebake-all-texture-qa`) |
-| Dev setup, pytest, pre-commit | [development.md](../../docs/development.md) |
-| Lessons coverage metric (`check_lessons_coverage.py`, `lessons_coverage_lib.py`, Card Done / prior-lessons workflow) | [development.md](../../docs/development.md) § **Lessons Coverage Metric** + § Lessons captured `artifacts:` schema; [kanban-prior-lessons-gate.mdc](../../.cursor/rules/kanban-prior-lessons-gate.mdc) when gate behavior changes |
+| Dev setup, pytest, pre-commit | [development.md](../../docs/development.md) — product setup + pointer block |
+| Agent/governance narrative (**DocsGovernanceSplit** dg1+) | [docs/governance/](../../docs/governance/) handbook — Signature: `docs-governance-split` |
+| Post-governance edit verify | `python3 scripts/check_governance_parity.py --docs-governance-split` — Signature: `docs-governance-split` |
+| Kanban workflow / card scope | [kanban-workflow.md](../../docs/governance/kanban-workflow.md) |
+| Lessons index, coverage, artifacts | [lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) |
+| Forward feedback index | [forward-feedback.md](../../docs/governance/forward-feedback.md) |
+| Feature area schema / parity CLI | [feature-areas-parity.md](../../docs/governance/feature-areas-parity.md) |
+| Governance audit / gc0 compaction | [audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) |
 | Kanban feature areas, new modules/tests | [feature-areas.yaml](../../docs/feature-areas.yaml) — **mandatory** per kanban skill |
 | Shipped roadmap-scale capability | [roadmap.md](../../docs/roadmap.md) — mark completed / remove “not yet” claims; **do not** add new queue items (kanban is the queue) |
 

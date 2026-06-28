@@ -22,7 +22,20 @@ Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
 ## Before committing (mandatory)
 
 1. Stage intended files: `git add …`
-2. **Ruff E501 on staged Python** (hook 1 — run before pytest):
+2. **Kanban card alignment** — when a card is in **Review** or commit-ready, **Tests → Files** on the
+   card must cover the hook scope for staged **Product Paths** (Signature:
+   `precommit-pytest-scope-mismatch`):
+
+   ```bash
+   python3 scripts/resolve_card_tests.py --from-card .devtool/features/your-card.md --files-only
+   scripts/pre-commit-pytest.sh   # compare targeted file list
+   ```
+
+   Draft **Tests → Files** from Product prefixes before **in-progress → review**, not only from AC-adjacent
+   unit tests. **Tests → Verify (agent)** cites `scripts/pre-commit-pytest.sh` (or full suite when hook
+   says so).
+
+3. **Ruff E501 on staged Python** (hook 1 — run before pytest):
 
    ```bash
    git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|pyi)$' \
@@ -32,21 +45,35 @@ Pair with [targeted-testing](../targeted-testing/SKILL.md) for pytest selection.
    Fix every `Line too long` before commit — wrap strings, split f-strings, break call chains.
    Signature: `ruff-e501-line-length`. Do **not** defer to the hook; agents must run this on
    every implementation turn that touched `.py` / `.pyi` (self-eval §4).
-3. **Simulate the pytest hook** on staged paths (not a hand-picked subset):
+4. **Simulate the pytest hook** on staged paths (not a hand-picked subset):
 
    ```bash
    scripts/pre-commit-pytest.sh
    ```
 
    This is the same script the commit hook runs. If it chooses **full suite**, run `.venv/bin/pytest -q` until green. See [targeted-testing](../targeted-testing/SKILL.md) §5–§6 for scope rules and post-fix re-runs.
-4. After a test failure fix, re-run `scripts/pre-commit-pytest.sh` (or full suite if that was the scope) — **not** only the one failing file unless the hook listed a single file.
-5. Optional after green pytest on **same staged hash**:
+5. After a test failure fix, re-run `scripts/pre-commit-pytest.sh` (or full suite if that was the scope) — **not** only the one failing file unless the hook listed a single file.
+6. Optional after green pytest on **same staged hash**:
 
    ```bash
    scripts/record-pytest-pass.sh
    ```
 
    Pre-commit may skip pytest for 30 minutes; ruff and palettes still run.
+
+## Agent commit-ready gate (before Review)
+
+When moving a kanban card to **review**, run all three hooks on **staged** paths in one step:
+
+```bash
+git add …   # product + tests + docs + governance touched for the card
+scripts/agent-commit-ready.sh
+```
+
+Exits non-zero when ruff, `validate_palettes`, or pytest fails — same order as `.pre-commit-config.yaml`.
+Pair with card **Tests → Verify (agent)** citing `scripts/pre-commit-pytest.sh`. Signature:
+`precommit-pytest-scope-mismatch`, `2d-stair-riser-runtime-cache-test` — see [reference.md](reference.md)
+§ Failure patterns.
 
 ## Optional — lessons coverage hook (not default)
 
@@ -174,6 +201,7 @@ pre-commit run pytest                   # hook 3
 
 ```
 - [ ] Files staged
+- [ ] Card **Tests → Files** aligned with `resolve_card_tests.py` / hook output (when kanban card active)
 - [ ] Targeted pytest green (or record-pytest-pass)
 - [ ] Commit attempted
 - [ ] Ruff issues fixed (line length, unused vars)

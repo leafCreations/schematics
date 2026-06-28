@@ -70,8 +70,8 @@ _CHECKLIST = (
     "[agent-self-evaluation/reference.md](../../.cursor/skills/agent-self-evaluation/reference.md) "
     "or [pre-commit-workflow/reference.md](../../.cursor/skills/pre-commit-workflow/reference.md); "
     "[Consistency matrix](../../.cursor/skills/agent-triage/reference.md) rows still accurate\n"
-    "- [ ] **Docs:** [docs/development.md](../../docs/development.md) Cursor agent workflow ↔ "
-    "AGENTS.md + consistency links\n"
+    "- [ ] **Docs:** [docs/governance/](../../docs/governance/) handbook ↔ "
+    "AGENTS.md + consistency links (Signature: docs-governance-split)\n"
     "- [ ] **Lessons coverage:** when `.devtool/features/done/` exists, run "
     "`python3 scripts/check_lessons_coverage.py`; composite &lt; 75% should appear as "
     "`Lessons coverage drift alert:` from `check_governance_parity.py`\n"
@@ -79,7 +79,7 @@ _CHECKLIST = (
     "(`agent-consistency`, `kanban-*`, …)\n"
 )
 
-_LABEL_PATHS = """\
+_PRODUCT_PATHS = """\
 - `AGENTS.md`
 - `.cursor/rules/agent-routing.mdc`
 - `.cursor/skills/agent-triage/SKILL.md`
@@ -92,14 +92,17 @@ _LABEL_PATHS = """\
 - `.cursor/skills/agent-self-evaluation/SKILL.md`
 - `.cursor/skills/agent-self-evaluation/reference.md`
 - `.cursor/skills/pre-commit-workflow/reference.md`
-- `docs/development.md`
+- `docs/governance/README.md`
+- `docs/governance/overview.md`
 - `docs/feature-areas.yaml`
 """
 
 
-def build_governance_audit_body() -> str:
+def build_governance_audit_body(*, epic: str | None = None, epic_hint: str = "") -> str:
     intro = (
-        "Recurring manual audit (suggested **quarterly**). Procedure: "
+        "Recurring manual audit (**optional backstop** — primary cadence is epic-completion "
+        "audit per [kanban-markdown/reference.md](../../.cursor/skills/kanban-markdown/"
+        "reference.md) § Epic audit). Procedure: "
         "[kanban-markdown/SKILL.md](../../.cursor/skills/kanban-markdown/SKILL.md) "
         "§ Periodic AGENTS.md governance audit. Matrix: "
         "[agent-triage/reference.md](../../.cursor/skills/agent-triage/reference.md) "
@@ -107,9 +110,16 @@ def build_governance_audit_body() -> str:
         "**Agent:** read-only compare — fill **## Audit findings** below; "
         "do **not** fix drift in this turn unless the user asks."
     )
+    epic_block = ""
+    if epic:
+        epic_block = (
+            f"\n\n**Epic context:** `{epic}` — run "
+            f"`python3 scripts/resolve_epic_cards.py --epic {epic} --status` before audit.\n"
+            f"{epic_hint}"
+        )
     return f"""# AGENTS.md governance audit
 
-{intro}
+{intro}{epic_block}
 
 ## Audit checklist
 
@@ -128,9 +138,31 @@ _(Agent fills drift bullets here after read-only compare.)_
 
 `Agent Workflow`
 
-## Label Paths
+## Product Paths
 
-{_LABEL_PATHS}
+{_PRODUCT_PATHS}
+
+## Product Methods
+
+- _TBD — agent fills at pre-implementation review._
+
+## Tests
+
+### Files
+
+- _TBD_
+
+### Methods
+
+- _TBD_
+
+### Verify (agent)
+
+- _TBD — `scripts/pre-commit-pytest.sh` on staged paths._
+
+## Docs
+
+- _TBD_
 """
 
 
@@ -139,9 +171,17 @@ def create_governance_audit_card(
     audit_date: date | None = None,
     features_dir: Path | None = None,
     force: bool = False,
+    epic: str | None = None,
 ) -> Path:
     features_dir = features_dir or DEFAULT_FEATURES_DIR
     features_dir.mkdir(parents=True, exist_ok=True)
+
+    epic_hint = ""
+    if epic:
+        from scripts.resolve_epic_cards import format_status_report, iter_epic_cards
+
+        report = iter_epic_cards(epic, features_dir=features_dir)
+        epic_hint = format_status_report(report).replace("\n", "\n> ")
 
     audit_date = audit_date or datetime.now(UTC).date()
     date_slug = audit_date.isoformat()
@@ -172,7 +212,8 @@ order: "{order}"
 ---
 """
 
-    path.write_text(frontmatter + build_governance_audit_body(), encoding="utf-8")
+    body = build_governance_audit_body(epic=epic, epic_hint=epic_hint)
+    path.write_text(frontmatter + body, encoding="utf-8")
     return path
 
 
@@ -196,6 +237,10 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Overwrite an existing card for the same date",
     )
+    parser.add_argument(
+        "--epic",
+        help="Include epic status hint in card body (resolve_epic_cards --status)",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -203,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
             audit_date=args.date,
             features_dir=args.features_dir,
             force=args.force,
+            epic=args.epic,
         )
     except FileExistsError as exc:
         print(f"create_governance_audit_card: {exc}", file=sys.stderr)

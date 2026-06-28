@@ -798,6 +798,7 @@ areas:
       - kanban-review-qa.mdc
       - kanban-commit-issue-cards.mdc
       - kanban-inquiry-cards.mdc
+      - kanban-plan-cards.mdc
       - kanban-agent-cards.mdc
       - kanban-prior-lessons-gate.mdc
       - agent-consistency.mdc
@@ -824,29 +825,65 @@ areas:
       - .cursor/rules/kanban-review-qa.mdc
       - .cursor/rules/kanban-commit-issue-cards.mdc
       - .cursor/rules/kanban-inquiry-cards.mdc
+      - .cursor/rules/kanban-plan-cards.mdc
       - .cursor/rules/kanban-agent-cards.mdc
       - .cursor/rules/kanban-prior-lessons-gate.mdc
       - scripts/resolve_prior_lessons.py
       - scripts/check_lessons_coverage.py
       - scripts/lessons_coverage_lib.py
+      - scripts/resolve_epic_cards.py
+      - scripts/resolve_archive_group.py
       - scripts/pre-commit-lessons-coverage.sh
       - scripts/build_lessons_index.py
+      - scripts/build_forward_feedback_index.py
+      - scripts/resolve_forward_feedback.py
       - scripts/resolve_feature_areas.py
+      - scripts/resolve_card_tests.py
+      - scripts/pre-commit-pytest.sh
+      - scripts/agent-commit-ready.sh
       - tests/test_resolve_prior_lessons.py
+      - tests/test_resolve_card_tests.py
       - tests/test_check_lessons_coverage.py
       - tests/test_build_lessons_index.py
+      - tests/test_build_forward_feedback_index.py
+      - tests/test_resolve_forward_feedback.py
       - docs/lessons-index.yaml
+      - docs/forward-feedback-index.yaml
+      - docs/governance/README.md
+      - docs/governance/overview.md
+      - docs/governance/kanban-workflow.md
+      - docs/governance/lessons-and-coverage.md
+      - docs/governance/forward-feedback.md
+      - docs/governance/feature-areas-parity.md
+      - docs/governance/audit-and-compaction.md
     handlers:
       - resolve_prior_lessons
       - find_done_lessons_strict
       - build_lessons_index
+      - build_forward_feedback_index
+      - resolve_forward_feedback
       - resolve_feature_areas
+      - extract_product_paths
+      - simulate_hook
       - check_lessons_coverage
+      - audit_application_coverage
+      - audit_application_coverage_per_card
       - audit_promotion_quality
       - audit_consumption_coverage
       - check_area_schema_parity
       - check_governance_parity
+      - check_handoff_duplication_pair
+      - audit_forward_feedback_gc5
+      - run_forward_feedback_audit
+      - run_forward_feedback_stale_audit
+      - aggregate_open_stats
       - check_lessons_coverage_drift
+      - resolve_epic_cards
+      - iter_epic_cards
+      - resolve_archive_group
+      - iter_archive_group_cards
+      - is_epic_closed
+      - validate_new_epic_name
       - report_governance_line_counts
       - format_line_count_report
       - collect_baseline_artifact_paths
@@ -860,28 +897,52 @@ areas:
       - extract_signatures
     docs:
       - docs/development.md
+      - docs/governance/README.md
+      - docs/governance/kanban-workflow.md
+      - docs/governance/lessons-and-coverage.md
+      - docs/governance/forward-feedback.md
+      - docs/governance/feature-areas-parity.md
+      - docs/governance/audit-and-compaction.md
     lesson_signatures:
       - precommit-stash-old-hooks
       - lessons-by-area-routing
       - feature-areas-lesson-pointers
       - kanban-prompt-ask-vs-agent
+      - kanban-card-scope-schema
+      - kanban-cursor-mode-gates
+      - precommit-pytest-scope-mismatch
       - artifacts-doc-yaml-normalize
       - precommit-ruff-staged-venv
       - governance-compact-baseline
       - lessons-coverage-c2-c3-audit
+      - lessons-coverage-c4-per-card-threshold
+      - governance-epic-completion-audit
+      - governance-archive-group-batch
+      - governance-epic-completion-summary
+      - governance-gc7-handoff-duplication-pair
+      - governance-gc7-forward-feedback-audit
       - lessons-coverage-ci-drift
       - card-done-forward-feedback
       - card-done-forward-feedback-top3-skipped
+      - forward-feedback-index
+      - forward-feedback-card-done-ingest
+      - forward-feedback-resolution-tracking
+      - forward-feedback-stale-metrics
       - governance-compact-classify-task-types
       - governance-area-schema-agents-table-sync
       - governance-compact-classify-ssot
       - governance-compact-kanban-rule-globs
+      - card-done-agent-move-qa-complete
+      - lessons-coverage-c1b-forward-feedback
       - governance-compact-self-eval-handoff
       - ruff-e501-line-length
       - precommit-no-card-on-manual-hook
       - lessons-index-inline-sig-backtick
+      - docs-governance-split
     lesson_docs:
       - docs/development.md
+      - docs/governance/README.md
+      - docs/governance/lessons-and-coverage.md
     agents_skill: agent-triage
     agents_rules:
       - agent-routing.mdc
@@ -894,6 +955,7 @@ areas:
       - kanban-review-qa.mdc
       - kanban-commit-issue-cards.mdc
       - kanban-inquiry-cards.mdc
+      - kanban-plan-cards.mdc
       - kanban-agent-cards.mdc
       - kanban-prior-lessons-gate.mdc
       - testing.mdc#precommit-stash-old-hooks

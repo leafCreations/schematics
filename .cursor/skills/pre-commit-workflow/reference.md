@@ -1,6 +1,6 @@
 # Pre-Commit Workflow — Reference
 
-Path→test selection and hook scope: [targeted-testing/reference.md](../targeted-testing/reference.md). Hook script source of truth: `scripts/pre-commit-pytest.sh`.
+Path→test selection and hook scope: [targeted-testing/reference.md](../targeted-testing/reference.md). Hook script source of truth: `scripts/pre-commit-pytest.sh`. Simulate hook selection for kanban **Product Paths**: `python3 scripts/resolve_card_tests.py --from-card CARD.md --files-only` (Signature: `precommit-pytest-scope-mismatch`). Before Review: `scripts/agent-commit-ready.sh`.
 
 Row schema (phase 1): [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §6f.
 
@@ -11,7 +11,7 @@ Area-specific hook and pytest mistakes. Promote from **`commit-issue`** cards on
 | Signature | Trigger snippet | Fix pattern | Skill | Rule |
 | --------- | --------------- | ----------- | ----- | ---- |
 | `precommit-stash-old-hooks` | commit failed, no `commit-issue` card; unstaged `scripts/pre-commit-*.sh` or `on_pre_commit_failure.sh` | Pre-commit stashes unstaged changes — old hook scripts run without capture. Stage all hook infra (`.pre-commit-config.yaml`, `scripts/pre-commit-*.sh`, `scripts/on_pre_commit_failure.sh`, `scripts/create_commit_issue_card.py`); run `pre-commit install` after wiring changes | pre-commit-workflow | testing.mdc |
-| `precommit-pytest-scope-mismatch` | narrow `pytest` green, commit fails on pytest hook | Re-run `scripts/pre-commit-pytest.sh` on staged paths — match hook scope, not a hand-picked file | pre-commit-workflow | testing.mdc |
+| `precommit-pytest-scope-mismatch` | narrow `pytest` green, commit fails on pytest hook | Draft **Tests → Files** with `python3 scripts/resolve_card_tests.py --from-card CARD.md --files-only`; re-run `scripts/pre-commit-pytest.sh` on staged paths — match hook scope, not a hand-picked file (Signature: ks3 `resolve_card_tests.py`) | pre-commit-workflow | testing.mdc |
 | `2d-stair-riser-runtime-cache-test` | `test_compile_texture_set_runtime_bakes_missing_sprite` — `assert 115 == 0` at void corner after riser ghost | Riser ghost makes complement semi-opaque — assert `STAIR_RISER_GHOST_ALPHA`, not `0`; grep `getpixel.*== 0` under `tests/` for `STAIRS` when changing `compose_stairs` / `stair_shapes`; include `test_sprite_baker_cache.py` in stair verify set (hook already maps `helpers/sprite_baker/*` → cache test) | targeted-testing | testing.mdc |
 | `precommit-ruff-dirty-after-fix` | ruff hook passed, commit still blocked / dirty tree | Hook re-staged fixed files — `git status`, `git add` any remaining, commit again | pre-commit-workflow | — |
 | `precommit-ruff-staged-venv` | ruff mass F405/UP031/SIM* in `site-packages` or `.tmp-venv/`; thousands of errors | Unstage venv; add `.tmp-venv/` to `.gitignore`; filter `.venv/`, `.tmp-venv/`, `site-packages/` in `pre-commit-ruff.sh`; `extend-exclude` in `pyproject.toml` | pre-commit-workflow | testing.mdc |
@@ -22,6 +22,9 @@ Area-specific hook and pytest mistakes. Promote from **`commit-issue`** cards on
 | `precommit-mainwindow-__new__-test` | `AttributeError: '_preview_panel'` in `test_main_window` using `MainWindow.__new__` | Guard optional widgets in `_clear_preview_session` (`getattr(self, "_preview_panel", None)`) or stub panel on test instance | pre-commit-workflow | testing.mdc |
 | `c4-attachable-partial-mesh-routing` | `test_orbit_attachable_mesh` fails; attachables render as 1×1 cubes; `ImportError: is_partial_volume_behavior` | Stage `orbit_attachable_mesh.py` with `orbit_partial_mesh.py` routing (`attachable_boxes_for_cell`, `is_orbit_box_behavior`, `is_partial_volume_behavior`) and matching `orbit_greedy_mesh.py` `solid_cells` / `partial_worlds` | ui-change | testing.mdc |
 | `governance-compact-kanban-rule-globs` | `test_run_checks_integration_pass` fails; `missing always-on rule kanban-card-gates.mdc` or missing scoped `kanban-*-cards.mdc` | In tmp_path fixture, write `KANBAN_ALWAYS_ON_RULE` with `alwaysApply: true` and each `KANBAN_CARD_TYPE_RULE_NAMES` entry with `.devtool/features/**` globs; include `REFERENCE_CLASSIFY_SNIPPET` in triage `reference.md` and monkeypatch `REFERENCE_CLASSIFY_FINGERPRINT` from snippet rows | pre-commit-workflow | testing.mdc |
+| `precommit-ruff-sim102-sim103` | ruff SIM102 nested `if`; SIM103 `return True`/`return False` tail | Combine nested filters with `and`; replace final `if cond: return True; return False` with `return cond` (or append `or cond` to prior chain) | pre-commit-workflow | testing.mdc |
+| `precommit-ruff-f811-duplicate-test` | ruff F811 `test_*` redefined in same module | Rename the earlier or narrower duplicate — keep the richer assertion under the descriptive name | pre-commit-workflow | testing.mdc |
+| `structure-fixture-voxel-count-drift` | residence/stage1 integration test fails on `len(boxes) == N` only; behavioral assert still passes | Re-count voxels from current YAML (`structures/.../stage.yaml`); update hardcoded `N` — do not weaken culling assertions | targeted-testing | testing.mdc |
 
 **Lookup:** on failure signals, [agent-triage/SKILL.md](../agent-triage/SKILL.md) §1b → grep **Signature** or **Trigger snippet** here before re-diagnosing. Cross-cutting patterns: [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns.
 

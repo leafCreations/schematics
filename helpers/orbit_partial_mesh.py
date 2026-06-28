@@ -35,6 +35,7 @@ class OrbitBox:
     min_corner: tuple[float, float, float]
     max_corner: tuple[float, float, float]
     role: str = "default"
+    bed_span: tuple[int, int] | None = None
 
 
 def build_orbit_partial_mesh_from_context(ctx: SchematicContext):

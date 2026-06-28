@@ -142,6 +142,17 @@ def _build_texture_key_candidates(
 
         texture_keys.append(base_token)
 
+    entry = get_block_entry(parsed) or {}
+    if entry.get("behavior") == "bed" and parsed.material:
+        default_color = entry.get("color_default") or "red"
+        if default_color != parsed.material:
+            if parsed.variant:
+                texture_keys.append(f"{parsed.token}:{default_color}#{parsed.variant}")
+            texture_keys.append(f"{parsed.token}:{default_color}")
+        if parsed.variant:
+            texture_keys.append(f"{parsed.token}#{parsed.variant}")
+        texture_keys.append(parsed.token)
+
     if raw_token in textures:
         texture_keys.append(raw_token)
 

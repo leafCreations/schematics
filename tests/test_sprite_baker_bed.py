@@ -26,10 +26,12 @@ def test_list_bed_bake_keys():
     assert "BED" in keys
     assert "BED#head" in keys
     assert "BED:red#head" in keys
+    assert "BED:blue#head" in keys
 
     inventory_keys = list_bed_bake_keys("inventory")
     assert "BED" in inventory_keys
     assert "BED:red" in inventory_keys
+    assert "BED:blue" in inventory_keys
 
 
 def test_compose_bed_uses_token_color():

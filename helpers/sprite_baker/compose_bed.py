@@ -4,7 +4,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from helpers.paths import ENTITY_BED_TEXTURES_FOLDER
+from helpers.block_picker import enumerate_token_materials
+from helpers.paths import ENTITY_BED_TEXTURES_FOLDER, resolve_entity_bed_textures_folder
 from helpers.registry_blocks import resolve_token_color
 from helpers.sprite_baker.bed_schematic import (
     compose_bed_inventory_schematic,
@@ -37,18 +38,23 @@ def is_bed_bake_key(key: str, *, view: TextureType = "top") -> bool:
     return entry is not None and is_bed_bakeable(entry)
 
 
-def list_bed_colors(*, bed_textures_dir: Path = ENTITY_BED_TEXTURES_FOLDER) -> list[str]:
-    if not bed_textures_dir.exists():
-        return ["red"]
+def list_bed_colors(*, bed_textures_dir: Path | None = None) -> list[str]:
+    resolved_dir = bed_textures_dir or resolve_entity_bed_textures_folder()
+    colors: set[str] = set(enumerate_token_materials("minecraft:{color}_bed"))
 
-    colors = sorted(path.stem for path in bed_textures_dir.glob("*.png"))
-    return colors or ["red"]
+    if resolved_dir.is_dir():
+        colors.update(path.stem for path in resolved_dir.glob("*.png"))
+
+    if not colors:
+        colors.add("red")
+
+    return sorted(colors)
 
 
 def list_bed_bake_keys(
     view: TextureType = "top",
     *,
-    bed_textures_dir: Path = ENTITY_BED_TEXTURES_FOLDER,
+    bed_textures_dir: Path | None = None,
 ) -> list[str]:
     from registries.loader import build_registry_texture_mapping
 
@@ -89,17 +95,37 @@ def resolve_bed_color_from_key(key: str, entry: BlockRegistryEntry) -> str:
     return resolve_token_color(entry, parsed)
 
 
+def _bed_atlas_color_candidates(
+    color: str,
+    entry: BlockRegistryEntry,
+) -> list[str]:
+    candidates: list[str] = [color]
+    default_color = entry.get("color_default")
+
+    if default_color and default_color not in candidates:
+        candidates.append(default_color)
+
+    if "red" not in candidates:
+        candidates.append("red")
+
+    return candidates
+
+
 def _load_bed_atlas(
     color: str,
+    entry: BlockRegistryEntry,
     *,
-    bed_textures_dir: Path = ENTITY_BED_TEXTURES_FOLDER,
+    bed_textures_dir: Path | None = None,
 ) -> Image.Image:
-    atlas_path = bed_textures_dir / f"{color}.png"
+    resolved_dir = bed_textures_dir or resolve_entity_bed_textures_folder()
 
-    if not atlas_path.exists():
-        raise SpriteBakeError(f"Bed entity texture not found: {atlas_path}")
+    for candidate in _bed_atlas_color_candidates(color, entry):
+        atlas_path = resolved_dir / f"{candidate}.png"
 
-    return Image.open(atlas_path).convert("RGBA")
+        if atlas_path.exists():
+            return Image.open(atlas_path).convert("RGBA")
+
+    raise SpriteBakeError(f"Bed entity texture not found for color {color!r} under {resolved_dir}")
 
 
 def compose_bed(
@@ -108,7 +134,7 @@ def compose_bed(
     view: TextureType | str,
     size: int,
     textures_dir: Path,
-    bed_textures_dir: Path = ENTITY_BED_TEXTURES_FOLDER,
+    bed_textures_dir: Path | None = None,
 ) -> Image.Image:
     del textures_dir  # Beds bake from entity/bed atlases, not block textures.
 
@@ -124,7 +150,7 @@ def compose_bed(
 
     color = resolve_bed_color_from_key(key, entry)
     part = resolve_bed_part(parsed.variant, entry)
-    atlas = _load_bed_atlas(color, bed_textures_dir=bed_textures_dir)
+    atlas = _load_bed_atlas(color, entry, bed_textures_dir=bed_textures_dir)
 
     if view == "inventory":
         return compose_bed_inventory_schematic(atlas=atlas, size=size)

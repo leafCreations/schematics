@@ -2,6 +2,10 @@
 # Pre-commit hook: run pytest only for tests related to staged changes.
 # Falls back to the full suite when core wiring changes or coverage is too broad.
 #
+# Simulate selection without running pytest (used by scripts/resolve_card_tests.py):
+#   PRE_COMMIT_PYTEST_LIST_ONLY=1 PRE_COMMIT_PYTEST_PATHS=$'helpers/sprite_baker/foo.py' \
+#     scripts/pre-commit-pytest.sh
+#
 # Skip re-running pytest when tests already passed for the same staged files:
 #   scripts/record-pytest-pass.sh   # after a green pytest run
 #   SKIP_PRECOMMIT_PYTEST=1 git commit ...   # explicit override (agent use)
@@ -9,6 +13,8 @@ set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
+
+LIST_ONLY="${PRE_COMMIT_PYTEST_LIST_ONLY:-0}"
 
 STAGED_HASH="$(
   git diff --cached --name-only --diff-filter=ACM | LC_ALL=C sort | sha256sum | cut -d' ' -f1
@@ -44,6 +50,12 @@ else
 fi
 
 _run_pytest() {
+  if [[ "$LIST_ONLY" == "1" ]]; then
+    if ((${#@})); then
+      echo "pre-commit pytest: ${#@} file(s) — $*"
+    fi
+    return 0
+  fi
   local log
   log="$(mktemp)"
   if ! "$PYTEST" -q "$@" 2>&1 | tee "$log"; then
@@ -57,6 +69,10 @@ _run_pytest() {
 }
 
 mapfile -t STAGED < <(git diff --cached --name-only --diff-filter=ACM)
+
+if [[ -n "${PRE_COMMIT_PYTEST_PATHS:-}" ]]; then
+  mapfile -t STAGED < <(printf '%s\n' "$PRE_COMMIT_PYTEST_PATHS" | sed '/^$/d')
+fi
 
 if ((${#STAGED[@]} == 0)); then
   exit 0
@@ -279,6 +295,11 @@ for file in "${STAGED[@]}"; do
       add tests/test_resolve_prior_lessons.py tests/test_check_lessons_coverage.py tests/test_build_lessons_index.py
       ;;
 
+    scripts/resolve_card_tests.py)
+      CODE_TOUCHED=1
+      add tests/test_resolve_card_tests.py
+      ;;
+
     scripts/bake_sprites.py | scripts/generate_catalog.py | scripts/prune_minecraft_assets.py | scripts/migrate_project_assets.py | scripts/dedupe_minecraft_assets.py)
       CODE_TOUCHED=1
       add_glob "tests/test_sprite_baker_*.py"
@@ -294,12 +315,18 @@ done
 
 if ((RUN_FULL)); then
   echo "pre-commit pytest: full suite (core or global change detected)"
+  if [[ "$LIST_ONLY" == "1" ]]; then
+    exit 0
+  fi
   _run_pytest || exit 1
   exit 0
 fi
 
 if ((${#TESTS[@]} > MAX_TARGETED)); then
   echo "pre-commit pytest: full suite (${#TESTS[@]} targeted files > ${MAX_TARGETED})"
+  if [[ "$LIST_ONLY" == "1" ]]; then
+    exit 0
+  fi
   _run_pytest || exit 1
   exit 0
 fi
@@ -307,6 +334,9 @@ fi
 if ((${#TESTS[@]} == 0)); then
   if ((CODE_TOUCHED)); then
     echo "pre-commit pytest: full suite (unmapped code changes)"
+    if [[ "$LIST_ONLY" == "1" ]]; then
+      exit 0
+    fi
     _run_pytest || exit 1
     exit 0
   fi

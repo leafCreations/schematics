@@ -54,6 +54,14 @@ Baked files use sanitized keys:
 
 * `STAIRS:oak#outer_left` → `assets/project/generated/top/STAIRS_oak_outer_left.png`
 * `DOOR:oak` (inventory) → `assets/project/generated/inventory/DOOR_oak.png`
+* `BED:blue#head` → `assets/project/generated/top/BED_blue_head.png`
+
+### Bed bake keys
+
+`helpers/sprite_baker/compose_bed.list_bed_bake_keys()` emits `BED:{color}#head|foot` for every catalog
+bed color (`minecraft:{color}_bed`), not only colors with PNGs under `textures/entity/bed/`. Entity atlases
+resolve via `resolve_entity_bed_textures_folder()` (active tree, then `assets/versions/26_1_2/…`). When a
+color atlas is missing, baking falls back to registry `color_default` (`red`) before failing.
 
 ## Runtime baking
 

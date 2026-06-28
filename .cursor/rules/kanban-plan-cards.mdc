@@ -1,0 +1,80 @@
+---
+description: Kanban plan cards — Plan Mode gate, Recommendation after approval, spawn follow-ups
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban plan cards
+
+When a feature file has frontmatter `labels` including **`plan`** (case-insensitive), follow
+[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Plan cards and
+[reference.md § Plan cards](../skills/kanban-markdown/reference.md#plan-cards).
+Signature: `kanban-cursor-mode-gates`.
+
+## User provides
+
+- `## Description` (required) — problem or roadmap question
+- `## Feature Areas` (optional)
+
+## Agent provides
+
+- `## Recommendation` — **on card only after** `plan approved` / `approved` / `update …` / rare
+  `plan and update` (not during **`Plan @card`** — that phase is chat-only in **Plan Mode**)
+- `## Product Paths` / **Product Methods** — optional when Feature Areas set or when spawning
+- `## Spawned …` tables — after user asks to spawn follow-up cards
+
+**Do not** use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on plan cards.
+
+## Cursor mode gate
+
+**`Plan @card`** requires **Plan Mode**. Research and structured plan output stay **in chat** until
+the user approves. Wrong Cursor mode → **stop**; instruct user to switch to Plan Mode and retry.
+
+Canonical matrix: [reference.md § Cursor mode gates](../skills/kanban-markdown/reference.md#cursor-mode-gates-plan--inquire--verbs).
+
+## Workflow
+
+1. Confirm **Description** present
+2. Resolve **Feature Areas** → **Product** scope when areas are set (optional pre-spawn)
+3. `todo` → `in-progress` → **`Plan @card`** (Plan Mode) — discuss roadmap in chat; **no** card edits
+4. User approves → **`update @plan-card`** / `plan approved` / `approved` (Agent) → write
+   **Recommendation** on card → `review`
+5. User asks to spawn → create **todo** child cards (`feature` / `bug` / `agent` / `inquiry` / `plan`)
+   with epic + review-ready sections; link from **`## Spawned feature cards`** (same table pattern
+   as inquiry)
+6. User or agent moves plan → `done` when satisfied — **no** Card Done lessons or forward feedback
+
+**Rare:** `plan and update @plan-card` — Plan Mode exploration + **Recommendation** same turn
+(reference § Cursor mode gates).
+
+## Spawn follow-ups
+
+When the user requests implementation of plan recommendations, spawn **todo** child cards per
+[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Spawn from inquiry (same table
+pattern):
+
+- `status: "todo"`, appropriate `labels`, `epic: "{EpicName}"`
+- Body: type-appropriate sections (**Decisions** / **Corrective Action** / **Response** / **Recommendation**
+  per label — not on parent plan card)
+- Parent plan: **`## Spawned feature cards`** table + bump `modified`
+- Example: plan `render-bed-2026-06-27` → epic `OrbitFunctionalFaceTextures` bug a0/a1 — reference
+  § Spawn from plan (OrbitFunctionalFaceTextures example)
+
+Do **not** start implementation on spawned cards until user assigns work.
+
+## Card Done
+
+**Do not** run lessons learned or forward feedback when closing a **plan** card. Plan **Done** =
+move to `done/` only ([kanban-card-gates.mdc](kanban-card-gates.mdc) §4).
+
+## Do not
+
+- Write **Recommendation** during **`Plan @card`** without approval path
+- Implement application code on the plan card — spawn **feature** / **bug** / **agent** cards instead
+- Use **Response** (inquiry section) on plan cards
+- Spawn cards in **Backlog** — always **todo**
+
+## Full workflow
+
+See `.cursor/skills/kanban-markdown/reference.md` § Plan cards for template and example
+**Recommendation**.

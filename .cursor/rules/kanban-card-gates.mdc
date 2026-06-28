@@ -5,36 +5,54 @@ alwaysApply: true
 
 # Kanban card gates
 
-Hard stops before **edits** (governance, card body, product code). Read [agent-routing.mdc](agent-routing.mdc) and [AGENTS.md](../../AGENTS.md) § Classify quickly. Signature: `kanban-prompt-ask-vs-agent`.
+Hard stops before **edits** (governance, card body, product code). Read [agent-routing.mdc](agent-routing.mdc) and [AGENTS.md](../../AGENTS.md) § Classify quickly. Signatures: `kanban-prompt-ask-vs-agent`, `kanban-cursor-mode-gates`.
+
+**Cursor mode:** infer Ask / Plan / Agent from session context; **stop** on mismatch for **`Plan @card`**
+or **`Inquire @card`**. Full matrix: [reference.md § Cursor mode gates](../skills/kanban-markdown/reference.md#cursor-mode-gates-plan--inquire--verbs).
 
 ## 1. Kanban card required (product work)
 
-**Do not** edit application code or ship product fixes unless the user assigned a **kanban card** under `.devtool/features/` **and** used an **agent verb** (§2).
+**Do not** edit application code or ship product fixes unless the user assigned a **kanban card** under
+`.devtool/features/` **and** used an **agent verb** (§2).
 
 | User prompt | Mode | Allowed |
 | ----------- | ---- | ------- |
 | Question, explain, audit | **Ask-only** | Read-only |
 | Fix / implement / refactor **without** naming a card | **Ask-only** | Stop — kanban card required |
 | Names a card but **review-only** verb (§2) | **Ask-only** | Read card + codebase; chat only |
+| **`Plan @card`** / **`Inquire @card`** alone | **Plan** / **Ask** | Chat only — **no** product code; spawn **feature** / **agent** for implementation |
 
 **No surgical / ad-hoc product implementation** without a card + agent verb.
 
 ## 2. Prompt verb gate (card named)
 
-Classify the user message **before** editing any file. Case-insensitive; `@path` or `.devtool/features/…` counts as naming a card.
+Classify the user message **before** editing any file. Case-insensitive; `@path` or
+`.devtool/features/…` counts as naming a card.
 
-| Intent | Example prompts | Mode | Edits |
-| ------ | --------------- | ---- | ----- |
-| **Review card** | `review @…`, `review foo-2026-06-25`, `Kanban: review …` | **Ask-only** | Read + report in chat — **no** file edits |
-| **Bare card attach** | `@.devtool/features/foo.md` only | **Ask-only** | Summarize card — no edits until agent verb |
-| **Review + update** | `review and update …`, `review and implement …` | **Agent** | Card + governance (+ product per card type) |
-| **Update card** | `update … card` | **Agent** | Card `.md` + scoped work |
+| Intent | Example prompts | Cursor mode | Edits |
+| ------ | --------------- | ----------- | ----- |
+| **Review card** | `review @…`, `review foo-2026-06-25`, `Kanban: review …` | Any | Read + report in chat — **never** edit card |
+| **Bare card attach** | `@.devtool/features/foo.md` only | Any | Summarize — no edits until agent verb |
+| **Inquire** | `Inquire @card`, `Inquire …` | **Ask** | Chat research only — **no** card file edits |
+| **Plan** | `Plan @card`, `Plan …` | **Plan** | Chat plan/roadmap only — **no** card file edits |
+| **Update card** | `update …`, `update @card` | **Agent** | Card `.md` (+ scoped work per label) |
+| **Plan approved** | `plan approved`, `approved`, `plan … approved` | **Agent** | **`plan`** card — write **Recommendation** |
+| **Review + update** | `review and update …`, `review and implement …` | **Agent** | Rare — research + card write same turn |
+| **Plan + update** | `plan and update …` | **Agent** | Rare — Plan exploration + **Recommendation** same turn |
 | **Spawn from card** | `spawn cards from …`, `spawn follow-up` | **Agent** | New **todo** cards |
 | **Implement card** | `implement …`, `work on …`, `continue …` | **Agent** | Full card lifecycle |
-| **Answer inquiry** | `Kanban: answer inquiry on …` | **Agent** | **Response** on inquiry card |
-| **No card / default** | anything else | **Ask-only** | Per §1 |
+| **Card Done** | `Done`, `QA complete`, `QA Approved`, `QA Accepted`, `QA-complete`, `Review passed`, `mark … Done`, `close the card` (card named) | **Agent** | Move to `done/` + Card Done same turn — [kanban-markdown/reference.md](../skills/kanban-markdown/reference.md) § QA-complete triggers; Signature: `card-done-agent-move-qa-complete` |
+| **Epic audit** | `epic complete`, `run epic audit`, `close epic {Name}`, … | **Agent** | Anchor + § Epic audit — parity, lessons, `docs/epics-closed.yaml`; chat **`### Epic summary`** — Signatures: `governance-epic-completion-audit`, `governance-epic-completion-summary`. **Does not** move cards to `archived/` — follow with **`archive group {Name} complete`** (single-epic groups may reuse epic name, e.g. `DocsGovernanceSplit`) |
+| **Archive group batch** | `archive group complete`, `archive group {Name}`, … | **Agent** | Anchor + § Archive group — batch `done/` → `archived/`; chat **`### Initiative summary`** — Signatures: `governance-archive-group-batch`, `governance-epic-completion-summary`. **Not** on Card Done |
+| **Legacy inquiry** | `Kanban: answer inquiry on …` | **Ask** then **Agent** | **Deprecated** — treat as **`Inquire`** (Ask, chat); user then **`update @inquiry-card`** (Agent) for **Response** — not same-turn card write |
+| **No card / default** | anything else | Per §1 | Per §1 |
 
-**Upgrade:** if ask-only review finds work needed, tell the user to retry with `review and update`, `update`, `spawn`, or `implement`.
+**Card-update allowlist:** edit kanban card markdown only when prompt includes `update …`,
+`plan approved`, `approved`, `plan … approved`, or rare compounds above — not on bare `@path`,
+`review …`, `Inquire …`, or `Plan …` alone.
+
+**Upgrade:** if ask-only review finds work needed, tell the user to retry with `review and update`,
+`update`, `plan approved`, `spawn`, or `implement`.
 
 ## 3. Frontmatter label required
 
@@ -46,15 +64,21 @@ Every kanban card **must** have a recognized type in frontmatter `labels` (inlin
 | `["bug"]` | Bug | **Required** — [kanban-bug-cards.mdc](kanban-bug-cards.mdc) |
 | `["agent"]` | Agent | **Required** — [kanban-agent-cards.mdc](kanban-agent-cards.mdc) |
 | `["inquiry"]` | Inquiry | **Not allowed** — [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) |
+| `["plan"]` | Plan | **Not allowed** — [kanban-plan-cards.mdc](kanban-plan-cards.mdc) |
 | `["commit-issue"]` | Commit-issue | **Required** — [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) |
 
 **Invalid** — stop **all** work on that card: missing `labels`, `labels: []`, or unknown label.
 
+**Active cards (feature/bug/agent/commit-issue):** agent completes **Product**, **Tests**, and **Docs**
+before **Review**; **Tests → Verify (agent)** cites `scripts/pre-commit-pytest.sh` — draft **Tests →
+Files** via `scripts/resolve_card_tests.py` (Signature: `precommit-pytest-scope-mismatch`,
+`kanban-card-scope-schema`). Scoped `kanban-*-cards.mdc` hold detail.
+
 ## 4. Lessons learned scope
 
-| Label | User says **Done** |
-| ----- | ------------------ |
-| `feature`, `bug`, `agent`, `commit-issue` | Run § Card Done — lessons + forward feedback ([kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); Signature: `card-done-forward-feedback`) |
-| `inquiry` | **Do not** run lessons capture **or** forward feedback |
+| Label | User says **Done** / **QA-complete** |
+| ----- | ------------------------------------ |
+| `feature`, `bug`, `agent`, `commit-issue` | Agent moves to `done/` + § Card Done — lessons + forward feedback ([kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); Signature: `card-done-forward-feedback`; move: `card-done-agent-move-qa-complete`) |
+| `inquiry`, `plan` | Agent or user may move — **do not** run lessons capture **or** forward feedback |
 
-Signature: `kanban-lessons-label-scope`. Forward feedback skip on inquiry: `card-done-forward-feedback`.
+Signature: `kanban-lessons-label-scope`. Forward feedback skip on inquiry/plan: `card-done-forward-feedback`.

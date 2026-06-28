@@ -49,6 +49,7 @@ def compose_chest_side_schematic(
     part: str,
     size: int,
     chest_textures_dir: Path,
+    include_latch: bool = True,
 ) -> Image.Image:
     atlas_name = PART_ATLAS_FILES.get(part)
 
@@ -63,14 +64,15 @@ def compose_chest_side_schematic(
     atlas = Image.open(atlas_path).convert("RGBA")
     lid = LID_FRONT.crop(atlas)
     base = BASE_FRONT.crop(atlas)
-    latch = LATCH.crop(atlas)
 
     face = Image.new("RGBA", (lid.width, lid.height + base.height), (0, 0, 0, 0))
     face.paste(base, (0, lid.height))
     face.paste(lid, (0, 0))
 
-    latch_x = (face.width - latch.width) // 2
-    latch_y = lid.height - 2
-    face.paste(latch, (latch_x, latch_y), latch)
+    if include_latch:
+        latch = LATCH.crop(atlas)
+        latch_x = (face.width - latch.width) // 2
+        latch_y = lid.height - 2
+        face.paste(latch, (latch_x, latch_y), latch)
 
     return fit_template_to_cell(face, size)

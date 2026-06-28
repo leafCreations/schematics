@@ -18,19 +18,25 @@ labels: ["feature"]
 
 ## User provides
 
-- Story / summary, **`## Feature Areas`**, **`## Acceptance Criteria`** (or agent drafts at review)
+- Story / summary, **`## Feature Areas`**, **`## Acceptance Criteria`** (behavior draft or agent completes)
 - **`## Verify`** (optional — manual app checks)
 
 ## Agent provides (pre-implementation card review)
 
-- **`## Label Paths`** — resolved from Feature Areas via `docs/feature-areas.yaml`
-- **`## Label Methods`** — symbols to edit (when Feature Areas set)
+- **`## Product Paths`** — product code from Feature Areas via `docs/feature-areas.yaml` (no `tests/`)
+- **`## Product Methods`** — symbols to edit (when Feature Areas set)
+- **`## Tests`** — **Files**, **Methods**, **Verify (agent)** — see [reference.md § Tests](../skills/kanban-markdown/reference.md#tests)
+- **`## Docs`** — doc paths + § hints from area `docs:`
 - **`## Decisions`** — concrete plan before `in-progress`
-- **`## Acceptance Criteria`** — testable bullets `[ ]` when missing
+- **`## Acceptance Criteria`** — behavior-only bullets `[ ]` when missing (no pytest paths or `test_*`)
+
+**Legacy alias:** cards under `done/` / `archived/` may use **Label Paths** / **Label Methods** — parsers
+read as Product (Signature: `kanban-card-scope-schema`).
 
 ## Card Done — lessons learned (mandatory)
 
-When the user says the card is **Done** (user moves file to `done/`):
+When the user signals **QA-complete / Done**, the **agent** moves the card to `done/` and runs
+Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`):
 
 1. Run [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
 2. Update **≥1 skill** + **≥1 rule** + relevant **`docs/`** / registry.
@@ -45,20 +51,25 @@ When the user says the card is **Done** (user moves file to `done/`):
 ## Workflow
 
 1. Confirm **`labels: ["feature"]`** and user story / Feature Areas present
-2. Resolve Feature Areas → Label Paths + Label Methods
+2. Resolve Feature Areas → **Product Paths** + **Product Methods** + **Tests** + **Docs**
 3. Prior lessons gate → refresh **Context** / **Decisions** card links (`archived/` / `done/`; mark closed deps) → **Decisions** → `todo` → `in-progress` → implement
-4. Staged pytests green; `docs/feature-areas.yaml` + `docs/` updated
+4. **Tests** complete — draft **Tests → Files** from Product Paths via
+   `python3 scripts/resolve_card_tests.py --from-card CARD.md --files-only`; stage paths;
+   `scripts/pre-commit-pytest.sh` or `scripts/agent-commit-ready.sh` green; cross-check card **Tests →
+   Files** vs hook output (Signature: `precommit-pytest-scope-mismatch`); `docs/feature-areas.yaml` +
+   card **Docs** paths updated per [docs-maintenance](../skills/docs-maintenance/SKILL.md)
 5. Mark AC `[x]` → `review` → user Verify / QA
-6. User **Done** → lessons learned (not optional)
+6. User **QA-complete / Done** → agent moves to `done/` + lessons learned (not optional)
 
 ## Do not
 
 - Use **`## Corrective Action`** or **`## Response`** on feature cards
 - Implement without an assigned kanban card ([agent-routing.mdc](agent-routing.mdc))
 - Leave **`## Decisions`** as `TBD` before `in-progress`
-- Skip **Label Methods** when Feature Areas are set
+- Skip **Product Methods** / **Tests** / **Docs** when Feature Areas are set — complete before **Review**
+- Put pytest commands or `test_*` names in **Acceptance Criteria** — use **Tests**
 - **Superseded GovernanceDriftAlert siblings** — when fix landed on a parent `done/` card (same `_SCHEMA_INTERNAL_PATHS` / shared root cause), update sibling with **Decisions** `Superseded` + link, AC `[x]`, `review`; close without re-implementing — cite parent **Lessons captured** (kanban-markdown reference § Card Done artifact table)
-- **Parity spawn (GovernanceDriftAlert)** — `check_governance_parity.py` must create **Label Methods**, **Decisions**, **Acceptance Criteria** placeholders — not **Corrective Action**; kanban-markdown reference § Drift spawn card skeleton
+- **Parity spawn (GovernanceDriftAlert)** — `check_governance_parity.py` must create **Product Methods**, **Tests**, **Docs**, **Decisions**, **Acceptance Criteria** placeholders — not **Corrective Action**; kanban-markdown reference § Drift spawn card skeleton
 
 ## Full workflow
 

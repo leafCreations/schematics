@@ -62,7 +62,12 @@ After pruning, each Minecraft resource extract contains only:
 | `textures/block/` | Schematic rendering and palette validation |
 | `textures/item/` | Campfire brush preview, some inventory icons |
 | `textures/entity/bed/` | Bed sprite baking (26.1 entity-atlas path) |
-| `textures/entity/chest/` | Chest sprite baking |
+| `textures/entity/chest/` | Chest entity atlases (64×64 unwrap) — source for 2D schematic and orbit attachable bakes |
+
+When `assets/minecraft/textures/entity/bed/` is absent after dedupe, bed baking resolves atlases from
+`assets/versions/26_1_2/textures/entity/bed/` via `helpers.paths.resolve_entity_bed_textures_folder()`.
+Chest entity atlases resolve similarly via `resolve_entity_chest_textures_folder()` for
+`compose_chest` / `compose_chest_side_schematic` orbit attachable faces.
 
 Project-owned paths live under `assets/project/`:
 

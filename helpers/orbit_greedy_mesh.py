@@ -10,6 +10,7 @@ from helpers.grid import get_offset_x, get_offset_z
 from helpers.layer_groups import is_layer_render_visible
 from helpers.layer_management import layer_worldgen_index
 from helpers.orbit_attachable_mesh import (
+    bed_foot_token,
     is_block_model_face_behavior,
     resolve_attachable_block_model,
 )
@@ -429,24 +430,26 @@ def _collect_partial_box_faces(
             ):
                 continue
 
-            corners = _box_face_corners(box, face_pass.normal)
-            merge_id = _register_face_signature(
-                box.cell,
-                face_pass.normal,
-                layer_cells_cache,
-                topdown_textures,
-                sideview_textures,
-                atlas,
-                merge_id_to_atlas,
-                signature_to_merge_id,
-            )
-            pending_quads.append(
-                _PendingQuad(
-                    normal=face_pass.normal,
-                    corners=corners,
-                    atlas_id=merge_id_to_atlas[merge_id],
-                ),
-            )
+            face_parts = _iter_bed_face_parts(box, face_pass.normal)
+            for texture_token, corners in face_parts:
+                merge_id = _register_face_signature(
+                    box.cell,
+                    face_pass.normal,
+                    layer_cells_cache,
+                    topdown_textures,
+                    sideview_textures,
+                    atlas,
+                    merge_id_to_atlas,
+                    signature_to_merge_id,
+                    texture_token=texture_token,
+                )
+                pending_quads.append(
+                    _PendingQuad(
+                        normal=face_pass.normal,
+                        corners=corners,
+                        atlas_id=merge_id_to_atlas[merge_id],
+                    ),
+                )
 
 
 def _collect_block_model_element_faces(
@@ -633,6 +636,112 @@ def _solid_face_visible(
     return neighbor_cell.token != cell.token
 
 
+def _bed_subbox(
+    box: OrbitBox,
+    *,
+    min_x: float | None = None,
+    max_x: float | None = None,
+    min_z: float | None = None,
+    max_z: float | None = None,
+) -> OrbitBox:
+    bx_min_x, bx_min_y, bx_min_z = box.min_corner
+    bx_max_x, bx_max_y, bx_max_z = box.max_corner
+    return OrbitBox(
+        cell=box.cell,
+        min_corner=(
+            bx_min_x if min_x is None else min_x,
+            bx_min_y,
+            bx_min_z if min_z is None else min_z,
+        ),
+        max_corner=(
+            bx_max_x if max_x is None else max_x,
+            bx_max_y,
+            bx_max_z if max_z is None else max_z,
+        ),
+        role=box.role,
+        bed_span=box.bed_span,
+    )
+
+
+def _bed_end_cap_token(
+    head_token: str,
+    foot_token: str,
+    span: tuple[int, int],
+    normal: tuple[int, int, int],
+) -> str:
+    dx, dz = span
+    if dz != 0 and normal[2] != 0:
+        if normal[2] < 0:
+            return head_token if dz > 0 else foot_token
+        return foot_token if dz > 0 else head_token
+    if dx != 0 and normal[0] != 0:
+        if normal[0] < 0:
+            return head_token if dx > 0 else foot_token
+        return foot_token if dx > 0 else head_token
+    return head_token
+
+
+def _bed_split_along_span(
+    box: OrbitBox,
+    normal: tuple[int, int, int],
+    span: tuple[int, int],
+    head_token: str,
+    foot_token: str,
+) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
+    dx, dz = span
+    min_x, _, min_z = box.min_corner
+    max_x, _, max_z = box.max_corner
+
+    if dz != 0:
+        mid_z = (min_z + max_z) / 2.0
+        if dz > 0:
+            head_box = _bed_subbox(box, max_z=mid_z)
+            foot_box = _bed_subbox(box, min_z=mid_z)
+        else:
+            head_box = _bed_subbox(box, min_z=mid_z)
+            foot_box = _bed_subbox(box, max_z=mid_z)
+        return [
+            (head_token, _box_face_corners(head_box, normal)),
+            (foot_token, _box_face_corners(foot_box, normal)),
+        ]
+
+    mid_x = (min_x + max_x) / 2.0
+    if dx > 0:
+        head_box = _bed_subbox(box, max_x=mid_x)
+        foot_box = _bed_subbox(box, min_x=mid_x)
+    else:
+        head_box = _bed_subbox(box, min_x=mid_x)
+        foot_box = _bed_subbox(box, max_x=mid_x)
+    return [
+        (head_token, _box_face_corners(head_box, normal)),
+        (foot_token, _box_face_corners(foot_box, normal)),
+    ]
+
+
+def _iter_bed_face_parts(
+    box: OrbitBox,
+    normal: tuple[int, int, int],
+) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
+    if box.role != "bed" or box.bed_span is None:
+        return [(box.cell.token, _box_face_corners(box, normal))]
+
+    head_token = box.cell.token
+    foot_token = bed_foot_token(head_token)
+    dx, dz = box.bed_span
+
+    if normal[1] != 0:
+        return _bed_split_along_span(box, normal, box.bed_span, head_token, foot_token)
+
+    if dz != 0 and normal[0] != 0:
+        return _bed_split_along_span(box, normal, box.bed_span, head_token, foot_token)
+
+    if dx != 0 and normal[2] != 0:
+        return _bed_split_along_span(box, normal, box.bed_span, head_token, foot_token)
+
+    token = _bed_end_cap_token(head_token, foot_token, box.bed_span, normal)
+    return [(token, _box_face_corners(box, normal))]
+
+
 def _register_face_signature(
     cell: OccupiedVoxel,
     normal: tuple[int, int, int],
@@ -642,10 +751,13 @@ def _register_face_signature(
     atlas: OrbitTextureAtlas,
     merge_id_to_atlas: list[int],
     signature_to_merge_id: dict[str, int],
+    *,
+    texture_token: str | None = None,
 ) -> int:
     face_kind = orbit_face_kind_for_normal(normal)
     side_facing = side_facing_for_normal(normal)
-    signature = texture_signature(cell.token, face_kind, side_facing=side_facing)
+    raw_token = texture_token or cell.token
+    signature = texture_signature(raw_token, face_kind, side_facing=side_facing)
 
     existing = signature_to_merge_id.get(signature)
     if existing is not None:
@@ -656,12 +768,12 @@ def _register_face_signature(
         topdown_textures,
         sideview_textures,
     )
-    fallback = _token_color(cell.token)
+    fallback = _token_color(raw_token)
     image = None
     if textures:
         layer_cells = layer_cells_cache.get(cell.layer_list_index, [])
         image = resolve_orbit_face_texture(
-            cell.token,
+            raw_token,
             textures,
             face_kind=face_kind,
             side_facing=side_facing,

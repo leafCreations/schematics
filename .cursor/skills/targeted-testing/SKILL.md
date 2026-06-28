@@ -41,23 +41,62 @@ Use `git diff --name-only` (staged or working tree) or the files you just edited
 | 1 | [reference.md](reference.md) quick table |
 | 2 | `scripts/pre-commit-pytest.sh` `case` branches (source of truth) |
 | 3 | Convention: `helpers/foo.py` → `tests/test_foo.py` if it exists |
-| 4 | Kanban card **`## Label Methods`** — test function names listed there |
+| 4 | Kanban card **`## Tests`** — **Files** and **Methods**; **`## Product Methods`** for code symbols |
 | 5 | [repo-map](../repo-map/SKILL.md) entry points |
 
 **Docs-only** (`docs/**`) with no code changes → **no pytest**.
 
+**Before Review (mandatory — Signature: `precommit-pytest-scope-mismatch`):**
+
+1. Draft **Tests → Files** from **Product Paths** (not only the test adjacent to your edit):
+
+   ```bash
+   python3 scripts/resolve_card_tests.py --from-card .devtool/features/your-card.md --files-only
+   # or: python3 scripts/resolve_card_tests.py helpers/sprite_baker/foo.py --files-only
+   ```
+
+   Hook SSOT: `scripts/pre-commit-pytest.sh` `case` branches — the helper simulates them via
+   `PRE_COMMIT_PYTEST_LIST_ONLY=1`.
+
+2. Stage intended commit paths; run **`scripts/pre-commit-pytest.sh`** (same as commit hook) or
+   **`scripts/agent-commit-ready.sh`** (ruff → palettes → pytest on staged files).
+
+3. Cross-check card **Tests → Files** against hook output for targeted runs; **Tests → Verify (agent)**
+   must cite `scripts/pre-commit-pytest.sh`. When hook says **full suite**, **Verify** cites
+   `.venv/bin/pytest -q`.
+
+4. Optional behavior invariants (e.g. grep `STAIRS` + `== 0` after compositor changes) belong in
+   **Tests**, not **Acceptance Criteria** — Signature: `2d-stair-riser-runtime-cache-test`.
+
 **Test file edited** → run **that file** (and only add related files if the test imports shared fixtures you changed).
 
-**Lessons coverage audit (lc1):** after edits under `scripts/check_lessons_coverage.py`,
+**Lessons coverage audit (lc1 / lc4c / lc4b):** after edits under `scripts/check_lessons_coverage.py`,
 `scripts/lessons_coverage_lib.py`, or `scripts/resolve_prior_lessons.py`:
 
 ```bash
-.venv/bin/pytest tests/test_check_lessons_coverage.py tests/test_resolve_prior_lessons.py -q
+.venv/bin/pytest tests/test_check_lessons_coverage.py tests/test_check_governance_parity.py tests/test_resolve_prior_lessons.py -q
 ```
 
-Fixture tests must monkeypatch `FEATURES_DIR` on `resolve_prior_lessons` and `check_lessons_coverage`,
-and `REPO_ROOT` on `lessons_coverage_lib` when `build_report` stores paths via `relative_to`.
-Signature: `lessons-coverage-c2-c3-audit` — see [reference.md](reference.md) and [testing.mdc](../../rules/testing.mdc).
+Include `test_check_governance_parity.py` when drift spawn body changes
+(`build_drift_card_body` / `_spawn_review_sections`). **C1b / five-metric composite:** adding a
+sub-metric changes drift severity fixtures — grep `test_check_lessons_coverage_drift_critical` and
+update label-scoped done-card frontmatter in fixtures. **C4 per-card (lc4b):** composite and 75%
+drift gate use `audit_application_coverage_per_card`; aggregate C4 is advisory — grep
+`test_c4_per_card_passes_when_aggregate_low` and `test_drift_threshold_follows_per_card_c4`.
+**Parser SSOT:** `PRIOR_LESSONS_RE` lives in
+`resolve_prior_lessons.py` only — `lessons_coverage_lib` imports `extract_prior_lessons_citations`.
+Signature: `lessons-coverage-c1b-forward-feedback`, `lessons-coverage-c2-c3-audit`,
+`lessons-coverage-c4-per-card-threshold` — see
+[reference.md](reference.md) and [testing.mdc](../../rules/testing.mdc).
+
+**Forward feedback index (ff0):** after edits under `scripts/build_forward_feedback_index.py`,
+`scripts/resolve_forward_feedback.py`, or gc5 item parsers in `scripts/lessons_coverage_lib.py`:
+
+```bash
+.venv/bin/pytest tests/test_build_forward_feedback_index.py tests/test_resolve_forward_feedback.py -q
+```
+
+Signature: `forward-feedback-index` — see [testing.mdc](../../rules/testing.mdc).
 
 ### 3. Run targeted tests
 
@@ -131,6 +170,7 @@ When you change code **because a test failed**, the right re-run is often **broa
 | `helpers/terrain_tokens.py` / natural vs terrain split | `test_terrain_tokens`, `test_sprite_baker_simple` |
 | `structures/**` layer YAML (beds, chests, tokens) | `test_worldgen_functional_blocks`, `test_structure_loader` |
 | `render_main.py` or `registries/loader.py` staged | **full suite** (hook forces it) |
+| `helpers/sprite_baker/*` compositor semantic change (e.g. riser ghost α) | `test_sprite_baker_cache.py` — hook maps all `helpers/sprite_baker/*`; grep `tests/` for stale `STAIRS` + `== 0` — Signature: `2d-stair-riser-runtime-cache-test`, `precommit-pytest-scope-mismatch` |
 | Any `tests/test_*.py` edited | that file + tests that import the same fixtures |
 
 **Rule:** after a fix, run `scripts/pre-commit-pytest.sh` again — not only `pytest failed_file.py`.
@@ -170,6 +210,7 @@ Pre-commit also runs **full suite** when:
 | `ui/main_window.py` | `tests/test_main_window.py` |
 | `renderers/worldgen.py` | `tests/test_worldgen_bed.py` `tests/test_worldgen_site.py` … (see reference) |
 | `helpers/orbit_*.py`, `ui/widgets/orbit_preview_widget.py`, `ui/mesh_build_worker.py` | `tests/test_orbit_greedy_mesh.py` `tests/test_orbit_partial_mesh.py` `tests/test_orbit_preview.py` |
+| `helpers/sprite_baker/compose_bed.py`, `helpers/paths.py` (`resolve_entity_bed_textures_folder`), colored `BED:*` orbit faces, merged bed part split (`_iter_bed_face_parts`, `bed_foot_token`) | `pytest tests/test_orbit_greedy_mesh.py tests/test_sprite_baker_bed.py -q -k bed` — Signature: `orbit-bed-colored-texture-keys` |
 | `structures/**` | `tests/test_structure_loader.py` `tests/test_ui_document.py` |
 
 Full list: [reference.md](reference.md).
@@ -204,14 +245,23 @@ To see which tests the hook would run on staged files:
 
 ```bash
 git diff --cached --name-only   # review staged paths
-# Match against scripts/pre-commit-pytest.sh cases
-pre-commit run pytest           # runs hook for real
+scripts/pre-commit-pytest.sh    # runs hook for real (requires staged files)
 ```
 
-Or run the script directly (requires staged files):
+Draft **Tests → Files** from **Product Paths** before Review (no staging required):
 
 ```bash
-scripts/pre-commit-pytest.sh
+python3 scripts/resolve_card_tests.py --from-card .devtool/features/your-card.md --files-only
+python3 scripts/resolve_card_tests.py helpers/sprite_baker/foo.py --files-only
+```
+
+Uses `PRE_COMMIT_PYTEST_LIST_ONLY=1` against `scripts/pre-commit-pytest.sh` — Signature:
+`precommit-pytest-scope-mismatch`.
+
+Or run all three hooks on staged paths:
+
+```bash
+scripts/agent-commit-ready.sh
 ```
 
 ## Do not use this skill for

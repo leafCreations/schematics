@@ -67,7 +67,7 @@ Before handoff, score the turn against these checks:
 
 | Area touched | Verify |
 | ------------ | ------ |
-| Kanban / card implementation | **Prompt verb gate** ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2); prior lessons gate; Card Done lessons + forward feedback **only** `feature` / `bug` / `agent` / `commit-issue` (Signature: `card-done-forward-feedback` — on card after Lessons captured; top-3 in chat — §7 Card Done); registry + **`docs/`**; AC `[x]` before Review; **GovernanceCompact** Card Done: cite `--line-counts` before/after (Signature: `governance-compact-baseline`); **§6:** ≥1 skill + ≥1 rule |
+| Kanban / card implementation | **Prompt verb gate** ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2); prior lessons gate; Card Done: agent move on QA-complete + lessons + forward feedback **only** `feature` / `bug` / `agent` / `commit-issue` (Signatures: `card-done-agent-move-qa-complete`, `card-done-forward-feedback` — on card after Lessons captured; top-3 in chat — §7 Card Done); registry + **`docs/`**; AC `[x]` before Review; **GovernanceCompact** Card Done: cite `--line-counts` before/after (Signature: `governance-compact-baseline`); **§6:** ≥1 skill + ≥1 rule |
 | Structure YAML / editor save | Manifest vs `stage.yaml` split correct ([repo-map](../repo-map/SKILL.md)) |
 | UI panel/dialog | [ui-change](../ui-change/SKILL.md) checklist |
 | Registry/palette | `validate_palettes()` if behavior/palette changed; **templated families** use one token + materials, not raw catalog ids in `blocks:` ([repo-map](../repo-map/SKILL.md) § Templated block families) |
@@ -222,7 +222,7 @@ Ask yes/no; any **yes** → update in the **same turn** or flag **AGENTS.md stal
 | Did a failure **Signature** or reference row change? | Owning `reference.md` + triage failure routing + rules (Signature cite only) |
 | Did a kanban **label** or card workflow change? | AGENTS.md card types + `kanban-*.mdc` + [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) |
 | Did agent/kanban **rules** change? | AGENTS.md area table + peer rules per [agent-consistency.mdc](../../rules/agent-consistency.mdc) |
-| Did user-facing agent workflow in **docs** change? | [docs/development.md](../../docs/development.md) (and other `docs/` per [docs-maintenance](../docs-maintenance/SKILL.md)) |
+| Did user-facing agent workflow in **docs** change? | [docs/governance/](../../docs/governance/) handbook + [development.md](../../docs/development.md) product setup per [docs-maintenance](../docs-maintenance/SKILL.md) — Signature: `docs-governance-split` |
 
 **Detail checklist** (four check types + registry): [agent-consistency.mdc](../../rules/agent-consistency.mdc) — do not duplicate that prose here. **Artifact parity:** [agent-triage/reference.md](../agent-triage/reference.md) § Consistency matrix.
 
@@ -241,11 +241,21 @@ Signature: `governance-compact-self-eval-handoff`. **Last sections only** — in
 1. **`### Top forward feedback`** — **Card Done turns only** (`feature` / `bug` / `agent` /
    `commit-issue`): up to three items from the card block (Primary + top Secondary; backfill per
    [kanban-markdown/reference.md](../kanban-markdown/reference.md) § Forward-looking feedback).
-   Omit on all other turns.
-2. **`### Files used`** — load order; one line per path/skill that drove the turn
-3. **`### Self-evaluation`** — compact fields below; **do not** paste §1–§6 checklists
+   Agent moves card to `done/` same turn (Signature: `card-done-agent-move-qa-complete`). Omit on
+   all other turns.
+1b. **`### Forward feedback dedup`** — **Card Done turns only** when
+   `build_forward_feedback_index.py` stderr reports exact duplicate question fingerprints (Signature:
+   `forward-feedback-card-done-ingest`). Non-blocking; place after **`### Top forward feedback`**
+   when both apply. Omit when no dedup warnings.
+2. **`### Epic summary`** or **`### Initiative summary`** — **epic audit / archive group complete
+   turns only:** 1–2 paragraphs, outcomes in plain language ([kanban-markdown/reference.md](../kanban-markdown/reference.md)
+   § Epic / initiative completion summary; Signature: `governance-epic-completion-summary`). Epic
+   audit → **`### Epic summary`**; archive group complete → **`### Initiative summary`**. Omit on
+   all other turns.
+3. **`### Files used`** — load order; one line per path/skill that drove the turn
+4. **`### Self-evaluation`** — compact fields below; **do not** paste §1–§6 checklists
 
-Detail: §2b (context load), §6 (skill/rule loop), §6g (governance drift). More examples:
+Detail: §2b (context load), §6 (skill/rule loop), §6g (governance drift). **Parity:** `check_handoff_duplication_pair` flags when AGENTS End handoff repeats ≥3 consecutive compact field lines (Signature: `governance-gc7-handoff-duplication-pair`). More examples:
 [reference.md](reference.md) § Example handoffs.
 
 ### Files used

@@ -21,9 +21,11 @@ Examples:
 
 Use these mappings as the default starting point:
 
-| Changed Area       | Recommended Tests                                               |
-| ------------------ | --------------------------------------------------------------- |
-| `helpers/cells.py` | `pytest tests/test_cells.py -q`                                 |
+| Changed Area | Recommended Tests |
+| --- | --- |
+| Kanban **Product Paths** → card **Tests → Files** | `python3 scripts/resolve_card_tests.py --files-only PATH…` or `--from-card CARD.md` — hook SSOT (`precommit-pytest-scope-mismatch`) |
+| Agent **Review** / commit-ready (staged hooks) | `scripts/agent-commit-ready.sh` — ruff → palettes → pytest; **Tests → Verify (agent)** cites `scripts/pre-commit-pytest.sh` |
+| `helpers/cells.py` | `pytest tests/test_cells.py -q` |
 | `ui/`              | `pytest tests/test_ui_document.py tests/test_main_window.py -q` |
 | `ui/main_window.py` (`MainWindow.__new__` tests) | `pytest tests/test_main_window.py -q` — Signature: `precommit-mainwindow-__new__-test` |
 | `ui/widgets/render_panel.py` | `pytest tests/test_render_panel.py -q` |
@@ -51,28 +53,37 @@ Use these mappings as the default starting point:
 | `helpers/block_picker.py`, `ui/widgets/properties_panel.py` (brush/direction) | `pytest tests/test_block_picker.py tests/test_properties_panel.py -q` |
 | Properties inspector live-apply (`brush_inspector_changed`, `_apply_inspector_to_selected_cell`) | `pytest tests/test_properties_panel.py tests/test_main_window.py -q -k "inspector or brush_inspector or apply_inspector"` — Signature: `properties-inspector-live-apply` |
 | `helpers/orbit_greedy_mesh.py` (solid shell culling) | `pytest tests/test_orbit_greedy_mesh.py::test_solid_face_visible_at_material_boundary tests/test_orbit_greedy_mesh.py::test_embedded_crafting_table_has_vertical_faces -q` |
+| Bed/chest attachable orbit facing (`orbit_face_textures`, `chest_schematic`) | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_attachable_mesh.py tests/test_orbit_render_class.py tests/test_sprite_baker_chest.py -q -k "chest or bed"` |
 | Orbit top/side face seam (`expand_orbit_quad_corners`, side texture path) | `pytest tests/test_orbit_greedy_mesh.py -q -k "expand_orbit or dirt_path_side or cobblestone_orbit_side"` — Signature: `orbit-top-side-seam-geometry` |
 | Orbit shader / `aFaceUv` attribute changes | **Manual QA required** — partial attribute adds black out preview; run full `test_orbit_greedy_mesh.py` + `test_orbit_preview.py` after widget shader edits (Signature: `orbit-shader-attribute-blackout`) |
 | `registries/behaviors/functional.yaml` (SMOKER, BLAST_FURNACE facing_block) | `pytest tests/test_orbit_greedy_mesh.py -k 'smoker or blast_furnace or minecraft_smoker or furnace_lit' -q` |
 | `helpers/block_texture_load.py`, `helpers/facing_block_textures.py` (animated lit front) | `pytest tests/test_block_texture_load.py tests/test_orbit_greedy_mesh.py -k 'block_texture or furnace_lit or smoker_lit' -q` |
-| `helpers/utils_schematics.py` 2D stair `@direction` / `_prepare_topdown_texture` | `pytest tests/test_utils_schematics.py -q -k "straight_stair or corner_stair or paste_straight or paste_corner"` — Signature: `2d-stair-facing-rotation` |
+| `structure-fixture-voxel-count-drift` | `test_residence_stage1_*` fails on hardcoded `len(boxes)` | Re-count from current `structures/.../stage.yaml`; update `N` — keep behavioral culling asserts | targeted-testing | testing.mdc |
+| Ruff SIM102/SIM103/F811 on staged scripts/tests | ruff hook before pytest | `.venv/bin/ruff check` on staged paths; grep `precommit-ruff-sim102-sim103`, `precommit-ruff-f811-duplicate-test` in pre-commit-workflow reference | pre-commit-workflow | testing.mdc |
 
 **Animated strip assertions:** golden images for `_on` lit fronts must use `load_block_texture_image` (frame 0), not `Image.open(...).resize(...)` on the full PNG — otherwise tests pass while the app tiles multiple openings (Signature: `orbit-animated-texture-strip`).
 | `structures/`      | Run tests covering the affected structures or builders          |
 | `scripts/`         | Run tests covering the affected workflow or utility             |
 | `scripts/build_lessons_index.py`, `scripts/resolve_prior_lessons.py` | `pytest tests/test_build_lessons_index.py tests/test_resolve_prior_lessons.py -q` |
+| `scripts/resolve_card_tests.py`, `scripts/agent-commit-ready.sh`, `scripts/pre-commit-pytest.sh` (`PRE_COMMIT_PYTEST_LIST_ONLY`) | `pytest tests/test_resolve_card_tests.py -q` — Signature: `precommit-pytest-scope-mismatch` |
 | `resolve_prior_lessons.py` inline `` `sig:…` `` on Lessons captured bullets | `pytest tests/test_build_lessons_index.py -q -k inline_sig` — Signature: `lessons-index-inline-sig-backtick` |
-| `scripts/check_lessons_coverage.py`, `scripts/lessons_coverage_lib.py` | `pytest tests/test_check_lessons_coverage.py tests/test_resolve_prior_lessons.py -q` — Signature: `lessons-coverage-c2-c3-audit`. **C4 fixture:** `test_c4_application_coverage_prior_lessons`, `test_extract_prior_lessons_citations_commit_issue_and_hash_ids`. **CLI:** exit 1 when composite &lt; 75% is expected threshold behavior, not a traceback failure |
+| `scripts/build_forward_feedback_index.py`, `scripts/forward_feedback_index_lib.py`, `scripts/resolve_forward_feedback.py` | `pytest tests/test_build_forward_feedback_index.py tests/test_resolve_forward_feedback.py -q` — Signature: `forward-feedback-index`; **ff1 dedup:** `-k dedup`; **ff2 link:** `-k link` — Signature: `forward-feedback-resolution-tracking`; **ff3 report/stale:** `-k stale or report or risk_band` — Signature: `forward-feedback-stale-metrics` |
+| `check_governance_parity.py` `--forward-feedback-stale` | `pytest tests/test_check_governance_parity.py -q -k forward_feedback_stale` — Signature: `forward-feedback-stale-metrics` |
+| `check_governance_parity.py` `--docs-governance-split` | `pytest tests/test_check_governance_parity.py -q -k docs_governance_split` — Signature: `docs-governance-split` |
+| `scripts/check_lessons_coverage.py`, `scripts/lessons_coverage_lib.py` | `pytest tests/test_check_lessons_coverage.py tests/test_resolve_prior_lessons.py -q` — Signature: `lessons-coverage-c2-c3-audit`, `lessons-coverage-c1b-forward-feedback`, `lessons-coverage-c4-per-card-threshold`. **C4:** `test_c4_application_coverage_prior_lessons`, `test_c4_per_card_passes_when_aggregate_low`, `test_drift_threshold_follows_per_card_c4`, `test_prior_lessons_block_not_truncated_by_following_bold_line`. **C1b:** `test_c1b_forward_feedback_grandfather_and_required`. **CLI:** exit 1 when composite &lt; 75% is expected threshold behavior (uses C4 per-card), not a traceback failure |
 | `scripts/sync_agents_area_table.py`, `check_agents_area_table_parity` | `pytest tests/test_sync_agents_area_table.py tests/test_check_governance_parity.py -q -k area_table` — Signature: `governance-area-schema-agents-table-sync` |
-| `scripts/check_governance_parity.py` classify SSOT (`check_classify_parity`, `REFERENCE_CLASSIFY_FINGERPRINT`) | `pytest tests/test_check_governance_parity.py -q -k classify` — Signature: `governance-compact-classify-ssot` |
+| `scripts/check_governance_parity.py` classify SSOT (`check_classify_parity`, `REFERENCE_CLASSIFY_FINGERPRINT` = `fe1e226a461904d1` after KanbanCursorModeGates cm3) | `pytest tests/test_check_governance_parity.py tests/test_resolve_epic_cards.py tests/test_resolve_archive_group.py -q -k "classify or epic or archive"` — Signature: `governance-compact-classify-ssot`, `governance-epic-completion-audit`, `governance-archive-group-batch` |
+| `scripts/resolve_archive_group.py` | `pytest tests/test_resolve_archive_group.py -q` — Signature: `governance-archive-group-batch` |
+| `scripts/check_governance_parity.py` (`check_handoff_duplication_pair`, gc7) | `pytest tests/test_check_governance_parity.py -q -k handoff` — Signature: `governance-gc7-handoff-duplication-pair` |
+| `scripts/check_governance_parity.py` (`audit_forward_feedback_gc5`, `--forward-feedback-audit`) | `pytest tests/test_check_governance_parity.py -q -k forward_feedback` — Signature: `governance-gc7-forward-feedback-audit` |
 | `scripts/check_governance_parity.py` kanban rule globs (`check_kanban_rule_globs`, gc3) | `pytest tests/test_check_governance_parity.py -q -k kanban_rule` — Signature: `governance-compact-kanban-rule-globs` |
-| `check_governance_parity.py` `consolidate_drift_issues_for_spawn` (registry Label Methods) | `pytest tests/test_check_governance_parity.py -q -k consolidate` — Signature: `governance-drift-spawn-consolidate-by-source-card` |
+| `check_governance_parity.py` `consolidate_drift_issues_for_spawn` (registry Product Methods) | `pytest tests/test_check_governance_parity.py -q -k consolidate` — Signature: `governance-drift-spawn-consolidate-by-source-card` |
 | gc5 forward-feedback format (`kanban-markdown/reference.md` § Forward-looking feedback) | `pytest tests/test_check_governance_parity.py tests/test_check_lessons_coverage.py -q`; grep `Impact Scope` in reference — Signature: `card-done-forward-feedback` |
 | `test_run_checks_integration_pass` / missing kanban rules in tmp_path fixture | same + `-k integration_pass` — Signature: `governance-compact-kanban-rule-globs` |
 | `scripts/check_governance_parity.py`, `scripts/resolve_feature_areas.py`, `docs/feature-areas.yaml` | `pytest tests/test_check_governance_parity.py tests/test_resolve_feature_areas.py -q -k agents_parity` (Signature: `governance-area-schema-parity-tests`) |
 | `check_governance_parity.py` `_SCHEMA_INTERNAL_PATHS` / `is_schema_internal_registry_path` / `check_registry_parity` (lc1 lessons-coverage paths on Agent Workflow) | `pytest tests/test_check_governance_parity.py -q -k "schema_internal or registry_parity_ignores_lessons"` — Signature: `governance-area-schema-parity-tests` |
 | `scripts/pre-commit-lessons-coverage.sh` (optional hook) | `pytest tests/test_check_lessons_coverage.py tests/test_check_governance_parity.py -q -k "lessons_coverage or threshold"` — Signature: `lessons-coverage-ci-drift` |
-| `parse_artifacts_line`, `artifacts:` on Card Done bullets | same + grep `artifacts:` in `docs/development.md` and kanban-markdown § Card Done; `doc:` yaml paths need explicit `.yaml`/`.yml` (Signature: `artifacts-doc-yaml-normalize`) |
+| `parse_artifacts_line`, `artifacts:` on Card Done bullets | same + grep `artifacts:` in `docs/governance/lessons-and-coverage.md` and kanban-markdown § Card Done; `doc:` yaml paths need explicit `.yaml`/`.yml` (Signature: `artifacts-doc-yaml-normalize`) |
 
 For uncommon cases, consult:
 

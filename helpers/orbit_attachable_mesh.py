@@ -16,7 +16,7 @@ from helpers.sprite_baker.block_model import (
 from helpers.sprite_baker.compose_lantern import resolve_lantern_model_name, resolve_lantern_variant
 from helpers.sprite_baker.compose_torch import resolve_torch_variant
 from helpers.sprite_baker.compose_trapdoor import resolve_trapdoor_half
-from helpers.structure_tokens import ParsedToken, parse_structure_token
+from helpers.structure_tokens import ParsedToken, format_structure_token, parse_structure_token
 from helpers.trapdoor_state import explicit_open
 from helpers.types import BlockRegistryEntry, CellGrid
 from helpers.utils import normalize_direction
@@ -311,6 +311,7 @@ def _bed_boxes(
                 min_corner=(min_x, wy, min_z),
                 max_corner=(max_x, wy + _BED_HEIGHT, max_z),
                 role="bed",
+                bed_span=(dx, dz),
             ),
         ]
 
@@ -520,3 +521,16 @@ def tokens_match_bed_partner(left: ParsedToken, right: ParsedToken) -> bool:
     left_entry = get_block_entry(left) or {}
     right_entry = get_block_entry(right) or {}
     return resolve_token_color(left_entry, left) == resolve_token_color(right_entry, right)
+
+
+def bed_foot_token(head_token: str) -> str:
+    """Return the foot-part token paired with a head bed token."""
+    parsed = parse_structure_token(head_token)
+    if parsed is None or parsed.token != "BED":
+        return head_token
+    if parsed.variant == "foot":
+        return head_token
+
+    from dataclasses import replace
+
+    return format_structure_token(replace(parsed, variant="foot"))

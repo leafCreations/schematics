@@ -27,9 +27,9 @@ cells:
   - SLAB:oak
   - SLAB:oak
   - SLAB:oak
-  - SLAB:oak
-  - SLAB:oak
-  - SLAB:oak
+  - .
+  - .
+  - .
   - .
 - - .
   - SLAB:oak
@@ -42,9 +42,9 @@ cells:
   - SLAB:oak
   - SLAB:oak
   - SLAB:oak
-  - SLAB:oak
-  - SLAB:oak
-  - SLAB:oak
+  - .
+  - .
+  - .
   - .
 - - .
   - SLAB:oak

@@ -13,20 +13,27 @@ alwaysApply: true
 
 | Mode | Work source | Code / cards |
 | ---- | ----------- | ------------ |
-| **Agent** | Card named + **agent verb** — `implement`, `update`, `review and update`, `spawn`, `answer inquiry`, … | [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); [kanban-card-gates.mdc](kanban-card-gates.mdc) §2 |
-| **Ask-only** | `review …` card only, bare `@path`, no card, or no agent verb | Read-only — no file edits |
+| **Agent** | Card named + **agent verb** — `implement`, `update`, `plan approved`, `review and update`, `spawn`, `Done`, `QA complete`, `epic complete`, … | [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); [kanban-card-gates.mdc](kanban-card-gates.mdc) §2 |
+| **Ask-only** | `review …` only, bare `@path`, **`Inquire @card`**, no card, or no agent verb | Read-only — no file edits |
+| **Plan (chat-only)** | **`Plan @card`** alone | Plan Mode — discuss in chat; no card edits until approval |
 
 ## Turn lifecycle
 
 ```text
-START → agent-triage/SKILL.md (classify; card + label + prompt-verb gate; one scoped kanban-*-cards.mdc; §1b on failure signals only)
-WORK  → card Label Paths + Label Methods → prior lessons gate (feature/bug/agent/commit-issue)
+START → agent-triage/SKILL.md (classify; card + label + prompt-verb gate incl. Plan/Inquire modes; one scoped kanban-*-cards.mdc; §1b on failure signals only)
+WORK  → card Product + Tests + Docs → prior lessons gate (feature/bug/agent/commit-issue)
         → Decisions / Corrective Action → implement
-        → Review QA fix: **QA follow-up** + refresh Feature Areas / Label Paths / Label Methods
+        → Review QA fix: **QA follow-up** + refresh Feature Areas / Product / Tests / Docs
 VERIFY → ruff E501 on touched `.py`/`.pyi` before handoff; targeted pytest; pre-commit-pytest.sh before Review/commit
-DONE  → user says card Done → lessons + forward feedback **only** for feature / bug / agent / commit-issue
-        → top-3 forward feedback in chat before handoff; inquiry Done: **no** lessons or forward feedback
-        → build_lessons_index.py when lessons ran; curate feature-areas lesson_* when applicable
+DONE  → user QA-complete / Done signal → agent moves to done/ + lessons + forward feedback
+        **only** for feature / bug / agent / commit-issue (Signature: card-done-agent-move-qa-complete)
+        → user epic complete → § Epic audit on anchor + **`### Epic summary`** (Signature:
+        governance-epic-completion-audit, governance-epic-completion-summary)
+        → user archive group complete → § Archive group on anchor + **`### Initiative summary`**
+        (Signature: governance-archive-group-batch, governance-epic-completion-summary)
+        → top-3 forward feedback in chat before handoff; inquiry Done: move only — no lessons
+        → build_lessons_index.py when lessons ran; build_forward_feedback_index.py when lessons
+        ran (Signature: `forward-feedback-card-done-ingest`); curate feature-areas lesson_* when applicable
 END   → agent-self-evaluation/SKILL.md + handoff block
 ```
 
@@ -39,11 +46,13 @@ END   → agent-self-evaluation/SKILL.md + handoff block
 | `feature` | [kanban-feature-cards.mdc](kanban-feature-cards.mdc) | **Decisions** |
 | `bug` | [kanban-bug-cards.mdc](kanban-bug-cards.mdc) | **Corrective Action** (not Decisions) |
 | `commit-issue` | [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) | **Review** → Root Cause + Corrective Action; implement after user approval |
-| `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response**; spawn child cards when user approves; **no** Card Done lessons |
+| `inquiry` | [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) | **Response** after `update`; **`Inquire @card`** + Ask Mode — Signature: `kanban-cursor-mode-gates` |
+| `plan` | [kanban-plan-cards.mdc](kanban-plan-cards.mdc) | **Recommendation** after approval; **`Plan @card`** + Plan Mode — Signature: `kanban-cursor-mode-gates` |
 | `agent` | [kanban-agent-cards.mdc](kanban-agent-cards.mdc) | **Decisions**; user **Description** + **Feature Area** |
 | **Invalid** (missing / `[]` / unknown) | [kanban-card-gates.mdc](kanban-card-gates.mdc) | **Stop** — user must fix `labels` |
 
-Resolve **Feature Areas** (or agent card **Feature Area**) → **Label Paths** + **Label Methods** via `docs/feature-areas.yaml` before `in-progress`.
+Resolve **Feature Areas** (or agent card **Feature Area**) → **Product Paths** + **Product Methods**
++ **Tests** + **Docs** via [docs/feature-areas.yaml](../../docs/feature-areas.yaml) before `in-progress`.
 
 ## Code style (Python)
 
@@ -67,8 +76,12 @@ break call chains while editing — not only after hook failure.
 ## Discovery budget
 
 - **Kanban + Feature Areas** → `docs/lessons-index.yaml` area block + [agent-triage/reference.md](../skills/agent-triage/reference.md) § Lessons by area before broad `.devtool/features/done/` grep ([kanban-prior-lessons-gate.mdc](kanban-prior-lessons-gate.mdc))
+- **Top-N forward-feedback questions** → `docs/forward-feedback-index.yaml` + `resolve_forward_feedback.py --category … --top N` — not `lessons-index.yaml`; Signature: `forward-feedback-index`
+- **Kanban Tests → Files from Product Paths** → `python3 scripts/resolve_card_tests.py --from-card CARD.md --files-only` before Review — not hand-picked pytest; Signature: `precommit-pytest-scope-mismatch`
+- **Forward-feedback depth metrics** → `resolve_forward_feedback.py --report` or `check_governance_parity.py --forward-feedback-stale` — Signature: `forward-feedback-stale-metrics`
 - **Failure signals** (hook, pytest, UI wiring, handoff) → [agent-triage/SKILL.md](../skills/agent-triage/SKILL.md) §1b grep before broad reads
 - **Governance edits** → [agent-triage/reference.md](../skills/agent-triage/reference.md) § Consistency matrix
+- **Docs vs governance layout** (DocsGovernanceSplit) → [kanban-markdown/reference.md](../skills/kanban-markdown/reference.md) § Docs governance layout; contributor handbook [docs/governance/](../../docs/governance/) — not `development.md` § prose; residual § verify: `check_governance_parity.py --docs-governance-split` (Signature: `docs-governance-split`)
 - **Governance audit card** → [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit (reference § Classify)
 - **Classify signals** — canonical [agent-triage/reference.md](../skills/agent-triage/reference.md) § Classify; AGENTS § Classify quickly ≤5-row summary only; new signal → reference + bump `REFERENCE_CLASSIFY_FINGERPRINT` — Signature: `governance-compact-classify-ssot`
 - **Grep** before opening `ui/main_window.py` or other large files

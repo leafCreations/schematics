@@ -1,6 +1,8 @@
 from scripts.resolve_prior_lessons import (
     _lessons_excerpt,
+    _section_body_aliases,
     area_artifacts,
+    extract_label_paths,
     find_done_lessons,
 )
 
@@ -54,3 +56,29 @@ def test_find_done_lessons_includes_archived(tmp_path, monkeypatch):
 def test_area_artifacts_lists_docs():
     artifacts = area_artifacts(["Render Preview"])
     assert "docs/ui.md" in artifacts["docs"]
+
+
+def test_section_body_aliases_prefers_first_heading():
+    text = "## Product Paths\n\n- `ui/foo.py`\n\n## Label Paths\n\n- `ui/bar.py`\n"
+    body = _section_body_aliases(text, ("Product Paths", "Label Paths"))
+    assert body is not None
+    assert "`ui/foo.py`" in body
+    assert "`ui/bar.py`" not in body
+
+
+def test_extract_label_paths_reads_product_paths():
+    text = "## Product Paths\n\n- `helpers/cells.py`\n"
+    assert extract_label_paths(text) == ["helpers/cells.py"]
+
+
+def test_extract_label_paths_legacy_label_paths():
+    text = "## Label Paths\n\n- `helpers/cells.py`\n"
+    assert extract_label_paths(text) == ["helpers/cells.py"]
+
+
+def test_extract_label_paths_includes_tests_files():
+    text = (
+        "## Product Paths\n\n- `helpers/cells.py`\n\n"
+        "## Tests\n\n### Files\n\n- `tests/test_cells.py`\n\n### Methods\n\n- _TBD_\n"
+    )
+    assert extract_label_paths(text) == ["helpers/cells.py", "tests/test_cells.py"]

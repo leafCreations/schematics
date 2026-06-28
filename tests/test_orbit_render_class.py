@@ -25,6 +25,11 @@ def test_copper_lantern_exposed_is_block_model():
     assert orbit_render_class("COPPER_LANTERN#exposed") == "block_model"
 
 
+def test_chest_is_attachable_box():
+    assert orbit_render_class("CHEST@north#single") == "attachable_box"
+    assert orbit_render_class("CHEST@west#left") == "attachable_box"
+
+
 def test_door_is_attachable_box():
     assert orbit_render_class("DOOR:oak@north#lower") == "attachable_box"
 

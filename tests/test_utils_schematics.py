@@ -196,3 +196,25 @@ def test_resolve_cell_texture_grass_registry_token_uses_catalog_fallback():
     assert image is not None
     assert image.size == (constants.BLOCK_PX, constants.BLOCK_PX)
     assert image.getpixel((0, 0))[3] == 255
+
+
+def test_build_texture_key_candidates_bed_color_includes_default_fallbacks():
+    parsed = ParsedToken(token="BED", material="blue", direction="north", variant="head")
+    entry = BLOCK_REGISTRY["BED"]
+    defaults = entry.get("defaults", {})
+    render_textures = entry.get("render", {}).get("textures", {})
+
+    keys = schematics_utils._build_texture_key_candidates(
+        "BED:blue@north#head",
+        parsed,
+        "BED",
+        defaults,
+        render_textures,
+        {},
+        "top",
+    )
+
+    assert keys[:2] == ["BED:blue#head", "BED:blue"]
+    assert "BED:red#head" in keys
+    assert "BED#head" in keys
+    assert keys[-1] == "BED"

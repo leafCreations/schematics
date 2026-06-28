@@ -139,6 +139,21 @@ attachables.
 | `attachable_box` | `BED:*`, `CHEST:*`, `DOOR:*` | `helpers/orbit_attachable_mesh.py` — custom AABBs, neighbor pairing | `c4-attachable-partial-mesh-routing`; `tests/test_orbit_attachable_mesh.py` |
 | `block_model` | `TORCH`, `LANTERN`, `COPPER_LANTERN#*`, `TRAPDOOR:*` (open and closed) | `helpers/orbit_block_model_mesh.py` — JSON element faces; closed trapdoor may use thin AABB bounds in attachable helper for culling only | `orbit-attachable-block-model-faces`, `orbit-lantern-hanging-variant`; `tests/test_orbit_attachable_mesh.py -k block_model`; `tests/test_orbit_render_class.py` |
 
+Colored beds (`BED:blue@north#head`) sample baked sprites via `compile_texture_set` keys
+`BED:{color}#head|foot` — not token-color fallback. Merged head+foot AABBs split top/long-side
+faces per part (`_iter_bed_face_parts` in `helpers/orbit_greedy_mesh.py`).
+
+**Bed/chest orbit facing** — `_resolve_orbit_attachable_bake_face_texture`
+(`helpers/orbit_face_textures.py`) maps world side normals to front / back / end roles from block
+`@direction` (same compass policy as `facing_block`). **Bed** side faces use cached schematic
+bakes via `resolve_cell_texture`; merged top uses head vs foot bakes per cell half. **Chest**
+side faces: front keeps the cached side bake with latch; back and ends call
+`compose_chest_side_schematic(..., include_latch=False)` (back mirrored). Top uses the rotated
+2D top bake via `resolve_cell_texture` — not JSON block-model element faces. Entity atlas crops
+for 2D bakes: `helpers/sprite_baker/chest_atlas.py`. Tests: `test_orbit_bed_blue_resolves_face_texture`,
+`test_orbit_bed_merged_top_head_and_foot_bakes`, `test_orbit_chest_side_front_differs_from_end`,
+`test_orbit_chest_side_latch_only_on_front`, `test_chest_is_attachable_box`.
+
 Open vs closed trapdoor (`;open=true` / `;open=false`) changes **model and rotation** inside the
 `block_model` path — not the taxonomy class. Signature: `orbit-render-class-routing`.
 

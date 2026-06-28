@@ -51,7 +51,8 @@ Outputs go to `output/schematics/{output_folder}/`.
 | Guide | Contents |
 | ----- | -------- |
 | [docs/structure-editor-guide.md](docs/structure-editor-guide.md) | **Structure Editor user guide** — how to use the desktop UI |
-| [docs/development.md](docs/development.md) | Venv, dependencies, Ruff, pre-commit, pytest |
+| [docs/development.md](docs/development.md) | Venv, dependencies, Ruff, pre-commit, pytest (product setup) |
+| [docs/governance/](docs/governance/) | Agent/kanban handbook — lessons, parity, audit, compaction |
 | [docs/project-structure.md](docs/project-structure.md) | Repository layout |
 | [docs/registry.md](docs/registry.md) | Behavior registry, palettes, and texture loading |
 | [docs/ui.md](docs/ui.md) | Structure editor technical reference (PySide6) |

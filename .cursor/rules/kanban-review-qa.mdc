@@ -19,14 +19,17 @@ When the user reports a **Review** issue and you fix it:
 | `bug` | **`## Corrective Action`** |
 | feature (default), `agent` | **`## Decisions`** |
 
-Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. When paths or symbols changed, note **Labels:** appended paths/methods (or `none` if card already complete).
+Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. When scope changed, note
+**Scope:** appended Product / Tests / Docs (or `none` if card already complete).
 
 **Same turn — refresh card scope** (mandatory when the fix changes code):
 
-1. **`## Feature Areas`** — append product-area label(s) when fix crosses into an area not listed (`python scripts/resolve_feature_areas.py --list`).
-2. **`## Label Paths`** — append edited/added file paths not already on the card (dedupe).
-3. **`## Label Methods`** — append `path` — `symbol` bullets for new handlers, helpers, or tests touched.
-4. **`docs/feature-areas.yaml`** — when new paths/handlers are durable for that area (same gate as initial implementation).
+1. **`## Feature Areas`** — append product-area label(s) when fix crosses into an area not listed.
+2. **`## Product Paths`** — append edited/added product paths not already on the card (dedupe).
+3. **`## Product Methods`** — append `path` — `symbol` bullets for new handlers or helpers.
+4. **`## Tests`** — append test files and `test_*` methods.
+5. **`## Docs`** — append doc paths + § hints when user docs changed.
+6. **`docs/feature-areas.yaml`** — when new paths/handlers are durable for that area.
 
 - Bump card `modified` in the **same turn** as the fix.
 - Do **not** rely on chat history as the only record.
@@ -34,31 +37,40 @@ Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. W
 ## Do not
 
 - Skip card **QA follow-up** recording because the fix was small
-- Skip **Label Paths** / **Label Methods** refresh when the fix edited files or symbols not on the card
+- Skip **Product** / **Tests** / **Docs** refresh when the fix edited files or symbols not on the card
 - Remove user **Feature Areas** labels — append only
 
 ## Card Done — lessons learned (mandatory)
 
-When the user says a **`feature`**, **`bug`**, **`agent`**, or **`commit-issue`** card is **Done**
-(user moves file to `done/`):
+When the user signals **QA-complete / Done** on a **`feature`**, **`bug`**, **`agent`**, or
+**`commit-issue`** card, the **agent** moves the file to `done/` and runs Card Done **same turn**
+(Signature: `card-done-agent-move-qa-complete` — [reference § QA-complete triggers](../skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table)):
 
 1. Read all **Corrective Action** / **Decisions** + **QA follow-up** bullets on the card.
 2. Capture durable lessons in **≥1 area skill** + **≥1 scoped rule** + **`docs/`** (and `feature-areas.yaml` / `registries/` when applicable).
 3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card with links to updated artifacts.
-4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** on the card **after** Lessons captured —
-   six categories; Impact Scope, References, Mitigation on max tier, Importance when tied;
-   card-specific not boilerplate. Signature: `card-done-forward-feedback` — format in
-   [kanban-markdown/reference.md](../skills/kanban-markdown/reference.md)
-   § Forward-looking feedback; top-3 in chat on Card Done turn (agent-self-evaluation §7).
-5. When reference § Forward-looking feedback changes, grep all scoped `kanban-*-cards.mdc` Card Done
+4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
+   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
+   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
+   when tied; top-3 in chat on Card Done turn).
+5. Run `python3 scripts/build_lessons_index.py` then `python3 scripts/build_forward_feedback_index.py`
+   when lessons ran (Signature: `forward-feedback-card-done-ingest`; dedup stderr →
+   **`### Forward feedback dedup`** in chat — non-blocking).
+6. When reference § Forward-looking feedback changes, grep all scoped `kanban-*-cards.mdc` Card Done
    bullets in one pass (feature / bug / agent / commit-issue).
+7. **Governance Card Done verify (gel2):** on agent governance cards with gc5 blocks, suggest
+   `check_governance_parity.py --forward-feedback-audit --no-spawn-cards` during Review — advisory
+   exit 0; complements C1b. Signature: `governance-gc7-forward-feedback-audit`.
 
-**`inquiry` cards:** user **Done** → **no** lessons capture **and no** forward feedback
-([kanban-card-gates.mdc](kanban-card-gates.mdc)).
+**`inquiry` cards:** user or agent may move on **Done** — **no** lessons capture **and no**
+forward feedback ([kanban-card-gates.mdc](kanban-card-gates.mdc)).
 
-Full checklist: kanban-markdown § Card Done — lessons learned capture. **Do not** move the card to Done for the user.
+Full checklist: kanban-markdown § Card Done — lessons learned capture.
 
 ## Do not
 
+- Treat **QA Review** fix prompts (`QA Review:`, bug reports during Review) as Card Done — stay in
+  **review** with `**QA follow-up**` until user sends a QA-complete / Done signal from the trigger
+  table (Signature: `card-done-agent-move-qa-complete`)
 - Put pytest-only checklist items in **`## QA Review`** (agent workflow — see kanban-markdown § QA Review)
 - Skip **lessons captured** when user says Done because AC were already `[x]`

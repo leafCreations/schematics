@@ -11,14 +11,17 @@ import scripts.resolve_prior_lessons as rpl
 from scripts.check_lessons_coverage import report_to_dict, run_audit
 from scripts.lessons_coverage_lib import (
     audit_application_coverage,
+    audit_application_coverage_per_card,
     audit_capture_coverage,
     audit_consumption_coverage,
+    audit_forward_feedback_coverage,
     audit_promotion_quality,
     build_report,
     composite_score,
     extract_context_done_links,
 )
 from scripts.resolve_prior_lessons import (
+    extract_prior_lessons_citations,
     find_done_lessons,
     find_done_lessons_strict,
     parse_artifacts_line,
@@ -190,13 +193,202 @@ def test_extract_prior_lessons_citations_commit_issue_and_hash_ids():
         "**Prior lessons (2026-06-27):** commit-issue-pytest-2026-06-25T015348.md, "
         "governance-drift-registry-dd7c222873.md, `lessons-coverage-metric-spec-2026-06-25.md`.\n"
     )
-    cites = lib._extract_prior_lessons_citations(text)
+    cites = extract_prior_lessons_citations(text)
     assert "commit-issue-pytest-2026-06-25T015348.md" in cites
     assert "governance-drift-registry-dd7c222873.md" in cites
     assert "lessons-coverage-metric-spec-2026-06-25.md" in cites
 
 
-def test_resolve_prior_lessons_audit_all_empty_fixture(kanban_dirs, monkeypatch):
+def test_prior_lessons_block_not_truncated_by_following_bold_line():
+    text = (
+        "## Decisions\n\n"
+        "**Prior lessons (2026-06-27):** Applied `legacy-lesson-2026-06-20.md`.\n"
+        "**QA follow-up (2026-06-27):** parser must not stop at this line.\n"
+    )
+    cites = extract_prior_lessons_citations(text)
+    assert "legacy-lesson-2026-06-20.md" in cites
+
+
+def test_c4_prior_lessons_mid_block_bold_still_cites(kanban_dirs, monkeypatch):
+    features, done, _ = kanban_dirs
+    monkeypatch.setattr(lib, "_known_signatures", lambda: {"app-lesson-sig"})
+
+    _write_done(
+        done,
+        "surfaced-lesson.md",
+        "## Label Paths\n\n- `scripts/foo.py`\n\n"
+        "## Lessons captured (2026-06-27)\n\n"
+        "- **Fix:** cite in Prior lessons.\n"
+        "  - artifacts: sig:app-lesson-sig\n",
+        epic="AppEpic",
+    )
+
+    active = features / "review-with-prior.md"
+    active.write_text(
+        "---\nstatus: review\nepic: AppEpic\n---\n\n"
+        "## Feature Area\n\n`Agent Workflow`\n\n"
+        "## Label Paths\n\n- `scripts/foo.py`\n\n"
+        "## Decisions\n\n"
+        "**Prior lessons (2026-06-27):** Applied `surfaced-lesson.md` — `app-lesson-sig`.\n"
+        "**QA follow-up (2026-06-27):** follow-up after prior block.\n",
+        encoding="utf-8",
+    )
+
+    metric = audit_application_coverage(features)
+    assert metric.score == 1.0
+
+
+def test_c4_per_card_passes_when_aggregate_low(kanban_dirs, monkeypatch, tmp_path):
+    from scripts.lessons_coverage_lib import MetricScore
+
+    features, done, _ = kanban_dirs
+    monkeypatch.setattr(lib, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(rpl, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(lib, "_known_signatures", lambda: set())
+    monkeypatch.setattr(lib, "_path_exists", lambda _path: False)
+
+    for index in range(57):
+        _write_done(
+            done,
+            f"lesson-{index:02d}.md",
+            "## Label Paths\n\n- `scripts/epic.py`\n\n"
+            "## Lessons captured (2026-06-27)\n\n- lesson without promotion\n",
+            epic="BigEpic",
+        )
+
+    cite_stems = ", ".join(f"`lesson-{index:02d}.md`" for index in range(3))
+    active = features / "active-epic.md"
+    active.write_text(
+        "---\nstatus: review\nepic: BigEpic\n---\n\n"
+        "## Feature Area\n\n`Agent Workflow`\n\n"
+        "## Label Paths\n\n- `scripts/epic.py`\n\n"
+        "## Decisions\n\n"
+        f"**Prior lessons (2026-06-27):** Applied {cite_stems}.\n",
+        encoding="utf-8",
+    )
+
+    aggregate = audit_application_coverage(features)
+    per_card = audit_application_coverage_per_card(features)
+    report = build_report(features)
+
+    assert aggregate.numerator == 3
+    assert aggregate.denominator == 57
+    assert aggregate.score == pytest.approx(3 / 57)
+    assert per_card.numerator == 1
+    assert per_card.denominator == 1
+    assert per_card.score == 1.0
+
+    old_composite = composite_score(
+        report.c1,
+        report.c1b,
+        report.c2,
+        report.c3,
+        MetricScore("C4 Application (aggregate)", 3, 57, 3 / 57),
+    )
+    assert old_composite is not None
+    assert old_composite * 100 < 75
+    assert report.composite is not None
+    assert report.composite * 100 >= 75
+
+
+def test_drift_threshold_follows_per_card_c4(kanban_dirs, monkeypatch, tmp_path):
+    features, done, _ = kanban_dirs
+    monkeypatch.setattr(lib, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(rpl, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(lib, "_known_signatures", lambda: set())
+    monkeypatch.setattr(lib, "_path_exists", lambda _path: False)
+
+    for index in range(57):
+        _write_done(
+            done,
+            f"lesson-{index:02d}.md",
+            "## Label Paths\n\n- `scripts/epic.py`\n\n"
+            "## Lessons captured (2026-06-27)\n\n- lesson without promotion\n",
+            epic="BigEpic",
+        )
+
+    cite_stems = ", ".join(f"`lesson-{index:02d}.md`" for index in range(3))
+    active = features / "active-epic.md"
+    active.write_text(
+        "---\nstatus: review\nepic: BigEpic\n---\n\n"
+        "## Feature Area\n\n`Agent Workflow`\n\n"
+        "## Label Paths\n\n- `scripts/epic.py`\n\n"
+        "## Decisions\n\n"
+        f"**Prior lessons (2026-06-27):** Applied {cite_stems}.\n",
+        encoding="utf-8",
+    )
+
+    import scripts.check_lessons_coverage as clc
+
+    monkeypatch.setattr(clc, "FEATURES_DIR", features)
+    assert run_audit(threshold=75.0) == 0
+
+
+def test_c1b_forward_feedback_grandfather_and_required(kanban_dirs):
+    _, done, _ = kanban_dirs
+
+    _write_done(
+        done,
+        "legacy-no-ff.md",
+        "## Lessons captured (2026-06-27)\n\n- legacy lesson\n",
+        epic="OldEpic",
+    )
+    legacy = done / "legacy-no-ff.md"
+    legacy.write_text(
+        '---\nlabels: ["feature"]\ncompletedAt: "2026-06-20T12:00:00.000Z"\n'
+        "epic: OldEpic\n---\n\n"
+        "## Lessons captured (2026-06-27)\n\n- legacy lesson\n",
+        encoding="utf-8",
+    )
+
+    _write_done(
+        done,
+        "modern-with-ff.md",
+        "## Lessons captured (2026-06-27)\n\n- modern\n\n"
+        "## Forward-looking feedback (2026-06-27)\n\n### Governance\n- item\n",
+        epic="NewEpic",
+    )
+    modern = done / "modern-with-ff.md"
+    modern.write_text(
+        '---\nlabels: ["agent"]\ncompletedAt: "2026-06-27T20:00:00.000Z"\n'
+        "epic: NewEpic\n---\n\n"
+        "## Lessons captured (2026-06-27)\n\n- modern\n\n"
+        "## Forward-looking feedback (2026-06-27)\n\n### Governance\n- item\n",
+        encoding="utf-8",
+    )
+
+    _write_done(
+        done,
+        "modern-missing-ff.md",
+        "## Lessons captured (2026-06-27)\n\n- missing ff\n",
+        epic="NewEpic",
+    )
+    missing = done / "modern-missing-ff.md"
+    missing.write_text(
+        '---\nlabels: ["bug"]\ncompletedAt: "2026-06-27T21:00:00.000Z"\n'
+        "epic: NewEpic\n---\n\n"
+        "## Lessons captured (2026-06-27)\n\n- missing ff\n",
+        encoding="utf-8",
+    )
+
+    metric = audit_forward_feedback_coverage()
+    assert metric.denominator == 3
+    assert metric.numerator == 2
+    assert metric.score == pytest.approx(2 / 3)
+
+
+def test_composite_five_equal_weights():
+    from scripts.lessons_coverage_lib import MetricScore
+
+    c1 = MetricScore("C1", 1, 1, 1.0)
+    c1b = MetricScore("C1b", 1, 1, 1.0)
+    c2 = MetricScore("C2", 1, 2, 0.5)
+    c3 = MetricScore("C3", 0, 0, None)
+    c4 = MetricScore("C4", 1, 4, 0.25)
+    assert composite_score(c1, c1b, c2, c3, c4) == pytest.approx(0.75)
+
+
+def test_check_lessons_coverage_audit_all_exits_zero(kanban_dirs, monkeypatch):
     features, _, _ = kanban_dirs
     import scripts.check_lessons_coverage as clc
 
@@ -291,12 +483,32 @@ def test_build_report_json(kanban_dirs, monkeypatch):
         "- **Fix:** doc.\n"
         "  - artifacts: sig:governance-compact-baseline\n",
     )
+    sample = done / "sample.md"
+    sample.write_text(
+        '---\nlabels: ["agent"]\ncompletedAt: "2026-06-27T20:00:00.000Z"\n---\n\n'
+        "## Lessons captured (2026-06-27)\n\n"
+        "- **Fix:** doc.\n"
+        "  - artifacts: sig:governance-compact-baseline\n\n"
+        "## Forward-looking feedback (2026-06-27)\n\n### Governance\n- item\n",
+        encoding="utf-8",
+    )
 
     report = build_report(features)
     data = report_to_dict(report)
     assert data["c1"]["score_pct"] is not None
+    assert data["c1b"]["score_pct"] is not None
     assert data["c2"]["score_pct"] is not None
     assert data["composite_pct"] is not None
+
+
+def test_resolve_prior_lessons_audit_all_empty_fixture(kanban_dirs, monkeypatch):
+    features, _, _ = kanban_dirs
+    import scripts.check_lessons_coverage as clc
+
+    monkeypatch.setattr(rpl, "FEATURES_DIR", features)
+    monkeypatch.setattr(clc, "FEATURES_DIR", features)
+
+    assert rpl.main(["--audit", "all"]) == 0
 
 
 def test_run_audit_exit_code_below_threshold(kanban_dirs, monkeypatch, tmp_path):

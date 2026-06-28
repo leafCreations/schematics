@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,7 @@ from scripts.check_governance_parity import (
     check_classify_parity,
     check_failure_pattern_parity,
     check_handlers_registry_parity,
+    check_handoff_duplication_pair,
     check_kanban_label_methods_handlers,
     check_kanban_rule_globs,
     check_lessons_coverage_drift,
@@ -38,7 +40,9 @@ from scripts.check_governance_parity import (
     extract_label_method_symbols,
     extract_lessons_by_area_first_column,
     filter_registry_compare_paths,
+    find_stale_development_md_section_refs,
     format_drift_line,
+    format_forward_feedback_audit_report,
     format_line_count_report,
     is_schema_internal_registry_path,
     is_valid_handler_symbol,
@@ -49,8 +53,12 @@ from scripts.check_governance_parity import (
     parse_drift_line,
     priority_for_severity,
     run_checks,
+    run_docs_governance_split_audit,
+    run_forward_feedback_audit,
+    run_forward_feedback_stale_audit,
     section_line_count,
 )
+from scripts.check_governance_parity import main as parity_main
 
 AGENTS_CLASSIFY_SNIPPET = """
 ## Classify quickly
@@ -76,12 +84,18 @@ REFERENCE_CLASSIFY_SNIPPET = """
 | Signal | Mode | First action (short) |
 | ------ | ---- | -------------------- |
 | **Review** kanban card only (`review …`, bare `@path`) | Ask-only | kanban-card-gates §2 |
+| **`Inquire @card`** / `Inquire …` | Ask-only | Chat — `update` → Response |
+| **`Plan @card`** / `Plan …` | Plan | Chat — `plan approved` / `update` → Recommendation |
+| **`plan approved`** / `approved` | Agent | plan card Recommendation |
+| **`review and update`** / **`plan and update`** (rare) | Agent | Compound same-turn |
 | **Update / spawn / implement** card (agent verbs) | Agent | kanban-markdown |
-| `Kanban: answer inquiry on …` | Agent | Inquiry **Response** |
+| Legacy `Kanban: answer inquiry on …` | Ask-only → Agent | Deprecated — Inquire then update |
 | Card missing / empty / unknown `labels` | Block | Stop |
 | Implement / fix without a card | Ask-only | kanban card required |
 | Review QA on assigned card | Review | kanban-review-qa |
 | User says feature / bug / agent / commit-issue Done | Governance | Card Done |
+| Epic complete / audit | Agent | Epic audit |
+| Archive group complete | Agent | Archive group batch |
 | User says inquiry Done | Close only | No lessons |
 | AGENTS.md governance audit | Read-only | Periodic audit |
 | Lessons coverage drift / low composite | Governance | check_lessons_coverage |
@@ -117,6 +131,7 @@ AGENTS_CARD_TYPES = """
 | `feature` | Feature Areas | Decisions |
 | `bug` | Steps | Root Cause |
 | `inquiry` | Description | Response |
+| `plan` | Description | Recommendation |
 | `agent` | Description | Decisions |
 | `commit-issue` | Problem | Corrective Action |
 """
@@ -193,6 +208,70 @@ def test_check_classify_parity_detects_reference_fingerprint_drift():
         short_ref,
     )
     assert any(PREFIX_ROUTING in line and "fingerprint drift" in line for line in issues)
+
+
+SKILL_HANDOFF_SNIPPET = """
+## 7. Handoff format
+
+### Self-evaluation (compact — one line per field)
+
+```markdown
+- **Scope:** on-target | read-only | note
+- **Context load:** ok | note
+- **Drift alerts:** none (N/A)
+- **Tests:** path + result | n/a — why
+- **Docs:** paths | n/a — why
+- **Skills used:** slugs | none
+- **Skills updated:** slug — one line | none (read-only)
+- **Rules updated:** path — one line | none (read-only)
+- **Commit-ready:** yes | needs pre-commit | n/a
+```
+"""
+
+AGENTS_HANDOFF_POINTER = """
+## End handoff
+
+Full template: agent-self-evaluation §7 — pointer only.
+**Last sections:** `### Files used` then `### Self-evaluation`.
+"""
+
+AGENTS_HANDOFF_DUP = """
+## End handoff
+
+- **Scope:** on-target | read-only | note
+- **Context load:** ok | note
+- **Drift alerts:** none (N/A)
+"""
+
+
+def test_check_handoff_duplication_pair_passes_pointer_only():
+    assert check_handoff_duplication_pair(AGENTS_HANDOFF_POINTER, SKILL_HANDOFF_SNIPPET) == []
+
+
+def test_check_handoff_duplication_pair_fails_three_consecutive_lines():
+    issues = check_handoff_duplication_pair(AGENTS_HANDOFF_DUP, SKILL_HANDOFF_SNIPPET)
+    assert len(issues) == 1
+    assert PREFIX_ROUTING in issues[0]
+    assert "governance-gc7-handoff-duplication-pair" in issues[0]
+
+
+def test_check_handoff_duplication_pair_passes_two_lines_only():
+    agents = """
+## End handoff
+
+- **Scope:** on-target | read-only | note
+- **Context load:** ok | note
+"""
+    assert check_handoff_duplication_pair(agents, SKILL_HANDOFF_SNIPPET) == []
+
+
+def test_check_handoff_duplication_pair_passes_on_repo_artifacts():
+    repo = Path(__file__).resolve().parent.parent
+    agents = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    skill = (repo / ".cursor/skills/agent-self-evaluation/SKILL.md").read_text(
+        encoding="utf-8",
+    )
+    assert check_handoff_duplication_pair(agents, skill) == []
 
 
 def test_check_failure_pattern_parity_detects_missing_reference_row():
@@ -443,6 +522,19 @@ def test_extract_label_method_symbols_from_card_body():
     assert symbols == {"PreviewToolbar.zoom_changed", "PreviewPanel.restore_saved_zoom"}
 
 
+def test_extract_label_method_symbols_reads_product_methods():
+    card = """
+## Feature Areas
+
+`Preview Toolbar`
+
+## Product Methods
+
+- `ui/widgets/preview_toolbar.py` — `PreviewToolbar.zoom_changed`
+"""
+    assert extract_label_method_symbols(card) == {"PreviewToolbar.zoom_changed"}
+
+
 def test_check_kanban_label_methods_handlers_detects_missing_symbol(tmp_path: Path):
     features = tmp_path / "features"
     features.mkdir()
@@ -467,6 +559,7 @@ order: "a0"
     issues = check_kanban_label_methods_handlers(features, handlers)
     assert len(issues) == 1
     assert PREFIX_REGISTRY in issues[0]
+    assert "Product Methods" in issues[0]
     assert "not_in_registry" in issues[0]
 
 
@@ -510,7 +603,7 @@ def test_check_card_type_parity_detects_unknown_label():
 
 
 def test_check_card_type_parity_passes_for_known_labels():
-    known = {"feature", "bug", "inquiry", "commit-issue", "agent"}
+    known = {"feature", "bug", "inquiry", "plan", "commit-issue", "agent"}
     assert check_card_type_parity({"bug"}, known) == []
 
 
@@ -534,6 +627,7 @@ def test_check_kanban_rule_globs_detects_always_apply_on_card_type(tmp_path: Pat
         "kanban-feature-cards.mdc",
         "kanban-agent-cards.mdc",
         "kanban-inquiry-cards.mdc",
+        "kanban-plan-cards.mdc",
         "kanban-commit-issue-cards.mdc",
     ):
         (rules / name).write_text(
@@ -698,8 +792,12 @@ def test_build_drift_card_body_sections():
     assert "## Alert" in body
     assert "## Feature Areas" in body
     assert "`Feature Area Registry`" in body
-    assert "## Label Paths" in body
-    assert "## Label Methods" in body
+    assert "## Product Paths" in body
+    assert "## Product Methods" in body
+    assert "## Tests" in body
+    assert "### Files" in body
+    assert "### Verify (agent)" in body
+    assert "## Docs" in body
     assert "## Decisions" in body
     assert "## Acceptance Criteria" in body
     assert "## Corrective Action" not in body
@@ -711,8 +809,14 @@ def test_build_drift_card_body_agent_spawn_sections():
     body = build_drift_card_body(issue)
     assert "## Description" in body
     assert "## Feature Area" in body
-    assert "## Label Methods" in body
+    assert "## Product Methods" in body
+    assert "## Tests" in body
+    assert "## Docs" in body
     assert "## Decisions" in body
+    assert "**Prior lessons" in body
+    assert "lessons-index.yaml" in body
+    assert "Product Paths" in body
+    assert "C4:" in body
     assert "## Acceptance Criteria" in body
     assert "## Feature Areas" not in body
     assert "## Corrective Action" not in body
@@ -728,7 +832,9 @@ def test_create_drift_alert_cards_writes_todo_card(tmp_path: Path):
     assert 'status: "todo"' in text
     assert 'priority: "medium"' in text
     assert "## Alert" in text
-    assert "## Label Methods" in text
+    assert "## Product Methods" in text
+    assert "## Tests" in text
+    assert "## Docs" in text
     assert "## Decisions" in text
     assert "## Acceptance Criteria" in text
     assert "## Corrective Action" not in text
@@ -766,7 +872,7 @@ def test_consolidate_registry_label_methods_per_kanban_card():
     assert len(merged) == 1
     assert "`compose_stairs`" in merged[0]
     assert "`build_stair_top_mask`" in merged[0]
-    assert f"kanban `{card}` — Label Methods symbols" in merged[0]
+    assert f"kanban `{card}` — Product Methods symbols" in merged[0]
 
 
 def test_create_drift_alert_cards_one_card_for_multiple_registry_symbols(tmp_path: Path):
@@ -920,7 +1026,8 @@ def test_check_lessons_coverage_drift_emits_breakdown(tmp_path: Path, monkeypatc
     assert len(issues) == 1
     assert issues[0].startswith(PREFIX_LESSONS)
     assert "C1 Capture" in issues[0]
-    assert "C4 Application" in issues[0]
+    assert "C4 Application (aggregate)" in issues[0]
+    assert "C4 Application (per-card)" in issues[0]
 
 
 def test_check_lessons_coverage_drift_critical_below_sixty(tmp_path: Path, monkeypatch):
@@ -943,6 +1050,12 @@ def test_check_lessons_coverage_drift_critical_below_sixty(tmp_path: Path, monke
         "## Lessons captured (2026-06-27)\n\n- no promotion\n",
         epic="LowEpic",
     )
+    done.joinpath("lesson.md").write_text(
+        '---\nlabels: ["feature"]\ncompletedAt: "2026-06-27T21:00:00.000Z"\n'
+        "epic: LowEpic\n---\n\n"
+        "## Lessons captured (2026-06-27)\n\n- no promotion\n",
+        encoding="utf-8",
+    )
     active = features / "active.md"
     active.write_text(
         "---\nstatus: review\nepic: LowEpic\n---\n\n"
@@ -954,6 +1067,7 @@ def test_check_lessons_coverage_drift_critical_below_sixty(tmp_path: Path, monke
 
     issues = check_lessons_coverage_drift(features, include_severity=True)
     assert issues[0].startswith(f"[{SEVERITY_CRITICAL}]")
+    assert "C1b Forward feedback" in issues[0]
 
 
 def test_create_lessons_coverage_drift_card_epic(tmp_path: Path):
@@ -971,6 +1085,303 @@ def test_create_lessons_coverage_drift_card_epic(tmp_path: Path):
     assert "lessons-coverage-drift-" in text
     assert "## Description" in text
     assert "## Feature Area" in text
-    assert "## Label Methods" in text
+    assert "## Product Methods" in text
+    assert "## Tests" in text
+    assert "## Docs" in text
     assert "## Decisions" in text
     assert "## Acceptance Criteria" in text
+
+
+GC5_CATEGORY_BLOCK = """
+- **Question:** Card-specific question?
+  **Risk Level:** {risk} | **Priority:** {priority}
+  **Impact Scope:** {scope}
+  **References:** sig:test-gc5
+{mitigation}"""
+
+
+def _gc5_forward_feedback(*, governance_risk: int = 4) -> str:
+    mitigation = ""
+    if governance_risk >= 4:
+        mitigation = "  **Mitigation:** concrete step for max-tier risk"
+    blocks = [
+        GC5_CATEGORY_BLOCK.format(
+            risk=governance_risk,
+            priority="High" if governance_risk >= 4 else "Low",
+            scope="system-wide",
+            mitigation=mitigation,
+        ),
+    ]
+    low = GC5_CATEGORY_BLOCK.format(
+        risk=2,
+        priority="Low",
+        scope="local",
+        mitigation="",
+    )
+    blocks.extend([low] * 5)
+    categories = (
+        "Governance",
+        "Skill",
+        "Rule",
+        "Codebase",
+        "Prompt pattern",
+        "Routing",
+    )
+    sections = [f"### {name}\n{body}" for name, body in zip(categories, blocks, strict=True)]
+    return "## Forward-looking feedback (2026-06-27)\n\n" + "\n\n".join(sections) + "\n"
+
+
+def _write_closed_agent_card(
+    done_dir: Path,
+    name: str,
+    *,
+    completed_at: str,
+    body: str,
+) -> Path:
+    path = done_dir / name
+    path.write_text(
+        "---\n"
+        f'labels: ["agent"]\n'
+        f'completedAt: "{completed_at}"\n'
+        "epic: TestEpic\n"
+        "---\n\n"
+        "## Lessons captured (2026-06-27)\n\n"
+        "- lesson bullet\n\n"
+        f"{body}",
+        encoding="utf-8",
+    )
+    return path
+
+
+@pytest.fixture
+def forward_feedback_features(tmp_path: Path):
+    features = tmp_path / "features"
+    done = features / "done"
+    done.mkdir(parents=True)
+    return features, done
+
+
+def test_audit_forward_feedback_gc5_passes_full_card(forward_feedback_features):
+    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+
+    features, done = forward_feedback_features
+    _write_closed_agent_card(
+        done,
+        "full-gc5.md",
+        completed_at="2026-06-27T20:00:00.000Z",
+        body=_gc5_forward_feedback(),
+    )
+    assert audit_forward_feedback_gc5(features_dir=features) == []
+
+
+def test_audit_forward_feedback_gc5_reports_missing_impact_scope(forward_feedback_features):
+    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+
+    features, done = forward_feedback_features
+    incomplete = _gc5_forward_feedback()
+    incomplete = incomplete.replace("  **Impact Scope:** system-wide\n", "", 1)
+    _write_closed_agent_card(
+        done,
+        "incomplete-gc5.md",
+        completed_at="2026-06-27T21:00:00.000Z",
+        body=incomplete,
+    )
+    hits = audit_forward_feedback_gc5(features_dir=features)
+    assert len(hits) == 1
+    rel, issues = hits[0]
+    assert rel == "done/incomplete-gc5.md"
+    assert any("missing Impact Scope" in issue for issue in issues)
+
+
+def test_audit_forward_feedback_gc5_skips_grandfathered(forward_feedback_features):
+    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+
+    features, done = forward_feedback_features
+    _write_closed_agent_card(
+        done,
+        "legacy.md",
+        completed_at="2026-06-26T12:00:00.000Z",
+        body="- no forward feedback block\n",
+    )
+    assert audit_forward_feedback_gc5(features_dir=features) == []
+
+
+def test_format_forward_feedback_audit_report_pass():
+    lines = format_forward_feedback_audit_report([])
+    assert len(lines) == 1
+    assert "Forward feedback audit:" in lines[0]
+    assert "governance-gc7-forward-feedback-audit" in lines[0]
+
+
+def test_format_forward_feedback_audit_report_lists_gaps():
+    lines = format_forward_feedback_audit_report(
+        [("done/bad.md", ["Governance: missing Impact Scope"])],
+    )
+    assert any("done/bad.md" in line for line in lines)
+    assert any("missing Impact Scope" in line for line in lines)
+
+
+def test_run_forward_feedback_audit_exits_zero(forward_feedback_features, capsys):
+    features, done = forward_feedback_features
+    _write_closed_agent_card(
+        done,
+        "gap.md",
+        completed_at="2026-06-27T22:00:00.000Z",
+        body="- no ff\n",
+    )
+    assert run_forward_feedback_audit(features_dir=features) == 0
+    out = capsys.readouterr().out
+    assert "Forward feedback audit:" in out
+    assert "missing ## Forward-looking feedback" in out
+
+
+def test_main_forward_feedback_audit_flag(forward_feedback_features):
+    features, _done = forward_feedback_features
+    assert (
+        parity_main(
+            [
+                "--forward-feedback-audit",
+                "--features-dir",
+                str(features),
+                "--quiet",
+            ],
+        )
+        == 0
+    )
+
+
+def test_run_forward_feedback_stale_audit_exits_zero(tmp_path: Path, capsys):
+    index_path = tmp_path / "forward-feedback-index.yaml"
+    index_path.write_text(
+        """
+version: 1
+items:
+  - id: ff-old
+    status: open
+    risk_level: 4
+    completed_at: '2026-01-01'
+    category: Governance
+    question: stale?
+    source_card: .devtool/features/done/x.md
+""".strip(),
+        encoding="utf-8",
+    )
+    assert (
+        run_forward_feedback_stale_audit(
+            index_path=index_path,
+            stale_days=30,
+        )
+        == 0
+    )
+    out = capsys.readouterr().out
+    assert "Forward feedback stale:" in out
+    assert "forward-feedback-stale-metrics" in out
+    assert "ff-old" in out
+
+
+def test_run_forward_feedback_stale_audit_pass_when_none_stale(tmp_path: Path, capsys):
+    index_path = tmp_path / "forward-feedback-index.yaml"
+    index_path.write_text(
+        """
+version: 1
+items:
+  - id: ff-fresh
+    status: open
+    risk_level: 4
+    completed_at: '2026-06-26'
+    category: Governance
+    question: fresh?
+""".strip(),
+        encoding="utf-8",
+    )
+    from scripts.forward_feedback_index_lib import find_stale_high_risk_open
+
+    rows = [{"id": "ff-fresh", "status": "open", "risk_level": 4, "completed_at": "2026-06-26"}]
+    assert find_stale_high_risk_open(rows, stale_days=30, today=date(2026, 6, 27)) == []
+    assert (
+        run_forward_feedback_stale_audit(
+            index_path=index_path,
+            stale_days=30,
+        )
+        == 0
+    )
+    out = capsys.readouterr().out
+    assert "no high-risk open items exceed" in out
+
+
+def test_main_forward_feedback_stale_flag(tmp_path: Path):
+    index_root = tmp_path / "repo"
+    docs = index_root / "docs"
+    docs.mkdir(parents=True)
+    (docs / "forward-feedback-index.yaml").write_text("version: 1\nitems: []\n", encoding="utf-8")
+    assert (
+        parity_main(
+            [
+                "--forward-feedback-stale",
+                "--repo-root",
+                str(index_root),
+                "--stale-days",
+                "7",
+                "--quiet",
+            ],
+        )
+        == 0
+    )
+
+
+def test_find_stale_development_md_section_refs_flags_governance_link(tmp_path: Path):
+    repo = tmp_path / "repo"
+    rules = repo / ".cursor/rules"
+    rules.mkdir(parents=True)
+    (rules / "example.mdc").write_text(
+        "See docs/development.md § Kanban card scope.\n",
+        encoding="utf-8",
+    )
+    hits = find_stale_development_md_section_refs(repo)
+    assert len(hits) == 1
+    assert hits[0][0] == ".cursor/rules/example.mdc"
+
+
+def test_find_stale_development_md_section_refs_allows_meta_grep_lines(tmp_path: Path):
+    repo = tmp_path / "repo"
+    skill = repo / ".cursor/skills/docs-maintenance"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text(
+        'rg "development.md §" .cursor AGENTS.md docs/\nnot `development.md §` prose\n',
+        encoding="utf-8",
+    )
+    assert find_stale_development_md_section_refs(repo) == []
+
+
+def test_run_docs_governance_split_audit_passes_when_clean(tmp_path: Path, capsys):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text("# agents\n", encoding="utf-8")
+    docs = repo / "docs"
+    docs.mkdir()
+    (docs / "development.md").write_text("setup\n", encoding="utf-8")
+    gov = docs / "governance"
+    gov.mkdir()
+    (gov / "README.md").write_text("handbook\n", encoding="utf-8")
+    assert run_docs_governance_split_audit(repo_root=repo) == 0
+    out = capsys.readouterr().out
+    assert "Docs governance split:" in out
+    assert "no stale development.md § anchors" in out
+    assert "docs-governance-split" in out
+
+
+def test_main_docs_governance_split_flag(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text("# agents\n", encoding="utf-8")
+    assert (
+        parity_main(
+            [
+                "--docs-governance-split",
+                "--repo-root",
+                str(repo),
+                "--quiet",
+            ],
+        )
+        == 0
+    )

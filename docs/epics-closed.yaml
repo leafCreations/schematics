@@ -1,0 +1,29 @@
+# Closed kanban epics — do not reuse `epic:` on new cards; spawn follow-ups under a new
+# PascalCase name. Append on epic-completion audit (gel0). Signature:
+# governance-epic-completion-audit
+#
+# Fields per entry:
+#   name — frontmatter epic value (PascalCase)
+#   closed — ISO date (YYYY-MM-DD)
+#   anchor — path to anchor card with ## Epic audit section
+#   follow_up — optional new epic name for post-close work
+#
+# Example (after GovernanceEpicLifecycle gel0–gel3 complete):
+# closed:
+#   - name: GovernanceEpicLifecycle
+#     closed: "2026-06-27"
+#     anchor: archived/agent-governance-epic-completion-audit-2026-06-27.md
+#     follow_up: null
+closed:
+  - name: KanbanCardScope
+    closed: "2026-06-28"
+    anchor: archived/agent-kanban-card-scope-ks0-schema-spec-2026-06-27.md
+    follow_up: null
+  - name: ForwardFeedbackRegistry
+    closed: "2026-06-27"
+    anchor: archived/agent-forward-feedback-ff0-index-build-2026-06-27.md
+    follow_up: null
+  - name: DocsGovernanceSplit
+    closed: "2026-06-27"
+    anchor: archived/agent-docs-governance-split-dg0-schema-spec-2026-06-29.md
+    follow_up: null
