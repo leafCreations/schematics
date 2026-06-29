@@ -13,7 +13,8 @@ Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
 
 1. **Run before sending the final message** — not optional, not deferred to a follow-up.
 2. **Include optional `### Top forward feedback`** (Card Done), **`### Forward feedback dedup`**
- (Card Done when index rebuild reports duplicates), **`### Epic summary`** / **`### Initiative summary`**
+ (Card Done when index rebuild reports duplicates — cite `python3 scripts/report_forward_feedback_dedup.py`;
+ Signature: `forward-feedback-dedup-report`), **`### Epic summary`** / **`### Initiative summary`**
    (epic/archive close), **`### Compaction advisory`** (warn/critical — Signature:
    `governance-compaction-drift-alert`), then **`### Files used`** and **`### Self-evaluation`** as the **last sections**
    — see [SKILL.md](../skills/agent-self-evaluation/SKILL.md) §7 for order.

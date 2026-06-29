@@ -97,6 +97,8 @@ Note anything that cost extra turns, tokens, or user corrections:
 | Hook failure with non-obvious fix | Yes — pre-commit-workflow |
 | UI wiring trap | Yes — ui-change or `.cursor/rules/ui-*.mdc` |
 | User had to repeat a process expectation | Yes — update skill and/or rule |
+| Costly discovery (`find`, broad `Glob`, recovery search, broad explore) | Yes — command ledger + ff risk **≥ 3**; Signature: `agent-costly-discovery-commands` |
+| Card Done `mv` failed → recovery search | Yes — use `move_kanban_card.py`; Signature: `kanban-card-move-resolver` |
 | One-off typo or bad local edit | No |
 | Task-specific business logic only | No — belongs in code/docs, not skills/rules |
 
@@ -246,7 +248,24 @@ Signature: `governance-compact-self-eval-handoff`. **Last sections only** — in
 1b. **`### Forward feedback dedup`** — **Card Done turns only** when
    `build_forward_feedback_index.py` stderr reports exact duplicate question fingerprints (Signature:
    `forward-feedback-card-done-ingest`). Non-blocking; place after **`### Top forward feedback`**
-   when both apply. Omit when no dedup warnings.
+   when both apply. Omit when no dedup warnings. Run
+   `python3 scripts/report_forward_feedback_dedup.py` (or `--rebuild` after index build) and mirror
+   clusters in chat — Signature: `forward-feedback-dedup-report`. Fixed template:
+
+```markdown
+### Forward feedback dedup
+- **Rebuild warnings:** N duplicate fingerprint(s) on stderr
+- **User inspect:** `python3 scripts/report_forward_feedback_dedup.py` (add `--rebuild` to match rebuild)
+- **Action:** none — all terminal | review — open rows remain
+- **Cluster 1:** fingerprint `…` — question: `…`
+  - **Canonical:** `ff-…` (answered|duplicate|…)
+  - **Duplicates:** `ff-…`, `ff-…`
+```
+
+   Omit entire section when rebuild stderr count is 0 (terminal clusters suppressed — ffd2).
+1c. **`### Commands used`** — optional when costly discovery ran (`find`, broad `Glob`, recovery
+   search, broad explore/Task). List command class + why; review before ff scoring — Signature:
+   `agent-costly-discovery-commands`. Omit when none.
 2. **`### Epic summary`** or **`### Initiative summary`** — **epic audit / archive group complete
    turns only:** 1–2 paragraphs, outcomes in plain language ([kanban-markdown/reference.md](../kanban-markdown/reference.md)
    § Epic / initiative completion summary; Signature: `governance-epic-completion-summary`). Epic

@@ -56,6 +56,16 @@ Lessons captured `artifacts:` schema (Signature: `docs-governance-split`).
 
 Python touched by the card must keep lines ≤ **100** characters (`pyproject.toml` `line-length = 100`; pre-commit ruff E501). Wrap strings and split long markdown-in-Python before commit.
 
+## ForwardFeedbackDedup epic (ffd1 done — 2026-06-29)
+
+## ForwardFeedbackDedup epic (archived 2026-06-29)
+
+Closed — `docs/epics-closed.yaml`. Inspect: `python3 scripts/report_forward_feedback_dedup.py`.
+
+## KanbanCardLifecycle epic (archived 2026-06-29)
+
+Closed — `docs/epics-closed.yaml`. Moves: `python3 scripts/move_kanban_card.py`.
+
 ## KanbanCardScope epic (ks2 complete — 2026-06-27)
 
 **Product** + **Tests** + **Docs** on active cards — Signature: `kanban-card-scope-schema`. Closed:

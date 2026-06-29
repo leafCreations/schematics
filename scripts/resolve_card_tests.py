@@ -95,6 +95,13 @@ def main(argv: list[str] | None = None) -> int:
         if not card_path.is_absolute():
             card_path = REPO_ROOT / card_path
         if not card_path.is_file():
+            from scripts.move_kanban_card import resolve_kanban_card
+
+            stem = Path(args.from_card).stem
+            resolved = resolve_kanban_card(stem=stem)
+            if resolved is not None:
+                card_path = resolved.path
+        if not card_path.is_file():
             print(f"resolve_card_tests: card not found: {card_path}", file=sys.stderr)
             return 1
         paths = extract_product_paths(card_path.read_text(encoding="utf-8"))

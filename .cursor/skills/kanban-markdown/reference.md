@@ -308,15 +308,19 @@ override when count ≥ 2 (user decision, 2026-06-29).
 
 **Same turn (mandatory for labeled cards):**
 
-1. Frontmatter: `status: done`, `completedAt`, bump `modified`
-2. Move `.devtool/features/{id}.md` → `.devtool/features/done/{id}.md`
-3. Append `## Lessons captured` on `done/` path; spawn **`feedback`** and/or legacy parent
-   `## Forward-looking feedback` per § Forward-feedback capture cadence
-4. `python3 scripts/build_lessons_index.py` when lessons ran
-5. `python3 scripts/build_forward_feedback_index.py` when lessons ran — Signature:
-   `forward-feedback-card-done-ingest`; advisory exact-question dedup → `duplicate_of` in yaml
-   + stderr; surface lines in chat as **`### Forward feedback dedup`** (non-blocking)
-6. `### Top forward feedback` in chat (agent-self-evaluation §7)
+1. **Move** — `python3 scripts/move_kanban_card.py --id {id} --to done` (Signature:
+   `kanban-card-move-resolver`); capture stdout path. **Do not** raw `mv` + parallel edit at active
+   path. Optional `--set-done` or set `status` / `completedAt` / `modified` in step 2.
+2. Single edit on printed path — append `## Lessons captured`; spawn **`feedback`** per §
+   Forward-feedback capture cadence; review **command ledger** before ff scoring (Signature:
+   `agent-costly-discovery-commands`).
+3. `python3 scripts/build_lessons_index.py` when lessons ran
+4. `python3 scripts/build_forward_feedback_index.py` when lessons ran — Signature:
+   `forward-feedback-card-done-ingest`; non-terminal dedup may stderr — run
+   `python3 scripts/report_forward_feedback_dedup.py` (`--rebuild` after build) and surface
+   **`### Forward feedback dedup`** when stderr count > 0 (Signature: `forward-feedback-dedup-report`);
+   omit section when 0
+5. `### Top forward feedback` in chat (agent-self-evaluation §7)
 
 **Not Card Done:** user reports Review bugs → stay in **review** with `**QA follow-up**` ([kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc)).
 
@@ -431,6 +435,10 @@ Shared ranking for **`feedback`** cards, legacy parent gc5 items, and top-3 chat
 
 **Spawn gate (parent Card Done):** risk 1–2 no spawn (top-3 may include when sole items); 3–4 spawn
 **`feedback`** when user attention needed; 5 mandatory **`feedback`** spawn same turn — Option A.
+
+**Costly discovery (KanbanCardLifecycle kcl3):** honest default **risk ≥ 3** for command-ledger
+entries (`find`, broad `Glob` on `done/`/`archived/`, recovery search, broad explore/Task after
+classify). Signature: `agent-costly-discovery-commands`.
 
 **Top-3 chat:** **`### Top forward feedback`** for risk **≥ 3** only; omit when none spawned and no
 legacy parent ff written. **Ranking** (Primary / Secondary / top-3 backfill): Impact Scope

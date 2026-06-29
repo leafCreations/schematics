@@ -195,6 +195,31 @@ def test_apply_duplicate_of_is_advisory_only():
     assert len(warnings) == 1
 
 
+def test_build_index_suppresses_terminal_duplicate_stderr(ff_features):
+    repo_root, done = ff_features
+    shared = "Terminal cluster suppress?"
+    _write_closed_card(done, "card-a.md", body=_duplicate_question_body(shared))
+    _write_closed_card(done, "card-b.md", body=_duplicate_question_body(shared))
+    payload1, warnings1 = build_index(repo_root=repo_root)
+    assert len(warnings1) == 1
+    canonical = next(row for row in payload1["items"] if row["source_card"].endswith("card-a.md"))
+    duplicate = next(row for row in payload1["items"] if row["source_card"].endswith("card-b.md"))
+    overlay_path = repo_root / "docs" / "forward-feedback-index.yaml"
+    write_index(
+        {
+            "version": 1,
+            "generated_at": "2026-06-29T00:00:00+00:00",
+            "items": [
+                {**canonical, "status": "answered"},
+                {**duplicate, "status": "duplicate"},
+            ],
+        },
+        output_path=overlay_path,
+    )
+    _payload2, warnings2 = build_index(repo_root=repo_root)
+    assert warnings2 == []
+
+
 def test_question_fingerprint_normalizes_whitespace():
     assert question_fingerprint("  foo?  ") == question_fingerprint("foo?")
 

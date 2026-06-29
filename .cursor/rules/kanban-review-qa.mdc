@@ -44,11 +44,13 @@ Before **review** on **`Floating Camera`** cards: [ui-change/SKILL.md](../skills
 ## Card Done — lessons learned (mandatory)
 
 When the user signals **QA-complete / Done** on **`feature`**, **`bug`**, **`agent`**, or
-**`commit-issue`**, the **agent** moves to `done/` and runs Card Done **same turn**
-(Signature: `card-done-agent-move-qa-complete` — [reference § QA-complete triggers](../skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table)).
+**`commit-issue`**, the **agent** moves to `done/` via `python3 scripts/move_kanban_card.py` and runs
+Card Done **same turn** (Signatures: `card-done-agent-move-qa-complete`, `kanban-card-move-resolver`
+— [reference § QA-complete triggers](../skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table)).
 Unnamed card: [reference § Disambiguation](../skills/kanban-markdown/reference.md#disambiguation-card-unnamed).
 Full checklist: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done.
 **`inquiry` / `feedback`:** move only — no lessons or ff ([kanban-card-gates.mdc](kanban-card-gates.mdc)).
+**Do not** run recovery `find` when move fails — re-run resolver with correct `--id`/stem.
 
 ## Do not
 

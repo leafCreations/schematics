@@ -15,7 +15,8 @@ Corrective Action; optional Product / Tests / Docs. **Implement** after user app
 may use **`review and implement`** — Signature: `commit-issue-review-and-implement-one-shot`.
 
 **Card Done:** [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done; promote
-patterns to [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md).
+patterns to [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). SIM103 tail:
+return the positive condition (e.g. `move_kanban_card._matches_card`) — Signature: `precommit-ruff-sim102-sim103`.
 
 **Do not:** **`## Decisions`**; delete **Problem** / **Failed Tests**; bare **`implement`** without
 prior review.

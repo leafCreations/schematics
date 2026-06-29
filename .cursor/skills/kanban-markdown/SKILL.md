@@ -82,6 +82,14 @@ After **label gate**, load **one** scoped card-type rule for the card's `labels`
 `kanban-*.mdc`. [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) stays always-on.
 Signature: `governance-compact-kanban-rule-globs`.
 
+**ForwardFeedbackDedup** — closed 2026-06-29; see `docs/epics-closed.yaml`. User inspect
+`python3 scripts/report_forward_feedback_dedup.py`. Signatures: `forward-feedback-dedup-report`,
+`forward-feedback-card-done-ingest`.
+
+**KanbanCardLifecycle** — closed 2026-06-29; see `docs/epics-closed.yaml`. Card moves:
+`python3 scripts/move_kanban_card.py`. Signatures: `kanban-card-move-resolver`,
+`agent-costly-discovery-commands`.
+
 ## Board location
 
 | Path | Role |
@@ -274,24 +282,42 @@ On user **QA-complete / Done** signal (see [reference.md § QA-complete → Card
 phase/epic coordination: [reference-glossary.md](reference-glossary.md) — Signatures:
 `forward-feedback-capture-policy`, `card-done-feedback-spawn`, `epic-coordination-not-forward-feedback`.
 
+**Move-first (mandatory — `feature` / `bug` / `agent` / `commit-issue`):** Signature:
+`kanban-card-move-resolver`. **Do not** run raw `mv` from `.devtool/features/` or parallel
+`StrReplace` at the active path with `mv` in the same turn.
+
+```bash
+python3 scripts/move_kanban_card.py --id {id} --to done
+# archive same turn when user requests: --to archived
+# optional frontmatter: add --set-done (else set status/completedAt in step 2 edit)
+```
+
+Capture stdout path — single edit pass on that path for Lessons captured and spawn tables. **Do not**
+run `find`, broad `Glob`, or recovery search when resolve fails — fix stem/`--id` and re-run script.
+
 **Agent must run in that turn:**
 
 1. Read card — Decisions / Corrective Action, QA follow-ups, Context; check cadence row above
-2. Distill durable lessons (symptom → fix pattern → tests)
-3. Update **≥1 skill** + **≥1 rule** + relevant **docs** / registry
-4. Add **`## Lessons captured (YYYY-MM-DD)`** on card (edit `done/{id}.md` if moved)
-5. Score open questions — spawn **`todo`** **`feedback`** card(s) when risk **≥ 3** (**Risk 5**
+2. **Move** — `move_kanban_card.py` as above (inquiry/`feedback`: skip — move-only still uses script
+   when path is under active bucket)
+3. **Command ledger** — review costly ops this turn (`find`, broad `Glob`, recovery search, broad
+   explore); score ff before spawn — Signature: `agent-costly-discovery-commands`
+4. Distill durable lessons (symptom → fix pattern → tests)
+5. Update **≥1 skill** + **≥1 rule** + relevant **docs** / registry
+6. Add **`## Lessons captured (YYYY-MM-DD)`** on the printed `done/` path (one edit pass with
+   frontmatter if `--set-done` not used)
+7. Score open questions — spawn **`todo`** **`feedback`** card(s) when risk **≥ 3** (**Risk 5**
    mandatory same turn — Option A). Append **`## Spawned follow-up cards`** on parent with
    feedback paths; after index rebuild add **`Forward feedback:`** `` `ff-*` `` on child **Context**
    and run `resolve_forward_feedback.py --link` when linking spawn — Signature:
    `forward-feedback-resolution-tracking`, `card-done-feedback-spawn`.
-6. When lessons ran: `python3 scripts/build_lessons_index.py`; then
+8. When lessons ran: `python3 scripts/build_lessons_index.py`; then
    `python3 scripts/build_forward_feedback_index.py` when lessons ran **or** **`feedback`** cards
    were spawned (Signature: `forward-feedback-card-done-ingest`). Dedup → **`### Forward feedback
-   dedup`** in chat.
-7. **Top-3 chat** (`### Top forward feedback`) — risk **≥ 3** only; include 1–2 only when sole
+   dedup`** in chat (`python3 scripts/report_forward_feedback_dedup.py`).
+9. **Top-3 chat** (`### Top forward feedback`) — risk **≥ 3** only; include 1–2 only when sole
    items; **omit** when no feedback spawned and no legacy parent ff block written — agent-self-evaluation §7
-8. Card Done turns only — not per-turn §6 chat feedback
+10. Card Done turns only — not per-turn §6 chat feedback
 
 Optional `artifacts:` tail — [lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons captured `artifacts:` (Signature: `docs-governance-split`). Recommended for C2 scoring; not required for Done. Use `doc:lessons-index.yaml`; inline `` `sig:slug` `` indexed — re-run `build_lessons_index.py` when `lesson_signatures` drift.
 

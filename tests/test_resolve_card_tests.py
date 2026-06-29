@@ -47,3 +47,28 @@ labels: ["feature"]
     )
     paths = extract_product_paths(card.read_text(encoding="utf-8"))
     assert paths == ["helpers/cells.py", "ui/main_window.py"]
+
+
+def test_from_card_resolves_done_bucket(tmp_path: Path, monkeypatch):
+    features = tmp_path / "features"
+    done = features / "done"
+    done.mkdir(parents=True)
+    card = done / "closed-feature.md"
+    card.write_text(
+        """---
+labels: ["feature"]
+---
+# Example
+
+## Product Paths
+
+- `helpers/cells.py`
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("scripts.move_kanban_card.DEFAULT_FEATURES_DIR", features)
+
+    from scripts.resolve_card_tests import main
+
+    code = main(["--from-card", "closed-feature", "--files-only"])
+    assert code == 0

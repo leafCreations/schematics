@@ -943,18 +943,22 @@ areas:
       - scripts/build_lessons_index.py
       - scripts/build_forward_feedback_index.py
       - scripts/resolve_forward_feedback.py
+      - scripts/report_forward_feedback_dedup.py
       - scripts/batch_forward_feedback_hygiene.py
       - scripts/check_governance_parity.py
       - scripts/governance_compaction_lib.py
       - scripts/resolve_feature_areas.py
       - scripts/resolve_card_tests.py
+      - scripts/move_kanban_card.py
       - scripts/pre-commit-pytest.sh
       - scripts/agent-commit-ready.sh
       - tests/test_resolve_prior_lessons.py
       - tests/test_resolve_card_tests.py
+      - tests/test_move_kanban_card.py
       - tests/test_check_lessons_coverage.py
       - tests/test_build_lessons_index.py
       - tests/test_build_forward_feedback_index.py
+      - tests/test_report_forward_feedback_dedup.py
       - tests/test_resolve_forward_feedback.py
       - tests/test_governance_compaction.py
       - docs/lessons-index.yaml
@@ -973,10 +977,15 @@ areas:
       - build_lessons_index
       - build_forward_feedback_index
       - resolve_forward_feedback
+      - cluster_duplicate_fingerprints
+      - filter_suppressed_dedup_warnings
       - batch_forward_feedback_hygiene
       - resolve_feature_areas
       - extract_product_paths
       - simulate_hook
+      - resolve_kanban_card
+      - move_kanban_card
+      - rel_repo_path
       - check_lessons_coverage
       - audit_application_coverage
       - audit_application_coverage_per_card
@@ -1053,6 +1062,8 @@ areas:
       - governance-compact-kanban-rule-globs
       - card-done-agent-move-qa-complete
       - card-done-disambiguate-multi-review
+      - kanban-card-move-resolver
+      - agent-costly-discovery-commands
       - lessons-coverage-c1b-forward-feedback
       - governance-compact-self-eval-handoff
       - ruff-e501-line-length

@@ -59,10 +59,26 @@ Rare same-turn: `review and update`, `plan and update`. Legacy `Kanban: answer i
 ## Card Done (QA-complete)
 
 When the user signals **QA-complete / Done** on a **`feature`**, **`bug`**, **`agent`**, or
-**`commit-issue`** card, the agent moves the file to `done/` and runs Card Done same turn (lessons
+**`commit-issue`** card, the agent moves via `move_kanban_card.py` and runs Card Done same turn (lessons
 always; forward feedback per cadence). Canonical trigger table + **Disambiguation** when the user omits
 `@path`: [kanban-markdown/reference.md § QA-complete → Card Done](../../.cursor/skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table)
-(Signatures: `card-done-agent-move-qa-complete`, `card-done-disambiguate-multi-review`).
+(Signatures: `card-done-agent-move-qa-complete`, `card-done-disambiguate-multi-review`,
+`kanban-card-move-resolver`).
+
+```bash
+python3 scripts/move_kanban_card.py --id {id} --to done
+python3 scripts/resolve_card_tests.py --from-card {stem}   # resolves done/ when stem only
+```
+
+## ForwardFeedbackDedup (archived 2026-06-29)
+
+Closed — `docs/epics-closed.yaml`. Inspect: `python3 scripts/report_forward_feedback_dedup.py`.
+
+## KanbanCardLifecycle (archived 2026-06-29)
+
+Closed — `docs/epics-closed.yaml`. CLI: `python3 scripts/move_kanban_card.py --id {id} --to done`.
+
+## Agent workflow scripts
 
 - `python scripts/resolve_feature_areas.py "<label>"` — paths; `--handlers` for registry entry-point symbols; `--lessons` for curated `lesson_signatures` / `lesson_docs`
 - `python3 scripts/resolve_card_tests.py PATH…` or `--from-card CARD.md` — hook test selection for Product Paths

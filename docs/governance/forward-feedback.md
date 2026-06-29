@@ -52,8 +52,19 @@ excludes spawned unless `--include-spawned`.
 `python3 scripts/build_forward_feedback_index.py`. Ingests legacy parent
 `## Forward-looking feedback` on closed cards **and** **`feedback`**-labeled cards (todo/review/done/
 archived) with **`## Risk assessment`** (fcp2). Exact duplicate question fingerprints set
-`duplicate_of` on later items and emit stderr warnings — surface in chat as
+`duplicate_of` on later items. **Terminal clusters** (canonical + duplicates answered /
+duplicate / wont-fix / etc.) emit **no** stderr — use `report_forward_feedback_dedup.py` to inspect.
+Non-terminal clusters still warn on rebuild. Surface remaining warnings in chat as
 `### Forward feedback dedup` (non-blocking). Signature: `forward-feedback-card-done-ingest`.
+
+**Dedup report (informational):** inspect clusters without parsing stderr — Signature:
+`forward-feedback-dedup-report`:
+
+```bash
+python3 scripts/report_forward_feedback_dedup.py
+python3 scripts/report_forward_feedback_dedup.py --rebuild   # after fresh build_index
+python3 scripts/report_forward_feedback_dedup.py --json
+```
 
 **Feedback spawn path (fcp2):** on parent Card Done, spawn **`feedback`** todo when risk **≥ 3**
 (**Risk 5** mandatory — Option A). After index rebuild, link child **Context** and resolution:

@@ -55,3 +55,11 @@ closed:
   closed: '2026-06-28'
   anchor: archived/agent-kanban-reference-thin-krt0-schema-spec-2026-06-30.md
   follow_up: null
+- name: ForwardFeedbackDedup
+  closed: '2026-06-29'
+  anchor: archived/agent-forward-feedback-dedup-ffd0-schema-spec-2026-06-29.md
+  follow_up: null
+- name: KanbanCardLifecycle
+  closed: '2026-06-29'
+  anchor: archived/agent-kanban-card-lifecycle-kcl0-schema-spec-2026-06-29.md
+  follow_up: null

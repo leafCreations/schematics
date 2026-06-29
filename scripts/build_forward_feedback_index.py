@@ -166,6 +166,11 @@ def build_index(
     merge_resolution_overlays(items, index_path=overlay_path)
     for record in items:
         apply_duplicate_status(record)
+    from scripts.report_forward_feedback_dedup import (  # noqa: PLC0415
+        filter_suppressed_dedup_warnings,
+    )
+
+    dedup_warnings = filter_suppressed_dedup_warnings(items, dedup_warnings)
     items.sort(key=lambda row: (row["id"], row["source_card"]))
     payload = {
         "version": 1,
