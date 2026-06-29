@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Surface prior lessons and commit-issue patterns for kanban card review.
 
-Scans ``## Lessons captured`` under ``.devtool/features/done/`` and
-``.devtool/features/archived/``. Used during pre-implementation card review
-(kanban-markdown § Prior lessons gate).
+SSOT CLI for the prior-lessons gate (Signature: ``governance-index-not-grep``). Agents call this
+after ``docs/lessons-index.yaml`` — not broad folder grep on ``done/`` / ``archived/``. Scans
+``## Lessons captured`` under ``.devtool/features/done/`` and ``.devtool/features/archived/``.
+Used during pre-implementation card review (kanban-markdown § Prior lessons gate).
 """
 
 from __future__ import annotations

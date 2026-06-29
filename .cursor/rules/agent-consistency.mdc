@@ -23,7 +23,7 @@ When you **edit** paths matched by this rule's `globs`, keep workflow artifacts 
 
 ### 3. Card-type consistency
 
-- [ ] Every kanban label in [AGENTS.md](../../AGENTS.md) card types table has a matching `kanban-*.mdc` and section in [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) — includes **`plan`** → [kanban-plan-cards.mdc](kanban-plan-cards.mdc) (Signature: `kanban-cursor-mode-gates`)
+- [ ] Every kanban label in [AGENTS.md](../../AGENTS.md) card types table has a matching `kanban-*.mdc` and section in [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) — includes **`plan`** → [kanban-plan-cards.mdc](kanban-plan-cards.mdc), **`feedback`** → [kanban-feedback-cards.mdc](kanban-feedback-cards.mdc) (Signature: `feedback-label-kanban`, `kanban-cursor-mode-gates`)
 - [ ] New label type → update all three in the same turn
 
 ### 4. Failure-pattern consistency
@@ -36,7 +36,7 @@ When you **edit** paths matched by this rule's `globs`, keep workflow artifacts 
 
 | Change | Update |
 | ------ | ------ |
-| New **Signature** / failure row | Owning `reference.md` + triage failure routing + AGENTS.md Classify/Maintaining if lookup changes |
+| New **Signature** / failure row | Owning `reference.md` + triage failure routing; Classify row if lookup changes — not Maintaining narrative rows (acb3) |
 | New kanban **label** type | AGENTS.md card types + new/updated `kanban-*.mdc` + kanban-markdown/SKILL.md |
 | Kanban prompt verb gate (ask-only vs agent) | AGENTS.md + agent-routing.mdc + kanban-card-gates.mdc §2 + kanban-markdown § Cursor mode gates — Signature: `kanban-cursor-mode-gates`, `kanban-prompt-ask-vs-agent` |
 | Kanban Cursor mode gates (complete) | `REFERENCE_CLASSIFY_FINGERPRINT` bump with reference § Classify row edits; verify `pytest -k classify` — Signature: `governance-compact-classify-ssot`; epic `KanbanCursorModeGates` closed via gel0 — Signature: `kanban-cursor-mode-gates` |
@@ -45,11 +45,18 @@ When you **edit** paths matched by this rule's `globs`, keep workflow artifacts 
 | Kanban **prior lessons gate** | [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Prior lessons gate + [kanban-prior-lessons-gate.mdc](kanban-prior-lessons-gate.mdc) + `scripts/resolve_prior_lessons.py` |
 | Lessons-by-area routing table | [agent-triage/reference.md](../skills/agent-triage/reference.md) § Lessons by area + AGENTS Classify **Area lesson lookup** + triage §2 discovery |
 | Governance compaction baseline (gc0) | [docs/governance/audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) § Governance compaction; `check_governance_parity.py --line-counts` — Signatures: `governance-compact-baseline`, `docs-governance-split` |
+| Compaction threshold advisory (acb1) | [compaction-baseline.yaml](../../docs/governance/compaction-baseline.yaml); `--compaction`; handoff **`### Compaction advisory`** — Signature: `governance-compaction-drift-alert` |
+| Duplication threshold automation (acb6) | [compaction-baseline.yaml](../../docs/governance/compaction-baseline.yaml) `duplication_pairs` + caps; `--duplication-threshold`; spawn warn+ — Signature: `governance-duplication-automation` |
+| Kanban reference thin (krt0+) | [kanban-markdown/reference.md](../../.cursor/skills/kanban-markdown/reference.md), [reference-glossary.md](../../.cursor/skills/kanban-markdown/reference-glossary.md); epic **KanbanReferenceThin**; `--duplication-threshold` exit 0 post-krt3 — Signature: `governance-thin-kanban-reference` |
+| Always-on rule diet (acb2) | `worldgen.mdc`, `model-routing.mdc`, `testing.mdc` — `alwaysApply: false` + globs; gov always-on **248** lines — Signature: `governance-always-on-rule-diet`; verify `test_acb2_product_rules_not_always_on` |
+| Thin AGENTS.md (acb3) | Maintaining epic prose → this § **Change → must update** + reference § Closed epics; AGENTS **< 220** lines — Signature: `governance-thin-agents-md`; `check_handoff_duplication_pair` |
+| AgentContextBudget schema (acb0) | Anchor **Epic cards** table + [audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) § AgentContextBudget epic; phase Signatures acb2–acb6 on anchor |
 | Kanban skill split (gc1) | `kanban-markdown/SKILL.md` ≤ ~400 lines lifecycle; card templates in `kanban-markdown/reference.md`; scoped `kanban-*.mdc` authoritative — Signature: `governance-compact-kanban-split` |
 | Card Done forward-feedback index rebuild (ff1) | kanban-markdown § Card Done + reference § QA-complete same turn; `build_forward_feedback_index.py` after `build_lessons_index.py`; dedup chat — Signature: `forward-feedback-card-done-ingest` |
 | Forward-feedback resolution tracking (ff2) | `resolve_forward_feedback.py --link` / `--set-status`; overlay merge; Classify query row — Signature: `forward-feedback-resolution-tracking` |
 | Card Done forward-looking feedback (gc5) | kanban-markdown § Card Done step 6 + reference § Forward-looking feedback (Impact Scope, References, Mitigation, Importance); scoped kanban Card Done sections; Signature: `card-done-forward-feedback`; top-3 chat on Card Done — not per-turn §6 |
 | Card Done agent move (gc8) | reference § QA-complete triggers + kanban-card-gates §2 + scoped kanban Card Done + AGENTS step 5; Signature: `card-done-agent-move-qa-complete`; bump `REFERENCE_CLASSIFY_FINGERPRINT` when Classify row changes |
+| Card Done disambiguation (gc9) | reference § Disambiguation + kanban-card-gates §2 Card Done + agent-triage § Classify + AGENTS Classify quickly; Signature: `card-done-disambiguate-multi-review`; bump fingerprint when Classify row changes |
 | Archive group batch (gel3) | reference § Archive group + kanban-card-gates §2 archive group verbs + `resolve_archive_group.py`; Signature: `governance-archive-group-batch`; bump fingerprint when Classify row changes |
 | Epic/initiative summary (gel4) | reference § Epic / initiative completion summary + agent-self-evaluation §7; Signature: `governance-epic-completion-summary` |
 | Classify SSOT (gc2) | Full table in reference § Classify only; AGENTS ≤5-row summary; triage §1 pointer; `check_classify_parity` + `CLASSIFY_ANCHORS` + `REFERENCE_CLASSIFY_FINGERPRINT` — bump fingerprint same turn as Classify row edits unless epic splits phases — Signature: `governance-compact-classify-ssot` |

@@ -40,6 +40,9 @@ retroactive rename.
 **Lifecycle:** inquiry/review spawn may leave Product / Tests / Docs as `_TBD_`; all three must be
 accurate before **in-progress → review** (mandatory at implementation gates).
 
+**Section glossary (ccp1):** [reference-glossary.md](reference-glossary.md) — Signature:
+`kanban-card-section-glossary`. Do not duplicate glossary tables in scoped `kanban-*-cards.mdc`.
+
 ### Acceptance Criteria (behavior only)
 
 **Do not** put pytest commands, test file paths, or `test_*` function names in AC — use **Tests**.
@@ -193,744 +196,78 @@ to **Product** sections (same semantics; tests/docs were often mixed into Label 
 - `tests/test_preview_panel.py` — `test_preview_panel_zoom_scales_pixmap`
 ```
 
+## Kanban card sections (glossary)
+
+Full **row schema**, **glossary tables**, **anti-patterns**, and **label matrix:**
+[reference-glossary.md](reference-glossary.md) — Signature: `kanban-card-section-glossary`,
+`governance-thin-kanban-reference` (krt3 split).
+
 ## Cursor mode gates (Plan / Inquire / verbs)
 
-Epic **`KanbanCursorModeGates`** (cm0–cm3). Aligns **Cursor UI mode** (Ask / Plan / Agent), user
-**prompt verbs**, and **kanban card file edits**. Scoped rules implement in **cm1**
-([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2, [kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc)).
-Signature: `kanban-cursor-mode-gates`. Complements `kanban-prompt-ask-vs-agent`.
-
-### Mode detection
-
-Agents **cannot** probe Cursor UI mode from repo scripts. Infer from **session context** (system
-reminders such as “Ask mode is active”, Plan Mode, or default Agent). On mismatch for **`Plan @card`**
-or **`Inquire @card`** → **stop**; tell the user which Cursor mode to select and retry.
-
-### Verb / mode / card-edit matrix (default)
-
-| User prompt (contains) | Required Cursor mode | Edit `.devtool/features/*.md`? | Product code? |
-| ---------------------- | -------------------- | ------------------------------ | ------------- |
-| `review @card` / `review …` only | Any | **No** — chat-only always | No |
-| `Inquire @card` / `Inquire …` | **Ask** | **No** — research in chat | No |
-| `Plan @card` / `Plan …` | **Plan** | **No** — plan/roadmap in chat | No |
-| `update …` / `update @card` | **Agent** | **Yes** (card body) | Only if card type allows |
-| `plan approved` / `approved` / `plan … approved` | **Agent** | **Yes** on **`plan`** card — write **Recommendation** | No |
-| `implement …` / `spawn …` / `Done` / … | **Agent** | Per [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2 | Per card type |
-
-**Card-update allowlist:** agents edit kanban card markdown only when the prompt includes
-`update …`, `plan approved`, `approved`, `plan … approved`, or the rare compounds below — not on
-bare `@path`, `review …`, `Inquire …`, or `Plan …` alone.
-
-**`approved` scope:** valid only when continuing an **approved Plan discussion** on a card with
-`labels: ["plan"]` — not a generic commit verb on feature/bug cards.
-
-**Deprecated:** `Kanban: answer inquiry on …` as same-turn **Response** write — use **`Inquire`**
-(Ask, chat) then **`update @inquiry-card`** (Agent) after discussion.
-
-### Rare compound verbs (single-turn exceptions)
-
-Document only — **not** the default workflow. User explicitly accepts skipping the discuss-then-approve
-gate.
-
-| Compound prompt | Phase A | Phase B (same turn) |
-| --------------- | ------- | ------------------- |
-| **`review and update @card`** | Ask-style research (read-only) | Agent writes card sections |
-| **`plan and update @card`** | Plan Mode exploration + structured plan | Agent writes **Recommendation** on **`plan`** card |
-
-Use when the user trusts one-turn persistence; otherwise prefer default two-phase flow.
-
-### Plan cards
-
-**Label:** `labels: ["plan"]`. **Rule:** [kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc).
-
-| Section | Who | When on card |
-| ------- | --- | ------------ |
-| **Description** | User | Creation |
-| **Feature Areas** | User (optional) | Creation |
-| **Recommendation** | Agent | **After** `plan approved` / `update` — not during `Plan @card` |
-| **Product Paths** / **Product Methods** | Agent (optional) | When spawning or area set — after approval |
-| **Spawned …** tables | Agent | After user asks to spawn |
-
-**Do not** use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on plan cards.
-Card Done: move to `done/` only — **no** lessons or forward feedback (same as inquiry).
-
-#### Plan workflow (default)
-
-```text
-User assigns plan card → Plan @card (Plan Mode) → discuss in chat
-  → user: plan approved / approved / update @card (Agent)
-  → write ## Recommendation on card → review
-  → optional spawn feature/bug/agent cards
-  → done (move only)
-```
-
-#### Example Recommendation (on card, post-approval)
-
-```markdown
-## Recommendation
-
-### Summary
-
-Split orbit preview banner work into three feature cards (banner, sign, campfire) with shared
-Product Paths under `ui/widgets/orbit_preview_widget.py`.
-
-### Phased roadmap
-
-1. Banner overlay geometry (feature-orbit-preview-banner)
-2. Sign attachable routing (feature-orbit-preview-sign)
-3. Campfire particle stub (feature-orbit-preview-campfire)
-
-### Suggested follow-up cards
-
-| order | label | title |
-| ----- | ----- | ----- |
-| … | feature | … |
-```
-
-## Feature cards
-
-**Rule:** [kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc).
-
-| Section | Who | When |
-| ------- | --- | ---- |
-| Story, **Feature Areas**, optional AC (behavior) | User | Creation |
-| **Product Paths**, **Product Methods**, **Tests**, **Docs**, **Decisions**, AC | Agent | Pre-implementation review |
-
-Legacy open cards may use **Label Paths** / **Label Methods** until ks2 — see § Kanban card scope.
-
-**Do not** use Corrective Action or Response on feature cards.
-
-### Feature card workflow
-
-```text
-User assigns → pre-implementation review → Product + Tests + Docs sections
-  → prior lessons gate → Decisions → in-progress → implement
-  → pytests + registry + docs → AC [x] → review → user Verify/QA → done → lessons
-```
-
-## Bug cards
-
-**Rule:** [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc). **Corrective Action** — not Decisions.
-
-**Frontmatter:** `labels: ["bug"]` (inline JSON array).
-
-### Who writes what
-
-| Section | Who |
-| ------- | --- |
-| Steps to Reproduce, Current/Expected Behavior, Feature Areas | User |
-| QA Review | User (during Review) |
-| Root Cause, AC (behavior), Out of Scope, Product Paths, Product Methods, Tests, Docs, Corrective Action | Agent |
-
-Legacy: **Label Paths** / **Label Methods** acceptable until ks2.
-
-**Legacy:** `## What happens` → **Current Behavior**.
-
-### Recommended section order
-
-1. `# Title`
-2. Steps to Reproduce, Current/Expected Behavior (user)
-3. Root Cause, AC, Out of Scope (agent)
-4. Feature Areas (user)
-5. Product Paths, Product Methods, Tests, Docs, Corrective Action (agent)
-6. Verify (optional), QA Review (user)
-
-### Gates
-
-| Gate | Requirement |
-| ---- | ----------- |
-| Before `in-progress` | User sections + agent sections filled |
-| Before implementation | Corrective Action concrete — not TBD |
-| Before `review` | AC `[x]`; pytests; registry + docs |
-
-### Example Corrective Action
-
-```markdown
-## Corrective Action
-
-- Add `_preview_stale` on `MainWindow`; set after successful save paths.
-- `_ensure_preview_render()`: skip cached PNG short-circuit when stale.
-- `_on_tab_changed`: call `_ensure_preview_render()` when Viewer tab selected.
-
-**Tests:** `tests/test_render_preview.py` — stale-after-save cases.
-
-**Docs:** `docs/ui.md` — Viewer section.
-```
-
-## Commit-issue cards
-
-**Rule:** [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc). Auto-created by
-`scripts/on_pre_commit_failure.sh` only when `PRE_COMMIT=1` (actual **`git commit`**). Manual agent
-runs of hook scripts do **not** spawn cards — Signature: `precommit-no-card-on-manual-hook`.
-
-### Who writes what
-
-| Section | Who |
-| ------- | --- |
-| Problem, Failed Tests, Staged files | Capture script |
-| Root Cause, Corrective Action | Agent (on user **review**) |
-| Product Paths, Product Methods, Tests, Docs | Agent (optional) |
-
-Legacy: **Label Paths** / **Label Methods** until ks2.
-
-### Reusable pattern? (on review)
-
-If hook/pytest pattern is reusable:
-
-1. Row in [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) § Failure patterns
-2. Cite **Signature** in [testing.mdc](../../rules/testing.mdc)
-3. Note Signature in Corrective Action
-
-### Workflow
-
-```text
-git commit fails → todo commit-issue card
-User: review → Root Cause + Corrective Action (no code)
-User approves → implement → review → done
-User: review and implement → same-turn plan + fix (trivial hook failures only)
-  — not implement alone; Signature: commit-issue-review-and-implement-one-shot
-```
-
-Skip card: `SKIP_COMMIT_ISSUE_CARD=1 git commit …`
-
-## Agent cards
-
-**Rule:** [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc). **`## Feature Area`** (singular).
-
-### Who writes what
-
-| Section | Who |
-| ------- | --- |
-| Description, Feature Area | User |
-| Product Paths, Product Methods, Tests, Docs, AC (behavior), Decisions | Agent |
-| QA Review | User (optional) |
-
-Legacy: **Label Paths** / **Label Methods** until ks2.
-
-Do **not** use Corrective Action, Root Cause, or Response.
-
-### Product Methods (governance)
-
-Include scripts, skills/rules sections, registry docs — not pytest (use **Tests**). Example symbols:
-
-- `scripts/foo.py` — `function_name`
-- `.cursor/skills/kanban-markdown/reference.md` — `§ Agent cards`
-- `AGENTS.md` — `### Card types`
-
-### Recommended section order
-
-1. Description, Feature Area (user)
-2. Product Paths, Product Methods, Tests, Docs, AC, Decisions (agent)
-3. Verify, QA Review
-
-### Spawn phased agent card series
-
-When user asks for multi-step governance epic:
-
-1. One **todo** card per phase — never Backlog
-2. `labels: ["agent"]`, `epic: "{PascalCase}"`, `order` (`lc0`, `gs0`, …)
-3. User: Description + Feature Area on every card
-4. Agent at spawn: Product Paths, Product Methods, Tests, Docs, AC, Decisions; optional Context with phase table
-5. **Hybrid agent cards:** product Feature Area + thin helper; keep `labels: ["agent"]`
-6. **Spawn from Out of Scope:** `## Spawned follow-up cards` on parent; correct label per type
-7. **Out-of-order close:** when a later phase (e.g. lc1) lands before an earlier spec card (lc0),
-   grep the target doc section first — extend with gaps (**Related workflow**, **Inputs**, rollout
-   note) rather than rewriting; record the skew in **Decisions** (`**Prior lessons**` or dated note).
-
-**Example epics:** `LessonsCoverageMetric` (lc0–lc3); `LessonsReferenceIndex` (li0–li3);
-`GovernanceAreaSchema` (gs0–gs3); `GovernanceCompact` (gc0–gc7); `ArtifactsDocYaml` (ap0–ap1).
-
-### Example Description (user)
-
-```markdown
-## Description
-
-Add kanban label `agent` for governance cards. Keep Python lines ≤ 100 characters.
-Document workflow in skills and rules.
-```
-
-```markdown
-## Feature Area
-
-- `Agent Workflow`
-```
-
-## Inquiry cards
-
-**Rule:** [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc). No Decisions / CA / AC on card.
-Cursor mode: **`Inquire @card`** + **Ask Mode** — see § [Cursor mode gates](#cursor-mode-gates-plan--inquire--verbs).
-
-### Who writes what
-
-| Section | Who |
-| ------- | --- |
-| Description | User |
-| Feature Areas | User (optional) |
-| Product Paths, Product Methods | Agent (when Feature Areas set) — after **`update`** |
-| Response | Agent — **on card only after** `update …` / `review and update` (not on `Inquire` alone) |
-
-### Inquiry workflow (default — cm0)
-
-```text
-User assigns → optional Product scope → in-progress
-  → Inquire @card (Ask Mode) → research + answer in chat
-  → user discusses → update @inquiry-card (Agent) → write ## Response on card → review
-  → user may spawn feature/bug/agent/plan cards
-  → done (move only — no Card Done lessons)
-```
-
-**Rare:** `review and update @inquiry-card` — research + **Response** on card same turn (§ Cursor mode gates).
-
-### Gates
-
-| Gate | Requirement |
-| ---- | ----------- |
-| Before `in-progress` | Description present |
-| Before `review` | **Response** on card (after `update` / approval path) |
-| **`Inquire @card`** | Ask Mode — **no** card file edits |
-| Code | None by default |
-
-### Example Response
-
-```markdown
-## Response
-
-### Answer
-
-Preview PNGs are session-scoped under `output/schematics/_preview/{session}/`.
-
-### Key paths
-
-- `ui/main_window.py` — `_ensure_preview_render()`, `_preview_stale`
-- `docs/ui.md` — Viewer tab behavior
-
-### Suggested follow-up cards
-
-**Bug: Preview stale after save**
-- Feature Areas: `Render Preview`, `Render Tab`
-- AC draft: After save, Viewer re-renders when session PNGs are stale.
-```
-
-## Spawn from inquiry
-
-Full procedure: [SKILL.md § Spawn from inquiry](SKILL.md#spawn-from-inquiry).
-
-### Feature card body at spawn
-
-| Section | Content |
-| ------- | ------- |
-| `# Title` | From recommendation |
-| **Acceptance Criteria** | Draft `[ ]` behavior bullets — no pytest in AC |
-| **Out of Scope** | From inquiry boundaries |
-| **Feature Areas** | Backtick-quoted labels |
-| **Product Paths** | Resolved via feature-areas.yaml (no `tests/`) |
-| **Product Methods** | Registry handlers + inquiry evidence |
-| **Tests** | Files, Methods, Verify (agent) |
-| **Docs** | From area `docs:` + § hints |
-| **Decisions** | Concrete plan |
-| **Context** | Parent inquiry id; phase number; optional parent **`ff-*`** id when spawned from forward-feedback index (`resolve_forward_feedback.py --link`) |
-
-Legacy spawn bodies may still use **Label Paths** / **Label Methods** until ks1 parser dual-read ships.
-
-**Spawn label by work type:** `feature`/`bug` product; **`agent`** governance; **`inquiry`** research.
-
-### Drift spawn card skeleton (`check_governance_parity.py`)
-
-Auto-spawned cards must include **all label-type sections** before `in-progress` — use `_TBD_`
-placeholders, not omit sections. Signature: `lessons-coverage-ci-drift`.
-
-| Label | Sections at spawn (after `## Alert` + paths) |
-| ----- | ---------------------------------------------- |
-| `feature` (GovernanceDriftAlert) | **Feature Areas**, **Product Paths**, **Product Methods**, **Tests**, **Docs**, **Decisions**, **Acceptance Criteria** |
-| `agent` (LessonsCoverageMetric drift) | **Description** (from corrective-action text), **Feature Area**, **Product Paths**, **Product Methods**, **Tests**, **Docs**, **Decisions**, **Acceptance Criteria** |
-
-Until ks1 ships, parity spawn may still emit **Label** headings — parsers accept both. Use `_TBD_`
-placeholders for Product/Tests/Docs when unknown at spawn time.
-
-**Registry Product Methods drift:** `create_drift_alert_cards` consolidates multiple missing-handler
-alerts for the **same source kanban card** into one todo card (bullet list of symbols). Card id:
-`governance-drift-registry-{hash:card}` — Signature: `governance-drift-spawn-consolidate-by-source-card`.
-**Consolidated (epic `GovernanceDriftSpawnConsolidate`, p0 — archived 2026-06-29):** `consolidate_drift_issues_for_spawn`
-also merges by root cause — same-area `lesson_signatures`, schema-internal AGENTS path batch,
-cross-area duplicate handlers — one card per group; stable id from `consolidation_group_key`; spawn
-epic **`GovernanceDriftFix`** ( **`GovernanceDriftAlert` closed** ); anchor
-`archived/agent-governance-drift-spawn-consolidate-2026-06-28.md`; Signature:
-`governance-drift-spawn-consolidate-by-root-cause`. See
-[docs/governance/feature-areas-parity.md](../../docs/governance/feature-areas-parity.md) § Registry drift spawn consolidation.
-Parsers dual-read **Label Methods** until ks2; spawn output uses **Product Methods** (ks1).
-**Parser SSOT (ks1):** `scripts/resolve_prior_lessons.py` `extract_label_paths()` — Product Paths,
-legacy Label Paths, and **Tests → Files**; `check_governance_parity.extract_label_method_symbols()`
-— Product + Label Methods headings.
-
-Do **not** use **Corrective Action** on spawned `feature`/`agent` cards — bug/commit-issue only.
-
-**Spawn inquiry from render QA:** 2D vs 3D parity questions → `labels: ["inquiry"]` todo card; link from parent.
-
-**Spawn from inquiry (OrbitRenderClass example):** parent inquiry Response + implementation plan →
-`agent` todo (doc/test parity) + deferred `feature` todo (registry YAML when trigger fires); parent
-`## Spawned feature cards` table with epic `OrbitRenderClass` order a0/a1.
-
-**Spawn from plan (OrbitFunctionalFaceTextures example):** plan card Recommendation + user
-`update`/`spawn` → two **`bug`** todos (a0 texture resolution, a1 facing faces + merged bed
-head/foot top split); parent **`## Spawned feature cards`** + child **Product** / **Tests** /
-**Docs** / **Corrective Action**; epic on parent + children; implement a0 before a1 when ordered.
-
-**Spawn from plan (RenderEngineFloatingCamera example):** plan
-[interior-view-for-3d-rendering-2026-06-24.md](../../../.devtool/features/interior-view-for-3d-rendering-2026-06-24.md)
-`plan approved` + spawn → epic `RenderEngineFloatingCamera` children **a8a** feature fc0 (core
-navigation), **a8b** feature fc1 (reset + near-plane), **a8b1** feature fc1b (look-direction
-forward/back), **a8b2** feature fc1c (pose persistence), **a8c** inquiry fc2 (UX modes),
-**a8d** feature fc3 (3-line camera HUD — facing, position, looking at); seed **`Floating Camera`**
-in `docs/feature-areas.yaml`; parent **`## Spawned feature cards`** table; implement fc0 before fc3,
-fc1/fc2 after user review.
-
-**Spawn from epic review (Card Done enforcement, 2026-06-27):** user discussion → implement queue:
-
-| order | card | epic |
-| ----- | ---- | ---- |
-| aK | `agent-card-done-agent-move-qa-complete-2026-06-27` | GovernanceCompact (gc8) |
-| aM | `agent-lessons-coverage-lc4c-parser-templates-c1b-2026-06-27` | LessonsCoverageMetric (lc4c — Option C) |
-| aN | `archived/agent-lessons-coverage-lc4b-c4-per-card-threshold-2026-06-27` | LessonsCoverageMetric (lc4b — archived) |
-
-Supersedes monolithic `agent-lessons-coverage-enforcement-option-b-2026-06-27` (aL). Link queue in
-**Context**; no parent inquiry table required.
-
-**Spawn from Q3 Option C (2026-06-27):** epic-completion audit + gc7 file checks — epic
-`GovernanceEpicLifecycle`:
-
-| order | card | phase |
-| ----- | ---- | ----- |
-| aO | `archived/agent-governance-epic-completion-audit-2026-06-27` | gel0 — epic audit workflow (archived) |
-| aP | `archived/agent-governance-gc7-handoff-duplication-pair-2026-06-27` | gel1 — handoff dup check (archived) |
-| aQ | `archived/agent-governance-gc7-forward-feedback-audit-2026-06-27` | gel2 — `--forward-feedback-audit` (archived) |
-
-**Implement order (full Q3 queue):** aK → aM → aN → aO → aP → aQ → aR (gel3 archive batch).
-Anchor card maintains **`## Epic cards`** table; on epic complete run § Epic audit (gel0). Cross-epic
-initiative **`CardDoneGovernanceLoop2026`** — manifest on gel3; batch archive § Archive group.
-
-**Spawn from card scope discussion (2026-06-27):** epic **`KanbanCardScope`** — **closed 2026-06-28**
-(archived aU–aX; anchor `archived/agent-kanban-card-scope-ks0-schema-spec-2026-06-27.md`):
-
-| order | card | phase |
-| ----- | ---- | ----- |
-| aU | `archived/agent-kanban-card-scope-ks0-schema-spec-2026-06-27` | ks0 — reference templates + ownership |
-| aV | `archived/agent-kanban-card-scope-ks1-parsers-spawn-2026-06-27` | ks1 — resolve_prior_lessons + parity spawn |
-| aW | `archived/agent-kanban-card-scope-ks2-governance-rollout-2026-06-27` | ks2 — kanban rules, AGENTS.md |
-| aX | `archived/agent-kanban-card-scope-ks3-verify-hook-gate-2026-06-27` | ks3 — Tests verify + pre-commit gate |
-
-**Closed** — do not reuse `epic: KanbanCardScope`. Signatures: `kanban-card-scope-schema`,
-`precommit-pytest-scope-mismatch`.
-
-**Spawn (2026-06-28):** epic **`KanbanCursorModeGates`** — Plan / Inquire Cursor mode gates (cm0–cm3):
-
-| order | card | phase |
-| ----- | ---- | ----- |
-| aY | `agent-kanban-cursor-mode-cm0-schema-spec-2026-06-28` | cm0 — schema + reference | done |
-| aZ | `agent-kanban-cursor-mode-cm1-scoped-rules-2026-06-28` | cm1 — plan rule + card-gates | done |
-| b0 | `agent-kanban-cursor-mode-cm2-classify-rollout-2026-06-28` | cm2 — AGENTS + Classify SSOT | done |
-| b1 | `agent-kanban-cursor-mode-cm3-verify-parity-2026-06-28` | cm3 — fingerprint + verify | done |
-
-Implement **aY → aZ → b0 → b1**. Signature: `kanban-cursor-mode-gates`.
-
-**Spawn (2026-06-29):** epic **`DocsGovernanceSplit`** — separate product `docs/` from governance
-narrative; split oversized `docs/development.md` — **closed 2026-06-27** (gel0 audit on dg0 anchor;
-`docs/epics-closed.yaml`; batch archived):
-
-| order | card | phase |
-| ----- | ---- | ----- |
-| dg0 | `archived/agent-docs-governance-split-dg0-schema-spec-2026-06-29.md` | dg0 — layout schema + file map |
-| dg1 | `archived/agent-docs-governance-split-dg1-split-development-2026-06-29.md` | dg1 — move prose; stub development.md |
-| dg2 | `archived/agent-docs-governance-split-dg2-routing-rollout-2026-06-29.md` | dg2 — AGENTS/skills/rules refs |
-| dg3 | `archived/agent-docs-governance-split-dg3-verify-parity-2026-06-29.md` | dg3 — grep + parity + gel0 close |
-
-All phases complete (in `archived/`). Anchor: dg0 **`## Epic cards`** + **`## Epic audit`** +
-**`## Archive batch`**. Signature: `docs-governance-split`.
-
-**Spawn from forward-feedback registry discussion (2026-06-27):** epic **`ForwardFeedbackRegistry`**
-**closed 2026-06-27** (gel0 audit on ff0 anchor; `docs/epics-closed.yaml`) — centralized gc5
-question index + top-N by category:
-
-| order | card | phase |
-| ----- | ---- | ----- |
-| ff0 | `archived/agent-forward-feedback-ff0-index-build-2026-06-27.md` | index + `resolve_forward_feedback.py` |
-| ff1 | `archived/agent-forward-feedback-ff1-card-done-ingest-2026-06-27.md` | Card Done rebuild + dedup warnings |
-| ff2 | `archived/agent-forward-feedback-ff2-resolution-tracking-2026-06-27.md` | status / spawned links |
-| ff3 | `archived/agent-forward-feedback-ff3-metrics-advisory-2026-06-27.md` | stale metrics (advisory) |
-
-All phases complete (in `archived/`). Anchor: ff0 **`## Epic cards`** + **`## Epic audit`** +
-**`## Archive batch`**. Signatures:
-`forward-feedback-index`, `forward-feedback-card-done-ingest`, `forward-feedback-resolution-tracking`,
-`forward-feedback-stale-metrics`. Complements gel2 `governance-gc7-forward-feedback-audit` (card field
-audit — not backlog SSOT).
-
-| order | card | phase |
-| ----- | ---- | ----- |
-| aR | `archived/agent-governance-gel3-archive-group-batch-2026-06-27` | gel3 — archive group batch (archived) |
-| aS | `archived/agent-governance-gel4-epic-completion-summary-2026-06-27` | gel4 — epic/initiative summary (archived) |
-
-### Epic cards (anchor convention)
-
-Multi-card epics use one **anchor** card (usually the first spawned member) with a **`## Epic cards`**
-table the agent maintains on every spawn:
-
-| Column | Purpose |
-| ------ | ------- |
-| `order` | Frontmatter `order` (`aO`, `aP`, …) |
-| `card` | Stem or relative path |
-| `status` | `todo` / `in-progress` / `review` / `done` / archived / superseded |
-
-**Epic complete** (user confirms): no rows remain `todo`, `in-progress`, or `review` for that `epic:`.
-Then run § Epic audit on the anchor — **not** the same turn as batch archive when `archiveGroup:` is
-set (defer to § Archive group).
-
-**Pre-spawn:** `python3 scripts/resolve_epic_cards.py --validate-new {EpicName}` — exit 1 when the
-name is in [docs/epics-closed.yaml](../../docs/epics-closed.yaml). Follow-ups use a **new** PascalCase
-epic (e.g. `LessonsCoverageMetric` closed → `LessonsCoverageMetricV2` or a themed rename).
-
-### Epic audit (gel0 — agent turn)
-
-When user confirms epic complete (no active cards with that `epic:`):
-
-1. Verify **`## Epic cards`** manifest — all rows `done` / archived / superseded.
-2. Run `python3 scripts/resolve_epic_cards.py --epic {Name} --status` (optional `--json`).
-3. Run `python3 scripts/check_governance_parity.py` (includes `check_handoff_duplication_pair` — gc7;
-   spawn fix cards unless audit-only / `--no-spawn-cards`).
-4. When `done/` exists: `python3 scripts/check_lessons_coverage.py --json`.
-5. Governance epics: `check_governance_parity.py --line-counts`; optional `--forward-feedback-audit`
-   after gel2; optional `--forward-feedback-stale` when closing **`ForwardFeedbackRegistry`** (ff3).
-6. Agent runtime smoke: `@` bug card → **Corrective Action** (not Decisions).
-7. Write **`## Epic audit (YYYY-MM-DD)`** on anchor (template below); append epic to
-   [docs/epics-closed.yaml](../../docs/epics-closed.yaml) via audit turn or
-   `resolve_epic_cards.append_closed_epic`.
-8. **Do not** reuse closed `epic:` on new cards — new PascalCase epic for follow-ups.
-9. **Do not** batch-move to `archived/` on epic audit same turn — run § Archive group when user
-   confirms `archive group {Name} complete` (single-epic groups may reuse the epic name, e.g.
-   `ForwardFeedbackRegistry`).
-10. Emit **`### Epic summary`** in chat — 1–2 paragraphs, outcomes in plain language (§ Epic /
-    initiative completion summary); copy into anchor **`## Summary`** when writing **`## Epic audit`**
-    same turn. Signature: `governance-epic-completion-summary`.
-
-Quarterly `create_governance_audit_card.py` is optional backstop only (e.g. 90 days without an epic
-close — not primary cadence). Signature: `governance-epic-completion-audit`.
-
-**`## Epic audit (YYYY-MM-DD)` template (anchor card):**
-
-```markdown
-## Epic audit (YYYY-MM-DD)
-
-- **Epic:** `GovernanceEpicLifecycle`
-- **Manifest:** all ## Epic cards rows done / archived / superseded
-- **Parity:** `check_governance_parity.py` — _(pass / N issues; spawned …)_
-- **Lessons coverage:** _(N/A no done/ | composite X% — per-card C4 …)_
-- **Line counts:** _(gc0 — optional for governance epics)_
-- **Runtime smoke:** _(agent @ bug card → Corrective Action — pass/fail)_
-- **Waivers:** _(KNOWN_DRIFT: … or none)_
-- **Spawned fix cards:** _(paths or none)_
-- **Closed registry:** appended to docs/epics-closed.yaml
-- **Archive group:** _(defer batch to gel3 § Archive group: CardDoneGovernanceLoop2026)_
-- **Summary:** _(1–2 sentences — what the epic shipped; plain language; copy from chat ### Epic summary)_
-```
-
-### Epic / initiative completion summary (gel4)
-
-On **epic audit** or **archive group complete** turns, add a brief human-readable narrative — distinct
-from **`## Epic audit`** / **`## Archive batch`** checklists and Card Done forward feedback.
-
-| Trigger | Chat heading | Anchor persistence |
-| ------- | ------------ | ------------------ |
-| `close epic {Name}` / `epic complete` | **`### Epic summary`** | **`## Summary`** bullet in **`## Epic audit`** |
-| `archive group {Name} complete` | **`### Initiative summary`** | **`## Summary`** bullet in **`## Archive batch`** |
-
-**Placement:** [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 — after Card Done
-**`### Top forward feedback`** (when present), before **`### Files used`**. Omit on all other turns.
-
-**Content (max 2 paragraphs):**
-
-- **Sources:** anchor **`## Epic cards`** or **`## Archive group`** manifest; member **Decisions** +
-  **Lessons captured**; parity / lessons CLI one-liners when relevant.
-- **Write:** outcomes and behavior changes — what agents/users can do now.
-- **Do not:** raw path dumps, AC checkbox lists, or duplicate forward-feedback questions.
-
-Signature: `governance-epic-completion-summary`.
-
-### Closed epics registry
-
-SSOT: [docs/epics-closed.yaml](../../docs/epics-closed.yaml) — append on epic audit; never reuse
-closed `epic:` on new cards.
-
-| CLI | Purpose |
-| --- | ------- |
-| `resolve_epic_cards.py --epic X --status` | Active / done / archived counts; `complete` when no active |
-| `resolve_epic_cards.py --validate-new X` | Pre-spawn gate — exit 1 when closed |
-| `resolve_epic_cards.py --list-closed` | List closed names + dates |
-| `resolve_archive_group.py --group X --status` | Active / done / archived counts; `complete` when no active |
-
-Rename examples: `GovernanceEpicLifecycle` → new epic after gel0–gel3; `LessonsCoverageMetric` →
-themed follow-up when lc4+ work continues under a fresh name.
-
-### Archive group (gel3 — cross-epic batch)
-
-When a feature spans **multiple epics**, **epic audit** and **batch archive** are separate gates.
-
-| Gate | Trigger | Cards move to `archived/`? |
-| ---- | ------- | -------------------------- |
-| Epic audit | No active cards for one `epic:` + user confirms | **No** — cards stay in `done/` until archive group batch (gel3) |
-| Archive group complete | All manifest rows `done` / archived / superseded + user confirms | **Yes** — batch listed members only |
-
-**Manifest SSOT:** anchor card **`## Archive group: {PascalCaseName}`** table (order, card, epic,
-status). Members carry matching **`archiveGroup:`** frontmatter (optional `epic:` between
-`assignee` and `dueDate`).
-
-**CardDoneGovernanceLoop2026** (2026-06-27, **archived** 2026-06-27): aK (GovernanceCompact gc8),
-aM/aN (LessonsCoverageMetric lc4), aO–aR (GovernanceEpicLifecycle gel0–gel3). Retire group name on
-new spawns — anchor `archived/agent-governance-gel3-archive-group-batch-2026-06-27.md`.
-
-**Archive group turn (agent):**
-
-1. Verify manifest — every row `done` / `archived` / `superseded`.
-2. User confirms `archive group {Name} complete`.
-3. Move `done/{id}.md` → `archived/{id}.md` for **listed members**; keep `status: "done"`.
-4. Refresh active card links (`done/` → `archived/`); Signature `kanban-card-stale-dependency-links`.
-5. Write **`## Archive batch (YYYY-MM-DD)`** on anchor; retire archive group name for new spawns.
-6. Emit **`### Initiative summary`** in chat — 1–2 paragraphs (§ Epic / initiative completion
-   summary); copy into anchor **`## Summary`** when writing **`## Archive batch`** same turn.
-   Signature: `governance-epic-completion-summary`.
-
-**`## Archive batch (YYYY-MM-DD)` template (anchor card):**
-
-```markdown
-## Archive batch (YYYY-MM-DD)
-
-- **Group:** `CardDoneGovernanceLoop2026` — **retired**
-- **Manifest:** all ## Archive group rows archived
-- **CLI:** `resolve_archive_group.py --group {Name} --status` — N archived, 0 active
-- **Moved:** listed members `done/` → `archived/`; `status: "done"` preserved
-- **Link refresh:** manifest + active card Context/Decisions (`done/` → `archived/`)
-- **Signature:** `governance-archive-group-batch`
-- **Summary:** _(1–2 sentences — what the initiative delivered; copy from chat ### Initiative summary)_
-```
-
-**Card Done:** move to `done/` only — never archive on the same turn.
-
-**Superseded never-implemented** cards may go to `archived/` early; remove from manifest or mark
-`superseded`.
-
-Signature: `governance-archive-group-batch`.
+Signature: `kanban-cursor-mode-gates`. Canonical matrix:
+[kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2;
+[kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc);
+[kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc).
+
+| Prompt | Cursor mode | Card file edits |
+| ------ | ----------- | --------------- |
+| `Plan @card` | Plan | Chat only until `plan approved` / `update` |
+| `Inquire @card` | Ask | Chat only until `update` |
+| `implement` / `update` / `spawn` / `Done` | Agent | Per scoped `kanban-*-cards.mdc` |
+
+Rare compounds (`review and update`, `plan and update`): [reference-glossary.md § Anti-patterns](reference-glossary.md#anti-patterns).
+
+## Card types (templates)
+
+Who-writes-what and workflow: scoped `kanban-*-cards.mdc` + [SKILL.md](SKILL.md). **Do not** duplicate
+tables here (Signature: `governance-compact-kanban-split`).
+
+| Label | Rule | Agent plan section |
+| ----- | ---- | ------------------ |
+| `feature` | [kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc) | **Decisions** |
+| `bug` | [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc) | **Corrective Action** |
+| `agent` | [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc) | **Decisions** |
+| `commit-issue` | [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc) | **Corrective Action** |
+| `inquiry` | [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc) | **Response** (after `update`) |
+| `plan` | [kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc) | **Recommendation** (after approval) |
+| `feedback` | [kanban-feedback-cards.mdc](../../rules/kanban-feedback-cards.mdc) | **Question** + **Risk assessment** |
+
+**Feedback (fcp1):** spawn + risk rubric — [§ Forward-feedback capture cadence](#forward-feedback-capture-cadence);
+example schema in [reference-glossary.md](reference-glossary.md) or archived fcp0 anchor.
+
+## Spawn, epics, and drift
+
+- **Spawn from inquiry/plan:** [SKILL.md § Spawn from inquiry](SKILL.md#spawn-from-inquiry) — `epic` +
+  `order`; review-ready Product / Tests / Docs / Decisions (or CA for bugs).
+- **Drift spawn skeleton:** parity spawns need full section placeholders (`_TBD_`) — Signatures:
+  `lessons-coverage-ci-drift`, `governance-drift-spawn-consolidate-by-root-cause`; see
+  [docs/governance/feature-areas-parity.md](../../docs/governance/feature-areas-parity.md).
+- **Epic anchor:** `## Epic cards` manifest; **`## Epic coordination`** in-flight only (never ff index) —
+  Signature: `epic-coordination-not-forward-feedback`.
+- **gel0 / gel3 / gel4:** `resolve_epic_cards.py`, `resolve_archive_group.py`, `docs/epics-closed.yaml`;
+  chat **`### Epic summary`** / **`### Initiative summary`** —
+  [docs/governance/kanban-workflow.md](../../docs/governance/kanban-workflow.md).
+- **Closed epic spawn tables:** `docs/epics-closed.yaml` only — Signature: `governance-thin-kanban-reference`.
 
 ## Prior lessons gate
 
 Canonical procedure: [SKILL.md § Prior lessons gate](SKILL.md#prior-lessons-gate).
 Rule: [kanban-prior-lessons-gate.mdc](../../rules/kanban-prior-lessons-gate.mdc).
 
-### Resolver arguments
+### Index vs folder grep (acb4)
 
-| Argument | Source |
-| -------- | ------ |
-| `--epic` | Frontmatter `epic` |
-| Positional labels | Feature Areas or Feature Area |
-| `--paths` | Prefixes from Product Paths (or Label Paths until ks1) |
+Signature: `governance-index-not-grep`. Yaml + `resolve_prior_lessons.py` first — no broad
+`done/` / `archived/` grep. Forward-feedback ranking: `forward-feedback-index.yaml` +
+`resolve_forward_feedback.py` (not prior-lessons). Resolver args: `--epic`, Feature Area labels,
+`--paths` from Product Paths. Full ladder: [SKILL.md § Prior lessons gate](SKILL.md#prior-lessons-gate-pre-implementation).
 
-### Read matched artifacts
+## Verify, Decisions, AC, QA Review, QA fixes
 
-| Section | Action |
-| ------- | ------ |
-| Registry lesson pointers | Grep Signatures; skim lesson_docs |
-| Done/archived Lessons captured | Full card when index insufficient |
-| Open commit-issue | Problem / Failed Tests; grep Signatures |
-| Feature area docs | Skim listed docs before Decisions |
-
-**Skip:** inquiry research-only; ad-hoc fixes without card.
-
-## Verify
-
-**Agent (always):** `scripts/pre-commit-pytest.sh` on staged paths — feature/bug/agent before Review.
-**Inquiry:** no pytest unless code changed.
-
-**Do not** put pytest lines in **`## Verify`** on cards — implicit agent work.
-
-## Decisions
-
-**Feature and agent cards only.**
-
-Write after pre-implementation review, before `in-progress`. Concrete bullets — not TBD.
-
-```markdown
-## Decisions
-
-- Group dropdown in `PreviewPanel` toolbar; hidden when only one group.
-- Per-Y PNGs under `output/schematics/_preview/{session}/`.
-- Reuse `RenderWorker` + save-first pattern from render-selection card.
-```
-
-## Corrective Action
-
-**Bug and commit-issue cards only.**
-
-Pair with **Root Cause** — root cause explains why; corrective action states what to change.
-
-## Acceptance Criteria
-
-**Feature and bug cards.** All satisfied bullets **`[x]`** before **Review**.
-
-| Rule | Detail |
-| ---- | ------ |
-| Format | `- [x]` / `- [ ]` — not `- []` |
-| All met | Every AC `[x]` unless user defers |
-| QA Review | Check off AC when QA completes scope |
-
-```markdown
-## Acceptance Criteria
-
-- [x] Render dropdown includes "Site Facades"
-- [x] Each Direction displays as individual PNG
-- [x] PNGs shown as thumbnails
-```
-
-## QA Review
-
-**User** populates during Review. Agent implements when user asks.
-
-1. Read QA Review + Feature Areas + Product scope (or legacy Label) + Tests + Docs + Out of Scope
-2. Pre-QA review — clarify ambiguities
-3. Implement open bullets; staged pytests
-4. Mark `[x]`; bump `modified`; stay in **review**
-
-**Spawn bug cards from QA Review:** parent **QA Review** + **Spawned bug cards** table; child `labels: ["bug"]`;
-set `order` (`a0`, `a1`, …) for implementation sequence.
-
-```markdown
-## QA Review
-
-- [ ] Preview dropdown should disable while render is in progress
-- [x] Caption text should not show full filesystem path
-```
-
-## User-reported QA fixes
-
-Rule: [kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc). Summary: [SKILL.md](SKILL.md#user-reported-qa-fixes).
-
-| Card type | Record under |
-| --------- | ------------ |
-| bug | **Corrective Action** |
-| feature, agent | **Decisions** |
-
-```markdown
-**QA follow-up (2026-06-25):** Black slab tops — `_resolve_orbit_slab_face_texture` +
-`test_orbit_slab_face_textures_are_opaque`. **Labels:** appended `helpers/orbit_greedy_mesh.py`.
-```
-
-### Scope refresh checklist
-
-| Section | When |
-| ------- | ---- |
-| Feature Areas | Fix touched new product area |
-| Product Paths | New/edited product path not on card |
-| Product Methods | New symbol (non-test) |
-| Tests | New test file or `test_*` |
-| Docs | New doc path or § |
-| feature-areas.yaml | Durable path/handler for area |
-
-Legacy **Label Paths** / **Label Methods** refresh still applies on open cards until ks2.
+**Verify:** agent `scripts/pre-commit-pytest.sh` before Review; user **`## Verify`** = manual app only.
+**Decisions** (feature/agent) / **Corrective Action** (bug/commit-issue): concrete before `in-progress`.
+**AC:** behavior-only `- [x]` before Review — no pytest in AC. **QA Review:** user checklist; agent
+implements + `**QA follow-up (YYYY-MM-DD):**` under Decisions/CA — [kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc);
+scope refresh table in [SKILL.md § User-reported QA fixes](SKILL.md#user-reported-qa-fixes).
 
 ## QA-complete → Card Done (trigger table)
 
@@ -946,11 +283,35 @@ named (path, id, or `@.devtool/features/…`), treat as **Agent** mode — move 
 | `review and update`, `implement`, `update … card` | **Yes** | Prior agent verbs — not Card Done unless also Done signal |
 | Inquiry `Done` | **Yes** (move only) | `done/` — **no** Lessons captured / forward feedback |
 
+### Disambiguation (card unnamed)
+
+Signature: `card-done-disambiguate-multi-review` (extends gc8 `card-done-agent-move-qa-complete`).
+When the user signal matches Card Done but **does not** name a card (`@path`, id slug, or
+unambiguous prose), count active cards with `status: review` under `.devtool/features/` only — not
+`done/`, `archived/`, Backlog, or `in-progress`.
+
+| Cards in **review** | User: Done / QA complete (no card named) | Agent |
+| --- | --- | --- |
+| **0** | Done signal | **Stop** — nothing to close; ask which card |
+| **1** | Done signal | **May proceed** — infer the sole review card |
+| **≥ 2** | Done signal | **Hard stop** — list review candidate paths; require `@.devtool/features/….md` or slug; **do not guess** |
+
+Board scan before Card Done when card unnamed:
+
+```bash
+rg 'status: "review"' .devtool/features/*.md
+```
+
+Apply to all trigger phrases above (`Done`, `QA complete`, `QA Approved`, `Review passed`,
+`close the card`, …). **Does not** change inquiry/plan Done (move-only, no lessons). No thread-context
+override when count ≥ 2 (user decision, 2026-06-29).
+
 **Same turn (mandatory for labeled cards):**
 
 1. Frontmatter: `status: done`, `completedAt`, bump `modified`
 2. Move `.devtool/features/{id}.md` → `.devtool/features/done/{id}.md`
-3. Append `## Lessons captured` + `## Forward-looking feedback` on `done/` path
+3. Append `## Lessons captured` on `done/` path; spawn **`feedback`** and/or legacy parent
+   `## Forward-looking feedback` per § Forward-feedback capture cadence
 4. `python3 scripts/build_lessons_index.py` when lessons ran
 5. `python3 scripts/build_forward_feedback_index.py` when lessons ran — Signature:
    `forward-feedback-card-done-ingest`; advisory exact-question dedup → `duplicate_of` in yaml
@@ -962,6 +323,9 @@ named (path, id, or `@.devtool/features/…`), treat as **Agent** mode — move 
 **Maintain (gc8):** new Done-signal phrases → this table + `kanban-card-gates.mdc` §2 Card Done row
 only — do not duplicate full trigger lists in scoped `kanban-*-cards.mdc`. Classify fingerprint bump
 only when `agent-triage/reference.md` § Classify **rows** change, not trigger-table edits alone.
+**Maintain (gc9):** disambiguation rule changes → this § Disambiguation subsection only; bump
+`REFERENCE_CLASSIFY_FINGERPRINT` when Classify row changes — Signature:
+`card-done-disambiguate-multi-review`.
 `` `sig:card-done-agent-move-qa-complete` ``
 
 ## Card Done — lessons learned capture
@@ -970,24 +334,11 @@ Canonical summary: [SKILL.md § Card Done](SKILL.md#card-done--lessons-learned-c
 
 ### Artifact update table
 
-| Lesson type | Update |
-| ----------- | ------ |
-| Area workflow | Matching area skill |
-| Hard constraint | Scoped `.mdc` rule |
-| User-visible behavior | `docs/` per docs-maintenance |
-| New symbols/paths | feature-areas.yaml handlers + Product Methods (or Label Methods until ks2) |
-| Cross-cutting failure | agent-self-evaluation/reference.md (**Signature** in rules) |
-| Prior-lessons discovery | agent-triage/reference.md § Lessons by area |
-| Card Done forward feedback | `## Forward-looking feedback` on done card after Lessons captured — Signature: `card-done-forward-feedback` |
-| Card Done forward-feedback index | `build_forward_feedback_index.py` after `build_lessons_index.py` when lessons ran; dedup chat — Signature: `forward-feedback-card-done-ingest` |
-| Lessons coverage audit | `check_lessons_coverage.py` (C1–C4); `--strict` for C3 without epic-only match — Signature: `lessons-coverage-strict-consumption` |
-| C4 Prior lessons block | No line starting with `**` inside block after header; cite done stems (`YYYY-MM-DD.md`, commit-issue `T` timestamps, drift hash ids) — Signature: `lessons-coverage-c2-c3-audit` |
-| GovernanceDriftAlert registry path (lc1 scripts) | Extend `_SCHEMA_INTERNAL_PATHS` in `check_governance_parity.py` — not AGENTS area table columns; sibling spawn cards (`lessons_coverage_lib.py`, hook script, test file) share one fix — Signature: `governance-area-schema-parity-tests`, `lessons-coverage-c2-c3-audit` |
-| Handoff duplication pair (gc7) | `check_handoff_duplication_pair`; AGENTS End handoff vs SKILL §7 — ≥3 consecutive `- **Field:**` lines — Signature `governance-gc7-handoff-duplication-pair` |
-| Epic-completion audit (gel0) | `resolve_epic_cards.py`; `docs/epics-closed.yaml`; reference § Epic audit — Signature `governance-epic-completion-audit`; epic audit ≠ archive when `archiveGroup:` set; chat **`### Epic summary`** — Signature `governance-epic-completion-summary` |
-| Archive group batch (gel3) | `resolve_archive_group.py`; reference § Archive group — Signature `governance-archive-group-batch`; Card Done → `done/` only; chat **`### Initiative summary`** — Signature `governance-epic-completion-summary` |
-| Superseded GovernanceDriftAlert sibling | Mark **Decisions** `Superseded` + link to parent `done/{id}.md`; AC `[x]`; `review` → user/agent `done/` — no code; cite parent **Lessons captured** |
-| GovernanceDriftAlert batch close | Group spawns by root cause (`_SCHEMA_INTERNAL_PATHS`, § Lessons by area rows, handler dedup, kanban Product Methods → yaml `handlers:`); one anchor **Lessons captured**; siblings **Superseded** — Signature: `governance-area-schema-parity-tests` |
+Skill + scoped rule + `docs/` / registry; cite **Signature** in rules. Card Done ff: §
+[Forward-feedback capture cadence](#forward-feedback-capture-cadence). Index rebuild:
+`build_lessons_index.py` then `build_forward_feedback_index.py` — Signature:
+`forward-feedback-card-done-ingest`. C4 / prior-lessons / drift / gel0 rows:
+[SKILL.md § Card Done](SKILL.md#card-done--lessons-learned-capture).
 
 ### Lessons captured example
 
@@ -1001,93 +352,93 @@ Canonical summary: [SKILL.md § Card Done](SKILL.md#card-done--lessons-learned-c
 
 Prefixes: `skill:`, `rule:`, `doc:`, `sig:`, `test:`. Registry yaml: `doc:lessons-index.yaml` (explicit extension). Inline `` `sig:slug` `` on lesson bullets is indexed by `build_lessons_index.py` — Signature: `lessons-index-inline-sig-backtick`.
 
-### Forward-looking feedback
+### Forward-looking feedback cadence
 
-**After** `## Lessons captured` on **`feature` / `bug` / `agent` / `commit-issue`** Done only —
-not every turn, not on **`inquiry`**. Signature: `card-done-forward-feedback`.
+**New Card Done closes:** § [Forward-feedback capture cadence](#forward-feedback-capture-cadence)
+(fcp2 SSOT) — lessons always; spawn **`feedback`** when risk **≥ 3**; **no** mandatory parent
+six-category ff. Signatures: `forward-feedback-capture-policy`, `card-done-forward-feedback-cadence`.
 
-Six categories (≥1 item each): governance, skill, rule, codebase, prompt pattern, routing.
-Items must reflect **this card's** outcomes — not generic placeholders.
+**Legacy parent gc5** — archived `done/` cards and index ingest only. Multi-card epic **phase
+members** (`epic:` + anchor **`## Epic cards`** ≥2 rows; card ≠ anchor) skip mandatory parent ff;
+optional `Forward feedback: deferred to epic {Name}` under **Lessons captured**. In-flight notes →
+anchor **`## Epic coordination`** — never index ingest (Signature:
+`epic-coordination-not-forward-feedback`). **Scoped Card Done bullets:**
+[kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc),
+[kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc),
+[kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc),
+[kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc),
+[kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc).
 
-**Per-item fields**
+### Forward-looking feedback (legacy gc5)
+
+Parent **`## Forward-looking feedback (YYYY-MM-DD)`** on **`feature` / `bug` / `agent` /
+`commit-issue`** `done/` cards — **not** on new closes (use **`feedback`** spawns). Field SSOT: §
+[Risk assessment rubric](#risk-assessment-rubric). Six categories when present: governance, skill,
+rule, codebase, prompt pattern, routing. **Top-3 chat:** risk **≥ 3** only —
+[agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7. Signature:
+`card-done-forward-feedback`.
+
+```markdown
+## Forward-looking feedback (YYYY-MM-DD)
+
+### Governance
+- **Question:** … **Risk Level:** 4 | **Priority:** High | **Importance:** Primary
+  **Impact Scope:** system-wide **References:** `check_governance_parity.py`, sig:governance-compact-baseline
+  **Mitigation:** … **Detail:** …
+```
+
+## Forward-feedback capture cadence
+
+Parent Card Done gate on **feature** / **bug** / **agent** / **commit-issue** — replaces mandatory
+parent six-category ff on **new** closes. Signatures: `forward-feedback-capture-policy`,
+`card-done-feedback-spawn`. Legacy parent blocks remain in index for archived cards. Policy decisions:
+archived fcp0 anchor (`docs/epics-closed.yaml`).
+
+| Card kind | Parent `## Forward-looking feedback`? | Spawn **`feedback`**? | Lessons on Card Done? | Top-3 chat |
+| --------- | ------------------------------------- | --------------------- | --------------------- | ---------- |
+| **One-off** feature / bug / agent | **No** | When honest risk **≥ 3**; **Risk 5** mandatory spawn | Yes | Risk **≥ 3** only; omit when none |
+| **Multi-card epic phase member** | **No** | Same risk gate | Yes (unless anchor batch defer) | Same |
+| **Epic anchor at gel0** | **No** synthesis | Consolidate existing open **`feedback`** / index rows | Yes | Existing high-risk only |
+| **`commit-issue`** | **No** | Optional when hook implies durable question | Yes | Same |
+| **`feedback`** card Done | — | — | **No** | — |
+
+**Parent close steps:**
+
+1. Capture **lessons** always.
+2. Score open questions — spawn **`feedback`** todos when risk **≥ 3**; **Risk 5** → mandatory spawn
+   same turn (Option A).
+3. Append **`## Spawned follow-up cards`** on parent with `feedback` paths (order, label, status).
+4. Rebuild index when **`feedback`** spawned or legacy parent ff present; link `` `ff-*` `` on child
+   **Context** — Signature: `forward-feedback-card-done-ingest`.
+5. **Do not** write parent six-category **`## Forward-looking feedback`** to satisfy Card Done.
+
+**Index SSOT:** **`feedback`** cards primary ingest (fcp2); parent gc5 deprecated for new closes.
+
+## Risk assessment rubric
+
+Shared ranking for **`feedback`** cards, legacy parent gc5 items, and top-3 chat. Signature:
+`forward-feedback-risk-rubric`.
 
 | Field | Required | Notes |
 | ----- | -------- | ----- |
-| **Question** | yes | Card-specific forward-looking question |
-| **Risk Level** | yes | 1–5 |
+| **Risk Level** | yes | 1 (Low) – 5 (Critical) |
 | **Priority** | yes | 1–2 Low; 3 Medium; 4–5 High (derived from risk) |
 | **Impact Scope** | yes | **local**, **multi-card**, or **system-wide** |
-| **References** | yes | Rules, skills, signatures, scripts, governance paths; optional `ff-*` index id |
+| **References** | yes | Rules, skills, signatures, scripts, governance paths; optional `ff-*` |
 | **Mitigation** | max-tier only | Concrete step for **every** item at the card's highest risk level |
 | **Detail** | risk ≥ 3 | Failure-mode context |
-| **Importance** | when tied | **Primary** / **Secondary** / **Tertiary** — see ranking below |
+| **Importance** | when tied | **Primary** / **Secondary** / **Tertiary** when ≥2 items share max risk |
 
-**Mandatory max risk:** the block must include ≥1 item at the card's highest risk level (do not
-cap all items at Low when outcomes warrant Medium+).
+**Spawn gate (parent Card Done):** risk 1–2 no spawn (top-3 may include when sole items); 3–4 spawn
+**`feedback`** when user attention needed; 5 mandatory **`feedback`** spawn same turn — Option A.
 
-**Importance labels:** when ≥2 items share the card's max risk, assign exactly one **Primary** and
-label the rest **Secondary**; optional **Tertiary** on lower-tier contextual items. A sole
-max-tier item needs no Importance label (implicit top item).
+**Top-3 chat:** **`### Top forward feedback`** for risk **≥ 3** only; omit when none spawned and no
+legacy parent ff written. **Ranking** (Primary / Secondary / top-3 backfill): Impact Scope
+(system-wide > multi-card > local) → category (Governance > Routing > Rule > Skill > Codebase >
+Prompt pattern) → failure-mode severity.
 
-**Ranking** (Primary selection; Secondary sort; top-3 chat backfill):
-
-1. Impact Scope: system-wide > multi-card > local
-2. Category: Governance > Routing > Rule > Skill > Codebase > Prompt pattern
-3. Failure-mode severity (tie-breaker)
-
-**Top-3 in chat (Card Done turn):** after writing the card block, surface up to three items in the
-assistant's final response — Primary first, then highest-ranked Secondary items; backfill from
-next-highest risk using the same sort until three items or the list is exhausted. Place
-`### Top forward feedback` before `### Files used` — [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7.
-
-**Backward compatibility:** legacy done cards without Impact Scope / References / Mitigation remain
-valid; no retroactive edits. C1–C4 lessons coverage does not parse forward-feedback sections.
-
-```markdown
-## Forward-looking feedback (2026-06-27)
-
-### Governance
-- **Question:** Should `--line-counts` be required on every GovernanceCompact Card Done?
-  **Risk Level:** 4 | **Priority:** High | **Importance:** Primary
-  **Impact Scope:** system-wide
-  **References:** `check_governance_parity.py --line-counts`, `kanban-agent-cards.mdc`, sig:governance-compact-baseline
-  **Mitigation:** Add one-line `--line-counts` bullet to GovernanceCompact Card Done AC templates.
-  **Detail:** Without a gate, compaction phases may ship without measurable before/after proof.
-
-### Skill
-- **Question:** Did kanban-markdown § Card Done need a reference split for the feedback example?
-  **Risk Level:** 2 | **Priority:** Low | **Importance:** Tertiary
-  **Impact Scope:** local
-  **References:** skill:kanban-markdown, sig:governance-compact-kanban-split
-
-### Rule
-- **Question:** Should kanban-review-qa.mdc cite tightened forward-feedback fields alongside lessons?
-  **Risk Level:** 4 | **Priority:** High | **Importance:** Secondary
-  **Impact Scope:** multi-card
-  **References:** rule:kanban-review-qa.mdc, sig:card-done-forward-feedback
-  **Mitigation:** Grep all scoped `kanban-*-cards.mdc` Card Done bullets when reference § changes.
-  **Detail:** Card Done checklists drift when only SKILL.md updates.
-
-### Codebase
-- **Question:** Does `build_lessons_index.py` need to index forward-feedback sections?
-  **Risk Level:** 1 | **Priority:** Low
-  **Impact Scope:** local
-  **References:** `scripts/build_lessons_index.py`, sig:card-done-forward-feedback
-
-### Prompt pattern
-- **Question:** Should agents stop asking §6 improvement questions when user says Done?
-  **Risk Level:** 3 | **Priority:** Medium
-  **Impact Scope:** multi-card
-  **References:** skill:agent-self-evaluation, sig:card-done-forward-feedback
-  **Detail:** Duplicate feedback (chat §6 + card block) wastes tokens and splits the audit trail.
-
-### Routing
-- **Question:** Should AGENTS.md Classify **Done** rows mention top-3 chat surfacing?
-  **Risk Level:** 3 | **Priority:** Medium
-  **Impact Scope:** system-wide
-  **References:** AGENTS.md, skill:agent-triage, sig:card-done-forward-feedback
-  **Detail:** Agents routing Card Done from AGENTS alone may skip chat surfacing without an explicit row.
-```
+**Category (index ingest):** derive gc5 **category** from **References** / Feature Area — not six
+`###` headings on parent.
 
 ## File format
 
@@ -1170,107 +521,14 @@ order: "a0"
 
 ## Docs governance layout
 
-Epic **`DocsGovernanceSplit`** (dg0–dg3) — separate **product contributor docs** from **agent/governance
-narrative** currently mixed in `docs/development.md` (~500 lines of Cursor agent workflow). Signature:
+Epic **`DocsGovernanceSplit`** (dg0–dg3) — **closed 2026-06-27** (all phases archived). Signature:
 `docs-governance-split`.
 
-**Phases:** dg0 schema → dg1 move prose + stub `development.md` → dg2 routing rollout
-(AGENTS/skills/rules/README) → dg3 grep + parity verify + gel0 close — **epic closed 2026-06-27**
-(all phases in `archived/`). **dg3 gate:**
-`python3 scripts/check_governance_parity.py --docs-governance-split` (or
-`rg "development.md §" .cursor AGENTS.md docs/ --glob '!docs/forward-feedback-index.yaml'`) → zero
-stale § anchors in governance artifacts (Signature: `docs-governance-split`).
+**SSOT:** [docs/governance/overview.md](../../docs/governance/overview.md) (handbook hub + audience
+table). Product setup stays in [docs/development.md](../../docs/development.md). Do not restore dg1
+migration tables here — pointer-first (gc1 / dg2 pattern).
 
-### Target tree (post-dg1)
-
-```text
-docs/
-  development.md                 # product dev only — venv, hooks, pytest, dependencies (~120 lines)
-  feature-areas.yaml             # yaml SSOT — path unchanged
-  lessons-index.yaml             # generated — path unchanged
-  forward-feedback-index.yaml    # generated — path unchanged
-  epics-closed.yaml              # registry — path unchanged
-  governance/                    # contributor handbook (pointer-first; dg1 creates files)
-    README.md
-    overview.md
-    kanban-workflow.md
-    lessons-and-coverage.md
-    forward-feedback.md
-    feature-areas-parity.md
-    audit-and-compaction.md
-  ui.md, worldgen.md, …          # product docs — unchanged
-.cursor/skills/, .cursor/rules/, AGENTS.md   # canonical enforcement — unchanged SSOT
-```
-
-### Audience — who loads what
-
-| Audience | Primary reads | Does not duplicate |
-| -------- | ------------- | ------------------ |
-| **Human product contributor** | `docs/development.md`, product docs (`ui.md`, …) | Classify tables, kanban card templates, mode-gate matrices |
-| **Human governance contributor** | `docs/governance/overview.md` + topic stubs; yaml registries in `docs/` | Full skill/rule prose — follow deep links |
-| **Cursor agent** | [AGENTS.md](../../AGENTS.md) → scoped `.cursor/skills/` + `.cursor/rules/` | Long narrative in `docs/governance/` except onboarding skim |
-| **CI / scripts** | `docs/*.yaml`, `scripts/check_governance_parity.py`, `scripts/check_lessons_coverage.py` | Markdown handbooks — hardcoded yaml paths stay at `docs/*.yaml` |
-
-### Pointer-first rule (gc1 pattern)
-
-Governance docs under `docs/governance/` are **stubs + deep links** — not second copies of enforcement
-text. Canonical detail stays in:
-
-- [AGENTS.md](../../AGENTS.md) — routing entry, Classify quickly summary, Maintaining table
-- `.cursor/skills/` and `.cursor/rules/` — lifecycle, gates, Signatures
-- `docs/*.yaml` — machine registries (`feature-areas.yaml`, `lessons-index.yaml`, …)
-
-Each governance stub is one-screen: purpose, when to read, link to SSOT. dg2 updates cross-references;
-dg3 verifies no stale `development.md` § anchors remain.
-
-### Proposed `docs/governance/` file map (dg1)
-
-| File | One-line purpose |
-| ---- | ---------------- |
-| `overview.md` | Handbook hub — audience table, load order, links to AGENTS + yaml registries |
-| `kanban-workflow.md` | Card scope (Product/Tests/Docs), Cursor mode gates, user prompt verbs — pointers to reference § Kanban card scope and § Cursor mode gates |
-| `lessons-and-coverage.md` | Lessons index, feature-area lesson pointers, `artifacts:` schema, Lessons Coverage Metric (C1–C4) |
-| `forward-feedback.md` | Forward feedback index — build/query/resolve CLI; ff1–ff3 metrics pointers |
-| `feature-areas-parity.md` | Governance area schema (gs0–gs4), on-demand parity check CLI |
-| `audit-and-compaction.md` | Periodic governance audit, epic/archive lifecycle pointers, gc0 `--line-counts` baseline |
-
-Merged topics (fewer files, less dg2 churn): kanban subsections share one file; lessons index +
-coverage + artifacts share one file; audit + compaction share one file.
-
-### `development.md` section mapping (dg1)
-
-Product sections **stay** in `docs/development.md`. Parent `## Cursor agent workflow` becomes a short
-pointer block; `###` subsections move per table.
-
-| Current `development.md` section | dg1 destination | `development.md` stub line (dg1) |
-| -------------------------------- | --------------- | -------------------------------- |
-| *(intro — venv, UI deps, Amulet)* | **stay** | *(unchanged — product setup)* |
-| `## Git hooks` | **stay** | *(unchanged — product hooks)* |
-| `## Running checks` | **stay** | *(unchanged — pytest / pre-commit)* |
-| `## Cursor agent workflow` (parent) | `docs/governance/overview.md` | Agent and kanban workflow: [docs/governance/overview.md](governance/overview.md) and [AGENTS.md](../AGENTS.md). |
-| `### Kanban card scope (Product / Tests / Docs)` | `docs/governance/kanban-workflow.md` | Kanban scope: [kanban-workflow.md](governance/kanban-workflow.md#kanban-card-scope). |
-| `### Cursor mode gates (Plan / Inquire / verbs)` | `docs/governance/kanban-workflow.md` | Mode gates: [kanban-workflow.md](governance/kanban-workflow.md#cursor-mode-gates). |
-| `### User prompts (agent workflow)` | `docs/governance/kanban-workflow.md` | Prompt verbs: [kanban-workflow.md](governance/kanban-workflow.md#user-prompts). |
-| `### Lessons reference index` | `docs/governance/lessons-and-coverage.md` | Lessons index: [lessons-and-coverage.md](governance/lessons-and-coverage.md#lessons-reference-index). |
-| `### Forward feedback index` | `docs/governance/forward-feedback.md` | Forward feedback: [forward-feedback.md](governance/forward-feedback.md). |
-| `### Lessons Coverage Metric` | `docs/governance/lessons-and-coverage.md` | Coverage metric: [lessons-and-coverage.md](governance/lessons-and-coverage.md#lessons-coverage-metric). |
-| `### Feature area lesson pointers (li2)` | `docs/governance/lessons-and-coverage.md` | Lesson pointers: [lessons-and-coverage.md](governance/lessons-and-coverage.md#feature-area-lesson-pointers). |
-| `### Governance area schema (gs0)` | `docs/governance/feature-areas-parity.md` | Area schema: [feature-areas-parity.md](governance/feature-areas-parity.md#governance-area-schema). |
-| `### Lessons captured artifacts: schema` | `docs/governance/lessons-and-coverage.md` | Artifacts schema: [lessons-and-coverage.md](governance/lessons-and-coverage.md#lessons-captured-artifacts). |
-| `### Periodic governance audit` | `docs/governance/audit-and-compaction.md` | Governance audit: [audit-and-compaction.md](governance/audit-and-compaction.md#periodic-governance-audit). |
-| `### On-demand parity check` | `docs/governance/feature-areas-parity.md` | Parity CLI: [feature-areas-parity.md](governance/feature-areas-parity.md#on-demand-parity-check). |
-| `### Governance compaction (gc0 baseline)` | `docs/governance/audit-and-compaction.md` | Compaction baseline: [audit-and-compaction.md](governance/audit-and-compaction.md#governance-compaction). |
-| `## Dependencies` | **stay** | *(unchanged — pyproject extras)* |
-
-### Non-goals (this epic)
-
-- **No moving generated yaml** — `docs/lessons-index.yaml`, `docs/forward-feedback-index.yaml`,
-  `docs/feature-areas.yaml`, `docs/epics-closed.yaml` stay at current paths (scripts hardcode `docs/`).
-- **No duplicating kanban card templates** — templates remain in this reference and scoped
-  `kanban-*.mdc`; governance stubs link here.
-- **No `feature-areas.yaml` path change** — deferred to a separate epic if ever needed.
-- **dg0–dg2 complete** — schema, prose move, routing rollout done; **dg3** adds automated residual
-  grep / parity check (gel0 close on dg0 anchor).
+**Verify:** `python3 scripts/check_governance_parity.py --docs-governance-split` (advisory exit 0).
 
 ## Feature area registry
 

@@ -8,8 +8,10 @@ alwaysApply: false
 
 When you **edit** any file under `.cursor/skills/agent-*/` or `.cursor/skills/kanban-*/`:
 
-1. **Read** [AGENTS.md](../../AGENTS.md) § **Maintaining AGENTS.md (routing guide)** in the same turn (before handoff).
-2. If the skill edit changes routing, card types, turn lifecycle, handoff format, or area→skill mapping → **update AGENTS.md** per that table in the same turn.
+1. **Read** [AGENTS.md](../../AGENTS.md) § **Maintaining AGENTS.md (routing guide)** and
+   [agent-consistency.mdc](agent-consistency.mdc) § **Change → must update** in the same turn (before handoff).
+2. If the skill edit changes routing, card types, turn lifecycle, handoff format, or area→skill mapping →
+   **update AGENTS.md** per Maintaining pointer rows + agent-consistency table in the same turn.
 3. Handoff **Context load** must say `AGENTS.md current`, `AGENTS.md updated`, or `AGENTS.md stale: …` — not omit the check.
 
 **Files used** must include `AGENTS.md` with `(read)` or `(edit)` when this rule applied.
@@ -17,3 +19,5 @@ When you **edit** any file under `.cursor/skills/agent-*/` or `.cursor/skills/ka
 Does **not** replace [agent-self-evaluation.mdc](agent-self-evaluation.mdc) §2b check 4 on other turns — it **adds** a hard read when these skill paths change.
 
 **Broader parity:** same-turn updates to triage, rules, and reference tables → [agent-consistency.mdc](agent-consistency.mdc).
+**Maintaining (acb3):** do not restore closed-epic narrative rows on AGENTS.md — use agent-consistency
+§ Change → must update + reference § Closed epics. Signature: `governance-thin-agents-md`.

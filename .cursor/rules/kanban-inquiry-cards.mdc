@@ -6,67 +6,16 @@ alwaysApply: false
 
 # Kanban inquiry cards
 
-When a feature file has frontmatter `labels` including **`inquiry`** (case-insensitive), follow [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Inquiry cards.
-
-## User provides
-
-- `## Description` (required)
-- `## Feature Areas` (optional — omit when not about an existing product area)
-
-## Agent provides
-
-- `## Response` — **on card only after** `update …` / `review and update` (not during **`Inquire @card`**
-  — that phase is chat-only in Ask Mode). Include **Suggested follow-up cards** when applicable.
-- `## Product Paths` — when user provided **Feature Areas**, or when inferred during research (no `tests/`)
-- `## Product Methods` — when **Feature Areas** set; symbols from research + registry `handlers:`
-- `## Tests` / `## Docs` — optional on inquiry; required on spawned **feature** / **bug** / **agent** cards
-
-**Cursor mode (cm0):** **`Inquire @card`** requires **Ask Mode** — research in chat; wrong mode → stop.
-Canonical matrix: [reference.md § Cursor mode gates](../skills/kanban-markdown/reference.md#cursor-mode-gates-plan--inquire--verbs).
+`labels: ["inquiry"]` — [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Inquiry cards.
 Signature: `kanban-cursor-mode-gates`.
 
-## Spawn feature cards (mandatory when user asks)
+**User:** **Description**; optional **Feature Areas**. **`Inquire @card`** + Ask Mode — chat only;
+**Response** on card after **`update`** / rare `review and update`.
 
-When the user requests implementation of inquiry recommendations, spawn **todo** child cards per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § **Spawn feature cards from inquiry**:
+**Agent (optional):** Product scope when areas set. **Spawn:** [SKILL.md § Spawn from inquiry](../skills/kanban-markdown/SKILL.md#spawn-from-inquiry) —
+`todo` children with `epic` + review-ready sections; parent **`## Spawned feature cards`** table.
 
-- `status: "todo"`, `labels: ["feature"]` or `["bug"]` or **`["agent"]`** (governance/skills/rules — e.g. epic `GovernanceCompact`)
-- `epic: "{EpicName}"` — PascalCase theme (e.g. `DesignFailureMemorySystem`, `GovernanceDriftAlerts`, `GovernanceCompact`)
-- Body sections: **Acceptance Criteria**, **Out of Scope**, **Feature Areas** / **Feature Area**, **Product Paths**, **Product Methods**, **Tests**, **Docs**, **Decisions**, **Context**
-- Parent inquiry: **`## Spawned feature cards`** table + matching `epic`; set global **todo** `order` for execution sequence when user asks
+**Done:** move only — no lessons or ff ([kanban-card-gates.mdc](kanban-card-gates.mdc) §4).
 
-Do **not** start implementation on spawned cards until user assigns work (pre-implementation review still applies).
-
-**Out of Scope follow-ups** — when spawning from a parent card’s Out of Scope list, use the correct label per work type: `inquiry` (research), `agent` (governance), `feature` (product geometry). Add **`## Spawned follow-up cards`** on the parent with epic/order links.
-
-## Workflow
-
-1. Confirm **Description** present
-2. Resolve **Feature Areas** → **Product** + **Tests** + **Docs** when areas are set
-3. `todo` → `in-progress` → **`Inquire @card`** (Ask Mode) — research in chat; **no** card file edits
-4. User approves → **`update @inquiry-card`** (Agent) → write **Response** on card → `review`
-5. User asks to spawn → create **todo** child cards with `epic` + review-ready sections
-6. User or agent moves inquiry → `done` when satisfied — **no** Card Done lessons capture
-7. **Spawn table on parent** — after spawn, add `## Spawned feature cards` with order, path, label, status; bump parent `modified`
-
-**Rare:** `review and update @inquiry-card` — research + **Response** same turn (see reference § Cursor mode gates).
-**Deprecated:** `Kanban: answer inquiry on …` as same-turn Response write — use Inquire then update.
-
-## Card Done
-
-**Do not** run lessons learned capture when the user closes an **inquiry** card. Inquiry **Done** =
-agent or user moves to `done/` only — **no** `## Lessons captured` **and no**
-**`## Forward-looking feedback`**
-([kanban-card-gates.mdc](../rules/kanban-card-gates.mdc)).
-
-## Do not
-
-- Write **Response** during **`Inquire @card`** — chat only until user **`update @inquiry-card`**
-- Use **Decisions**, **Corrective Action**, or **Acceptance Criteria** on the **inquiry** card itself
-- Implement application code on the inquiry card unless user explicitly asks
-- Spawn cards in **Backlog** — always **todo**
-- Skip **Product** / **Tests** / **Docs** on spawned **feature** / **agent** cards when Feature Areas are set
-- Orbit / render **2D vs 3D parity** questions surfaced during bug QA → spawn **`inquiry`** card (not a bug on the parent unless AC contradicts shipped behavior); link from parent **Context** or handoff
-
-## Full workflow
-
-See `.cursor/skills/kanban-markdown/SKILL.md` for lifecycle and **Response** content guidelines.
+**Do not:** **Decisions** / **Corrective Action** / **AC** on inquiry card; **Response** during
+`Inquire` alone; Backlog spawns; implement on inquiry unless user asks.

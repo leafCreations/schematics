@@ -1,0 +1,22 @@
+---
+description: Kanban feedback cards — risk-gated open questions; spawn from Card Done; move-only Done
+globs: .devtool/features/**/*.md
+alwaysApply: false
+---
+
+# Kanban feedback cards
+
+`labels: ["feedback"]` — [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); spawn policy:
+[reference.md § Forward-feedback capture cadence](../skills/kanban-markdown/reference.md#forward-feedback-capture-cadence);
+sections: [reference-glossary.md](../skills/kanban-markdown/reference-glossary.md). Signatures:
+`feedback-label-kanban`, `forward-feedback-capture-policy`, `card-done-feedback-spawn`.
+
+**Spawn (parent Card Done):** risk **≥ 3** → **`todo`** feedback; **Risk 5** mandatory same turn
+(Option A — no auto **feature** / **agent** child). Required: **Question**, **Risk assessment**,
+**Context** (parent path; `` `ff-*` `` after index rebuild).
+
+**Workflow:** stay **`todo`** until user **`update`** / **`implement`**; **Done** → move only — no
+lessons or parent-style ff (`resolve_forward_feedback.py --set-status answered`).
+
+**Do not:** **Corrective Action** / **Response** / **Recommendation**; auto-implement on spawn;
+**Prior lessons** gate before spawn.

@@ -16,7 +16,12 @@ from scripts.build_forward_feedback_index import (
     render_index_yaml,
     write_index,
 )
-from scripts.lessons_coverage_lib import ForwardFeedbackItem, parse_forward_feedback_items
+from scripts.lessons_coverage_lib import (
+    ForwardFeedbackItem,
+    derive_feedback_card_category,
+    parse_feedback_card_items,
+    parse_forward_feedback_items,
+)
 
 GC5_ITEM = """
 - **Question:** Should registry yaml paths stay schema-internal?
@@ -208,3 +213,103 @@ def test_card_done_doc_parity_mentions_forward_feedback_index_rebuild():
         text = path.read_text(encoding="utf-8")
         assert needle in text, f"{path} missing {needle}"
         assert "build_lessons_index.py" in text, f"{path} missing lessons index pairing"
+
+
+FEEDBACK_CARD_BODY = """
+## Question
+
+Should C1b still require parent gc5 blocks after fcp2?
+
+## Risk assessment
+
+- **Risk Level:** 5 | **Priority:** High | **Importance:** Primary
+- **Impact Scope:** system-wide
+- **References:** `lessons_coverage_lib.py`, sig:lessons-coverage-c1b-forward-feedback
+- **Detail:** fcp3 may relax C1b; user must confirm before epic close.
+
+## Context
+
+- Parent: `.devtool/features/done/agent-parent-2026-06-29.md`
+"""
+
+
+def _write_feedback_card(
+    directory: Path,
+    name: str,
+    *,
+    body: str = FEEDBACK_CARD_BODY,
+    labels: str = '["feedback"]',
+    completed_at: str | None = None,
+) -> Path:
+    completed_line = f'completedAt: "{completed_at}"\n' if completed_at else ""
+    path = directory / name
+    path.write_text(
+        "---\n"
+        f"labels: {labels}\n"
+        f"{completed_line}"
+        'created: "2026-06-29T20:00:00.000Z"\n'
+        "---\n\n"
+        f"{body}",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_parse_feedback_card_items_extracts_fields():
+    items = parse_feedback_card_items(FEEDBACK_CARD_BODY)
+    assert len(items) == 1
+    item = items[0]
+    assert item.question.startswith("Should C1b")
+    assert item.risk_level == 5
+    assert item.impact_scope == "system-wide"
+    assert item.category == "Governance"
+
+
+def test_derive_feedback_card_category_from_references():
+    assert derive_feedback_card_category(references="skill:kanban-markdown") == "Skill"
+    assert derive_feedback_card_category(references="rule:testing.mdc") == "Rule"
+    assert derive_feedback_card_category(references="helpers/orbit_camera.py") == "Codebase"
+
+
+def test_build_index_ingests_feedback_card(ff_features):
+    repo_root, done = ff_features
+    features = repo_root / ".devtool" / "features"
+    _write_feedback_card(
+        features,
+        "feedback-todo.md",
+        body=FEEDBACK_CARD_BODY,
+    )
+    _write_feedback_card(
+        done,
+        "feedback-done.md",
+        body=FEEDBACK_CARD_BODY,
+        completed_at="2026-06-29T12:00:00.000Z",
+    )
+    payload, _warnings = build_index(repo_root=repo_root)
+    feedback_rows = [row for row in payload["items"] if "feedback-" in row["source_card"]]
+    assert len(feedback_rows) == 2
+    assert all(row["risk_level"] == 5 for row in feedback_rows)
+    assert feedback_rows[0]["category"] == "Governance"
+
+
+def test_build_index_preserves_legacy_parent_ff_with_feedback_cards(ff_features):
+    repo_root, done = ff_features
+    features = repo_root / ".devtool" / "features"
+    _write_closed_card(done, "legacy-parent.md", body=_gc5_body())
+    _write_feedback_card(features, "feedback-todo.md")
+    payload, _warnings = build_index(repo_root=repo_root)
+    assert len(payload["items"]) == 7
+
+
+def test_card_done_spawn_feedback_risk_five_doc_parity():
+    """Risk 5 Option A — mandatory feedback spawn documented (fcp2)."""
+    paths = (
+        REPO_ROOT / ".cursor/skills/kanban-markdown/SKILL.md",
+        REPO_ROOT / ".cursor/skills/kanban-markdown/reference.md",
+        REPO_ROOT / "docs/governance/forward-feedback.md",
+    )
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        assert "Risk 5" in text, f"{path} missing Risk 5 spawn policy"
+        assert "card-done-feedback-spawn" in text, f"{path} missing signature"
+        assert "feedback" in text.lower(), f"{path} missing feedback label reference"

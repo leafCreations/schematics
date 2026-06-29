@@ -24,83 +24,10 @@ When a feature file has frontmatter `labels` including **`agent`** (case-insensi
 
 ## Phased epics
 
-**GovernanceAreaSchema** (gs0–gs4): yaml `agents_skill` / `agents_rules` / `lesson_routing_row` on seeded
-areas; `check_area_schema_parity` + `--agents-parity` (gs2–gs3). **gs4 (complete):**
-`scripts/sync_agents_area_table.py` `--check` / `--write` syncs AGENTS § Area → skills & rules from
-yaml — Signature: `governance-area-schema-agents-table-sync`; run `--write` after seeding governance
-keys on a new area.
-
-**PrecommitRuffSim110** (p0–p1, **closed** 2026-06-29): SIM110 §1b routing +
-commit-issue `ruffRules` / `## Ruff rules` capture — anchor
-`archived/agent-precommit-ruff-sim110-triage-2026-06-28.md`; do not reuse epic name — Signature:
-`precommit-ruff-sim110`.
-
-**GovernanceDriftSpawnConsolidate** (p0 **complete**, archived 2026-06-29): `consolidate_drift_issues_for_spawn`
-merges registry drift by root cause before spawn; epic **`GovernanceDriftFix`** on new spawns (
-**`GovernanceDriftAlert` closed** ) — anchor
-`archived/agent-governance-drift-spawn-consolidate-2026-06-28.md`; do not reuse epic name —
-Signature: `governance-drift-spawn-consolidate-by-root-cause`.
-
-**GovernanceCompact** (gc0–gc7): measure before/after with `python3 scripts/check_governance_parity.py --line-counts`
-(exit 0 — Signature: `governance-compact-baseline`). Record before/after line counts in **Decisions** or Card Done
-handoff when closing compaction phases. Examples: `LessonsCoverageMetric` (lc0–lc3); `LessonsReferenceIndex` (li0–li3);
-`GovernanceAreaSchema` (gs0–gs3); `ArtifactsDocYaml` (ap0–ap1, `doc:` yaml parser); `GovernanceCompact` (gc0–gc7);
-`OrbitRenderClass` (or0 — **complete:** agent taxonomy + `helpers/orbit_render_class.py`; **or1 complete:**
-trapdoor doc/test parity — all `TRAPDOOR:*` → `block_model`, open/closed sub-geometry only). **gc2 (complete):** Classify
-signals canonical in triage reference § Classify only; AGENTS ≤5-row summary; triage §1 pointer;
-`check_classify_parity` fingerprint — Signature: `governance-compact-classify-ssot`. **gc3
-(complete):** card-type `kanban-*-cards.mdc` scoped `.devtool/features/**`; triage §1 pointer to
-agent-routing § Kanban card type (no §1 table — `TRIAGE_CLASSIFY_MAX_ROWS=0`); `check_kanban_rule_globs`
-— Signature: `governance-compact-kanban-rule-globs`. **gc4 (complete):** compact §7 handoff template;
-read-only §6 one-line handoff; consolidate-before-expand gate — Signature:
-`governance-compact-self-eval-handoff`. **gc5 extension (complete):** forward-feedback tightening
-— Impact Scope, References, Mitigation, Importance, top-3 chat; reference § SSOT — Signature:
-`card-done-forward-feedback`. **gc8 (complete):** agent moves `review` → `done` on user QA-complete signal;
-same-turn Card Done — Signature: `card-done-agent-move-qa-complete`. **gc6
-(complete):** task-type first-read rows in triage reference § Task types — Signature:
-`governance-compact-classify-task-types`; triage §2 summary (no full table duplication).
-
-**LessonsCoverageMetric lc0 (complete):** metric spec SSOT —
-[docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § **Lessons
-Coverage Metric** (C1–C4 formulas, **Inputs** table, interpretation bands, gitignored `done/`
-caveat, audit CLI pointers). Signature: `docs-governance-split`.
-
-**LessonsCoverageMetric lc1 (complete):** `scripts/check_lessons_coverage.py` +
-`scripts/lessons_coverage_lib.py`; `resolve_prior_lessons.py --audit capture|application|all`;
-`tests/test_check_lessons_coverage.py` uses `tmp_path` + monkeypatch `FEATURES_DIR` / `REPO_ROOT`
-(no gitignored `.devtool/` in CI). Signature: `lessons-coverage-c2-c3-audit` (C4 Prior-lessons fixture).
-
-**LessonsCoverageMetric lc2+:** `check_lessons_coverage.py` scores full C1–C4; `--strict` uses
-`find_done_lessons_strict()` (epic alone does not match C3). Signature: `lessons-coverage-strict-consumption`.
-Card Done: optional ``artifacts:`` tail improves C2 — Signature: `lessons-coverage-c2-c3-audit`
-([testing.mdc](testing.mdc)).
-
-**LessonsCoverageMetric lc3 (complete):** `check_governance_parity.py` calls `check_lessons_coverage_drift`
-when `.devtool/features/done/` or `archived/` exists; composite &lt; 75% → `Lessons coverage drift alert:` with
-C1–C4 breakdown; spawns `lessons-coverage-drift-YYYY-MM-DD` (epic `LessonsCoverageMetric`, label `agent`).
-Spawn cards must run the prior lessons gate and add `**Prior lessons (YYYY-MM-DD):**` under **Decisions**
-before `review` (no `\n**` line breaks inside the block — C4 parser boundary). Optional hook:
-`scripts/pre-commit-lessons-coverage.sh` (not in default `.pre-commit-config.yaml`). Clean clones
-skip gracefully. Signature: `lessons-coverage-ci-drift` ([testing.mdc](testing.mdc)). **Spawn skeleton:**
-all **agent** sections at create with `_TBD_` placeholders — kanban-markdown reference § Drift spawn
-card skeleton; not **Corrective Action** alone.
-
-**LessonsCoverageMetric lc4 (complete):** aM lc4c — parser SSOT, drift spawn stub, C1b
-(`lessons-coverage-c1b-forward-feedback`); aN lc4b — C4 per-card drift threshold
-(`lessons-coverage-c4-per-card-threshold`). Supersedes monolithic aL (archived).
-
-**GovernanceEpicLifecycle (gel0–gel4 archived):** CardDoneGovernanceLoop2026 batch-archived 2026-06-27.
-gel4 adds **`### Epic summary`** / **`### Initiative summary`** on epic/archive close — Signature
-`governance-epic-completion-summary`. Epic may close via gel0 audit when user confirms.
-**Drift spawn consolidation (shipped 2026-06-27):** registry **Product Methods** alerts group per source
-kanban card — Signature: `governance-drift-spawn-consolidate-by-source-card`.
-
-**Hybrid agent cards** (e.g. orbit render-class routing): **Feature Area** may be product-facing (`Render Preview`); AC may include a small `helpers/` resolver + docs/skill glossary — still `labels: ["agent"]`, not `feature`.
-
-**DocsGovernanceSplit (closed 2026-06-27):** product vs governance docs split — `docs/development.md`
-setup-only (~142 lines); `docs/governance/` handbook; `--docs-governance-split` advisory verify.
-Epic archived — anchor `archived/agent-docs-governance-split-dg0-schema-spec-2026-06-29.md`;
-`docs/epics-closed.yaml`. Signature: `docs-governance-split`.
+Closed epic history and in-flight manifests: `docs/epics-closed.yaml`, anchor **`## Epic cards`**,
+[docs/governance/audit-and-compaction.md](../../docs/governance/audit-and-compaction.md). **Stale drift
+spawns:** close **Superseded** when parity checks pass — handbook § Stale spawns. Signatures:
+`governance-compaction-drift-alert`, `governance-duplication-automation`, `governance-epic-completion-audit`.
 
 ## Workflow
 
@@ -115,21 +42,9 @@ Epic archived — anchor `archived/agent-docs-governance-split-dg0-schema-spec-2
 ## Card Done — lessons learned
 
 When the user signals **QA-complete / Done**, the **agent** moves the agent card to `done/` and
-runs Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`):
-
-1. Run [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
-2. Update **≥1 skill** + **≥1 rule** + relevant **`docs/`** / registry.
-3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card.
-4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
-   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
-   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
-   when tied; top-3 in chat on Card Done turn).
-5. **Archive-group anchor cards (gel3):** Card Done moves to `done/` only — when the user later
-   confirms `archive group {Name} complete`, run reference § Archive group on the anchor; verify with
-   `resolve_archive_group.py --group {Name} --status` first — Signature: `governance-archive-group-batch`.
-6. **Epic / initiative summary (gel4):** on epic audit or archive group complete, emit **`### Epic summary`**
-   or **`### Initiative summary`** (1–2 paragraphs) per reference § Epic / initiative completion
-   summary — Signature: `governance-epic-completion-summary`; not on Card Done or every turn.
+runs Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`). Checklist:
+[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture;
+gel3/gel4 archive and epic summary pointers in [reference.md § Spawn, epics, and drift](../skills/kanban-markdown/reference.md#spawn-epics-and-drift).
 
 ## Card Done `artifacts:` — registry yaml
 
@@ -143,39 +58,12 @@ Python touched by the card must keep lines ≤ **100** characters (`pyproject.to
 
 ## KanbanCardScope epic (ks2 complete — 2026-06-27)
 
-Epic **`KanbanCardScope`** (aU–aX): **Product** + **Tests** + **Docs** replace **Label** on active
-templates; user owns story + optional Feature Areas; agent owns AC (behavior), Product, Tests, Docs.
-**ks0–ks2 (done 2026-06-28):** reference, parsers, rules/skills/AGENTS rollout — Signature:
-`kanban-card-scope-schema`. Epic **`KanbanCardScope`** closed 2026-06-28 (archived aU–aX) — do not
-reuse `epic:`; follow-ups need a new PascalCase epic (`resolve_epic_cards.py --validate-new`).
-**Legacy:** `done/` / `archived/` cards may keep **Label** headings; active cards use **Product** +
-**Tests** + **Docs**.
+**Product** + **Tests** + **Docs** on active cards — Signature: `kanban-card-scope-schema`. Closed:
+`docs/epics-closed.yaml`.
 
-## KanbanCursorModeGates epic (complete — 2026-06-29)
+## CardDoneDisambiguation (gc9)
 
-Epic **`KanbanCursorModeGates`** (aY–b1 **complete**): Plan/Inquire Cursor mode gates shipped.
-**cm0–cm3:** reference § Cursor mode gates; `kanban-plan-cards.mdc`; card-gates §2/§3; Classify SSOT;
-`REFERENCE_CLASSIFY_FINGERPRINT` = `fe1e226a461904d1`. Close via gel0 audit on cm0 anchor —
-`docs/epics-closed.yaml`. Signatures: `kanban-cursor-mode-gates`, `governance-compact-classify-ssot`,
-`governance-compact-kanban-rule-globs`.
-
-## ForwardFeedbackRegistry epic (complete — 2026-06-27; archived — 2026-06-29)
-
-Epic **`ForwardFeedbackRegistry`** (ff0–ff3 **complete**; hold-fly forward-feedback follow-ups ff1b/ff2b
-**archived** 2026-06-29) — generated
-`docs/forward-feedback-index.yaml`, `resolve_forward_feedback.py` top-N by gc5 category, Card Done
-ingest (ff1), resolution links (ff2), stale metrics (ff3). Closed via gel0 audit on ff0 anchor;
-registry: `docs/epics-closed.yaml`. Build:
-`python3 scripts/build_forward_feedback_index.py`; query/link:
-`python3 scripts/resolve_forward_feedback.py --category Codebase --status open --top 3`;
-`python3 scripts/resolve_forward_feedback.py --link ff-* --card .devtool/features/….md`.
-Metrics: `resolve_forward_feedback.py --report` [--stale-days N];
-`check_governance_parity.py --forward-feedback-stale` (advisory exit 0).
-Card Done: rebuild index after lessons index; resolution via `--link` / `--set-status` — Signatures:
-`forward-feedback-card-done-ingest`, `forward-feedback-resolution-tracking`.
-Complements gel2 `--forward-feedback-audit` (card field completeness — not backlog SSOT). Signatures:
-`forward-feedback-index`, `forward-feedback-card-done-ingest`, `forward-feedback-resolution-tracking`,
-`forward-feedback-stale-metrics`.
+Bare **Done / QA complete** without `@path` — [reference.md § Disambiguation](../skills/kanban-markdown/reference.md#disambiguation-card-unnamed) — Signature: `card-done-disambiguate-multi-review`.
 
 ## Do not
 

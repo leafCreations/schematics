@@ -14,7 +14,8 @@ Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
 1. **Run before sending the final message** — not optional, not deferred to a follow-up.
 2. **Include optional `### Top forward feedback`** (Card Done), **`### Forward feedback dedup`**
  (Card Done when index rebuild reports duplicates), **`### Epic summary`** / **`### Initiative summary`**
-   (epic/archive close), then **`### Files used`** and **`### Self-evaluation`** as the **last sections**
+   (epic/archive close), **`### Compaction advisory`** (warn/critical — Signature:
+   `governance-compaction-drift-alert`), then **`### Files used`** and **`### Self-evaluation`** as the **last sections**
    — see [SKILL.md](../skills/agent-self-evaluation/SKILL.md) §7 for order.
 3. **Context load audit** — every turn: correct files, no excess load, proper order (classify before deep read), **[AGENTS.md](../../AGENTS.md) not stale** (update it when routing drifts); kanban cards: open **Product Methods** first (grep before broad read) when Feature Areas are set; card **Tests → Files** for pytest scope.
 4. **§6 skill & rule feedback loop** — every turn: mental check (both §6 questions).
@@ -33,6 +34,9 @@ Full process: `.cursor/skills/agent-self-evaluation/SKILL.md`
 9. **Ruff E501 before handoff** — implementation turns that edit `.py`/`.pyi`: run
    `.venv/bin/ruff check --select E501` on touched paths before the final message — Signature:
    `ruff-e501-line-length` ([pre-commit-workflow/SKILL.md](../skills/pre-commit-workflow/SKILL.md)).
+10. **Compaction advisory** — before handoff run `python3 scripts/check_governance_parity.py --compaction --quiet`.
+   When severity is **warn** or **critical**, include **`### Compaction advisory`** per SKILL §7 and set
+   **Compaction** in **Self-evaluation** — Signature: `governance-compaction-drift-alert`.
 
 ## Handoff block (required format)
 

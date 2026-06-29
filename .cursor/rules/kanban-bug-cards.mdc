@@ -57,18 +57,9 @@ When fixing **Review** issues the user reports (chat, screenshots, or **`## QA R
 
 ## Card Done — lessons learned
 
-When the user signals **QA-complete / Done** on a bug card, the **agent** moves to `done/` and
-runs Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`):
-
-1. Read all **Corrective Action** + **QA follow-up** bullets on the card.
-2. Capture durable lessons in **≥1 area skill** + **≥1 scoped rule** + **`docs/`** (and `feature-areas.yaml` / `registries/` when applicable).
-3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card with links to updated artifacts.
-4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
-   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
-   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
-   when tied; top-3 in chat on Card Done turn).
-
-Full checklist: kanban-markdown § Card Done — lessons learned capture.
+When the user signals **QA-complete / Done** on a bug card, the **agent** moves to `done/` and runs
+Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`). Checklist:
+[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
 
 ## Do not
 
@@ -81,21 +72,9 @@ Full checklist: kanban-markdown § Card Done — lessons learned capture.
 
 ## Spawn from parent QA Review
 
-When the user asks to record QA findings as bug cards (not fix in place on the parent):
-
-- Parent feature card: **`## QA Review`** + **`## Spawned bug cards`** table; note failed **Verify** lines when applicable
-- Child cards: `labels: ["bug"]`, `status: "todo"`, same `epic` as parent when part of a series
-- Set **`order`** (`a0`, `a1`, …) in **implementation sequence** on the parent **`## Spawned bug cards`** table
-- Lanterns / attachables explicitly deferred in parent **Out of Scope** → document in QA as deferred, not a bug card
-- Orbit **bed merged pair** QA (foot top bake on head half) → epic `OrbitFunctionalFaceTextures`
-  **a1** — split mattress top quads by head/foot part; not a0 color lookup alone.
-- Orbit preview bugs that mismatch 2D facing — reuse existing 2D rotation helpers (`corner_stair_facing_rotation`, `normalize_direction`) in 3D box builders; **mirror south-authored boxes on local Z** before rotation so `@south` treads sit on +Z (matches `build_stair_top_mask` / `test_paste_corner_stair_matches_worldgen_facing`). **2D straight stairs:** `_prepare_topdown_texture` must use `stairs_behavior` + `corner_stair_facing_rotation` — not `rotate_directional_texture` (Signature: `2d-stair-facing-rotation`). **QA slab-like Top Down after facing fix** → spawn **feature** card for bake-time riser ghost fill — not a direction bug.
-- **HUD look-ray geometry bugs (fc3 follow-up):** before `in-progress` on attachable/partial false-hit
-  reports, require **fc3a crosshair** manual QA with screen-center aim — Signature:
-  `floating-camera-fc3a-crosshair`. `bug-orbit-hud-look-ray-geometry-fc3-followup-2026-06-28` closed
-  Done 2026-06-29 (Looking at correct after crosshair; full-cell DDA retained).
-- Orbit stair **holes / transparency** (Signature: `orbit-stair-mask-transparency`) — **check textures before geometry**: 2D L-mask bakes on 3D faces + alpha discard look like missing mesh; fix with **full solid tiles** in `resolve_orbit_face_texture` (`PLANKS:{material}` for plank materials; `minecraft:{material}` for stone — not `PLANKS:cobblestone`), corner-probe `box_face_occluded` on `±Y`, riser box, same-cell culling; **do not** void-fill with masked tiles. QA: `structures/test/stage1`, `residence/stage1`, `well/stage1` cobblestone stairs. Tests: `test_orbit_stair_face_textures_are_opaque`, `test_orbit_cobblestone_stair_face_textures_are_opaque`, `test_lower_stair_slab_top_face_visible_on_open_half`
-- Orbit **fence / wall black rail gaps** (Signature: `orbit-fence-mask-transparency`) — **not** solid tiles on post faces (fills gaps with wood). Keep **masked** `FENCE:*` / `WALL:*` bakes on thin box geometry; shader **`if (sample.a < 0.05) discard`** (stairs/slabs use opaque tiles — safe). Tests: `test_orbit_fence_side_texture_uses_masked_bake`, `test_orbit_wall_side_texture_uses_masked_bake`
+Parent **`## QA Review`** + **`## Spawned bug cards`** table; child `labels: ["bug"]`, `status: todo`,
+same `epic` when phased. Product-specific spawn hints (orbit, Floating Camera, properties inspector):
+[testing.mdc](testing.mdc) + area skills — grep **Signature** before spawning.
 
 ## Full workflow
 

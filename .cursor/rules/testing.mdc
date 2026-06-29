@@ -1,203 +1,71 @@
 ---
 description: Run targeted pytest during development; full suite only when appropriate
-alwaysApply: true
+globs:
+  - "tests/**"
+  - "ui/**"
+  - "helpers/**"
+  - "scripts/**"
+  - "registries/**"
+  - "renderers/**"
+  - "structures/**"
+alwaysApply: false
 ---
 
 # Testing Workflow
 
-When verifying changes in this repo, prefer fast, targeted validation over repeatedly running the full suite.
+Prefer fast, targeted validation over the full suite. Glob-scoped — loads on product paths;
+governance/kanban turns use [targeted-testing/SKILL.md](../skills/targeted-testing/SKILL.md).
+Signature: `governance-always-on-rule-diet`.
 
-## During Development
+## Path → test SSOT
 
-Run targeted tests mapped to what changed.
-
-Examples:
-
-* `pytest tests/test_cells.py -q` after changes to `helpers/cells.py`
-* `pytest tests/test_ui_document.py tests/test_main_window.py -q` after changes under `ui/`
-* `pytest tests/test_palette_integrity.py -q` after changes under `registries/`
-
-## Common Test Mappings
-
-Use these mappings as the default starting point:
-
-| Changed Area | Recommended Tests |
+| Priority | Source |
 | --- | --- |
-| Kanban **Product Paths** → card **Tests → Files** | `python3 scripts/resolve_card_tests.py --files-only PATH…` or `--from-card CARD.md` — hook SSOT (`precommit-pytest-scope-mismatch`) |
-| Agent **Review** / commit-ready (staged hooks) | `scripts/agent-commit-ready.sh` — ruff → palettes → pytest; **Tests → Verify (agent)** cites `scripts/pre-commit-pytest.sh` |
-| `helpers/cells.py` | `pytest tests/test_cells.py -q` |
-| `ui/`              | `pytest tests/test_ui_document.py tests/test_main_window.py -q` |
-| `ui/main_window.py` (`MainWindow.__new__` tests) | `pytest tests/test_main_window.py -q` — Signature: `precommit-mainwindow-__new__-test` |
-| `ui/widgets/render_panel.py` | `pytest tests/test_render_panel.py -q` |
-| `registries/`      | `pytest tests/test_palette_integrity.py -q`                     |
-| `renderers/`       | Run renderer-specific tests if present                          |
-| `helpers/orbit_face_textures.py` | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_partial_mesh.py tests/test_orbit_preview.py -q` |
-| Orbit water/lava catalog tint | `pytest tests/test_orbit_greedy_mesh.py -q -k water_orbit_faces_apply_schematic` |
-| `helpers/orbit_camera.py` (`move_along_look`, look-direction W/S) | `pytest tests/test_orbit_camera.py tests/test_orbit_preview.py -q -k "move_along_look or pitched_down or keyboard_wasd"` — Signature: `floating-camera-fc1b-look-forward` |
-| `helpers/orbit_camera.py` `right_vector` / A·D strafe (fc0 QA) | `pytest tests/test_orbit_camera.py tests/test_orbit_preview.py -q -k "right_vector or strafe or keyboard_wasd"` — Signature: `floating-camera-fc0-strafe-right` |
-| `helpers/orbit_camera.py` (free-camera vectors / movement) | `pytest tests/test_orbit_camera.py tests/test_orbit_preview.py -q` — Signature: `floating-camera-fc0-free-nav` |
-| `OrbitPreviewWidget.reset_camera_to_default`, `_projection_near_plane` (fc1) | `pytest tests/test_orbit_preview.py -q -k "reset or projection_near"` — Signature: `floating-camera-fc1-reset-projection` |
-| `OrbitPreviewWidget.export_camera_pose`, `apply_camera_pose`; `viewer.orbit_camera_poses` (fc1c) | `pytest tests/test_app_settings.py tests/test_orbit_preview.py -q -k "orbit_camera_pose or apply_camera_pose"` — Signature: `floating-camera-fc1c-pose-persistence` |
-| `OrbitPreviewWidget` mouse look / wheel (fc2a) | `pytest tests/test_orbit_preview.py -q -k "mouse or look or wheel"` — include `test_orbit_preview_enables_mouse_tracking` (Qt needs `setMouseTracking(True)` or look feels like click-drag) — Signature: `floating-camera-fc2a-mouse-look` |
-| `viewer.orbit_camera_move_speed` (fc2b/fc3b) | `pytest tests/test_orbit_preview.py tests/test_app_settings.py tests/test_main_window.py tests/test_preview_panel.py -q -k "move_speed or scroll or movement_step or placement or crosshair or F3 or hud"` — Signature: `floating-camera-fc2b-scroll-move-speed`, `floating-camera-fc3b-hud-settings` |
-| `helpers/orbit_camera.py` HUD helpers; `viewer.orbit_camera_hud` (fc3) | `pytest tests/test_orbit_camera.py tests/test_orbit_preview.py tests/test_app_settings.py -q -k "orbit_camera or hud or facing or raycast"` — Signature: `floating-camera-fc3-orientation-hud` |
-| HUD look-ray geometry bug (attachables/partial) | `pytest tests/test_orbit_camera.py tests/test_orbit_attachable_mesh.py tests/test_orbit_partial_mesh.py -q -k "hud or raycast or look"` — Signature: `floating-camera-fc3-orientation-hud`; card `bug-orbit-hud-look-ray-geometry-fc3-followup-2026-06-28` |
-| `OrbitPreviewWidget._movement_timer`, hold fly keys (fc0 QA) | `pytest tests/test_orbit_preview.py -q -k "hold or movement_timer or shift_key or autorepeat"` — Signature: `floating-camera-fc0-hold-fly`; **Review QA:** hold Space/Shift/WASD — tap-only is a defect; ignore `KeyRelease` when `isAutoRepeat()` |
-| `OrbitPreviewWidget` mouse look / Esc / cursor (fc2a, fc3a QA) | `pytest tests/test_orbit_preview.py -q -k "mouse_look or escape or pointer_cursor or pointer_capture or crosshair or hud"` — Signature: `floating-camera-fc2a-mouse-look`, `floating-camera-fc3a-crosshair` |
-| `helpers/orbit_*.py`, `ui/widgets/orbit_preview_widget.py`, `ui/mesh_build_worker.py` | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_partial_mesh.py tests/test_orbit_attachable_mesh.py tests/test_orbit_render_class.py tests/test_orbit_preview.py tests/test_orbit_camera.py -q` |
-| `helpers/sprite_baker/compose_stairs.py`, `helpers/sprite_baker/stair_shapes.py` | `pytest tests/test_sprite_baker_stairs.py tests/test_sprite_baker_cache.py tests/test_utils_schematics.py -q -k "stair or riser or runtime_bakes"` — Signature: `2d-stair-riser-ghost` |
-| `helpers/sprite_baker/plank_materials.py` (`stairs_texture_material`, `stairs_texture_filename_candidates`) | `pytest tests/test_sprite_baker_stairs.py -q -k "brick or purpur or quartz or copper"` — Signature: `stairs-texture-material-aliases`; then `bake_sprites.py --type stairs --view top --all --force` before Review (Signature: `stairs-rebake-all-texture-qa`) |
-| `helpers/sprite_baker/stair_shapes.py` (`STAIR_RISER_GHOST_ALPHA`, riser lighten) | same stair row — `test_sprite_baker_cache.py::test_compile_texture_set_runtime_bakes_missing_sprite` asserts riser α not `0` (Signature: `2d-stair-riser-runtime-cache-test`) |
-| `helpers/orbit_render_class.py` (agent render-class taxonomy) | `pytest tests/test_orbit_render_class.py -q` — Signature: `orbit-render-class-routing`; trapdoor open/closed both `block_model` |
-| C4 attachables / multi-cell (`orbit_attachable_mesh.py`) | `pytest tests/test_orbit_attachable_mesh.py -q` |
-| C4 torch/lantern/trapdoor block-model faces (`orbit_block_model_mesh.py`) | `pytest tests/test_orbit_attachable_mesh.py -q -k "wall_torch or block_model_faces or door_plate_rotates"` — Signature: `orbit-attachable-block-model-faces` |
-| C4 attachable direction rotation (`normalize_direction` → N/S/E/W) | `pytest tests/test_orbit_attachable_mesh.py -q -k "rotation_follows_token or door_plate_rotates or tip_leans"` — Signature: `orbit-attachable-direction-rotation-keys` |
-| `helpers/orbit_partial_mesh.py` `iter_solid_neighbor_face_restore_rects` (stair L-void; Signature: `orbit-stair-solid-face-restore`) | `pytest tests/test_orbit_partial_mesh.py -q -k "open_half or restored_face"` |
-| `helpers/orbit_face_textures.py` water/lava catalog tint (`_apply_orbit_catalog_schematic_tint`) | `pytest tests/test_orbit_greedy_mesh.py -q -k water_orbit_faces` |
-| C4 attachable routing drift (`orbit_partial_mesh` without `attachable_boxes_for_cell`) | `pytest tests/test_orbit_attachable_mesh.py -q` — Signature: `c4-attachable-partial-mesh-routing` |
-| Copper/soul lantern hanging model (`_resolve_lantern_model_name`) | `pytest tests/test_orbit_attachable_mesh.py -q -k copper_lantern` — Signature: `orbit-lantern-hanging-variant` |
-| C4 door lower+upper gap (QA) | `pytest tests/test_orbit_attachable_mesh.py -q -k door_lower_upper` |
-| C4 lantern/fence wall hole (`partial_worlds`) | `pytest tests/test_orbit_attachable_mesh.py -q -k "plank_face_toward or greedy_mesh_plank_beside_fence or slab_neighbor"` |
-| Stair L-void beside solid (`partial_worlds` strip) | `pytest tests/test_orbit_partial_mesh.py -q -k "open_half_strip or restored_face_toward_partial_stair or solid_emits_upper_strip"` |
-| Fence/wall masked orbit textures + shader discard | `pytest tests/test_orbit_partial_mesh.py -q -k "fence or wall"` |
-| Slab deck / partial occlusion (`orbit_partial_mesh`, `orbit_greedy_mesh` strip faces) | `pytest tests/test_orbit_partial_mesh.py -q -k slab` |
-| `helpers/block_picker.py`, `ui/widgets/properties_panel.py` (brush/direction) | `pytest tests/test_block_picker.py tests/test_properties_panel.py -q` |
-| Properties inspector live-apply (`brush_inspector_changed`, `_apply_inspector_to_selected_cell`) | `pytest tests/test_properties_panel.py tests/test_main_window.py -q -k "inspector or brush_inspector or apply_inspector"` — Signature: `properties-inspector-live-apply` |
-| `helpers/orbit_greedy_mesh.py` (solid shell culling) | `pytest tests/test_orbit_greedy_mesh.py::test_solid_face_visible_at_material_boundary tests/test_orbit_greedy_mesh.py::test_embedded_crafting_table_has_vertical_faces -q` |
-| Bed/chest attachable orbit facing (`orbit_face_textures`, `chest_schematic`, `assets/project/custom/chest_*.png`) | `pytest tests/test_orbit_greedy_mesh.py tests/test_orbit_attachable_mesh.py tests/test_orbit_render_class.py tests/test_sprite_baker_chest.py -q -k "chest or bed"`; double back: `test_orbit_double_chest_back_uses_left_and_right_templates` — Signature: `orbit-chest-schematic-face-templates` |
-| Orbit top/side face seam (`expand_orbit_quad_corners`, side texture path) | `pytest tests/test_orbit_greedy_mesh.py -q -k "expand_orbit or dirt_path_side or cobblestone_orbit_side"` — Signature: `orbit-top-side-seam-geometry` |
-| Orbit shader / `aFaceUv` attribute changes | **Manual QA required** — partial attribute adds black out preview; run full `test_orbit_greedy_mesh.py` + `test_orbit_preview.py` after widget shader edits (Signature: `orbit-shader-attribute-blackout`) |
-| `registries/behaviors/functional.yaml` (SMOKER, BLAST_FURNACE facing_block) | `pytest tests/test_orbit_greedy_mesh.py -k 'smoker or blast_furnace or minecraft_smoker or furnace_lit' -q` |
-| `helpers/block_texture_load.py`, `helpers/facing_block_textures.py` (animated lit front) | `pytest tests/test_block_texture_load.py tests/test_orbit_greedy_mesh.py -k 'block_texture or furnace_lit or smoker_lit' -q` |
-| `structure-fixture-voxel-count-drift` | `test_residence_stage1_*` fails on hardcoded `len(boxes)` | Re-count from current `structures/.../stage.yaml`; update `N` — keep behavioral culling asserts | targeted-testing | testing.mdc |
-| Ruff SIM102/SIM103/F811 on staged scripts/tests | ruff hook before pytest | `.venv/bin/ruff check` on staged paths; grep `precommit-ruff-sim102-sim103`, `precommit-ruff-sim110`, `precommit-ruff-f811-duplicate-test` in pre-commit-workflow reference | pre-commit-workflow | testing.mdc |
+| 1 | [targeted-testing/SKILL.md](../skills/targeted-testing/SKILL.md) — workflow |
+| 2 | [targeted-testing/reference.md](../skills/targeted-testing/reference.md) — hook mirror (orbit, stairs, governance scripts) |
+| 3 | [agent-triage/reference.md](../skills/agent-triage/reference.md) § Common path → pytest mapping |
+| 4 | `scripts/pre-commit-pytest.sh` — hook source of truth |
+| 5 | Kanban **Tests → Files** — `python3 scripts/resolve_card_tests.py --from-card CARD.md --files-only` |
 
-**Animated strip assertions:** golden images for `_on` lit fronts must use `load_block_texture_image` (frame 0), not `Image.open(...).resize(...)` on the full PNG — otherwise tests pass while the app tiles multiple openings (Signature: `orbit-animated-texture-strip`).
-| `structures/`      | Run tests covering the affected structures or builders          |
-| `scripts/`         | Run tests covering the affected workflow or utility             |
-| `scripts/build_lessons_index.py`, `scripts/resolve_prior_lessons.py` | `pytest tests/test_build_lessons_index.py tests/test_resolve_prior_lessons.py -q` |
-| `scripts/resolve_card_tests.py`, `scripts/agent-commit-ready.sh`, `scripts/pre-commit-pytest.sh` (`PRE_COMMIT_PYTEST_LIST_ONLY`) | `pytest tests/test_resolve_card_tests.py -q` — Signature: `precommit-pytest-scope-mismatch` |
-| `registries/loader.py` `_load_token_texture` chest stale cache; `ui/texture_cache.py` 2D `CHEST#left|#right` top bakes | `pytest tests/test_sprite_baker_chest.py -q -k "cache_refreshes or top_parts"` — Signature: `chest-generated-top-cache-stale`; cache-stale test: `utime` below template mtime (see pre-commit-workflow reference) |
-| `resolve_prior_lessons.py` inline `` `sig:…` `` on Lessons captured bullets | `pytest tests/test_build_lessons_index.py -q -k inline_sig` — Signature: `lessons-index-inline-sig-backtick` |
-| `scripts/build_forward_feedback_index.py`, `scripts/forward_feedback_index_lib.py`, `scripts/resolve_forward_feedback.py` | `pytest tests/test_build_forward_feedback_index.py tests/test_resolve_forward_feedback.py -q` — Signature: `forward-feedback-index`; **ff1 dedup:** `-k dedup`; **ff2 link:** `-k link` — Signature: `forward-feedback-resolution-tracking`; **ff3 report/stale:** `-k stale or report or risk_band` — Signature: `forward-feedback-stale-metrics` |
-| `check_governance_parity.py` `--forward-feedback-stale` | `pytest tests/test_check_governance_parity.py -q -k forward_feedback_stale` — Signature: `forward-feedback-stale-metrics` |
-| `check_governance_parity.py` `--docs-governance-split` | `pytest tests/test_check_governance_parity.py -q -k docs_governance_split` — Signature: `docs-governance-split` |
-| `scripts/check_lessons_coverage.py`, `scripts/lessons_coverage_lib.py` | `pytest tests/test_check_lessons_coverage.py tests/test_resolve_prior_lessons.py -q` — Signature: `lessons-coverage-c2-c3-audit`, `lessons-coverage-c1b-forward-feedback`, `lessons-coverage-c4-per-card-threshold`. **C4:** `test_c4_application_coverage_prior_lessons`, `test_c4_per_card_passes_when_aggregate_low`, `test_drift_threshold_follows_per_card_c4`, `test_prior_lessons_block_not_truncated_by_following_bold_line`. **C1b:** `test_c1b_forward_feedback_grandfather_and_required`. **CLI:** exit 1 when composite &lt; 75% is expected threshold behavior (uses C4 per-card), not a traceback failure |
-| `scripts/sync_agents_area_table.py`, `check_agents_area_table_parity` | `pytest tests/test_sync_agents_area_table.py tests/test_check_governance_parity.py -q -k area_table` — Signature: `governance-area-schema-agents-table-sync` |
-| `scripts/check_governance_parity.py` classify SSOT (`check_classify_parity`, `REFERENCE_CLASSIFY_FINGERPRINT` = `fe1e226a461904d1` after KanbanCursorModeGates cm3) | `pytest tests/test_check_governance_parity.py tests/test_resolve_epic_cards.py tests/test_resolve_archive_group.py -q -k "classify or epic or archive"` — Signature: `governance-compact-classify-ssot`, `governance-epic-completion-audit`, `governance-archive-group-batch` |
-| `scripts/resolve_archive_group.py` | `pytest tests/test_resolve_archive_group.py -q` — Signature: `governance-archive-group-batch` |
-| `scripts/check_governance_parity.py` (`check_handoff_duplication_pair`, gc7) | `pytest tests/test_check_governance_parity.py -q -k handoff` — Signature: `governance-gc7-handoff-duplication-pair` |
-| `scripts/check_governance_parity.py` (`audit_forward_feedback_gc5`, `--forward-feedback-audit`) | `pytest tests/test_check_governance_parity.py -q -k forward_feedback` — Signature: `governance-gc7-forward-feedback-audit` |
-| `scripts/check_governance_parity.py` kanban rule globs (`check_kanban_rule_globs`, gc3) | `pytest tests/test_check_governance_parity.py -q -k kanban_rule` — Signature: `governance-compact-kanban-rule-globs` |
-| `check_governance_parity.py` `consolidate_drift_issues_for_spawn` (registry drift root-cause groups) | `pytest tests/test_check_governance_parity.py -q -k consolidate` — Signatures: `governance-drift-spawn-consolidate-by-source-card`, `governance-drift-spawn-consolidate-by-root-cause` |
-| gc5 forward-feedback format (`kanban-markdown/reference.md` § Forward-looking feedback) | `pytest tests/test_check_governance_parity.py tests/test_check_lessons_coverage.py -q`; grep `Impact Scope` in reference — Signature: `card-done-forward-feedback` |
-| `test_run_checks_integration_pass` / missing kanban rules in tmp_path fixture | same + `-k integration_pass` — Signature: `governance-compact-kanban-rule-globs` |
-| `scripts/check_governance_parity.py`, `scripts/resolve_feature_areas.py`, `docs/feature-areas.yaml` | `pytest tests/test_check_governance_parity.py tests/test_resolve_feature_areas.py -q -k agents_parity` (Signature: `governance-area-schema-parity-tests`) |
-| `check_governance_parity.py` `_SCHEMA_INTERNAL_PATHS` / `is_schema_internal_registry_path` / `check_registry_parity` (lc1 lessons-coverage paths on Agent Workflow) | `pytest tests/test_check_governance_parity.py -q -k "schema_internal or registry_parity_ignores_lessons"` — Signature: `governance-area-schema-parity-tests` |
-| `scripts/pre-commit-lessons-coverage.sh` (optional hook) | `pytest tests/test_check_lessons_coverage.py tests/test_check_governance_parity.py -q -k "lessons_coverage or threshold"` — Signature: `lessons-coverage-ci-drift` |
-| `parse_artifacts_line`, `artifacts:` on Card Done bullets | same + grep `artifacts:` in `docs/governance/lessons-and-coverage.md` and kanban-markdown § Card Done; `doc:` yaml paths need explicit `.yaml`/`.yml` (Signature: `artifacts-doc-yaml-normalize`) |
+## Quick examples
 
-For uncommon cases, consult:
+* `helpers/cells.py` → `pytest tests/test_cells.py -q`
+* `ui/` → `pytest tests/test_ui_document.py tests/test_main_window.py -q`
+* `registries/` → `pytest tests/test_palette_integrity.py -q`
+* Agent Review / commit-ready → `scripts/agent-commit-ready.sh` (Signature: `precommit-pytest-scope-mismatch`)
+
+Detailed orbit, floating-camera, and governance script rows live in **targeted-testing/reference.md**
+only — do not duplicate here (acb2).
+
+## Test selection
+
+Prefer the smallest meaningful set. Escalate to full suite only for core infra, test infra, many
+packages, or unclear dependency risk.
+
+## Pre-commit
 
 ```bash
-scripts/pre-commit-pytest.sh
+scripts/pre-commit-pytest.sh   # staged paths — same as hook
+scripts/record-pytest-pass.sh  # 30 min skip after green manual run
 ```
 
-which remains the source of truth for path-to-test mappings.
+Ruff and palette checks still run. Agents: `.venv/bin/ruff check --select E501` on touched `.py`
+before handoff — Signature: `ruff-e501-line-length`.
 
-## Test Selection Guidance
+On hook failure during **`git commit`**, a **`commit-issue`** kanban card may be created — Signature:
+`precommit-no-card-on-manual-hook`. Agent workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc).
+Common ruff codes: `precommit-ruff-b007`, `precommit-ruff-sim102-sim103`, `ruff-e501-line-length` — grep
+[pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). Governance integration
+fixture drift: `governance-index-not-grep-integration-fixture`, `governance-discovery-ladder-integration-fixture`.
 
-Prefer the smallest meaningful test set.
+## Agent behavior
 
-Examples:
+1. State which tests and why before running.
+2. On failure: summarize, suggest smallest fix, re-run targeted tests only.
+3. Do not claim tests passed without executing them.
 
-* Single helper change → corresponding helper test
-* Single UI widget change → corresponding UI tests
-* Registry change → registry integrity tests
-* Builder change → builder or structure tests
-* Shared utility change → all tests that depend on that utility
-* Cross-cutting change → broaden test scope as needed
+## Do not
 
-Escalate to the full suite only when:
-
-* core infrastructure changes
-* test infrastructure changes
-* many packages are affected
-* dependency relationships are unclear
-* targeted tests pass but risk remains high
-
-## Avoid Unnecessary Full Test Runs
-
-Do **not** run the full `pytest` suite after every small edit unless:
-
-* the user asks for it
-* the change touches broad/core behavior
-* the change affects many packages
-* the change modifies test infrastructure
-* the change modifies `conftest.py`
-* targeted tests pass but risk remains unclear
-
-## Pre-Commit Behavior
-
-Pre-commit uses:
-
-```bash
-scripts/pre-commit-pytest.sh
-```
-
-This maps staged paths to related tests and runs the full suite on unmapped or core changes.
-
-After a green manual run on the same staged files, use:
-
-```bash
-scripts/record-pytest-pass.sh
-```
-
-to allow the hook to skip pytest for 30 minutes.
-
-Ruff and palette checks still run. Python line length: **100** characters (E501). **Agents:** run
-`.venv/bin/ruff check --select E501` on every edited `.py`/`.pyi` before handoff — Signature:
-`ruff-e501-line-length` ([pre-commit-workflow/SKILL.md](../skills/pre-commit-workflow/SKILL.md) § Before committing).
-
-On hook failure during **`git commit`**, a **`commit-issue`** kanban card may be created under `.devtool/features/` (hook prints `commit-issue card created: …`; `SKIP_COMMIT_ISSUE_CARD=1` to disable). **Not** on manual `scripts/pre-commit-pytest.sh` runs — Signature: `precommit-no-card-on-manual-hook`. No card → stage hook infra — signature `precommit-stash-old-hooks` in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md). Mass ruff in `site-packages` / `.tmp-venv/` → `precommit-ruff-staged-venv`. Agents: never create `.tmp-venv` — signature `agent-no-tmp-venv`. Agent **review** workflow: [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc).
-
-## Before PRs or Large Changes
-
-Suggest running:
-
-```bash
-pytest
-```
-
-or:
-
-```bash
-pre-commit run pytest --all-files
-```
-
-before PRs, after large refactors, or after changes that affect shared foundations.
-
-## Agent Behavior
-
-Before running tests:
-
-1. State which tests are being run.
-2. Explain why those tests were selected.
-
-If a test fails:
-
-1. Summarize the failure.
-2. Identify the likely changed code involved.
-3. Suggest the smallest fix first.
-4. Re-run only the failing or related targeted tests.
-5. Escalate to broader tests only after targeted tests pass.
-
-Do not repeatedly run the same failing test without changing code or explaining the next diagnostic step.
-
-## Do Not
-
-* Do not default to running the entire test suite.
-* Do not run unrelated tests without justification.
-* Do not claim tests passed if they were not executed.
-* Do not repeatedly execute the same failing test without making changes or providing new analysis.
-* Do not replace targeted testing with broad testing unless risk justifies it.
+* Default to full `pytest` after small edits
+* Run unrelated tests without justification
+* Hand-pick pytest when the card lists **Tests → Files** or the hook maps staged paths

@@ -31,3 +31,27 @@ closed:
   closed: '2026-06-29'
   anchor: archived/agent-governance-drift-spawn-consolidate-2026-06-28.md
   follow_up: null
+- name: KanbanCardCapturePolicy
+  closed: '2026-06-28'
+  anchor: archived/agent-kanban-card-capture-policy-ccp0-schema-spec-2026-06-29.md
+  follow_up: ForwardFeedbackBacklogHygiene
+- name: ForwardFeedbackBacklogHygiene
+  closed: '2026-06-28'
+  anchor: archived/agent-forward-feedback-backlog-hygiene-fbh0-2026-06-29.md
+  follow_up: null
+- name: CardDoneDisambiguation
+  closed: '2026-06-29'
+  anchor: archived/agent-card-done-disambiguate-multi-review-2026-06-29.md
+  follow_up: null
+- name: ForwardFeedbackCapturePolicy
+  closed: '2026-06-29'
+  anchor: archived/agent-forward-feedback-capture-policy-fcp0-schema-spec-2026-06-29.md
+  follow_up: null
+- name: AgentContextBudget
+  closed: '2026-06-28'
+  anchor: archived/agent-agent-context-budget-acb0-schema-spec-2026-06-30.md
+  follow_up: KanbanReferenceThin
+- name: KanbanReferenceThin
+  closed: '2026-06-28'
+  anchor: archived/agent-kanban-reference-thin-krt0-schema-spec-2026-06-30.md
+  follow_up: null

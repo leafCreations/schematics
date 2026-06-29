@@ -69,12 +69,12 @@ Card ids hash the **group key** (stable when alert text shrinks as fixes land). 
 `consolidation_group_marker` on open cards.
 
 **`--forward-feedback-audit` (gc7 gel2 — advisory):** scans `done/` and `archived/` cards with
-`labels` in `feature` / `bug` / `agent` / `commit-issue`, lessons captured, and `completedAt` on or
-after lc4c ship date (`2026-06-27`). Reports missing gc5 forward-feedback fields (Impact Scope,
-References, Mitigation when category risk ≥ 4, six category sections). **Exit 0 always** — does not
-spawn drift cards or fail pre-commit. Complements **C1b** (`check_lessons_coverage.py` — presence of
-`## Forward-looking feedback`); this flag audits **field completeness** on post-grandfather cards.
-Signature: `governance-gc7-forward-feedback-audit`. Epic audit step 5 (gel0) may run this after
+`labels` in `feature` / `bug` / `agent` / `commit-issue`, lessons captured, and **present** parent
+`## Forward-looking feedback` (`completedAt` on or after lc4c ship date `2026-06-27`). Reports field
+gaps on written categories (Impact Scope, References, Mitigation when risk ≥ 4; Risk 5 spawn advisory).
+Missing parent ff is OK (fcp3). **Exit 0 always** — does not spawn drift cards or fail pre-commit.
+Complements **C1b** (lessons required; parent ff optional). Signature:
+`governance-gc7-forward-feedback-audit`. Epic audit step 5 (gel0) may run this after
 `--line-counts` on governance epics. **ff3 optional:** `--forward-feedback-stale` on
 `ForwardFeedbackRegistry` epic close — backlog depth vs gc7 card-field gaps (see Forward feedback
 index § Open backlog metrics).

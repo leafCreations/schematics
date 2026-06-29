@@ -1,8 +1,12 @@
 ---
 description: Minecraft world generation project rules
 globs:
-  - "**/*.py"
-alwaysApply: true
+  - "structures/**"
+  - "renderers/**"
+  - "render_main.py"
+  - "helpers/worldgen_*.py"
+  - "tests/test_worldgen_*.py"
+alwaysApply: false
 ---
 
 ## World Generation Model

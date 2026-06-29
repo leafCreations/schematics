@@ -38,47 +38,17 @@ Format: `**QA follow-up (YYYY-MM-DD):**` symptom → fix → test/doc pointer. W
 
 ## Floating Camera keyboard review
 
-Before **review** on **`Floating Camera`** / orbit keyboard cards, run the hold-to-fly checklist in
-[ui-change/SKILL.md](../skills/ui-change/SKILL.md) § **3D orbit camera — pre-review QA** — Signature:
-`floating-camera-fc0-hold-fly`. Confirm `keyReleaseEvent` ignores auto-repeat releases (QA regression:
-one step then stop).
-
-**Pose persistence (fc1c):** when the card saves 3D camera pose, manual QA must include **Open Recent**
-stage A → stage B → return to stage A with distinct **3D** poses — Signature:
-`floating-camera-fc1c-pose-persistence`.
-
-## Do not
-
-- Skip card **QA follow-up** recording because the fix was small
-- Skip **Product** / **Tests** / **Docs** refresh when the fix edited files or symbols not on the card
-- Remove user **Feature Areas** labels — append only
+Before **review** on **`Floating Camera`** cards: [ui-change/SKILL.md](../skills/ui-change/SKILL.md)
+§ **3D orbit camera — pre-review QA** — Signature: `floating-camera-fc0-hold-fly`.
 
 ## Card Done — lessons learned (mandatory)
 
-When the user signals **QA-complete / Done** on a **`feature`**, **`bug`**, **`agent`**, or
-**`commit-issue`** card, the **agent** moves the file to `done/` and runs Card Done **same turn**
-(Signature: `card-done-agent-move-qa-complete` — [reference § QA-complete triggers](../skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table)):
-
-1. Read all **Corrective Action** / **Decisions** + **QA follow-up** bullets on the card.
-2. Capture durable lessons in **≥1 area skill** + **≥1 scoped rule** + **`docs/`** (and `feature-areas.yaml` / `registries/` when applicable).
-3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card with links to updated artifacts.
-4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
-   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
-   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
-   when tied; top-3 in chat on Card Done turn).
-5. Run `python3 scripts/build_lessons_index.py` then `python3 scripts/build_forward_feedback_index.py`
-   when lessons ran (Signature: `forward-feedback-card-done-ingest`; dedup stderr →
-   **`### Forward feedback dedup`** in chat — non-blocking).
-6. When reference § Forward-looking feedback changes, grep all scoped `kanban-*-cards.mdc` Card Done
-   bullets in one pass (feature / bug / agent / commit-issue).
-7. **Governance Card Done verify (gel2):** on agent governance cards with gc5 blocks, suggest
-   `check_governance_parity.py --forward-feedback-audit --no-spawn-cards` during Review — advisory
-   exit 0; complements C1b. Signature: `governance-gc7-forward-feedback-audit`.
-
-**`inquiry` cards:** user or agent may move on **Done** — **no** lessons capture **and no**
-forward feedback ([kanban-card-gates.mdc](kanban-card-gates.mdc)).
-
-Full checklist: kanban-markdown § Card Done — lessons learned capture.
+When the user signals **QA-complete / Done** on **`feature`**, **`bug`**, **`agent`**, or
+**`commit-issue`**, the **agent** moves to `done/` and runs Card Done **same turn**
+(Signature: `card-done-agent-move-qa-complete` — [reference § QA-complete triggers](../skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table)).
+Unnamed card: [reference § Disambiguation](../skills/kanban-markdown/reference.md#disambiguation-card-unnamed).
+Full checklist: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done.
+**`inquiry` / `feedback`:** move only — no lessons or ff ([kanban-card-gates.mdc](kanban-card-gates.mdc)).
 
 ## Do not
 

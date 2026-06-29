@@ -6,74 +6,16 @@ alwaysApply: false
 
 # Kanban commit-issue cards
 
-When frontmatter `labels` includes **`commit-issue`**, the card was created automatically by `scripts/on_pre_commit_failure.sh` after a failed **`git commit`** pre-commit hook (`PRE_COMMIT=1`). Manual agent runs of hook scripts during implementation **do not** create cards — Signature: `precommit-no-card-on-manual-hook`.
+`labels: ["commit-issue"]` — auto-created by `scripts/on_pre_commit_failure.sh` on failed **`git commit`**
+only (`PRE_COMMIT=1`) — Signature: `precommit-no-card-on-manual-hook`. **Ruff:** `ruffRules` frontmatter
++ **`## Ruff rules`** — Signature: `precommit-ruff-sim110`.
 
-Full workflow: [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Commit-issue cards.
+**Capture script:** **Problem**, **Failed Tests**, **Staged files**. **Agent on review:** Root Cause,
+Corrective Action; optional Product / Tests / Docs. **Implement** after user approval — trivial hooks
+may use **`review and implement`** — Signature: `commit-issue-review-and-implement-one-shot`.
 
-**Ruff hook capture:** `scripts/create_commit_issue_card.py` parses unique ruff rule codes from the
-hook log into frontmatter `ruffRules: ["SIM110", …]` and a **`## Ruff rules`** section so Review
-agents can grep **Signature** rows (e.g. `precommit-ruff-sim110`) without parsing the Problem block.
-Signature: `precommit-ruff-sim110`.
+**Card Done:** [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done; promote
+patterns to [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md).
 
-## Who writes what
-
-| Section | Who | When |
-| ------- | --- | ---- |
-| **`## Problem`** | **Capture script** | On failed commit (hook log excerpt) |
-| **`## Ruff rules`** | **Capture script** | On **ruff** hook failure — parsed rule ids (e.g. `SIM110`); also in frontmatter `ruffRules: ["SIM110"]` |
-| **`## Failed Tests`** | **Capture script** | On failed commit (pytest test file paths) |
-| **`## Staged files`** | **Capture script** | On failed commit |
-| **`## Root Cause (current code)`** | **Agent** | When user asks to **review** the card |
-| **`## Corrective Action`** | **Agent** | When user asks to **review** the card |
-| **`## Product Paths`** | **Agent** | Optional during review (from staged paths — no `tests/`) |
-| **`## Product Methods`** | **Agent** | Optional during review (from traceback symbols) |
-| **`## Tests`** | **Agent** | From **Failed Tests** + hook-mapped siblings (`pre-commit-pytest.sh`) |
-| **`## Docs`** | **Agent** | When fix updates user/developer docs |
-
-## Reusable pattern? (on review)
-
-After **Root Cause** and **Corrective Action**, ask whether the failure is a **reusable hook/pytest pattern**. If yes:
-
-1. Add a row to [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md) § Failure patterns ([agent-self-evaluation/SKILL.md](../skills/agent-self-evaluation/SKILL.md) §6f schema)
-2. If a hook-level constraint applies, cite **Signature** in [testing.mdc](testing.mdc) — do not duplicate **Fix pattern** prose
-3. Note the promoted **Signature** in **Corrective Action** (or a short bullet below it)
-
-## Workflow gates
-
-| Step | Requirement |
-| ---- | ----------- |
-| Card created | `status: todo`, `labels: ["commit-issue"]` — user fixes commit or assigns review |
-| User: **review** | Agent reads code + card; **prior lessons gate**; fills **Root Cause** and **Corrective Action** — **no implementation yet** |
-| User approves plan | User explicitly asks to **implement** (after a prior review turn) |
-| User: **review and implement** | Same turn: Root Cause + Corrective Action + fix — use for trivial hook failures (e.g. mechanical ruff); **not** bare **`implement` alone** — Signature: `commit-issue-review-and-implement-one-shot` |
-| `todo` → `in-progress` | Only after user approval; follow **Corrective Action** |
-| `in-progress` → `review` | Fix applied; staged `scripts/pre-commit-pytest.sh` green; commit succeeds |
-
-## Card Done — lessons learned
-
-When the user signals **QA-complete / Done** on a **commit-issue** card, the **agent** moves to
-`done/` and runs Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`):
-
-1. Read **Problem**, **Corrective Action**, and promoted **Signature** (if any).
-2. Ensure durable patterns live in [pre-commit-workflow/reference.md](../skills/pre-commit-workflow/reference.md) § Failure patterns and [testing.mdc](testing.mdc) when hook-level (e.g. `precommit-ruff-staged-venv`, `agent-no-tmp-venv`).
-3. Add **`## Lessons captured (YYYY-MM-DD)`** on `done/{id}.md` listing updated artifacts; run
-   `python3 scripts/build_lessons_index.py` then `python3 scripts/build_forward_feedback_index.py`
-   when lessons ran (Signature: `forward-feedback-card-done-ingest`).
-4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
-   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
-   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
-   when tied; top-3 in chat on Card Done turn).
-5. Area-specific fixes (UI, helpers) → matching skill + rule per [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done.
-6. **Co-dependent staged paths** — if pytest fails on `test_orbit_attachable_mesh.py` after a partial revert, grep `attachable_boxes_for_cell` in `orbit_partial_mesh.py` before re-diagnosing (Signature: `c4-attachable-partial-mesh-routing`).
-7. **Governance parity integration fixture** — `test_run_checks_integration_pass` must seed gc3 kanban rules and Classify SSOT in tmp_path; grep `governance-compact-kanban-rule-globs` in pre-commit-workflow reference (Signature: `governance-compact-kanban-rule-globs`).
-8. **Recurring E501 commit-issue** — pre-handoff `.venv/bin/ruff check --select E501` on touched `.py`/`.pyi`; grep `ruff-e501-line-length` in pre-commit-workflow reference (Signature: `ruff-e501-line-length`).
-9. **Spurious manual-hook pytest cards** — if Problem shows segfault during agent verify, not user `git commit`, close after `PRE_COMMIT=1` gate lands; grep `precommit-no-card-on-manual-hook` (Signature: `precommit-no-card-on-manual-hook`).
-10. **Compositor semantic drift** — feature card pytest green but commit hook fails on sibling integration test: grep hook-mapped files (`pre-commit-pytest.sh` cases) and promote **Signature** to pre-commit-workflow reference — e.g. `2d-stair-riser-runtime-cache-test` (`test_sprite_baker_cache.py` after `compose_stairs` change).
-
-## Do not
-
-- Implement on first read — wait for user review approval unless they say **review and implement**
-  (bare **`implement`** alone assumes review already happened — Signature:
-  `commit-issue-review-and-implement-one-shot`)
-- Use **`## Decisions`** — use **Corrective Action**
-- Delete auto-captured **Problem** / **Failed Tests** — append agent sections below them
+**Do not:** **`## Decisions`**; delete **Problem** / **Failed Tests**; bare **`implement`** without
+prior review.

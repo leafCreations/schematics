@@ -9,11 +9,13 @@ from pathlib import Path
 from scripts.check_governance_parity import extract_reference_signatures
 from scripts.resolve_prior_lessons import (
     _ARTIFACTS_BULLET_RE,
+    FEATURES_DIR,
     REPO_ROOT,
     _closed_card_dirs,
     _lessons_excerpt,
     _parse_frontmatter,
     _path_overlaps,
+    _section_body,
     extract_feature_area_labels,
     extract_governance_artifacts,
     extract_label_paths,
@@ -36,6 +38,10 @@ _FORWARD_FEEDBACK_HEADING_RE = re.compile(
     r"^## Forward-looking feedback[^\n]*\n",
     re.MULTILINE,
 )
+_EPIC_CARDS_HEADING_RE = re.compile(r"^## Epic cards\b", re.MULTILINE)
+_DEFERRED_FF_RE = re.compile(r"Forward feedback:\s*deferred to epic", re.IGNORECASE)
+_RISK_ASSESSMENT_HEADING_RE = re.compile(r"^## Risk assessment[^\n]*\n", re.MULTILINE)
+_FEEDBACK_LABEL = "feedback"
 GC5_FORWARD_FEEDBACK_CATEGORIES = (
     "Governance",
     "Skill",
@@ -114,6 +120,14 @@ def _infer_path_type(path: str) -> str:
 
 def _path_type_is_correct(path: str) -> bool:
     return _infer_path_type(path) != "unknown"
+
+
+def _features_root_for_card(card_path: Path) -> Path:
+    """Return kanban features root (``.devtool/features``) for a card path."""
+    parent = card_path.parent
+    if parent.name in ("done", "archived"):
+        return parent.parent
+    return parent
 
 
 def _iter_closed_cards() -> list[Path]:
@@ -206,6 +220,97 @@ def _has_forward_feedback(text: str) -> bool:
     return _FORWARD_FEEDBACK_HEADING_RE.search(text) is not None
 
 
+def _has_forward_feedback_deferral(text: str) -> bool:
+    return bool(_DEFERRED_FF_RE.search(text))
+
+
+def _epic_cards_data_row_count(text: str) -> int:
+    """Count manifest data rows under the first ``## Epic cards`` table."""
+    match = _EPIC_CARDS_HEADING_RE.search(text)
+    if not match:
+        return 0
+    section = text[match.end() :]
+    next_heading = re.search(r"^## ", section, re.MULTILINE)
+    if next_heading:
+        section = section[: next_heading.start()]
+    count = 0
+    for line in section.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        if re.match(r"^\|\s*[-:]+\s*\|", stripped):
+            continue
+        if re.match(r"^\|\s*order\s*\|", stripped, re.IGNORECASE):
+            continue
+        count += 1
+    return count
+
+
+def _iter_epic_manifest_anchors(epic: str, features_dir: Path) -> list[tuple[Path, str]]:
+    """Cards with ``## Epic cards`` for ``epic`` (active + closed)."""
+    hits: list[tuple[Path, str]] = []
+    seen: set[Path] = set()
+    search_dirs = [features_dir, features_dir / "done", features_dir / "archived"]
+    for directory in search_dirs:
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob("*.md")):
+            if path in seen:
+                continue
+            text = path.read_text(encoding="utf-8")
+            meta = _parse_frontmatter(text)
+            if str(meta.get("epic") or "") != epic:
+                continue
+            if not _EPIC_CARDS_HEADING_RE.search(text):
+                continue
+            seen.add(path)
+            hits.append((path, text))
+    return hits
+
+
+def _epic_anchor_stems_for_manifest(epic: str, features_dir: Path) -> tuple[set[str], int]:
+    """Return anchor stems and max manifest row count for ``epic``."""
+    best_count = 0
+    stems: set[str] = set()
+    for path, text in _iter_epic_manifest_anchors(epic, features_dir):
+        count = _epic_cards_data_row_count(text)
+        if count > best_count:
+            best_count = count
+            stems = {path.stem}
+        elif count == best_count and count > 0:
+            stems.add(path.stem)
+    return stems, best_count
+
+
+def is_parent_ff_optional(meta: dict) -> bool:
+    """True when parent Card Done may omit ``## Forward-looking feedback`` (fcp3).
+
+    Signature: ``forward-feedback-capture-policy``.
+    """
+    return bool(_card_label_set(meta) & _C1B_LABELS)
+
+
+def is_epic_phase_member_ff_exempt(
+    card_path: Path,
+    text: str,
+    meta: dict,
+    *,
+    features_dir: Path | None = None,
+) -> bool:
+    """True for multi-card epic phase members (legacy carve-out; fcp3: all parents optional).
+
+    Signature: ``card-done-forward-feedback-cadence`` (KanbanCardCapturePolicy ccp3).
+    """
+    epic = str(meta.get("epic") or "").strip()
+    if not epic:
+        return False
+    root = features_dir or FEATURES_DIR
+    anchor_stems, manifest_rows = _epic_anchor_stems_for_manifest(epic, root)
+    if manifest_rows < 2:
+        return False
+    return card_path.stem not in anchor_stems
+
+
 def _completed_before_grandfather(meta: dict) -> bool:
     raw = meta.get("completedAt")
     if not raw:
@@ -215,7 +320,7 @@ def _completed_before_grandfather(meta: dict) -> bool:
 
 
 def audit_forward_feedback_coverage() -> MetricScore:
-    """C1b — done cards with forward feedback / label-scoped cards with lessons captured."""
+    """C1b — lessons captured; parent ``## Forward-looking feedback`` optional (fcp3)."""
     lesson_cards: list[tuple[Path, str, dict]] = []
     for card_path in _iter_closed_cards():
         text = card_path.read_text(encoding="utf-8")
@@ -223,7 +328,7 @@ def audit_forward_feedback_coverage() -> MetricScore:
         if excerpt is None:
             continue
         meta = _parse_frontmatter(text)
-        if not (_card_label_set(meta) & _C1B_LABELS):
+        if not is_parent_ff_optional(meta):
             continue
         lesson_cards.append((card_path, text, meta))
 
@@ -236,21 +341,20 @@ def audit_forward_feedback_coverage() -> MetricScore:
             "no label-scoped done cards with lessons",
         )
 
-    passed = 0
-    for _, text, meta in lesson_cards:
-        if _has_forward_feedback(text) or _completed_before_grandfather(meta):
-            passed += 1
-
-    score = passed / len(lesson_cards)
+    with_ff = sum(1 for _, text, _ in lesson_cards if _has_forward_feedback(text))
+    passed = len(lesson_cards)
+    score = 1.0
+    detail = (
+        f"{passed}/{len(lesson_cards)} cards lessons OK; parent ff optional "
+        f"({with_ff} with legacy ## Forward-looking feedback; "
+        f"grandfather before {C1B_FORWARD_FEEDBACK_GRANDFATHER_DATE})"
+    )
     return MetricScore(
         "C1b Forward feedback",
         passed,
         len(lesson_cards),
         score,
-        (
-            f"{passed}/{len(lesson_cards)} cards with forward feedback "
-            f"(grandfather before {C1B_FORWARD_FEEDBACK_GRANDFATHER_DATE})"
-        ),
+        detail,
     )
 
 
@@ -309,6 +413,38 @@ def _parse_risk_level(block: str) -> int | None:
         return None
 
 
+def _parse_feedback_risk_fields(section: str) -> dict[str, str]:
+    """Parse bullet-list ``## Risk assessment`` fields on feedback cards."""
+    fields: dict[str, str] = {}
+    field_names = (
+        "Risk Level",
+        "Impact Scope",
+        "References",
+        "Mitigation",
+        "Detail",
+        "Importance",
+        "Priority",
+    )
+    for line in section.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("-"):
+            continue
+        for name in field_names:
+            match = re.search(
+                rf"\*\*{re.escape(name)}:\*\*\s*(.+)",
+                stripped,
+                re.IGNORECASE,
+            )
+            if not match:
+                continue
+            value = match.group(1).strip()
+            if name == "Risk Level" and "|" in value:
+                value = value.split("|", 1)[0].strip()
+            key = name.lower().replace(" ", "_")
+            fields[key] = value
+    return fields
+
+
 def parse_forward_feedback_item_block(
     category: str, block: str, *, seq: int
 ) -> ForwardFeedbackItem | None:
@@ -355,6 +491,126 @@ def parse_forward_feedback_items(text: str) -> list[ForwardFeedbackItem]:
             if item is not None:
                 parsed.append(item)
     return parsed
+
+
+def _risk_assessment_section(text: str) -> str | None:
+    match = _RISK_ASSESSMENT_HEADING_RE.search(text)
+    if not match:
+        return None
+    rest = text[match.end() :]
+    next_heading = re.search(r"^## ", rest, re.MULTILINE)
+    if next_heading:
+        rest = rest[: next_heading.start()]
+    return rest.strip() or None
+
+
+def _feedback_question_text(text: str) -> str | None:
+    for heading in ("Question", "Description"):
+        body = _section_body(text, heading)
+        if not body:
+            continue
+        paragraph: list[str] = []
+        for line in body.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                if paragraph:
+                    break
+                continue
+            if stripped.startswith("#"):
+                break
+            paragraph.append(stripped)
+        if paragraph:
+            return " ".join(paragraph)
+    return None
+
+
+def derive_feedback_card_category(
+    *,
+    references: str | None,
+    feature_areas: list[str] | None = None,
+) -> str:
+    """Derive gc5 category from References / Feature Area (fcp2).
+
+    Signature: ``forward-feedback-capture-policy``.
+    """
+    ref = (references or "").lower()
+    if "skill:" in ref or ".cursor/skills/" in ref:
+        return "Skill"
+    if "rule:" in ref or ".cursor/rules/" in ref or ".mdc" in ref:
+        return "Rule"
+    if "agents.md" in ref or "agent-triage" in ref or "agent-routing" in ref:
+        return "Routing"
+    if "docs/governance" in ref or "sig:governance" in ref or "parity" in ref:
+        return "Governance"
+    if any(token in ref for token in ("scripts/", "helpers/", "ui/", "registries/", "tests/")):
+        return "Codebase"
+    if "prompt" in ref or "self-evaluation" in ref:
+        return "Prompt pattern"
+    for area in feature_areas or []:
+        lowered = area.lower()
+        if lowered in {"agent workflow"}:
+            return "Governance"
+        if "render" in lowered or "ui" in lowered or "camera" in lowered:
+            return "Codebase"
+    return "Governance"
+
+
+def parse_feedback_card_items(text: str) -> list[ForwardFeedbackItem]:
+    """Extract one forward-feedback item from a ``feedback``-labeled kanban card."""
+    question = _feedback_question_text(text)
+    section = _risk_assessment_section(text)
+    if not question or not section:
+        return []
+    feature_areas = extract_feature_area_labels(text)
+    risk_fields = _parse_feedback_risk_fields(section)
+    references = risk_fields.get("references")
+    category = derive_feedback_card_category(
+        references=references,
+        feature_areas=feature_areas,
+    )
+    risk_block = "\n".join(
+        f"**{key.replace('_', ' ').title()}:** {val}" for key, val in risk_fields.items()
+    )
+    item = ForwardFeedbackItem(
+        category=category,
+        question=question,
+        risk_level=_parse_risk_level(risk_block),
+        impact_scope=risk_fields.get("impact_scope"),
+        importance=risk_fields.get("importance"),
+        references=references,
+        mitigation=risk_fields.get("mitigation"),
+        detail=risk_fields.get("detail"),
+        priority=risk_fields.get("priority"),
+        seq=1,
+    )
+    return [item]
+
+
+def _is_feedback_card(meta: dict) -> bool:
+    return _FEEDBACK_LABEL in _card_label_set(meta)
+
+
+def iter_feedback_cards(
+    *,
+    features_dir: Path | None = None,
+) -> list[tuple[Path, str, dict]]:
+    """All ``feedback``-labeled cards under todo/review/done/archived."""
+    root = features_dir or (REPO_ROOT / ".devtool" / "features")
+    cards: list[tuple[Path, str, dict]] = []
+    paths: list[Path] = []
+    if root.is_dir():
+        paths.extend(sorted(root.glob("*.md")))
+    for sub in ("done", "archived"):
+        directory = root / sub
+        if directory.is_dir():
+            paths.extend(sorted(directory.glob("*.md")))
+    for card_path in paths:
+        text = card_path.read_text(encoding="utf-8")
+        meta = _parse_frontmatter(text)
+        if not _is_feedback_card(meta):
+            continue
+        cards.append((card_path, text, meta))
+    return cards
 
 
 def forward_feedback_rank_key(
@@ -427,18 +683,35 @@ def _audit_forward_feedback_category(category: str, block: str) -> list[str]:
     return issues
 
 
+def _max_risk_in_forward_feedback(section: str) -> int | None:
+    risks = [int(match.group(1)) for match in _RISK_LEVEL_RE.finditer(section)]
+    return max(risks) if risks else None
+
+
+def _has_feedback_spawn_link(text: str) -> bool:
+    body = _section_body(text, "Spawned follow-up cards")
+    if not body:
+        return False
+    return "feedback" in body.lower()
+
+
 def _audit_card_forward_feedback_gc5(text: str) -> list[str]:
+    """Audit present gc5 category blocks only — missing parent ff is OK (fcp3)."""
     section = _forward_feedback_section(text)
     if section is None:
-        return ["missing ## Forward-looking feedback"]
+        return []
     blocks = _split_forward_feedback_categories(section)
     issues: list[str] = []
-    for category in GC5_FORWARD_FEEDBACK_CATEGORIES:
-        block = blocks.get(category, "")
+    for category, block in blocks.items():
         if not block.strip():
-            issues.append(f"{category}: missing category section")
             continue
         issues.extend(_audit_forward_feedback_category(category, block))
+    max_risk = _max_risk_in_forward_feedback(section)
+    if max_risk is not None and max_risk >= 5 and not _has_feedback_spawn_link(text):
+        issues.append(
+            "Risk 5 in parent ## Forward-looking feedback but no "
+            "## Spawned follow-up cards with feedback spawn"
+        )
     return issues
 
 
@@ -452,7 +725,7 @@ def _iter_closed_cards_under(features_dir: Path) -> list[Path]:
 
 
 def audit_forward_feedback_gc5(*, features_dir: Path | None = None) -> list[tuple[str, list[str]]]:
-    """gc7 — post-grandfather closed cards with gc5 forward-feedback field gaps."""
+    """gc7 — present parent gc5 blocks: field gaps only (fcp3; no six-category mandate)."""
     root_features = features_dir or (REPO_ROOT / ".devtool" / "features")
     hits: list[tuple[str, list[str]]] = []
     for card_path in _iter_closed_cards_under(root_features):
@@ -460,9 +733,11 @@ def audit_forward_feedback_gc5(*, features_dir: Path | None = None) -> list[tupl
         if _lessons_excerpt(text) is None:
             continue
         meta = _parse_frontmatter(text)
-        if not (_card_label_set(meta) & _C1B_LABELS):
+        if not is_parent_ff_optional(meta):
             continue
         if _completed_before_grandfather(meta):
+            continue
+        if not _has_forward_feedback(text):
             continue
         card_issues = _audit_card_forward_feedback_gc5(text)
         if card_issues:
@@ -472,6 +747,15 @@ def audit_forward_feedback_gc5(*, features_dir: Path | None = None) -> list[tupl
                 rel = card_path
             hits.append((str(rel), card_issues))
     return hits
+
+
+def audit_phase_epic_ff_policy_advisory(*, features_dir: Path | None = None) -> list[str]:
+    """Advisory placeholder — legacy phase-member ff warnings retired (fcp3).
+
+    Signature: ``forward-feedback-capture-policy`` — parent ff optional on all closes.
+    """
+    _ = features_dir
+    return []
 
 
 def audit_capture_coverage(*, known_sigs: set[str] | None = None) -> MetricScore:

@@ -13,6 +13,10 @@ Run the **smallest meaningful pytest set** for what you changed. Default is **no
 
 Pair with [agent-triage](../agent-triage/SKILL.md) for when to test; this skill is **which tests** and **how to run them**.
 
+**Rule load (acb2):** [testing.mdc](../../rules/testing.mdc) is glob-scoped on product paths — not
+always-on. Detailed path→test rows (orbit, governance scripts, stairs) live in
+[reference.md](reference.md) only — Signature: `governance-always-on-rule-diet`.
+
 ## Before every pytest run
 
 State one line in your response:

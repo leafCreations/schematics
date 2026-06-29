@@ -23,9 +23,11 @@ from scripts.check_governance_parity import (
     check_area_schema_parity,
     check_card_type_parity,
     check_classify_parity,
+    check_discovery_ladder_routing,
     check_failure_pattern_parity,
     check_handlers_registry_parity,
     check_handoff_duplication_pair,
+    check_index_not_grep_routing,
     check_kanban_label_methods_handlers,
     check_kanban_rule_globs,
     check_lessons_coverage_drift,
@@ -110,6 +112,43 @@ REFERENCE_CLASSIFY_SNIPPET = """
 | Run tests / commit-ready | Verify | targeted-testing |
 | Area lesson lookup (kanban + Feature Areas) | Review first | lessons-index.yaml |
 """
+
+INTEGRATION_DISCOVERY_LADDER_SNIPPET = """
+## Discovery ladder
+
+Signature: `governance-discovery-ladder`.
+
+```mermaid
+flowchart TD
+  A[User prompt] --> B[Classify]
+```
+
+**Branches:** **Governance** **Kanban** **Docs-only** **Product** **Failure**
+"""
+
+INTEGRATION_INDEX_NOT_GREP_SNIPPET = """
+governance-index-not-grep
+lessons-index.yaml
+resolve_prior_lessons.py
+Index vs folder grep
+"""
+
+INTEGRATION_TRIAGE_SKILL_SNIPPET = (
+    TRIAGE_CLASSIFY_SNIPPET
+    + "\n"
+    + INTEGRATION_INDEX_NOT_GREP_SNIPPET
+    + "\nDiscovery ladder\n"
+    + "governance-discovery-ladder\n"
+)
+
+INTEGRATION_AGENT_ROUTING_SNIPPET = "routing\nDiscovery ladder\ngovernance-discovery-ladder\n"
+
+INTEGRATION_KANBAN_REFERENCE_SNIPPET = (
+    "## Index vs folder grep\n"
+    "Signature: `governance-index-not-grep`.\n"
+    "## Forward-feedback capture cadence\n"
+    "forward-feedback-capture-policy\n"
+)
 
 _AGENTS_AREA_ROW = (
     "| Agent / routing / self-eval | "
@@ -607,13 +646,54 @@ def test_check_card_type_parity_detects_unknown_label():
 
 
 def test_check_card_type_parity_passes_for_known_labels():
-    known = {"feature", "bug", "inquiry", "plan", "commit-issue", "agent"}
+    known = {"feature", "bug", "inquiry", "plan", "commit-issue", "agent", "feedback"}
     assert check_card_type_parity({"bug"}, known) == []
 
 
 def test_check_kanban_rule_globs_passes_on_repo():
     repo_root = Path(__file__).resolve().parents[1]
     assert check_kanban_rule_globs(repo_root) == []
+
+
+def test_acb2_product_rules_not_always_on():
+    """acb2 — worldgen, model-routing, testing glob-scoped (governance-always-on-rule-diet)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    rules_dir = repo_root / ".cursor" / "rules"
+    for name in ("worldgen.mdc", "model-routing.mdc", "testing.mdc"):
+        text = (rules_dir / name).read_text(encoding="utf-8")
+        assert "alwaysApply: true" not in text, name
+        assert "alwaysApply: false" in text, name
+    rows = collect_always_apply_rules(repo_root)
+    rels = {rel for rel, _count, _is_gov in rows}
+    assert ".cursor/rules/worldgen.mdc" not in rels
+    assert ".cursor/rules/model-routing.mdc" not in rels
+    assert ".cursor/rules/testing.mdc" not in rels
+    gov_lines = sum(count for _rel, count, is_gov in rows if is_gov)
+    assert gov_lines < 380
+
+
+def test_acb3_agents_md_under_line_cap():
+    """acb3 — AGENTS.md thinned; Maintaining pointer only (Signature: governance-thin-agents-md)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    agents = repo_root / "AGENTS.md"
+    lines = agents.read_text(encoding="utf-8").splitlines()
+    assert len(lines) < 220
+    text = agents.read_text(encoding="utf-8")
+    assert "KanbanCardScope closed" not in text
+    assert "docs/epics-closed.yaml" in text
+    assert check_handoff_duplication_pair(text, SKILL_HANDOFF_SNIPPET) == []
+
+
+def test_acb4_index_not_grep_routing():
+    """acb4 — yaml/index before done/archived folder grep (Signature: governance-index-not-grep)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    assert check_index_not_grep_routing(repo_root) == []
+
+
+def test_acb5_discovery_ladder_routing():
+    """acb5 — Discovery ladder SSOT (Signature: governance-discovery-ladder)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    assert check_discovery_ladder_routing(repo_root) == []
 
 
 def test_check_kanban_rule_globs_detects_always_apply_on_card_type(tmp_path: Path):
@@ -633,6 +713,7 @@ def test_check_kanban_rule_globs_detects_always_apply_on_card_type(tmp_path: Pat
         "kanban-inquiry-cards.mdc",
         "kanban-plan-cards.mdc",
         "kanban-commit-issue-cards.mdc",
+        "kanban-feedback-cards.mdc",
     ):
         (rules / name).write_text(
             "---\nglobs: .devtool/features/**/*.md\nalwaysApply: false\n---\n",
@@ -658,7 +739,7 @@ def test_run_checks_integration_pass(tmp_path: Path, monkeypatch: pytest.MonkeyP
     )
     triage_dir = repo / ".cursor/skills/agent-triage"
     triage_dir.mkdir(parents=True)
-    (triage_dir / "SKILL.md").write_text(TRIAGE_CLASSIFY_SNIPPET, encoding="utf-8")
+    (triage_dir / "SKILL.md").write_text(INTEGRATION_TRIAGE_SKILL_SNIPPET, encoding="utf-8")
     (repo / "docs").mkdir()
     (repo / "docs/feature-areas.yaml").write_text(
         """
@@ -683,7 +764,10 @@ areas:
     )
     rules_dir = repo / ".cursor/rules"
     rules_dir.mkdir(parents=True)
-    (rules_dir / "agent-routing.mdc").write_text("routing\n", encoding="utf-8")
+    (rules_dir / "agent-routing.mdc").write_text(
+        INTEGRATION_AGENT_ROUTING_SNIPPET,
+        encoding="utf-8",
+    )
     (rules_dir / mod.KANBAN_ALWAYS_ON_RULE).write_text(
         "---\nalwaysApply: true\n---\n",
         encoding="utf-8",
@@ -706,7 +790,24 @@ areas:
     (triage_dir / "reference.md").write_text(
         REFERENCE_CLASSIFY_SNIPPET
         + "\n## Lessons by area\n\n| Signal | Read |\n| --- | --- |\n"
-        + "| **Agent Workflow** | read |\n",
+        + "| **Agent Workflow** | read |\n"
+        + INTEGRATION_DISCOVERY_LADDER_SNIPPET,
+        encoding="utf-8",
+    )
+    gov_dir = repo / "docs/governance"
+    gov_dir.mkdir(parents=True)
+    (gov_dir / "lessons-and-coverage.md").write_text(
+        INTEGRATION_INDEX_NOT_GREP_SNIPPET,
+        encoding="utf-8",
+    )
+    kanban_dir = repo / ".cursor/skills/kanban-markdown"
+    kanban_dir.mkdir(parents=True)
+    (kanban_dir / "reference.md").write_text(
+        INTEGRATION_KANBAN_REFERENCE_SNIPPET,
+        encoding="utf-8",
+    )
+    (rules_dir / "kanban-prior-lessons-gate.mdc").write_text(
+        INTEGRATION_INDEX_NOT_GREP_SNIPPET,
         encoding="utf-8",
     )
     (repo / "docs/lessons-index.yaml").write_text("areas: {}\n", encoding="utf-8")
@@ -1133,7 +1234,8 @@ def test_check_lessons_coverage_drift_emits_breakdown(tmp_path: Path, monkeypatc
     assert "C4 Application (per-card)" in issues[0]
 
 
-def test_check_lessons_coverage_drift_critical_below_sixty(tmp_path: Path, monkeypatch):
+def test_check_lessons_coverage_drift_warn_at_sixty_after_fcp3_c1b(tmp_path: Path, monkeypatch):
+    """fcp3 C1b always passes when lessons exist — composite lifts to 60% (warn, not critical)."""
     import scripts.lessons_coverage_lib as lib
     import scripts.resolve_prior_lessons as rpl
 
@@ -1169,7 +1271,8 @@ def test_check_lessons_coverage_drift_critical_below_sixty(tmp_path: Path, monke
     )
 
     issues = check_lessons_coverage_drift(features, include_severity=True)
-    assert issues[0].startswith(f"[{SEVERITY_CRITICAL}]")
+    assert issues[0].startswith(f"[{SEVERITY_WARN}]")
+    assert "composite 60.0%" in issues[0]
     assert "C1b Forward feedback" in issues[0]
 
 
@@ -1264,6 +1367,67 @@ def forward_feedback_features(tmp_path: Path):
     return features, done
 
 
+def test_audit_forward_feedback_gc5_passes_lessons_only(forward_feedback_features):
+    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+
+    features, done = forward_feedback_features
+    _write_closed_agent_card(
+        done,
+        "lessons-only.md",
+        completed_at="2026-06-27T20:00:00.000Z",
+        body="- no parent ff block\n",
+    )
+    assert audit_forward_feedback_gc5(features_dir=features) == []
+
+
+def test_audit_forward_feedback_gc5_passes_partial_categories(forward_feedback_features):
+    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+
+    features, done = forward_feedback_features
+    partial = (
+        "## Forward-looking feedback (2026-06-27)\n\n"
+        "### Governance\n"
+        "- **Question:** one domain only?\n"
+        "  **Risk Level:** 3 | **Priority:** Medium\n"
+        "  **Impact Scope:** system-wide\n"
+        "  **References:** sig:forward-feedback-capture-policy\n"
+    )
+    _write_closed_agent_card(
+        done,
+        "partial-gc5.md",
+        completed_at="2026-06-27T20:00:00.000Z",
+        body=partial,
+    )
+    assert audit_forward_feedback_gc5(features_dir=features) == []
+
+
+def test_audit_forward_feedback_gc5_reports_risk5_without_feedback_spawn(
+    forward_feedback_features,
+):
+    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+
+    features, done = forward_feedback_features
+    risk5 = (
+        "## Forward-looking feedback (2026-06-27)\n\n"
+        "### Governance\n"
+        "- **Question:** critical gap?\n"
+        "  **Risk Level:** 5 | **Priority:** High\n"
+        "  **Impact Scope:** system-wide\n"
+        "  **References:** sig:card-done-feedback-spawn\n"
+        "  **Mitigation:** spawn feedback card\n"
+    )
+    _write_closed_agent_card(
+        done,
+        "risk5-no-spawn.md",
+        completed_at="2026-06-27T20:00:00.000Z",
+        body=risk5,
+    )
+    hits = audit_forward_feedback_gc5(features_dir=features)
+    assert len(hits) == 1
+    _rel, issues = hits[0]
+    assert any("Spawned follow-up cards" in issue for issue in issues)
+
+
 def test_audit_forward_feedback_gc5_passes_full_card(forward_feedback_features):
     from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
 
@@ -1335,7 +1499,7 @@ def test_run_forward_feedback_audit_exits_zero(forward_feedback_features, capsys
     assert run_forward_feedback_audit(features_dir=features) == 0
     out = capsys.readouterr().out
     assert "Forward feedback audit:" in out
-    assert "missing ## Forward-looking feedback" in out
+    assert "present parent ff blocks pass field audit" in out
 
 
 def test_main_forward_feedback_audit_flag(forward_feedback_features):
@@ -1454,6 +1618,26 @@ def test_find_stale_development_md_section_refs_allows_meta_grep_lines(tmp_path:
         encoding="utf-8",
     )
     assert find_stale_development_md_section_refs(repo) == []
+
+
+def test_fcp0_capture_policy_signatures_in_kanban_reference():
+    """fcp0 schema — capture policy + feedback label SSOT in kanban reference pack."""
+    repo_root = Path(__file__).resolve().parents[1]
+    kanban_dir = repo_root / ".cursor/skills/kanban-markdown"
+    ref = (kanban_dir / "reference.md").read_text(encoding="utf-8")
+    glossary = (kanban_dir / "reference-glossary.md").read_text(encoding="utf-8")
+    pack = f"{ref}\n{glossary}"
+    for sig in (
+        "forward-feedback-capture-policy",
+        "feedback-label-kanban",
+        "card-done-feedback-spawn",
+        "forward-feedback-risk-rubric",
+    ):
+        assert sig in pack
+    assert "## Feedback cards" in pack
+    assert "## Forward-feedback capture cadence" in pack
+    assert "## Risk assessment rubric" in pack
+    assert "fcp0" in pack.lower()
 
 
 def test_run_docs_governance_split_audit_passes_when_clean(tmp_path: Path, capsys):

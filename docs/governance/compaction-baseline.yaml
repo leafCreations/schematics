@@ -1,0 +1,40 @@
+# gc0 compaction baseline — Signature: governance-compaction-drift-alert
+# Refreshed post-krt3 (KanbanReferenceThin glossary split).
+captured_at: "2026-06-30"
+gc0_total_lines: 2715
+always_on_governance_lines: 232
+always_on_total_lines: 232
+thresholds:
+  gc0_total_warn_pct: 15
+  gc0_total_critical_pct: 25
+  always_on_governance_warn_lines: 400
+  always_on_governance_critical_lines: 480
+  per_artifact_warn_pct: 20
+  per_artifact_critical_pct: 50
+  per_artifact_warn_absolute: 600
+  per_artifact_critical_absolute: 900
+  duplication_reference_warn: 700
+  duplication_reference_critical: 1000
+  duplication_kanban_rules_warn: 600
+  duplication_kanban_rules_critical: 800
+  classify_trio_warn: 80
+  classify_trio_critical: 120
+  kanban_lifecycle_warn: 900
+  kanban_lifecycle_critical: 1200
+per_artifact:
+  AGENTS.md: 162
+  .cursor/skills/agent-triage/SKILL.md: 224
+  .cursor/skills/agent-triage/reference.md: 351
+  .cursor/skills/kanban-markdown/SKILL.md: 346
+  .cursor/skills/kanban-markdown/reference.md: 551
+  .cursor/skills/agent-self-evaluation/SKILL.md: 339
+duplication_pairs:
+  Classify quickly: 9
+  triage §1 Classify: 17
+  reference Classify signals: 36
+  AGENTS card types: 16
+  kanban-markdown SKILL (lifecycle): 346
+  kanban-markdown reference: 551
+  kanban-*.mdc (sum): 479
+  classify trio (sum): 62
+  kanban lifecycle (sum): 897

@@ -252,6 +252,21 @@ Signature: `governance-compact-self-eval-handoff`. **Last sections only** — in
    § Epic / initiative completion summary; Signature: `governance-epic-completion-summary`). Epic
    audit → **`### Epic summary`**; archive group complete → **`### Initiative summary`**. Omit on
    all other turns.
+2b. **`### Compaction advisory`** — **every turn** when `python3 scripts/check_governance_parity.py
+   --compaction --quiet` reports **warn** or **critical** (Signature:
+   `governance-compaction-drift-alert`). Fixed template:
+
+```markdown
+### Compaction advisory
+- **Status:** consider compaction | compaction urgent
+- **Severity:** warn | critical
+- **Signals:** gc0 +N% (current/baseline); always-on governance +N%; top outlier …
+- **Action:** [audit-and-compaction.md](../../docs/governance/audit-and-compaction.md); `--compaction`; **AgentContextBudget** epic
+```
+
+   Map **warn** → `consider compaction`; **critical** → `compaction urgent`. **Omit** entire section
+   when below warn. Pair with **Compaction** field in **Self-evaluation** (not `none` when this block
+   is present).
 3. **`### Files used`** — load order; one line per path/skill that drove the turn
 4. **`### Self-evaluation`** — compact fields below; **do not** paste §1–§6 checklists
 
@@ -271,6 +286,7 @@ Expand a field only when that check **failed** or needs a drift line.
 ### Self-evaluation
 - **Scope:** on-target | read-only | note
 - **Context load:** ok | note — AGENTS.md current|updated|stale: …
+- **Compaction:** none | consider — one line | urgent — one line
 - **Drift alerts:** none (N/A) | `[severity]` + prefix | KNOWN_DRIFT: …
 - **Tests:** path + result | n/a — why
 - **Docs:** paths | n/a — why

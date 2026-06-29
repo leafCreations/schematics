@@ -22,7 +22,10 @@ python3 scripts/build_lessons_index.py --check   # exit 1 when stale
 **Agent read order (kanban pre-implementation):** skim the card's area block in
 `docs/lessons-index.yaml`, then [agent-triage/reference.md](../../.cursor/skills/agent-triage/reference.md)
 § **Lessons by area**, then `resolve_prior_lessons.py` — open full done cards only when still
-ambiguous ([kanban-prior-lessons-gate.mdc](../../.cursor/rules/kanban-prior-lessons-gate.mdc)). For
+ambiguous ([kanban-prior-lessons-gate.mdc](../../.cursor/rules/kanban-prior-lessons-gate.mdc)). **Do not**
+broad `grep` / `Glob` on `.devtool/features/done/` or `archived/` for lesson discovery — Signature:
+`governance-index-not-grep` ([kanban-markdown/reference.md](../../.cursor/skills/kanban-markdown/reference.md)
+§ Index vs folder grep). For
 gc5 **forward-feedback questions** (not promoted lessons), use `docs/forward-feedback-index.yaml`
 and `resolve_forward_feedback.py --category … --top N` after the lessons index when the task is
 backlog/ranking, not prior-lessons citation (Signature: `forward-feedback-index`).
@@ -47,7 +50,7 @@ Measures how effectively lessons from **Done** and **commit-issue** cards flow i
 | ID | Name | Formula (summary) |
 | -- | ---- | ----------------- |
 | C1 | Capture Coverage | done cards with ≥1 resolvable promotion / done cards with `## Lessons captured` |
-| C1b | Forward Feedback | done cards with `## Forward-looking feedback` / label-scoped cards with lessons (grandfather legacy) |
+| C1b | Forward Feedback | label-scoped cards with lessons captured (parent ff optional — fcp3) |
 | C2 | Promotion Quality | correctly typed refs / total governance refs (skip cards with zero refs) |
 | C3 | Consumption Coverage | surfaced lesson cards / expanded relevant set (`surfaced / relevant`) |
 | C4 | Application Coverage | **Per-card (threshold):** active cards with accepted Prior-lessons cite / eligible active cards. **Aggregate (advisory):** cited surfaced lessons / total surfaced lessons on active cards. |
@@ -55,7 +58,7 @@ Measures how effectively lessons from **Done** and **commit-issue** cards flow i
 | ID | Inputs (numerator / denominator) |
 | -- | -------------------------------- |
 | C1 | **Num:** closed cards (`done/` + `archived/`) whose `## Lessons captured` has ≥1 on-disk governance path or Signature row in pre-commit-workflow / agent-self-evaluation reference tables. **Den:** cards with non-empty `## Lessons captured`. |
-| C1b | **Num:** closed cards with `labels` in `feature` / `bug` / `agent` / `commit-issue` that also have `## Forward-looking feedback`, **or** `completedAt` before lc4c ship date (`2026-06-27`). **Den:** same label set with non-empty `## Lessons captured`. Signature: `lessons-coverage-c1b-forward-feedback`. |
+| C1b | **Num:** closed cards with `labels` in `feature` / `bug` / `agent` / `commit-issue` and non-empty `## Lessons captured` (parent `## Forward-looking feedback` **optional** on new closes — fcp3). Legacy cards may still have parent gc5 blocks; grandfather `completedAt` before lc4c ship date (`2026-06-27`) noted in report detail. **Den:** same label set with non-empty `## Lessons captured`. Signatures: `lessons-coverage-c1b-forward-feedback`, `forward-feedback-capture-policy`. |
 | C2 | **Num:** governance refs (from ``artifacts:`` or **Governance** bullets) with correct artifact type. **Den:** total refs on cards that promoted at least one ref (cards with zero refs skipped). |
 | C3 | **Num:** done/archived lesson cards returned by `find_done_lessons()` (or `find_done_lessons_strict()`). **Den:** expanded relevance set per active card — epic, feature area, **Label Paths**, optional **Context** links (`--strict` drops epic-only match). |
 | C4 | **Per-card (threshold):** **Num:** active cards with Label Paths + plan section, ≥1 surfaced lesson, and ≥1 accepted cite in `**Prior lessons (YYYY-MM-DD):**`. **Den:** same cards with ≥1 surfaced lesson (ignore cards with zero surfaced). **Aggregate (advisory):** **Num:** surfaced lessons cited in Prior-lessons block. **Den:** all surfaced lesson hits on eligible active cards. Signature: `lessons-coverage-c4-per-card-threshold`. |

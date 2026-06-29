@@ -36,17 +36,8 @@ read as Product (Signature: `kanban-card-scope-schema`).
 ## Card Done — lessons learned (mandatory)
 
 When the user signals **QA-complete / Done**, the **agent** moves the card to `done/` and runs
-Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`):
-
-1. Run [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
-2. Update **≥1 skill** + **≥1 rule** + relevant **`docs/`** / registry.
-3. Add **`## Lessons captured (YYYY-MM-DD)`** on the card.
-4. Add **`## Forward-looking feedback (YYYY-MM-DD)`** after Lessons captured (Signature:
-   `card-done-forward-feedback` — [reference.md](../skills/kanban-markdown/reference.md)
-   § Forward-looking feedback: Impact Scope, References, Mitigation on max tier, Importance
-   when tied; top-3 in chat on Card Done turn).
-
-**Do not** skip lessons capture because AC were already `[x]`.
+Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`). Full checklist:
+[kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture.
 
 ## Workflow
 
@@ -68,117 +59,13 @@ Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`):
 - Leave **`## Decisions`** as `TBD` before `in-progress`
 - Skip **Product Methods** / **Tests** / **Docs** when Feature Areas are set — complete before **Review**
 - Put pytest commands or `test_*` names in **Acceptance Criteria** — use **Tests**
-- **Superseded GovernanceDriftAlert siblings** — when fix landed on a parent `done/` card (same `_SCHEMA_INTERNAL_PATHS` / shared root cause), update sibling with **Decisions** `Superseded` + link, AC `[x]`, `review`; close without re-implementing — cite parent **Lessons captured** (kanban-markdown reference § Card Done artifact table)
-- **GovernanceDriftAlert batch (2026-06-28)** — group spawns by root cause: (1) extend `_SCHEMA_INTERNAL_PATHS` for `docs/governance/*` + hook scripts, (2) add `agent-triage/reference.md` § Lessons by area rows for seeded `lesson_signatures`, (3) dedupe cross-area `handlers:`, (4) register kanban Product Methods on yaml — one anchor card with **Lessons captured**; siblings **Superseded** — Signature: `governance-area-schema-parity-tests`
-- **GovernanceDriftAlert epic closed 2026-06-29** — do not reuse `epic:` on new cards; use a new PascalCase epic for drift follow-ups — [docs/epics-closed.yaml](../../docs/epics-closed.yaml)
-- **Parity spawn (GovernanceDriftFix)** — `check_governance_parity.py` consolidates alerts by root
-  cause before spawn (`consolidate_drift_issues_for_spawn`); must create **Product Methods**,
-  **Tests**, **Docs**, **Decisions**, **Acceptance Criteria** placeholders — not **Corrective Action**;
-  kanban-markdown reference § Drift spawn card skeleton — Signature:
-  `governance-drift-spawn-consolidate-by-root-cause`
+- **Governance drift spawns** — group by root cause; one anchor **Lessons captured** — Signature:
+  `governance-area-schema-parity-tests`, `governance-drift-spawn-consolidate-by-root-cause`
 
-## Floating Camera keyboard movement
+## Floating Camera (product AC)
 
-When **Feature Areas** include **`Floating Camera`** or AC describes 3D orbit keyboard fly
-(`WASD`, Space, Shift), include a behavior AC bullet:
-
-- Hold movement keys move continuously until release (not tap-only per `keyPressEvent`)
-
-Signature: `floating-camera-fc0-hold-fly`. Parent ff: `ff-feature-floating-camera-reset-fc1-2026-06-28-governance-01-4ba51333`.
-
-**Hold-fly implementation:** `keyReleaseEvent` must ignore `event.isAutoRepeat()` (mirror
-`keyPressEvent`) — auto-repeat releases clear `_held_movement_keys` and stop movement after one step.
-
-## Floating Camera look-direction forward (fc1b)
-
-When AC covers W/S/↑/↓ along the look vector:
-
-- Wire forward/back via `move_along_look`; strafe via `move_on_plane(..., forward_delta=0, ...)`
-- Pitched-down unit test before widget wiring (`test_move_along_look_follows_pitch_when_elevation_nonzero`)
-
-Signature: `floating-camera-fc1b-look-forward`.
-
-## Floating Camera pose persistence (fc1c)
-
-When AC covers saving 3D orbit camera pose across sessions:
-
-- Store under `viewer.orbit_camera_poses` keyed `{structure}/{stage}` (not one global triple)
-- `PreviewPanel.set_orbit_pose_scope(structure, stage)` before save/restore
-- Call `_persist_editor_settings()` before `open_structure_in_editor_process` / `_restart_editor_for_structure` (`execve` skips `closeEvent`)
-- Manual QA: stage A → stage B → stage A via **Open Recent** with **3D** poses on each
-
-Signature: `floating-camera-fc1c-pose-persistence`. Parent ff:
-`ff-feature-floating-camera-pose-persistence-fc1c-2026-06-29-governance-01`.
-
-## Floating Camera orientation HUD (fc3)
-
-When **Feature Areas** include **`Floating Camera`** and AC covers the 3-line HUD:
-
-- Top-right QLabel; pref `viewer.orbit_camera_hud` (default on); **Viewer → Camera HUD** (3D only)
-- `format_hud_block_label` → `format_entry_label` for materialized catalog names (Oak Log, not Log)
-- Full-cell `raycast_voxel` + `hud_voxel_map` is acceptable for fc3 ship; perceived geometry false hits
-  on attachables/partial blocks → **validate with fc3a crosshair first** — bug a8e closed Done 2026-06-29
-  (Looking at correct; no geometry raycast). Reopen only if crosshair-aligned QA still fails.
-  Signature: `floating-camera-fc3-orientation-hud`, `floating-camera-fc3a-crosshair`.
-
-## Floating Camera HUD crosshair (fc3a)
-
-When AC covers the center-screen look-ray reticle:
-
-- Qt overlay `_CrosshairOverlay` on `OrbitPreviewWidget` — **not** GL draw calls
-- White dot + four gap-separated arms; `_layout_crosshair()` centers on widget resize
-- `WA_TransparentForMouseEvents`; same visibility gate as HUD (`_hud_overlay_visible`)
-- `PreviewPanel.set_orbit_view_active` / `set_orbit_view_active(False)` on **2D** toggle
-- **Click-to-capture (fc3a QA):** `_capture_pointer()` → `grabMouse()` + `grabKeyboard()` + `BlankCursor`;
-  mouse deltas from **global** position so look continues outside widget bounds; **Esc** / focus-out /
-  **2D** toggle → `_release_pointer()`; no auto-focus on **3D** entry
-- Independent crosshair pref deferred to fc3b — follows **Viewer → Camera HUD** until then
-- Offscreen pytest: simulate `focusInEvent`/`focusOutEvent` — `QOpenGLWidget.setFocus()` may fail without GL
-
-Signature: `floating-camera-fc3a-crosshair`. Blocks fc3b **Show Crosshairs** checkbox.
-
-## Floating Camera mouse look (fc2a)
-
-When AC covers pointer look without click-drag:
-
-- **`setMouseTracking(True)`** on `OrbitPreviewWidget` — Qt omits `mouseMoveEvent` without tracking
-- Gate look on widget **`hasFocus()`** (click 3D view to capture); **fc3a QA:** not hover-only
-- **`BlankCursor`** via `QApplication.setOverrideCursor` while focused; restore on focus-out
-- **Esc** → `clearFocus()` restores cursor and stops look
-- Do **not** auto-focus orbit widget on **3D** tab entry — user clicks to capture
-- Reset `_last_look_pos` via `_reset_mouse_look_anchor` on focus-in; suppress first-move snap
-- Remove 3D `wheelEvent` dolly; **2D** Viewer zoom menu unchanged
-- Scroll → movement speed is **fc2b** — unblocked after fc2a Done
-- **Review QA:** assert focus-gate + Esc cursor tests before manual pointer-look QA
-
-Signature: `floating-camera-fc2a-mouse-look`. Depends: fc0/fc1b keyboard paths unchanged.
-
-## Floating Camera scroll move speed (fc2b)
-
-When AC covers scroll → keyboard fly speed:
-
-- **3D** scroll or **+** / **-** adjusts `viewer.orbit_camera_move_speed` (±0.1/step; clamp **0.25–4.0**; default **0.65×**); no camera dolly; mouse look sensitivity **unchanged**
-- Gate wheel on `hasFocus()` or `_pointer_captured` (same as fc2a capture path)
-- Speed label on **`_OrbitViewHost`** sibling in `preview_panel.py` — orbit `move_speed_feedback` signal;
-  **not** child QLabel on QOpenGLWidget; **never** QPainter in `paintGL`
-- Scale **`_movement_speed_per_second()`** / **`_movement_distance(elapsed_ms)`** on timer tick — not fixed step per 50 ms; 16 ms tick + `QElapsedTimer` (fc2b QA smoothness at low multiplier)
-- Transient **Move speed: N.N×** label below crosshair (~1.5s `QTimer` hide); not permanent HUD line
-- Overlay hint mentions scroll; **2D** preview wheel unchanged
-- Pref round-trip via `ui/app_settings.py` + `ui/editor_prefs.py` + `config/editor_settings.yaml`
-
-Signature: `floating-camera-fc2b-scroll-move-speed`. Depends: fc2a removed scroll dolly.
-
-## Floating Camera HUD settings (fc3b)
-
-When AC covers HUD Properties modal:
-
-- **Viewer → HUD Panel** (+ HUD cog) opens `CameraHudSettingsDialog`; **F3** toggles HUD panel (same as
-  **Show HUD panel** / **HUD Panel** menu)
-- Modal: placement (9 positions), **Show Crosshairs**, **Movement Speed** slider **0.2×–1.0×** (default **0.65×**)
-- fc3b narrows fc2b speed clamp and sets scroll/key step **±0.05** (was ±0.1, max 4.0×)
-- `_OrbitViewHost` speed label unchanged — modal + scroll share `viewer.orbit_camera_move_speed`
-
-Signature: `floating-camera-fc3b-hud-settings`. Depends: fc3/fc3a/fc2b done.
+When **Feature Areas** include **`Floating Camera`**, see [ui-change/SKILL.md](../skills/ui-change/SKILL.md)
+§ 3D orbit camera — Signatures: `floating-camera-fc0-hold-fly` through `floating-camera-fc3b-hud-settings`.
 
 ## Full workflow
 

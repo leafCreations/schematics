@@ -42,6 +42,8 @@ PREFIX_CARD = "Card-type drift alert:"
 PREFIX_FAILURE = "Failure-pattern drift alert:"
 PREFIX_REGISTRY = "Registry drift alert:"
 PREFIX_LESSONS = "Lessons coverage drift alert:"
+PREFIX_COMPACTION = "Compaction drift alert:"
+PREFIX_DUPLICATION = "Duplication drift alert:"
 PREFIX_FORWARD_FEEDBACK = "Forward feedback audit:"
 PREFIX_FORWARD_FEEDBACK_STALE = "Forward feedback stale:"
 PREFIX_DOCS_GOVERNANCE_SPLIT = "Docs governance split:"
@@ -68,10 +70,13 @@ DEFAULT_SEVERITY_BY_PREFIX: dict[str, str] = {
     PREFIX_FAILURE: SEVERITY_CRITICAL,
     PREFIX_REGISTRY: SEVERITY_WARN,
     PREFIX_LESSONS: SEVERITY_WARN,
+    PREFIX_COMPACTION: SEVERITY_WARN,
+    PREFIX_DUPLICATION: SEVERITY_WARN,
 }
 
 EPIC_GOVERNANCE_DRIFT = "GovernanceDriftFix"
 EPIC_LESSONS_COVERAGE = "LessonsCoverageMetric"
+EPIC_AGENT_CONTEXT_BUDGET = "AgentContextBudget"
 
 SEVERITY_PRIORITY: dict[str, str] = {
     SEVERITY_INFO: "low",
@@ -117,6 +122,23 @@ LABEL_PATHS_BY_PREFIX: dict[str, list[str]] = {
         "docs/governance/lessons-and-coverage.md",
         ".cursor/skills/agent-triage/reference.md",
     ],
+    PREFIX_COMPACTION: [
+        "docs/governance/compaction-baseline.yaml",
+        "docs/governance/audit-and-compaction.md",
+        "scripts/governance_compaction_lib.py",
+        "scripts/check_governance_parity.py",
+        "AGENTS.md",
+    ],
+    PREFIX_DUPLICATION: [
+        "docs/governance/compaction-baseline.yaml",
+        "docs/governance/audit-and-compaction.md",
+        "scripts/governance_compaction_lib.py",
+        "scripts/check_governance_parity.py",
+        ".cursor/skills/kanban-markdown/SKILL.md",
+        ".cursor/skills/kanban-markdown/reference.md",
+        ".cursor/skills/agent-triage/reference.md",
+        "AGENTS.md",
+    ],
 }
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
@@ -142,10 +164,12 @@ _SCHEMA_INTERNAL_PATHS = frozenset(
         "docs/governance/forward-feedback.md",
         "docs/governance/feature-areas-parity.md",
         "docs/governance/audit-and-compaction.md",
+        "docs/governance/compaction-baseline.yaml",
         "scripts/build_lessons_index.py",
         "scripts/build_forward_feedback_index.py",
         "scripts/forward_feedback_index_lib.py",
         "scripts/resolve_forward_feedback.py",
+        "scripts/batch_forward_feedback_hygiene.py",
         "scripts/resolve_card_tests.py",
         "scripts/pre-commit-pytest.sh",
         "scripts/agent-commit-ready.sh",
@@ -156,8 +180,10 @@ _SCHEMA_INTERNAL_PATHS = frozenset(
         "tests/test_resolve_card_tests.py",
         "scripts/check_lessons_coverage.py",
         "scripts/lessons_coverage_lib.py",
+        "scripts/governance_compaction_lib.py",
         "scripts/pre-commit-lessons-coverage.sh",
         "tests/test_check_lessons_coverage.py",
+        "tests/test_governance_compaction.py",
     }
 )
 _LABELS_RE = re.compile(r"^labels:\s*\[(.*?)\]", re.MULTILINE)
@@ -202,6 +228,7 @@ KANBAN_CARD_TYPE_RULE_NAMES: tuple[str, ...] = (
     "kanban-inquiry-cards.mdc",
     "kanban-plan-cards.mdc",
     "kanban-commit-issue-cards.mdc",
+    "kanban-feedback-cards.mdc",
 )
 KANBAN_ALWAYS_ON_RULE = "kanban-card-gates.mdc"
 
@@ -223,6 +250,10 @@ CLASSIFY_ANCHORS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("card missing label", ("missing", "unknown `labels`", "empty / unknown")),
     ("no card implement", ("without", "a card", "implement / fix")),
     ("inquiry done", ("inquiry", "done", "close only")),
+    (
+        "bare done multi review",
+        ("Done", "QA complete", "card unnamed", "disambiguate", "≥2"),
+    ),
     ("epic complete audit", ("epic complete", "run epic audit", "close epic")),
     (
         "archive group complete",
@@ -243,8 +274,8 @@ REFERENCE_CLASSIFY_HEADING = "## Classify the request (signals)"
 AGENTS_CLASSIFY_MAX_ROWS = 5
 TRIAGE_CLASSIFY_MAX_ROWS = 0
 # Fingerprint of reference § Classify signal first-column cells (normalized).
-# Update REFERENCE_CLASSIFY_FINGERPRINT when adding rows (cm3: fe1e226a461904d1).
-REFERENCE_CLASSIFY_FINGERPRINT = "fe1e226a461904d1"
+# Update REFERENCE_CLASSIFY_FINGERPRINT when adding rows (gc9: 594afd85cd2da764).
+REFERENCE_CLASSIFY_FINGERPRINT = "594afd85cd2da764"
 
 
 def _section_after(text: str, heading: str) -> str:
@@ -385,6 +416,17 @@ def corrective_action_for_issue(issue: DriftIssue) -> str:
             "[docs/governance/lessons-and-coverage.md](../../docs/governance/"
             "lessons-and-coverage.md) § Lessons Coverage Metric."
         ),
+        PREFIX_COMPACTION: (
+            "Work **AgentContextBudget** epic cards (always-on rule diet, thin AGENTS.md, "
+            "index-not-grep); refresh `docs/governance/compaction-baseline.yaml` after "
+            "compaction lands. Signature: `governance-compaction-drift-alert`."
+        ),
+        PREFIX_DUPLICATION: (
+            "Reduce duplicated governance prose — Classify trio pointers-only in AGENTS/triage; "
+            "move kanban card detail to reference.md; keep scoped `kanban-*.mdc` authoritative. "
+            "Refresh `docs/governance/compaction-baseline.yaml` after consolidation. "
+            "Signature: `governance-duplication-automation`."
+        ),
     }
     return actions.get(prefix, actions[PREFIX_ROUTING])
 
@@ -392,6 +434,10 @@ def corrective_action_for_issue(issue: DriftIssue) -> str:
 def card_title_for_issue(issue: DriftIssue) -> str:
     if issue.message.startswith(PREFIX_LESSONS):
         return f"lessons-coverage-drift-{datetime.now(UTC).date().isoformat()}"
+    if issue.message.startswith(PREFIX_COMPACTION):
+        return f"governance-compaction-advisory-{datetime.now(UTC).date().isoformat()}"
+    if issue.message.startswith(PREFIX_DUPLICATION):
+        return f"agent-governance-duplication-threshold-{datetime.now(UTC).date().isoformat()}"
     summary = issue.message
     if ":" in summary:
         summary = summary.split(":", 1)[1].strip()
@@ -408,6 +454,10 @@ def _slugify(text: str, *, max_len: int = 36) -> str:
 def issue_card_id(issue: DriftIssue) -> str:
     if issue.message.startswith(PREFIX_LESSONS):
         return f"lessons-coverage-drift-{datetime.now(UTC).date().isoformat()}"
+    if issue.message.startswith(PREFIX_COMPACTION):
+        return f"agent-governance-compaction-advisory-{datetime.now(UTC).date().isoformat()}"
+    if issue.message.startswith(PREFIX_DUPLICATION):
+        return f"agent-governance-duplication-threshold-{datetime.now(UTC).date().isoformat()}"
     group_key = consolidation_group_key(issue.message)
     if group_key is not None:
         return _card_id_for_group_key(group_key)
@@ -803,6 +853,8 @@ def create_drift_alert_cards(
 
     for line in consolidate_drift_issues_for_spawn(issues):
         issue = parse_drift_line(line)
+        if issue.message.startswith(PREFIX_COMPACTION) and issue.severity != SEVERITY_CRITICAL:
+            continue
         existing = _find_existing_card_for_alert(features_dir, issue.message)
         if existing is not None:
             continue
@@ -817,9 +869,18 @@ def create_drift_alert_cards(
         epic = (
             EPIC_LESSONS_COVERAGE
             if issue.message.startswith(PREFIX_LESSONS)
+            else EPIC_AGENT_CONTEXT_BUDGET
+            if issue.message.startswith(PREFIX_COMPACTION)
+            or issue.message.startswith(PREFIX_DUPLICATION)
             else EPIC_GOVERNANCE_DRIFT
         )
-        labels = '["agent"]' if issue.message.startswith(PREFIX_LESSONS) else '["feature"]'
+        labels = (
+            '["agent"]'
+            if issue.message.startswith(PREFIX_LESSONS)
+            or issue.message.startswith(PREFIX_COMPACTION)
+            or issue.message.startswith(PREFIX_DUPLICATION)
+            else '["feature"]'
+        )
         frontmatter = f"""---
 id: "{card_id}"
 status: "todo"
@@ -1436,6 +1497,131 @@ def check_kanban_rule_globs(repo_root: Path) -> list[str]:
     return issues
 
 
+INDEX_NOT_GREP_SIGNATURE = "governance-index-not-grep"
+
+INDEX_NOT_GREP_REQUIRED_TOKENS: dict[str, tuple[str, ...]] = {
+    ".cursor/rules/kanban-prior-lessons-gate.mdc": (
+        INDEX_NOT_GREP_SIGNATURE,
+        "lessons-index.yaml",
+        "resolve_prior_lessons.py",
+    ),
+    ".cursor/skills/agent-triage/SKILL.md": (
+        INDEX_NOT_GREP_SIGNATURE,
+        "lessons-index.yaml",
+        "resolve_prior_lessons.py",
+    ),
+    "docs/governance/lessons-and-coverage.md": (
+        INDEX_NOT_GREP_SIGNATURE,
+        "resolve_prior_lessons.py",
+    ),
+}
+
+
+def check_index_not_grep_routing(repo_root: Path) -> list[str]:
+    """acb4 — yaml/index before broad done/archived folder grep."""
+    issues: list[str] = []
+    for rel, tokens in INDEX_NOT_GREP_REQUIRED_TOKENS.items():
+        path = repo_root / rel
+        if not path.is_file():
+            issues.append(f"{PREFIX_ROUTING} missing index-not-grep artifact `{rel}`")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for token in tokens:
+            if token not in text:
+                issues.append(
+                    f"{PREFIX_ROUTING} `{rel}` missing index-not-grep token "
+                    f"`{token}` — Signature: {INDEX_NOT_GREP_SIGNATURE}"
+                )
+    ref = repo_root / ".cursor/skills/kanban-markdown/reference.md"
+    if not ref.is_file():
+        issues.append(
+            f"{PREFIX_ROUTING} missing kanban-markdown/reference.md for "
+            f"index-not-grep — Signature: {INDEX_NOT_GREP_SIGNATURE}"
+        )
+    else:
+        ref_text = ref.read_text(encoding="utf-8")
+        if "Index vs folder grep" not in ref_text:
+            issues.append(
+                f"{PREFIX_ROUTING} kanban-markdown/reference.md missing "
+                f"§ Index vs folder grep — Signature: {INDEX_NOT_GREP_SIGNATURE}"
+            )
+        if INDEX_NOT_GREP_SIGNATURE not in ref_text:
+            issues.append(
+                f"{PREFIX_ROUTING} kanban-markdown/reference.md missing "
+                f"Signature `{INDEX_NOT_GREP_SIGNATURE}`"
+            )
+    return issues
+
+
+DISCOVERY_LADDER_SIGNATURE = "governance-discovery-ladder"
+
+DISCOVERY_LADDER_BRANCH_TOKENS: tuple[str, ...] = (
+    "Governance",
+    "Kanban",
+    "Docs-only",
+    "Product",
+    "Failure",
+)
+
+DISCOVERY_LADDER_REQUIRED_TOKENS: dict[str, tuple[str, ...]] = {
+    ".cursor/rules/agent-routing.mdc": (
+        "Discovery ladder",
+        DISCOVERY_LADDER_SIGNATURE,
+    ),
+    ".cursor/skills/agent-triage/SKILL.md": (
+        "Discovery ladder",
+        DISCOVERY_LADDER_SIGNATURE,
+    ),
+}
+
+
+def check_discovery_ladder_routing(repo_root: Path) -> list[str]:
+    """acb5 — classify → area → grep decision ladder SSOT in reference."""
+    issues: list[str] = []
+    ref = repo_root / ".cursor/skills/agent-triage/reference.md"
+    if not ref.is_file():
+        issues.append(
+            f"{PREFIX_ROUTING} missing agent-triage/reference.md for "
+            f"discovery ladder — Signature: {DISCOVERY_LADDER_SIGNATURE}"
+        )
+        return issues
+    ref_text = ref.read_text(encoding="utf-8")
+    if "## Discovery ladder" not in ref_text:
+        issues.append(
+            f"{PREFIX_ROUTING} agent-triage/reference.md missing "
+            f"§ Discovery ladder — Signature: {DISCOVERY_LADDER_SIGNATURE}"
+        )
+    if DISCOVERY_LADDER_SIGNATURE not in ref_text:
+        issues.append(
+            f"{PREFIX_ROUTING} agent-triage/reference.md missing "
+            f"Signature `{DISCOVERY_LADDER_SIGNATURE}`"
+        )
+    if "```mermaid" not in ref_text or "flowchart" not in ref_text:
+        issues.append(
+            f"{PREFIX_ROUTING} agent-triage/reference.md § Discovery ladder "
+            f"missing mermaid flowchart — Signature: {DISCOVERY_LADDER_SIGNATURE}"
+        )
+    for token in DISCOVERY_LADDER_BRANCH_TOKENS:
+        if token not in ref_text.split("## Discovery ladder", 1)[-1].split("## ", 1)[0]:
+            issues.append(
+                f"{PREFIX_ROUTING} agent-triage/reference.md § Discovery ladder "
+                f"missing branch `{token}` — Signature: {DISCOVERY_LADDER_SIGNATURE}"
+            )
+    for rel, tokens in DISCOVERY_LADDER_REQUIRED_TOKENS.items():
+        path = repo_root / rel
+        if not path.is_file():
+            issues.append(f"{PREFIX_ROUTING} missing discovery-ladder artifact `{rel}`")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for token in tokens:
+            if token not in text:
+                issues.append(
+                    f"{PREFIX_ROUTING} `{rel}` missing discovery-ladder token "
+                    f"`{token}` — Signature: {DISCOVERY_LADDER_SIGNATURE}"
+                )
+    return issues
+
+
 def collect_governance_rule_paths(repo_root: Path) -> list[Path]:
     paths: list[Path] = []
     for pattern in GOVERNANCE_RULE_GLOBS:
@@ -1609,17 +1795,77 @@ def report_governance_line_counts(repo_root: Path) -> str:
     return report
 
 
+def run_compaction_audit(
+    *,
+    repo_root: Path,
+    features_dir: Path,
+    quiet: bool = False,
+    spawn_cards: bool = False,
+    include_severity: bool = True,
+) -> int:
+    """Advisory compaction drift vs compaction-baseline.yaml (exit 0)."""
+    from scripts.governance_compaction_lib import compaction_drift_lines
+
+    lines = compaction_drift_lines(
+        repo_root,
+        include_severity=include_severity,
+        min_severity=SEVERITY_WARN,
+    )
+    if spawn_cards and lines:
+        created = create_drift_alert_cards(lines, features_dir=features_dir)
+        if created and not quiet:
+            for path in created:
+                try:
+                    display = path.relative_to(repo_root)
+                except ValueError:
+                    display = path
+                print(f"drift card created: {display}", file=sys.stderr)
+    if lines and not quiet:
+        print("\n".join(lines))
+    return 0
+
+
+def run_duplication_threshold_audit(
+    *,
+    repo_root: Path,
+    features_dir: Path,
+    quiet: bool = False,
+    spawn_cards: bool = False,
+    include_severity: bool = True,
+) -> int:
+    """Fail parity when duplication pairs exceed post-compaction caps (exit 1)."""
+    from scripts.governance_compaction_lib import duplication_threshold_lines
+
+    lines = duplication_threshold_lines(
+        repo_root,
+        include_severity=include_severity,
+        min_severity=SEVERITY_WARN,
+    )
+    if spawn_cards and lines:
+        created = create_drift_alert_cards(lines, features_dir=features_dir)
+        if created and not quiet:
+            for path in created:
+                try:
+                    display = path.relative_to(repo_root)
+                except ValueError:
+                    display = path
+                print(f"drift card created: {display}", file=sys.stderr)
+    if lines and not quiet:
+        print("\n".join(lines))
+    return 1 if lines else 0
+
+
 def format_forward_feedback_audit_report(
     hits: list[tuple[str, list[str]]],
 ) -> list[str]:
-    """Format gc7 advisory lines for post-grandfather forward-feedback field gaps."""
+    """Format gc7 advisory lines for present parent forward-feedback field gaps (fcp3)."""
     from scripts.lessons_coverage_lib import C1B_FORWARD_FEEDBACK_GRANDFATHER_DATE
 
     signature = "governance-gc7-forward-feedback-audit"
     if not hits:
         return [
-            f"{PREFIX_FORWARD_FEEDBACK} all post-grandfather closed cards pass gc5 fields "
-            f"(completed on/after {C1B_FORWARD_FEEDBACK_GRANDFATHER_DATE}) — "
+            f"{PREFIX_FORWARD_FEEDBACK} present parent ff blocks pass field audit "
+            f"(post-{C1B_FORWARD_FEEDBACK_GRANDFATHER_DATE}; parent ff optional when absent) — "
             f"Signature: {signature}",
         ]
     lines = [
@@ -1637,10 +1883,17 @@ def run_forward_feedback_audit(
     quiet: bool = False,
 ) -> int:
     """Advisory gc7 scan — always exit 0; does not spawn drift cards."""
-    from scripts.lessons_coverage_lib import audit_forward_feedback_gc5
+    from scripts.lessons_coverage_lib import (
+        audit_forward_feedback_gc5,
+        audit_phase_epic_ff_policy_advisory,
+    )
 
     hits = audit_forward_feedback_gc5(features_dir=features_dir)
     lines = format_forward_feedback_audit_report(hits)
+    advisory = audit_phase_epic_ff_policy_advisory(features_dir=features_dir)
+    if advisory:
+        lines.append("Forward feedback phase-policy advisory (card-done-forward-feedback-cadence):")
+        lines.extend(advisory)
     if not quiet:
         print("\n".join(lines))
     return 0
@@ -1839,6 +2092,8 @@ def run_checks(
     agents_card_labels = parse_agents_card_type_labels(agents_text)
     issues.extend(check_card_type_parity(card_labels, agents_card_labels))
     issues.extend(check_kanban_rule_globs(repo_root))
+    issues.extend(check_index_not_grep_routing(repo_root))
+    issues.extend(check_discovery_ladder_routing(repo_root))
 
     parity_issues = apply_severity(issues, include_severity=include_severity)
     lessons_issues = check_lessons_coverage_drift(
@@ -1883,6 +2138,22 @@ def main(argv: list[str] | None = None) -> int:
         help="Print gc0 governance artifact line-count baseline and exit 0",
     )
     parser.add_argument(
+        "--compaction",
+        action="store_true",
+        help=(
+            "Advisory compaction drift vs compaction-baseline.yaml (exit 0; "
+            "Signature: governance-compaction-drift-alert)"
+        ),
+    )
+    parser.add_argument(
+        "--duplication-threshold",
+        action="store_true",
+        help=(
+            "Fail when Classify trio or kanban lifecycle pairs exceed "
+            "compaction-baseline.yaml caps (Signature: governance-duplication-automation)"
+        ),
+    )
+    parser.add_argument(
         "--forward-feedback-audit",
         action="store_true",
         help=(
@@ -1921,6 +2192,24 @@ def main(argv: list[str] | None = None) -> int:
         if not args.quiet:
             report_governance_line_counts(root)
         return 0
+
+    if args.compaction:
+        return run_compaction_audit(
+            repo_root=root,
+            features_dir=features_dir,
+            quiet=args.quiet,
+            spawn_cards=not args.no_spawn_cards,
+            include_severity=not args.plain,
+        )
+
+    if args.duplication_threshold:
+        return run_duplication_threshold_audit(
+            repo_root=root,
+            features_dir=features_dir,
+            quiet=args.quiet,
+            spawn_cards=not args.no_spawn_cards,
+            include_severity=not args.plain,
+        )
 
     if args.forward_feedback_audit:
         return run_forward_feedback_audit(features_dir=features_dir, quiet=args.quiet)

@@ -70,6 +70,19 @@ Prints artifact line counts (sorted), named duplication-pair section sizes, and 
 | `agent-*.mdc` (4 files) | 211 | Sum — routing / self-eval / consistency |
 | **Baseline total** | **2531** | 18 files in `GOVERNANCE_COMPACT_BASELINE_GLOBS` (gc1 + reference.md) |
 
+**acb3 (2026-06-28 — `governance-thin-agents-md`):** `AGENTS.md` **162** lines — Maintaining table
+replaced with pointer rows to [agent-consistency.mdc](../../.cursor/rules/agent-consistency.mdc) and
+reference § Closed epics; epic narrative removed from Maintaining.
+
+**acb4 (2026-06-28 — `governance-index-not-grep`):** yaml-first done/archived routing — hard ban in
+reference § Discovery ladder Kanban branch; detail in [kanban-markdown/reference.md](../../.cursor/skills/kanban-markdown/reference.md)
+§ Index vs folder grep; parity gate `check_index_not_grep_routing`.
+
+**acb5 (2026-06-28 — `governance-discovery-ladder`):** single classify → task type → grep tree in
+[agent-triage/reference.md](../../.cursor/skills/agent-triage/reference.md) § Discovery ladder (mermaid);
+[agent-routing.mdc](../../.cursor/rules/agent-routing.mdc) Discovery budget is pointer-only;
+`check_discovery_ladder_routing` — `pytest -k acb5`.
+
 **Duplication pairs** (section line counts — same prose maintained in multiple places):
 
 **Automated gc7 check:** `check_handoff_duplication_pair` in `check_governance_parity.py` fails when
@@ -78,8 +91,10 @@ AGENTS ``## End handoff`` repeats ≥3 consecutive `- **Field:**` lines verbatim
 Signature: `governance-gc7-handoff-duplication-pair`.
 
 **Advisory gc7 forward-feedback audit:** `check_governance_parity.py --forward-feedback-audit`
-reports gc5 field gaps on post-grandfather closed cards (Impact Scope, References, Mitigation when
-risk ≥ 4); exit 0 — complements C1b presence metric. Signature:
+audits **present** parent `## Forward-looking feedback` blocks only (field gaps on written
+categories; no six-category mandate — fcp3). Optional Risk 5 check: parent close with Risk 5 in ff
+block should link a **`feedback`** spawn under **`## Spawned follow-up cards`**. Exit 0 —
+complements C1b (lessons required; parent ff optional). Signature:
 `governance-gc7-forward-feedback-audit`. **Advisory ff3 stale metrics:**
 `--forward-feedback-stale` reports high-risk open index rows with no spawn after N days (default
 30); exit 0 — complements gc7 (card fields) and `resolve_forward_feedback.py --report` (category /
@@ -99,12 +114,24 @@ risk-band counts). Signature: `forward-feedback-stale-metrics`.
 
 | Rule | Lines | Tag |
 | ---- | ----- | --- |
+| `.cursor/rules/agent-routing.mdc` | 105 | governance |
+| `.cursor/rules/kanban-card-gates.mdc` | 92 | governance |
+| `.cursor/rules/agent-self-evaluation.mdc` | 51 | governance (gc4 — §7 pointer) |
+| **Total** | **248** | **248** governance-related |
+
+**acb2 (2026-06-28 — `governance-always-on-rule-diet`):** `worldgen.mdc`, `model-routing.mdc`, and
+`testing.mdc` are **glob-scoped** (`alwaysApply: false`) — not in the table above. Path→test rows
+live in [targeted-testing/reference.md](../../.cursor/skills/targeted-testing/reference.md). Prior
+gc0 snapshot (2026-06-27) for comparison:
+
+| Rule | Lines | Tag |
+| ---- | ----- | --- |
 | `.cursor/rules/testing.mdc` | 164 | governance |
 | `.cursor/rules/agent-routing.mdc` | 79 | governance |
 | `.cursor/rules/kanban-card-gates.mdc` | 60 | governance |
 | `.cursor/rules/worldgen.mdc` | 58 | other |
 | `.cursor/rules/model-routing.mdc` | 57 | other |
-| `.cursor/rules/agent-self-evaluation.mdc` | 38 | governance (gc4 — §7 pointer) |
+| `.cursor/rules/agent-self-evaluation.mdc` | 38 | governance |
 | **Total** | **462** | **347** governance-related |
 
 **Success criteria → measurable signals** (parent inquiry: reduce governance token churn):
@@ -155,3 +182,130 @@ Implementation: grep + consolidate-before-expand gate (§6c/§6d).
 feedback adds **Impact Scope**, **References**, **Mitigation** on max-tier items, **Importance**
 when ≥2 items share max risk, and top-3 chat surfacing on Card Done turns — Signature stays
 `card-done-forward-feedback`; legacy done cards without new fields remain valid.
+
+## AgentContextBudget epic (acb0) — closed 2026-06-28
+
+Epic **AgentContextBudget** — reduce governance token churn and agent discovery waste without
+breaking kanban parity. **Closed** — anchor archived:
+`.devtool/features/archived/agent-agent-context-budget-acb0-schema-spec-2026-06-30.md`.
+Registry: [epics-closed.yaml](../epics-closed.yaml). Follow-up: **KanbanReferenceThin** (closed).
+Follows closed **GovernanceCompact** (gc0–gc8) and **ForwardFeedbackCapturePolicy**.
+
+### Six concern areas (user 2026-06-30)
+
+| # | Concern | Phase | Signature |
+| - | ------- | ----- | --------- |
+| 1 | Always-on rule diet — scope `worldgen.mdc`, `model-routing.mdc`, `testing.mdc` with globs | acb2 | `governance-always-on-rule-diet` |
+| 2 | done/archived growth — yaml indexes + scripts, not folder grep | acb4 | `governance-index-not-grep` |
+| 3 | Thin AGENTS.md — trim § Maintaining; pointer to `epics-closed.yaml` + reference | acb3 | `governance-thin-agents-md` |
+| 4 | Hard index-not-grep — route through `lessons-index.yaml`, `forward-feedback-index.yaml`, `resolve_prior_lessons.py` | acb4 | `governance-index-not-grep` |
+| 5 | Discovery ladder — classify → area → grep decision tree | acb5 | `governance-discovery-ladder` |
+| 6 | Duplication automation | acb6 | `governance-duplication-automation` |
+
+### Epic phases
+
+| order | phase | scope | Signature |
+| ----- | ----- | ----- | --------- |
+| acb0 | schema | Six areas + epic table | — |
+| acb1 | compaction threshold | `--compaction`, handoff advisory | `governance-compaction-drift-alert` |
+| acb2 | always-on diet | Product rules off default context | `governance-always-on-rule-diet` |
+| acb3 | thin AGENTS.md | Maintaining table trim | `governance-thin-agents-md` |
+| acb4 | index-not-grep | yaml-first done/archived routing | `governance-index-not-grep` |
+| acb5 | discovery ladder | classify → area → grep tree | `governance-discovery-ladder` |
+| acb6 | duplication automation | post-thinning gc7 extension | `governance-duplication-automation` |
+
+**Implement order:** acb1 → acb2 → acb3 → acb4 → acb5 → acb6 (all landed; epic archived).
+
+**Baseline SSOT:** [compaction-baseline.yaml](compaction-baseline.yaml) (gc0 line counts from 2026-06-27;
+refresh after epic closes).
+
+## Compaction threshold notifications (acb1)
+
+Epic **AgentContextBudget** — Signature: `governance-compaction-drift-alert`.
+
+**Baseline SSOT:** [compaction-baseline.yaml](compaction-baseline.yaml) (gc0 line counts from 2026-06-27;
+refresh after epic closes).
+
+**Check:**
+
+```bash
+python3 scripts/check_governance_parity.py --compaction
+python3 scripts/check_governance_parity.py --compaction --spawn-cards   # critical only
+```
+
+Exit **0** — advisory. Agents run `--compaction --quiet` before handoff; when **warn** or
+**critical**, emit **`### Compaction advisory`** per
+[agent-self-evaluation/SKILL.md](../../.cursor/skills/agent-self-evaluation/SKILL.md) §7.
+
+| Tier | Signal | Threshold |
+| ---- | ------ | --------- |
+| **warn** | gc0 artifact total | > baseline + **15%** |
+| **critical** | gc0 artifact total | > baseline + **25%** |
+| **warn** | always-on governance lines | > **400** or > baseline + **15%** |
+| **critical** | always-on governance lines | > **480** or > baseline + **25%** |
+| **warn** | single gc0 artifact | > baseline + **20%** or > **600** lines |
+| **critical** | single gc0 artifact | > baseline + **50%** or > **900** lines |
+| **warn** | duplication `kanban-markdown reference` | > **700** lines |
+| **critical** | duplication `kanban-markdown reference` | > **1000** lines |
+| **warn** | duplication `kanban-*.mdc` sum | > **600** lines |
+| **critical** | duplication `kanban-*.mdc` sum | > **800** lines |
+| **warn** | duplication `classify trio (sum)` | > **80** lines |
+| **critical** | duplication `classify trio (sum)` | > **120** lines |
+| **warn** | duplication `kanban lifecycle (sum)` (SKILL + reference) | > **900** lines |
+| **critical** | duplication `kanban lifecycle (sum)` | > **1200** lines |
+
+**Spawn:** `--spawn-cards` creates one **agent** todo under epic **AgentContextBudget** on
+**critical** only (`agent-governance-compaction-advisory-YYYY-MM-DD`).
+
+**Stale spawns:** close pre-refresh compaction todos **Superseded** when `--compaction --quiet` is
+**ok** after baseline refresh — Signature: `governance-compaction-drift-alert`.
+
+### Duplication threshold automation (acb6)
+
+**Signature:** `governance-duplication-automation`. Extends gc7 handoff pair check with
+post-compaction caps on Classify trio and kanban lifecycle pairs (reference + SKILL sum).
+
+```bash
+python3 scripts/check_governance_parity.py --duplication-threshold
+python3 scripts/check_governance_parity.py --duplication-threshold --spawn-cards
+```
+
+Exit **1** when any pair exceeds **warn** or **critical** caps in
+[compaction-baseline.yaml](compaction-baseline.yaml) (`duplication_pairs` + `thresholds`).
+`--spawn-cards` creates **agent** todo under **AgentContextBudget** on **warn+**
+(`agent-governance-duplication-threshold-YYYY-MM-DD`). Pair with `--line-counts` for raw section
+sizes; `--compaction` remains advisory (exit 0).
+
+**Stale spawns:** close pre-thinning or pre-refresh todos **Superseded** when `--duplication-threshold
+--no-spawn-cards` exits **0** — link [acb6 archived](../../../.devtool/features/archived/agent-agent-context-budget-acb6-duplication-automation-2026-06-30.md)
++ KanbanReferenceThin krt3; Signature: `governance-duplication-automation`.
+
+**CI / default parity:** `--duplication-threshold` is **not** in default `run_checks` — opt-in audit
+(Signature: `governance-thin-kanban-reference`; KanbanReferenceThin closed 2026-06-28).
+
+### KanbanReferenceThin epic (krt0–krt3) — closed 2026-06-28
+
+**Signature:** `governance-thin-kanban-reference`. Thin `kanban-markdown/reference.md` to pass
+absolute duplication caps without relaxing thresholds. **Closed** — anchor archived:
+`.devtool/features/archived/agent-kanban-reference-thin-krt0-schema-spec-2026-06-30.md`.
+Registry: [epics-closed.yaml](../epics-closed.yaml).
+
+**Duplication caps (unchanged — forcing function):**
+
+| Threshold key | warn | critical |
+| ------------- | ---- | -------- |
+| `duplication_reference_critical` | 700 | **1000** |
+| `kanban_lifecycle_critical` | 900 | **1200** |
+
+**Baseline snapshot (2026-06-30, post-krt3):** reference **551** lines (−1035 vs krt0 **1586**);
+kanban lifecycle (sum) **897** (−1174 vs krt0 **2071**); `--duplication-threshold` exit **0**.
+`reference-glossary.md` holds glossary SSOT; classify trio **62** after triage §1 / Task types split.
+
+| Phase | Card | Scope | status |
+| ----- | ---- | ----- | ------ |
+| krt0 | `agent-kanban-reference-thin-krt0-schema-spec-2026-06-30` | Epic table + caps SSOT | archived |
+| krt1 | _(feedback implement 2026-06-30)_ | Closed epic spawn tables + dg1 → pointers | done (−194 lines) |
+| krt2 | `agent-kanban-reference-thin-krt2-legacy-ff-trim-2026-06-30` | Card Done / ff cadence dedupe | archived |
+| krt3 | `agent-kanban-reference-thin-krt3-glossary-trim-2026-06-30` | § Kanban card sections glossary trim | archived |
+
+**Closed:** gel0 2026-06-28 — archive group retired.

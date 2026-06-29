@@ -4,7 +4,7 @@
 
 Quick lookup for path→test mapping and entry points. Source of truth for hooks: `scripts/pre-commit-pytest.sh`.
 
-**Governance parity:** when editing `AGENTS.md`, agent/kanban skills or rules → [Consistency matrix](#consistency-matrix) + [agent-consistency.mdc](../../rules/agent-consistency.mdc) + [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §6g. **Drift alert format:** [§ Drift alert examples](#drift-alert-examples) (six prefixes; optional `[severity]`). **Periodic audit:** [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit;
+**Governance parity:** when editing `AGENTS.md`, agent/kanban skills or rules → [Consistency matrix](#consistency-matrix) + [agent-consistency.mdc](../../rules/agent-consistency.mdc) + [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §6g. **Drift alert format:** [§ Drift alert examples](#drift-alert-examples) (seven prefixes; optional `[severity]`). **Periodic audit:** [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Periodic AGENTS.md governance audit;
 checklist detail in [kanban-markdown/reference.md](../kanban-markdown/reference.md) — user runs
 `python3 scripts/create_governance_audit_card.py`.
 
@@ -14,8 +14,8 @@ Which artifacts must agree after a governance change. **Notes** are grep targets
 
 | Artifact | Must match | Notes |
 | -------- | ---------- | ----- |
-| [AGENTS.md](../../AGENTS.md) **Every turn** | [agent-triage/SKILL.md](SKILL.md) §1/§1b, [agent-routing.mdc](../../rules/agent-routing.mdc) lifecycle | Steps `1`–`5`, `1b`; Classify quickly ≤5-row summary |
-| [agent-routing.mdc](../../rules/agent-routing.mdc) | AGENTS.md turn lifecycle, card types | `START →` block; discovery budget |
+| [AGENTS.md](../../AGENTS.md) **Every turn** | [agent-triage/SKILL.md](SKILL.md) §1/§1b, [agent-routing.mdc](../../rules/agent-routing.mdc) lifecycle | Steps `1`–`6`; Classify quickly ≤5-row summary; Maintaining → [agent-consistency.mdc](../../rules/agent-consistency.mdc) (acb3) |
+| [agent-routing.mdc](../../rules/agent-routing.mdc) | AGENTS.md turn lifecycle, card types | `START →` block; discovery budget; product rules glob-scoped (acb2 — Signature: `governance-always-on-rule-diet`) |
 | [agent-triage/SKILL.md](SKILL.md) | AGENTS.md Every turn; [reference.md](reference.md) § Classify | §1 pointer only; § Lessons by area |
 | [agent-self-evaluation/SKILL.md](../agent-self-evaluation/SKILL.md) §7 handoff | AGENTS.md End handoff, [agent-self-evaluation.mdc](../../rules/agent-self-evaluation.mdc) | Compact one-line fields; AGENTS/mdc **pointer only** — gc4 Signature `governance-compact-self-eval-handoff`; gc7 `check_handoff_duplication_pair` flags ≥3 consecutive duplicated field lines — Signature `governance-gc7-handoff-duplication-pair` |
 | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | Rules (**Signature** only), § Failure pattern routing below, [testing.mdc](../../rules/testing.mdc) | Five columns per §6f |
@@ -46,8 +46,10 @@ Named warning lines for governance parity (epic **GovernanceDriftAlerts**). **Su
 | `Failure-pattern drift alert:` | **Failure-pattern** | Signature in rule or triage exists in a reference row; audit **Failure patterns** | `Failure-pattern drift alert:` Rule cites `precommit-palette-top-texture` — no row in pre-commit-workflow or self-eval reference |
 | `Registry drift alert:` | **Registry** | `docs/feature-areas.yaml` governance schema (`agents_skill`, `agents_rules`, `lesson_routing_row`, `lesson_signatures`) + **Agent Workflow** `paths` ↔ AGENTS area → skills & rules (`is_schema_internal_registry_path` excludes lesson index, `resolve_*.py`, and lc1 lessons-coverage scripts/tests — see docs/governance/feature-areas-parity.md § Governance area schema); `handlers:` malformed/duplicate; kanban **Product Methods** ↔ registry; audit **Area table** | `Registry drift alert:` feature-areas.yaml lists `scripts/check_lessons_coverage.py` not reflected in AGENTS Agent/Kanban area rows |
 | `Lessons coverage drift alert:` | **Lessons coverage** | [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons Coverage Metric; `check_lessons_coverage.py`; audit **Lessons coverage**; `check_governance_parity.py` when done/ exists | `Lessons coverage drift alert:` composite 62.5% (threshold 75%) — C1 Capture: 0.0% (...); C2 Promotion quality: N/A (...); C3 Consumption: N/A (...); C4 Application (aggregate): 5.3% (...); C4 Application (per-card): 0.0% (...) |
+| `Compaction drift alert:` | **Compaction** | [docs/governance/compaction-baseline.yaml](../../docs/governance/compaction-baseline.yaml); `check_governance_parity.py --compaction`; handoff **`### Compaction advisory`** — Signature: `governance-compaction-drift-alert` | `[critical] Compaction drift alert:` gc0 +84% (4670/2531); always-on governance +28% (444/347); outliers: kanban-markdown/reference.md +234%. Consider AgentContextBudget epic |
+| `Duplication drift alert:` | **Duplication** | `check_governance_parity.py --duplication-threshold`; caps in compaction-baseline; spawn warn+ — Signature: `governance-duplication-automation` | `Duplication drift alert:` kanban lifecycle (sum) +12% (1350/1200); kanban-markdown reference +8% (1080/1000). Close stale todos **Superseded** when `--duplication-threshold --no-spawn-cards` exit **0** post-baseline refresh |
 
-**Use:** paste one line per mismatch when comparing artifacts (manual grep, `python3 scripts/check_governance_parity.py`, or audit findings). Do not invent prefixes outside this table.
+**Use:** paste one line per mismatch when comparing artifacts (manual grep, `python3 scripts/check_governance_parity.py`, or audit findings). Do not invent prefixes outside this table (eight prefixes).
 
 ### Drift severity (optional prefix)
 
@@ -97,8 +99,10 @@ row count, fingerprint, and summary caps.
 | Card missing / empty / unknown `labels` | Block | Stop — user fixes frontmatter `labels` |
 | Implement / fix without a card | Ask-only | No product edits — kanban card required |
 | Review QA on assigned card | Review | kanban-review-qa.mdc + **QA follow-up** + refresh card scope |
-| User **QA-complete / Done** on `feature`/`bug`/`agent`/`commit-issue` | Agent | Move to `done/` + Card Done same turn — reference § QA-complete triggers; Signature `card-done-agent-move-qa-complete`; top-3 chat |
-| **Epic complete / audit** (`epic complete`, `run epic audit`, `close epic {Name}`) | Agent | Anchor card + reference § Epic audit — parity, lessons, closed registry; not batch archive when `archiveGroup:` set — Signature `governance-epic-completion-audit` |
+| User **QA-complete / Done** on `feature`/`bug`/`agent`/`commit-issue` (card named) | Agent | Move to `done/` + Card Done — **lessons** always; **ff** per cadence — reference § Forward-looking feedback cadence; top-3 only when ff written — Signatures `card-done-agent-move-qa-complete`, `card-done-forward-feedback-cadence` |
+| Bare **Done / QA complete** (card unnamed) | Block / Agent | `rg 'status: "review"' .devtool/features/*.md` — **0** review → stop; **1** → infer + Card Done; **≥ 2** → **stop**, list candidate paths, require `@path` — no guess — reference § Disambiguation — Signature `card-done-disambiguate-multi-review` |
+| In-flight epic note mis-placed as ff | Agent / Review | reference § Kanban card sections glossary + § Epic coordination on anchor — not ff index — Signature `epic-coordination-not-forward-feedback` |
+| **Epic complete / audit** (`epic complete`, `run epic audit`, `close epic {Name}`) | Agent | Anchor card + reference § Epic audit — parity, lessons, consolidated ff + coordination superseded — Signature `governance-epic-completion-audit`, `card-done-forward-feedback-cadence` |
 | **Archive group complete** (`archive group complete`, `archive group {Name}`) | Agent | Anchor card + reference § Archive group — verify manifest, batch `done/` → `archived/`; not on Card Done — Signature `governance-archive-group-batch` |
 | User says inquiry Done | Close only | Move to `done/` — no lessons or forward feedback |
 | AGENTS.md governance audit | Read-only | kanban-markdown § Periodic AGENTS.md governance audit |
@@ -117,7 +121,7 @@ row count, fingerprint, and summary caps.
 
 **Kanban + agent verb for implementation** — [kanban-markdown](../kanban-markdown/SKILL.md). Signatures: `kanban-prompt-ask-vs-agent`, `kanban-lessons-label-scope`.
 
-### Task types (first-read load set)
+## Task types (first-read load set)
 
 After §1 prompt-verb / card gate, classify **what kind of work** the task is — load only the
 first-read column. Signature: `governance-compact-classify-task-types`.
@@ -132,6 +136,38 @@ first-read column. Signature: `governance-compact-classify-task-types`.
 | Plan / roadmap | Plan → Agent | **`Plan @card`** (Plan) → **`plan approved`** / **`update`** (Agent) for **Recommendation** — [kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc); Signature `kanban-cursor-mode-gates` |
 | Multi-file change | Agent | Card **Product Paths** + grep symbols across listed paths; [repo-map/SKILL.md](../repo-map/SKILL.md) if layout unfamiliar |
 | Rule / skill update | Agent / Governance | [agent-consistency.mdc](../../rules/agent-consistency.mdc); ≥1 skill + ≥1 rule same turn on implementation; `check_governance_parity.py` before handoff |
+
+## Discovery ladder
+
+Signature: `governance-discovery-ladder` (acb5). **Single tree** after § Classify prompt-verb / card
+gate — consolidates § Task types, index-not-grep (acb4), and grep budget. [AGENTS.md](../../AGENTS.md)
+§ Classify quickly and [agent-routing.mdc](../../rules/agent-routing.mdc) Discovery budget link here
+only; row detail stays in § Classify + § Task types tables above.
+
+```mermaid
+flowchart TD
+  A[User prompt] --> B[§ Classify signals]
+  B --> C{Failure symptom?}
+  C -->|yes| D[SKILL §1b + § Failure pattern routing]
+  C -->|no| E{Task type}
+  E -->|Governance| F[Consistency matrix + agent-consistency]
+  E -->|Kanban| G[Card + scoped kanban rule + yaml index]
+  E -->|Docs-only| H[docs-maintenance + grep docs/]
+  E -->|Product code| I[Feature Areas → area skill + Product Methods]
+  G --> J[grep / read ≤3 files]
+  I --> J
+  H --> J
+  F --> J
+  D --> J
+```
+
+**Branches:** **Failure** — hook/pytest/UI/handoff → grep reference tables first, not broad explore.
+**Governance** — consistency matrix before edits; parity on handoff. **Kanban** — card + one
+`kanban-*-cards.mdc`; yaml + `resolve_prior_lessons.py` before `done/` grep (
+Signature: `governance-index-not-grep`). **Docs-only** — docs-maintenance; pytest only if code changed.
+**Product** — area skill from AGENTS; grep **Product Methods** / paths; glob-scoped product rules (
+worldgen, model-routing, testing) on demand only. **Cap:** 3 full reads → grep or semantic search.
+**Parity:** `check_discovery_ladder_routing` — `pytest -k acb5`.
 
 ## Lessons by area (read before card grep)
 
@@ -161,15 +197,19 @@ After resolving **`## Feature Areas`** or agent **`## Feature Area`** — **befo
 | **Properties Panel** — `MainWindow.__new__` tests | `lessons-index.yaml` `Properties Panel`; Signature `precommit-mainwindow-__new__-test` → [testing.mdc](../../rules/testing.mdc) |
 | **Properties Panel** — inspector live-apply / Save Layer | `lessons-index.yaml` `Properties Panel`; Signature `properties-inspector-live-apply` → [ui-change/SKILL.md](../ui-change/SKILL.md) § Properties brush — live apply; `pytest tests/test_properties_panel.py tests/test_main_window.py -q -k inspector` |
 | **Agent Workflow** — routing / kanban / index | `lessons-index.yaml` `Agent Workflow`; Signatures `feature-areas-lesson-pointers`, `kanban-prompt-ask-vs-agent`, `kanban-cursor-mode-gates`; [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2; [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Prior lessons gate |
+| **Agent Workflow** — discovery ladder (acb5) | Signature `governance-discovery-ladder` → reference § Discovery ladder; classify → task type → area/index → grep; `check_discovery_ladder_routing` — `pytest -k acb5` |
+| **Agent Workflow** — index-not-grep (acb4) | Signature `governance-index-not-grep` → yaml + `resolve_prior_lessons.py` before folder grep on `done/` / `archived/`; branch in § Discovery ladder; tree in [kanban-markdown/reference.md](../kanban-markdown/reference.md) § Index vs folder grep; `check_index_not_grep_routing` — `pytest -k acb4` |
 | **Agent Workflow** — kanban card scope (Product/Tests/Docs) | Signature `kanban-card-scope-schema` → [docs/governance/kanban-workflow.md](../../docs/governance/kanban-workflow.md); `scripts/resolve_card_tests.py`; `docs/epics-closed.yaml` KanbanCardScope |
 | **Agent Workflow** — governance area schema (gs0–gs4) | `lessons-index.yaml` `Agent Workflow`; `resolve_feature_areas.py --agents-parity`; `check_area_schema_parity`; `sync_agents_area_table.py --check`; Signatures `governance-area-schema-agents-table-sync`, `governance-area-schema-parity-tests` |
 | **Agent Workflow** — handoff duplication pair (gc7) | Signature `governance-gc7-handoff-duplication-pair` → `check_handoff_duplication_pair` in `check_governance_parity.py`; AGENTS End handoff pointer-only vs SKILL §7; `pytest -k handoff` |
+| **Agent Workflow** — duplication threshold (acb6) | Signature `governance-duplication-automation` → `--duplication-threshold` (exit 1 on warn+); Classify trio + kanban lifecycle sums vs [compaction-baseline.yaml](../../docs/governance/compaction-baseline.yaml); spawn warn+ — `pytest -k duplication` |
+| **Agent Workflow** — kanban reference thin (krt0+) | Signature `governance-thin-kanban-reference` → epic **KanbanReferenceThin**; pointer-first trim of [kanban-markdown/reference.md](../kanban-markdown/reference.md); opt-in `--duplication-threshold` until epic closes |
 | **Agent Workflow** — forward-feedback question index (ff0) | `docs/forward-feedback-index.yaml`; `resolve_forward_feedback.py --category … --top N`; Signature `forward-feedback-index` — questions backlog, not prior-lessons citations |
 | **Agent Workflow** — Card Done index ingest (ff1) | `build_forward_feedback_index.py` after `build_lessons_index.py`; `duplicate_of` + dedup chat — Signature `forward-feedback-card-done-ingest` |
 | **Agent Workflow** — resolution tracking (ff2) | `resolve_forward_feedback.py --link` / `--set-status`; overlay merge on rebuild — Signature `forward-feedback-resolution-tracking` |
 | **Agent Workflow** — stale metrics (ff3) | `resolve_forward_feedback.py --report`; `check_governance_parity.py --forward-feedback-stale` — Signature `forward-feedback-stale-metrics` |
 | **Agent Workflow** — forward-feedback query prompts | Classify row: `top 3 … questions`, `review open … feedback` → `resolve_forward_feedback.py` — Signature `forward-feedback-resolution-tracking` |
-| **Agent Workflow** — forward-feedback gc5 audit (gc7 gel2) | Signature `governance-gc7-forward-feedback-audit` → `audit_forward_feedback_gc5` + `--forward-feedback-audit` (advisory exit 0); complements C1b presence; `pytest -k forward_feedback`; distinct from ff0 question index |
+| **Agent Workflow** — forward-feedback gc5 audit (gc7 gel2) | Signature `governance-gc7-forward-feedback-audit` → `audit_forward_feedback_gc5` (present parent ff blocks only; Risk 5 spawn advisory) + `--forward-feedback-audit` (advisory exit 0); complements C1b (parent ff optional); `pytest -k forward_feedback` |
 | **Agent Workflow** — GovernanceCompact compaction (gc0+) | `lessons-index.yaml` `Agent Workflow`; Signature `governance-compact-baseline` → `check_governance_parity.py --line-counts` (exit 0); [docs/governance/audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) § Governance compaction; record before/after counts on Card Done |
 | **Agent Workflow** — kanban skill split (gc1) | Signature `governance-compact-kanban-split` → [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) lifecycle only; [reference.md](../kanban-markdown/reference.md) templates; `kanban-*.mdc` authoritative — no Classify table in SKILL |
 | **Agent Workflow** — kanban rule globs (gc3) | Signature `governance-compact-kanban-rule-globs` → card-type `kanban-*-cards.mdc` scoped `.devtool/features/**`; triage §1 → agent-routing § Kanban card type; `kanban-card-gates.mdc` always-on; `check_kanban_rule_globs` |
@@ -182,6 +222,7 @@ After resolving **`## Feature Areas`** or agent **`## Feature Area`** — **befo
 | Card **Done** / lessons index refresh | [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons captured `artifacts:`; `scripts/build_lessons_index.py` |
 | Card Done — forward-looking feedback (gc5) | After `## Lessons captured` on done card; six categories; Impact Scope, References, Mitigation on max tier, Importance when tied; Signature `card-done-forward-feedback`; [kanban-markdown/reference.md](../kanban-markdown/reference.md) § Forward-looking feedback; top-3 in chat on Card Done turn; **not** on `inquiry` Done |
 | Card Done agent move (gc8) | Signature `card-done-agent-move-qa-complete` → reference § QA-complete triggers; agent moves `review` → `done/` + same-turn Card Done; not on bare `review @card` |
+| Card Done disambiguation (gc9) | Signature `card-done-disambiguate-multi-review` → reference § Disambiguation; bare Done + review count 0/1/≥2; list paths when ≥2 — no guess |
 | Epic completion audit (gel0) | User `epic complete` / `close epic {Name}` → reference § Epic audit; `resolve_epic_cards.py --status`; append `docs/epics-closed.yaml` (`KanbanCardScope` 2026-06-28); chat **`### Epic summary`** — Signatures `governance-epic-completion-audit`, `governance-epic-completion-summary` |
 | Archive group batch (gel3) | User `archive group {Name} complete` → reference § Archive group; `resolve_archive_group.py --group {Name} --status`; chat **`### Initiative summary`** — Signatures `governance-archive-group-batch`, `governance-epic-completion-summary` |
 | Epic/initiative summary (gel4) | reference § Epic / initiative completion summary; agent-self-evaluation §7 — max 2 paragraphs; not on Card Done — Signature `governance-epic-completion-summary` |
@@ -204,8 +245,8 @@ Run after §1 classifies a **failure** — not on every turn. Grep **Trigger sni
 | `kanban-prompt-ask-vs-agent` | edits on `review @card` only; bare `@path` | §1b `kanban-prompt-ask-vs-agent` → kanban-card-gates §2; upgrade to `review and update` / `implement` |
 | `kanban-missing-label` | invalid card `labels` | §1b `kanban-missing-label` → kanban-markdown § Card label gate |
 | `kanban-lessons-label-scope` | lessons on inquiry Done | §1b `kanban-lessons-label-scope` → [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) |
-| `card-done-forward-feedback-skipped` | Card Done without forward feedback block | §1b → [kanban-markdown/SKILL.md](../kanban-markdown/SKILL.md) § Card Done step 6; Signature `card-done-forward-feedback` |
-| `card-done-forward-feedback-top3-skipped` | Card Done without top-3 chat block | agent-self-evaluation §7 — `### Top forward feedback` before handoff |
+| `card-done-forward-feedback-skipped` | Card Done without parent ff block | **Expected** when no risk ≥ 3 spawn — Signature `forward-feedback-capture-policy`; spawn **`feedback`** when risk ≥ 3 |
+| `card-done-forward-feedback-top3-skipped` | Card Done without top-3 chat when risk ≥ 3 items | agent-self-evaluation §7 — `### Top forward feedback` for risk **≥ 3** only; omit when none |
 | Agent handoff / kanban / AGENTS.md / self-eval | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `self-eval-skipped`, `kanban-roadmap-queue`, `agents-md-stale`, `handoff-missing-files-context`, `governance-compact-self-eval-handoff`, `agent-no-tmp-venv` |
 | Card Done `artifacts:` / lessons index bad `doc:` paths | [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `artifacts-doc-yaml-normalize`, `lessons-index.yaml.md`, `doc:lessons-index` |
 | Governance area schema / parity drift | [pre-commit-workflow/reference.md](../pre-commit-workflow/reference.md) + [agent-self-evaluation/reference.md](../agent-self-evaluation/reference.md) § Common failure patterns | `governance-area-schema-parity-tests`, `governance-compact-kanban-rule-globs`, `test_run_checks_integration_pass`, `check_governance_parity` |

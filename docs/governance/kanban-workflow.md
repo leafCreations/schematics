@@ -23,6 +23,22 @@ paths and run `scripts/agent-commit-ready.sh` (ruff → palettes → pytest) or 
 **Tests → Verify (agent)** must cite `scripts/pre-commit-pytest.sh`. Signatures:
 `precommit-pytest-scope-mismatch`, `2d-stair-riser-runtime-cache-test`.
 
+**Section glossary (ccp1):** every `##` heading — Purpose, Owner, When, Do, Don't, Labels,
+Machine-read; anti-patterns; label matrix —
+[kanban-markdown/reference-glossary.md](../../.cursor/skills/kanban-markdown/reference-glossary.md)
+(Signature: `kanban-card-section-glossary`). Cadence + Epic coordination: § Kanban card sections (capture policy) below.
+
+## Kanban card sections (capture policy)
+
+Epic **`ForwardFeedbackCapturePolicy`** (**closed 2026-06-29** — fcp0–fcp3). SSOT:
+[kanban-markdown/reference-glossary.md](../../.cursor/skills/kanban-markdown/reference-glossary.md)
+(Signature: `kanban-card-section-glossary`); § Epic coordination + Handoff under reference § Epic cards
+(Signature: `epic-coordination-not-forward-feedback`); § Forward-looking feedback cadence
+(Signature: `card-done-forward-feedback-cadence`); § **Feedback cards** + § **Forward-feedback
+capture cadence** (Signature: `forward-feedback-capture-policy`, `feedback-label-kanban` — fcp1 rule
+[kanban-feedback-cards.mdc](../../.cursor/rules/kanban-feedback-cards.mdc); fcp2 index ingest pending);
+fcp2 rollout).
+
 ## Cursor mode gates (Plan / Inquire / verbs)
 
 Epic **`KanbanCursorModeGates`** (cm0–cm3 **complete 2026-06-29**). Schema, scoped rules, and
@@ -39,6 +55,14 @@ Canonical verb/mode matrix: [kanban-markdown/reference.md § Cursor mode gates](
 
 Rare same-turn: `review and update`, `plan and update`. Legacy `Kanban: answer inquiry on …` → use
 **Inquire** then **update**. Full matrix: [kanban-markdown/reference.md § Cursor mode gates](../../.cursor/skills/kanban-markdown/reference.md#cursor-mode-gates-plan--inquire--verbs).
+
+## Card Done (QA-complete)
+
+When the user signals **QA-complete / Done** on a **`feature`**, **`bug`**, **`agent`**, or
+**`commit-issue`** card, the agent moves the file to `done/` and runs Card Done same turn (lessons
+always; forward feedback per cadence). Canonical trigger table + **Disambiguation** when the user omits
+`@path`: [kanban-markdown/reference.md § QA-complete → Card Done](../../.cursor/skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table)
+(Signatures: `card-done-agent-move-qa-complete`, `card-done-disambiguate-multi-review`).
 
 - `python scripts/resolve_feature_areas.py "<label>"` — paths; `--handlers` for registry entry-point symbols; `--lessons` for curated `lesson_signatures` / `lesson_docs`
 - `python3 scripts/resolve_card_tests.py PATH…` or `--from-card CARD.md` — hook test selection for Product Paths

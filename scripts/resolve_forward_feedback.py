@@ -3,6 +3,14 @@
 
 Filter by gc5 category and status; print top-N within category by risk, scope, importance.
 Link spawned cards or set resolution status via CLI (ff2).
+
+**Feedback spawn path (fcp2):** after parent Card Done spawns a ``feedback`` todo and index rebuild,
+link the row to the child card::
+
+  python3 scripts/resolve_forward_feedback.py --link ff-* --card .devtool/features/feedback-….md
+
+When the user closes the ``feedback`` card, set ``answered`` via ``--id`` / ``--set-status``.
+Signature: ``forward-feedback-resolution-tracking``, ``card-done-feedback-spawn``.
 """
 
 from __future__ import annotations

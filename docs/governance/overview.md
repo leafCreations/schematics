@@ -34,7 +34,8 @@ Agent routing and kanban process live outside application code:
 | [lessons-and-coverage.md](lessons-and-coverage.md) | Lessons index, coverage metric, artifacts |
 | [forward-feedback.md](forward-feedback.md) | Forward-feedback index CLI |
 | [feature-areas-parity.md](feature-areas-parity.md) | Area schema, on-demand parity |
-| [audit-and-compaction.md](audit-and-compaction.md) | Periodic audit, gc0 baseline |
+| [audit-and-compaction.md](audit-and-compaction.md) | Periodic audit, gc0 baseline, **AgentContextBudget** epic |
+| [compaction-baseline.yaml](compaction-baseline.yaml) | gc0 line-count SSOT + threshold keys — Signature: `governance-compaction-drift-alert` |
 
 Layout schema: [kanban-markdown/reference.md § Docs governance layout]
 (../../.cursor/skills/kanban-markdown/reference.md#docs-governance-layout).

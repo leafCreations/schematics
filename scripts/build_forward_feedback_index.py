@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build docs/forward-feedback-index.yaml from gc5 forward-feedback on closed cards.
 
-Scans ``done/`` and ``archived/`` for ``## Forward-looking feedback`` sections.
+Scans ``done/`` and ``archived/`` for legacy ``## Forward-looking feedback`` sections and
+``feedback``-labeled cards in todo/review/done/archived for ``## Risk assessment`` ingest (fcp2).
 Separate SSOT from ``docs/lessons-index.yaml`` — questions, not promoted lessons.
 """
 
@@ -28,7 +29,9 @@ from scripts.forward_feedback_index_lib import (
 )
 from scripts.lessons_coverage_lib import (
     ForwardFeedbackItem,
+    iter_feedback_cards,
     iter_labeled_lesson_cards,
+    parse_feedback_card_items,
     parse_forward_feedback_items,
 )
 from scripts.resolve_prior_lessons import REPO_ROOT as RPL_REPO_ROOT
@@ -102,6 +105,13 @@ def _item_to_record(
     return record
 
 
+def _card_completed_at(meta: dict) -> str | None:
+    raw = meta.get("completedAt") or meta.get("created")
+    if not raw:
+        return None
+    return str(raw)[:10] or None
+
+
 def build_index(
     *,
     repo_root: Path = REPO_ROOT,
@@ -122,7 +132,24 @@ def build_index(
         if not ff_items:
             continue
         rel_card = card_path.relative_to(repo_root).as_posix()
-        completed_at = str(meta.get("completedAt") or "")[:10] or None
+        completed_at = _card_completed_at(meta)
+        for item in ff_items:
+            uid = make_ff_uid(rel_card, item)
+            items.append(
+                _item_to_record(
+                    item,
+                    uid=uid,
+                    source_card=rel_card,
+                    completed_at=completed_at,
+                )
+            )
+
+    for card_path, text, meta in iter_feedback_cards(features_dir=features_root):
+        ff_items = parse_feedback_card_items(text)
+        if not ff_items:
+            continue
+        rel_card = card_path.relative_to(repo_root).as_posix()
+        completed_at = _card_completed_at(meta)
         for item in ff_items:
             uid = make_ff_uid(rel_card, item)
             items.append(

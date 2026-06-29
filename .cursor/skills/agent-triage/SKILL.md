@@ -13,8 +13,9 @@ description: >-
 
 Decide **how** to work before reading files or running commands. **Classify first:** read
 [reference.md](reference.md) § **Classify the request (signals)** (canonical — Signature:
-`governance-compact-classify-ssot`); [AGENTS.md](../../AGENTS.md) § Classify quickly is a ≤5-row
-summary only. Drill into `.cursor/rules/` and other skills when the table says so.
+`governance-compact-classify-ssot`); then § **Discovery ladder** (Signature:
+`governance-discovery-ladder`). [AGENTS.md](../../AGENTS.md) § Classify quickly is a ≤5-row
+summary only.
 
 **Every turn ends with** [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §7 handoff — **`### Files used`** (load order) then **`### Self-evaluation`** (`.cursor/rules/agent-self-evaluation.mdc`, alwaysApply).
 
@@ -22,7 +23,7 @@ summary only. Drill into `.cursor/rules/` and other skills when the table says s
 
 **Version / Minecraft facts:** read [project-context](../project-context/SKILL.md) before web search or assuming 1.x vs 26.x.
 
-**Planned work:** read [kanban-markdown](../kanban-markdown/SKILL.md) — **To Do** only; card types: **`feature`**, **bug**, **inquiry**, **`plan`**, **agent**, **commit-issue**; **prompt verb gate** ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2 — `review` → ask-only; **`Inquire @card`** → Ask; **`Plan @card`** → Plan; `implement` / `update` / `plan approved` / `spawn` / epic/archive → agent); no card → ask-only; invalid `labels` → stop; Card Done lessons + forward feedback for **feature / bug / agent / commit-issue** only; resolve Feature Areas → Product + Tests + Docs; update registry + **`docs/`** after implementation; Python ≤ **100** chars (E501).
+**Planned work:** read [kanban-markdown](../kanban-markdown/SKILL.md) — **To Do** only; card types: **`feature`**, **bug**, **inquiry**, **`plan`**, **agent**, **commit-issue**, **`feedback`**; **prompt verb gate** ([kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) §2 — `review` → ask-only; **`Inquire @card`** → Ask; **`Plan @card`** → Plan; `implement` / `update` / `plan approved` / `spawn` / epic/archive → agent); no card → ask-only; invalid `labels` → stop; Card Done lessons + **`feedback`** spawn (fcp2) for **feature / bug / agent / commit-issue** only; bare Done → reference § Disambiguation (`card-done-disambiguate-multi-review`); resolve Feature Areas → Product + Tests + Docs; update registry + **`docs/`** after implementation; Python ≤ **100** chars (E501). **Section placement:** [reference-glossary.md](../kanban-markdown/reference-glossary.md) — Signature: `kanban-card-section-glossary`.
 
 ## 1. Classify the request
 
@@ -40,23 +41,16 @@ Classify **prompt verb** then card + label ([kanban-card-gates.mdc](../../rules/
 
 **After label gate** (valid `labels` on a kanban card), load **exactly one** scoped card-type rule — do not open every `kanban-*.mdc`. Mapping: [agent-routing.mdc](../../rules/agent-routing.mdc) § Kanban card type (`labels` → rule). Signature: `governance-compact-kanban-rule-globs`. Also load on demand (same `.devtool/features/**` glob): [kanban-prior-lessons-gate.mdc](../../rules/kanban-prior-lessons-gate.mdc) before **Decisions** / **Corrective Action**; [kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc) during **Review** / Card Done. [kanban-card-gates.mdc](../../rules/kanban-card-gates.mdc) stays always-on.
 
-On **Agent** turns, classify **work kind** next (§2 Task types) before broad reads — Signature:
-`governance-compact-classify-task-types`.
+**Index-not-grep (acb4):** kanban branch in [reference.md](reference.md) § **Discovery ladder** —
+yaml + `resolve_prior_lessons.py` before `done/` / `archived/` grep (Signature:
+`governance-index-not-grep`).
 
-**Governance edits** (paths in [agent-consistency.mdc](../../rules/agent-consistency.mdc) `globs`): after classify, open [reference.md](reference.md) § **Consistency matrix** and § **Drift alert examples** before editing; run [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6g before handoff; surface drift per § **Governance drift detection** below.
+On **Agent** turns, classify **work kind** next — [reference.md](reference.md) § **Discovery ladder**
+(Signature: `governance-discovery-ladder`; task-type detail in § Task types).
 
-### Governance drift detection
+**Governance edits** (paths in [agent-consistency.mdc](../../rules/agent-consistency.mdc) `globs`): after classify, open [reference.md](reference.md) § **Consistency matrix** and § **Drift alert examples** before editing; run [agent-self-evaluation](../agent-self-evaluation/SKILL.md) §6g before handoff; surface drift per [§ Governance drift detection](#governance-drift-detection).
 
-**Not every turn** — only when this turn **edits** governance paths ([agent-consistency.mdc](../../rules/agent-consistency.mdc) `globs`).
-
-1. **Compare** touched artifacts against [reference.md](reference.md) § Consistency matrix (and § Drift alert examples anchors): routing, card types, Signatures, registry paths, `handlers:` symbols.
-2. **Fix** mismatches in the same turn when possible ([agent-consistency.mdc](../../rules/agent-consistency.mdc) change table).
-3. **If parity still fails** → one prefixed line per mismatch in Context load, §6g, and handoff `- **Drift alerts:**` (optional `[info|warn|critical]`; default `warn`).
-4. **Temporary waiver** → `KNOWN_DRIFT: <artifact pair> — <reason>[; expires: …]` in handoff (user-approved only; reference § KNOWN_DRIFT).
-
-Manual grep compare; run `python3 scripts/check_governance_parity.py` for on-demand checks (spawns **todo** drift fix cards per new issue unless `--no-spawn-cards`; includes `Lessons coverage drift alert:` when `.devtool/features/done/` or `archived/` exists and composite &lt; 75% — epic `LessonsCoverageMetric`, Signature: `lessons-coverage-ci-drift`). **`--line-counts`** prints gc0 governance artifact sizes and duplication pairs (exit 0 — Signature: `governance-compact-baseline`; [docs/governance/audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) § Governance compaction). **`--forward-feedback-audit`** — advisory gc5 field scan on post-grandfather closed cards (exit 0; complements C1b — Signature: `governance-gc7-forward-feedback-audit`). **Area table drift:** `python3 scripts/sync_agents_area_table.py --check` or `--write` after yaml `agents_skill` edits — Signature: `governance-area-schema-agents-table-sync`. Registry checks include `handlers:` malformed lines, cross-area duplicates, and kanban **Product Methods** missing from yaml. **Schema-internal registry paths** (lessons index, `resolve_*.py`, lc1 coverage scripts) skip AGENTS row compare — extend `_SCHEMA_INTERNAL_PATHS`, not AGENTS table columns ([docs/governance/feature-areas-parity.md](../../docs/governance/feature-areas-parity.md) § Governance area schema).
-
-### 1b. Failure-pattern lookup (on signals only)
+## 1b. Failure-pattern lookup (on signals only)
 
 **Not every turn** — skip on read-only, greenfield implementation, and questions with no failure symptom.
 
@@ -93,9 +87,22 @@ Grep agent-self-evaluation/reference.md for _persist_dialog_changes or ui-dialog
 Match → ui-change checklist + ui-dialogs.mdc
 ```
 
+## Governance drift detection
+
+**Not every turn** — only when this turn **edits** governance paths ([agent-consistency.mdc](../../rules/agent-consistency.mdc) `globs`).
+
+1. **Compare** touched artifacts against [reference.md](reference.md) § Consistency matrix (and § Drift alert examples anchors): routing, card types, Signatures, registry paths, `handlers:` symbols.
+2. **Fix** mismatches in the same turn when possible ([agent-consistency.mdc](../../rules/agent-consistency.mdc) change table).
+3. **If parity still fails** → one prefixed line per mismatch in Context load, §6g, and handoff `- **Drift alerts:**` (optional `[info|warn|critical]`; default `warn`).
+4. **Temporary waiver** → `KNOWN_DRIFT: <artifact pair> — <reason>[; expires: …]` in handoff (user-approved only; reference § KNOWN_DRIFT).
+
+On-demand: `python3 scripts/check_governance_parity.py` (`--line-counts`, `--compaction`, `--duplication-threshold`, `--forward-feedback-audit`; `--no-spawn-cards` on routine checks) — [audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) § Governance compaction; `sync_agents_area_table.py --check` after yaml `agents_skill` edits.
+
 ## 2. Choose discovery tools (token budget)
 
-**Kanban + Feature Areas:** after resolving labels via `docs/feature-areas.yaml`, read the matching block in `docs/lessons-index.yaml` and the row in [reference.md](reference.md) § **Lessons by area** **before** broad `grep` under `.devtool/features/done/`. Then run `scripts/resolve_prior_lessons.py`; open full done cards only when the index + routing row are insufficient ([kanban-prior-lessons-gate.mdc](../../rules/kanban-prior-lessons-gate.mdc)). **Not** the same as §1b **Failure pattern routing** — that table is for failure symptoms only; § Lessons by area is proactive prior-lessons lookup (Signature: `lessons-by-area-routing`).
+**Canonical ladder:** [reference.md](reference.md) § **Discovery ladder** (Signature:
+`governance-discovery-ladder`) — classify → task type → area/index → grep. § **Task types** and
+§ **Lessons by area** hold detail tables.
 
 **Default cap:** after **3** file reads, prefer `Grep` or `SemanticSearch` instead of opening more whole files.
 
@@ -111,17 +118,8 @@ Match → ui-change checklist + ui-dialogs.mdc
 
 ### Task types (first-read)
 
-After §1 classify, route by **work kind** — full table: [reference.md](reference.md) § **Task types**
-(Signature: `governance-compact-classify-task-types`).
-
-| Task type | First read (minimal) |
-| --------- | -------------------- |
-| Governance-only | [agent-consistency.mdc](../../rules/agent-consistency.mdc) + reference § Consistency matrix |
-| Docs-only | [docs-maintenance](../docs-maintenance/SKILL.md) |
-| Code / refactor | Card **Product Methods** + area skill from [AGENTS.md](../../AGENTS.md) § Area → skills & rules |
-| Inquiry | [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc) — **Response** only |
-| Multi-file | Card **Product Paths** + **Tests → Files** + grep symbols across paths |
-| Rule / skill | [agent-consistency.mdc](../../rules/agent-consistency.mdc) + [agent-agents-md-maintenance.mdc](../../rules/agent-agents-md-maintenance.mdc) |
+Pointer only — full table: [reference.md](reference.md) § **Task types** (Signature:
+`governance-compact-classify-task-types`).
 
 ## 3. Area → rules and docs (read only if touching that area)
 

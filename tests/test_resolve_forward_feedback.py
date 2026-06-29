@@ -275,3 +275,37 @@ def test_run_open_report_stale_section_when_stale_days_set():
     text = "\n".join(lines)
     assert "stale advisory:" in text
     assert "ff-old" in text
+
+
+def test_batch_forward_feedback_hygiene_dry_run(tmp_path, monkeypatch):
+    from scripts.batch_forward_feedback_hygiene import apply_batch
+
+    index = tmp_path / "forward-feedback-index.yaml"
+    payload = {
+        "version": 1,
+        "items": [
+            {
+                "id": "ff-test-commit-issue-ruff-01-abc",
+                "source_card": ".devtool/features/done/commit-issue-ruff.md",
+                "category": "Governance",
+                "question": "Should ruff run on commit?",
+                "status": "open",
+            },
+            {
+                "id": "ff-test-ccp0-governance-01-def",
+                "source_card": (
+                    ".devtool/features/archived/agent-kanban-card-capture-policy-"
+                    "ccp0-schema-spec-2026-06-29.md"
+                ),
+                "category": "Governance",
+                "question": "Should ff1 auto-skip phase members?",
+                "status": "open",
+            },
+        ],
+    }
+    index.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    stats = apply_batch(dry_run=True, index_path=index)
+    assert stats["wont-fix"] == 1
+    assert stats["kept_open"] == 1
+    reloaded = yaml.safe_load(index.read_text())
+    assert reloaded["items"][0]["status"] == "open"

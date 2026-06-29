@@ -41,9 +41,9 @@ Classify the user message **before** editing any file. Case-insensitive; `@path`
 | **Plan + update** | `plan and update …` | **Agent** | Rare — Plan exploration + **Recommendation** same turn |
 | **Spawn from card** | `spawn cards from …`, `spawn follow-up` | **Agent** | New **todo** cards |
 | **Implement card** | `implement …`, `work on …`, `continue …` | **Agent** | Full card lifecycle |
-| **Card Done** | `Done`, `QA complete`, `QA Approved`, `QA Accepted`, `QA-complete`, `Review passed`, `mark … Done`, `close the card` (card named) | **Agent** | Move to `done/` + Card Done same turn — [kanban-markdown/reference.md](../skills/kanban-markdown/reference.md) § QA-complete triggers; Signature: `card-done-agent-move-qa-complete` |
-| **Epic audit** | `epic complete`, `run epic audit`, `close epic {Name}`, `epic {Name} done archive`, … | **Agent** | Anchor + § Epic audit — parity, lessons, `docs/epics-closed.yaml`; chat **`### Epic summary`** — Signatures: `governance-epic-completion-audit`, `governance-epic-completion-summary`. **Does not** move cards to `archived/` alone — follow with **`archive group {Name} complete`** (or same-turn compound prompt above) |
-| **Archive group batch** | `archive group complete`, `archive group {Name}`, `{epic} done archive`, … | **Agent** | Anchor + § Archive group — batch `done/` → `archived/`; set `archiveGroup:` on members; chat **`### Initiative summary`** — Signatures: `governance-archive-group-batch`, `governance-epic-completion-summary`. **Not** on Card Done |
+| **Card Done** | `Done`, `QA complete`, … | **Agent** | Move + Card Done — [reference § QA-complete](../skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table); disambiguation gc9; Signature: `card-done-agent-move-qa-complete` |
+| **Epic audit** | `epic complete`, `close epic {Name}`, … | **Agent** | gel0 anchor audit — [reference § Spawn, epics](../skills/kanban-markdown/reference.md#spawn-epics-and-drift); **`### Epic summary`** |
+| **Archive group batch** | `archive group {Name}`, `{epic} done archive`, … | **Agent** | gel3 batch — **`### Initiative summary`**; not on Card Done |
 | **Legacy inquiry** | `Kanban: answer inquiry on …` | **Ask** then **Agent** | **Deprecated** — treat as **`Inquire`** (Ask, chat); user then **`update @inquiry-card`** (Agent) for **Response** — not same-turn card write |
 | **No card / default** | anything else | Per §1 | Per §1 |
 
@@ -66,6 +66,7 @@ Every kanban card **must** have a recognized type in frontmatter `labels` (inlin
 | `["inquiry"]` | Inquiry | **Not allowed** — [kanban-inquiry-cards.mdc](kanban-inquiry-cards.mdc) |
 | `["plan"]` | Plan | **Not allowed** — [kanban-plan-cards.mdc](kanban-plan-cards.mdc) |
 | `["commit-issue"]` | Commit-issue | **Required** — [kanban-commit-issue-cards.mdc](kanban-commit-issue-cards.mdc) |
+| `["feedback"]` | Feedback | **Not allowed** — [kanban-feedback-cards.mdc](kanban-feedback-cards.mdc) |
 
 **Invalid** — stop **all** work on that card: missing `labels`, `labels: []`, or unknown label.
 
@@ -76,9 +77,10 @@ Files** via `scripts/resolve_card_tests.py` (Signature: `precommit-pytest-scope-
 
 ## 4. Lessons learned scope
 
-| Label | User says **Done** / **QA-complete** |
-| ----- | ------------------------------------ |
-| `feature`, `bug`, `agent`, `commit-issue` | Agent moves to `done/` + § Card Done — lessons + forward feedback ([kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md); Signature: `card-done-forward-feedback`; move: `card-done-agent-move-qa-complete`) |
-| `inquiry`, `plan` | Agent or user may move — **do not** run lessons capture **or** forward feedback |
+| Label | **Done** / **QA-complete** |
+| ----- | -------------------------- |
+| `feature`, `bug`, `agent`, `commit-issue` | Move + Card Done — lessons always; ff per [reference § Forward-feedback capture cadence](../skills/kanban-markdown/reference.md#forward-feedback-capture-cadence) |
+| `inquiry`, `plan`, `feedback` | Move only — no lessons or parent-style ff |
 
-Signature: `kanban-lessons-label-scope`. Forward feedback skip on inquiry/plan: `card-done-forward-feedback`.
+Signatures: `kanban-lessons-label-scope`, `card-done-forward-feedback-cadence`, `feedback-label-kanban`.
+Glossary: [reference-glossary.md](../skills/kanban-markdown/reference-glossary.md).

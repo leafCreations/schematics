@@ -1,11 +1,13 @@
 ---
-description: Model routing guidance for Cursor and Continue
-alwaysApply: true
+description: Model routing guidance for Cursor and Continue (on-demand — not always-on)
+alwaysApply: false
 ---
 
 # Model Routing
 
-Use the cheapest capable model for the task.
+Use the cheapest capable model for the task. Load when the user asks about model choice or Continue
+routing — pointer from [agent-routing.mdc](agent-routing.mdc) § Discovery budget. Signature:
+`governance-always-on-rule-diet`.
 
 ## Continue / Local Models
 

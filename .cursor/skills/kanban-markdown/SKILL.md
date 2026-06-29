@@ -11,7 +11,11 @@ description: >-
 **Canonical task queue for agents.** Use this skill — not [docs/roadmap.md](../../docs/roadmap.md).
 
 **On demand:** [reference.md](reference.md) — card templates, section-order examples, file format,
-periodic audit checklist, long markdown blocks.
+periodic audit checklist, long markdown blocks. **Glossary SSOT:** [reference-glossary.md](reference-glossary.md)
+(Signature: `kanban-card-section-glossary`). **KanbanReferenceThin** closed — see
+[epics-closed.yaml](../../docs/epics-closed.yaml); `--duplication-threshold` passes (caps **1000** /
+**1200**) — Signature: `governance-thin-kanban-reference`; handbook
+[audit-and-compaction.md](../../docs/governance/audit-and-compaction.md) § KanbanReferenceThin.
 
 ## Agent scope (important)
 
@@ -68,9 +72,8 @@ User assigns card → pre-implementation card review (no code)
 ```
 
 **Bug:** [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc) — **Corrective Action**, not Decisions.
-**Inquiry:** **`Inquire @card`** (Ask) → chat; **`update`** writes **Response** — [reference.md § Inquiry cards](reference.md#inquiry-cards).
-**Plan:** **`Plan @card`** (Plan Mode) → chat; **`plan approved`** / **`update`** writes **Recommendation** —
-[reference.md § Plan cards](reference.md#plan-cards).
+**Inquiry:** **`Inquire @card`** (Ask) → chat; **`update`** writes **Response**.
+**Plan:** **`Plan @card`** (Plan Mode) → chat; **`plan approved`** / **`update`** writes **Recommendation**.
 **Agent:** [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc) — **Description** + **Feature Area**.
 **Commit-issue:** [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc) — review before implement.
 
@@ -103,22 +106,7 @@ VS Code `kanban-markdown.featuresDirectory` (default `.devtool/features`).
 
 ## Feature Areas vs Product / Tests / Docs
 
-Epic **`KanbanCardScope`** (ks0–ks2 **done**): active templates use **Product**, **Tests**, and
-**Docs**; **Acceptance Criteria** are behavior-only. Templates: [reference.md § Kanban card scope](reference.md#kanban-card-scope-product--tests--docs). Epic **`KanbanCardScope`** archived 2026-06-28 — do not reuse `epic:` (see `docs/epics-closed.yaml`). Parsers dual-read legacy **Label** on `done/` / `archived/` cards only (Signature: `kanban-card-scope-schema`). **Tests → Verify (agent)** cites `scripts/pre-commit-pytest.sh`; draft **Tests → Files** via `resolve_card_tests.py` (Signature: `precommit-pytest-scope-mismatch`).
-
-| Section | Who | Content |
-| ------- | --- | ------- |
-| **`## Feature Areas`** | User | Product labels (`Render Preview`, …) |
-| **`## Feature Area`** | User (agent cards) | One label; default `` `Agent Workflow` `` |
-| **`## Product Paths`** | Agent | Product code paths from [docs/feature-areas.yaml](../../docs/feature-areas.yaml) — no `tests/` |
-| **`## Product Methods`** | Agent | Symbols to edit — `path` — `symbol`, … |
-| **`## Tests`** | Agent | **Files**, **Methods**, **Verify (agent)** — pytest scope; `scripts/pre-commit-pytest.sh` authoritative |
-| **`## Docs`** | Agent | Doc paths + § hints; seed from area `docs:` in yaml |
-| **`## Label Paths`** / **`## Label Methods`** | _(legacy)_ | **`done/` / `archived/`** cards only — parsers read as Product |
-
-**Registry:** [docs/feature-areas.yaml](../../docs/feature-areas.yaml). Resolve before coding. After
-seeding `agents_skill` / `agents_rules`, run `python3 scripts/sync_agents_area_table.py --write` —
-Signature: `governance-area-schema-agents-table-sync`.
+Active templates: **Product**, **Tests**, **Docs**; behavior-only **AC** — [reference.md § Kanban card scope](reference.md#kanban-card-scope-product--tests--docs). Resolve via [docs/feature-areas.yaml](../../docs/feature-areas.yaml); `sync_agents_area_table.py --write` after yaml `agents_skill` edits.
 
 ```bash
 python scripts/resolve_feature_areas.py "Render Preview"
@@ -139,51 +127,29 @@ Examples: [reference.md](reference.md) § Kanban card scope (Product / Tests / D
 Scoped **`.mdc` rules** are authoritative per label. This skill covers **lifecycle and gates** only.
 Templates and long examples: [reference.md](reference.md).
 
-| `labels` | Rule | Reference templates |
-| -------- | ---- | ------------------- |
-| `["feature"]` | [kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc) | [reference.md § Feature cards](reference.md#feature-cards) |
-| `["bug"]` | [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc) | [reference.md § Bug cards](reference.md#bug-cards) |
-| `["agent"]` | [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc) | [reference.md § Agent cards](reference.md#agent-cards) |
-| `["inquiry"]` | [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc) | [reference.md § Inquiry cards](reference.md#inquiry-cards) |
-| `["commit-issue"]` | [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc) | [reference.md § Commit-issue cards](reference.md#commit-issue-cards) |
+| `labels` | Rule | Templates |
+| -------- | ---- | --------- |
+| `["feature"]` | [kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc) | [reference.md § Card types](reference.md#card-types-templates) |
+| `["bug"]` | [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc) | same |
+| `["agent"]` | [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc) | same |
+| `["inquiry"]` | [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc) | same |
+| `["plan"]` | [kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc) | same |
+| `["commit-issue"]` | [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc) | same |
+| `["feedback"]` | [kanban-feedback-cards.mdc](../../rules/kanban-feedback-cards.mdc) | same + [reference-glossary.md](reference-glossary.md) |
 
-### Feature cards
-
-Rule: [kanban-feature-cards.mdc](../../rules/kanban-feature-cards.mdc). Section order, AC, Decisions
-examples: [reference.md § Feature cards](reference.md#feature-cards).
-
-### Bug cards
-
-Rule: [kanban-bug-cards.mdc](../../rules/kanban-bug-cards.mdc). Use **Corrective Action** — not Decisions.
-Templates: [reference.md § Bug cards](reference.md#bug-cards).
-
-### Agent cards
-
-Rule: [kanban-agent-cards.mdc](../../rules/kanban-agent-cards.mdc). Phased epic spawn: § Spawn from inquiry
-and [reference.md § Agent cards](reference.md#agent-cards).
-
-### Inquiry cards
-
-Rule: [kanban-inquiry-cards.mdc](../../rules/kanban-inquiry-cards.mdc). **`Inquire @card`** + Ask Mode;
-**Response** on card after **`update`** — [reference.md § Inquiry cards](reference.md#inquiry-cards).
-
-### Plan cards
-
-Rule: [kanban-plan-cards.mdc](../../rules/kanban-plan-cards.mdc). **`Plan @card`** + Plan Mode;
-**Recommendation** on card after approval — [reference.md § Plan cards](reference.md#plan-cards).
-Signature: `kanban-cursor-mode-gates`.
-
-### Commit-issue cards
-
-Rule: [kanban-commit-issue-cards.mdc](../../rules/kanban-commit-issue-cards.mdc). Auto-created on failed
-commit. Review → user approves → **implement**; one-shot trivial fixes → **`review and implement`**
-(not **`implement` alone**) — Signature: `commit-issue-review-and-implement-one-shot`.
+**Plan:** `Plan @card` + Plan Mode; **commit-issue:** review before implement — Signature:
+`commit-issue-review-and-implement-one-shot`. **Feedback:** spawn from Card Done; move-only Done —
+Signature: `feedback-label-kanban`.
 
 ## Spawn from inquiry
 
 When spawning from a forward-feedback **`ff-*`** item, add **`Forward feedback:`** `` `ff-*` `` to
 child **Context** and run `resolve_forward_feedback.py --link` + `--set-status answered` after
 closing the spawn card — Signature: `forward-feedback-resolution-tracking`.
+
+When user **discussion closes the question** and requests spawn in the same turn (no implement yet),
+run `--link` then `--set-status answered` with resolution citing the spawned card path — do not leave
+`open` after spawn.
 
 When the user asks to **implement recommendations**, **spawn follow-ups**, or **create cards from inquiry**:
 
@@ -195,13 +161,8 @@ When the user asks to **implement recommendations**, **spawn follow-ups**, or **
 6. Parent inquiry: **`## Spawned feature cards`** table; bump `modified`
 7. **Do not** move spawned cards to `in-progress` until user assigns
 
-Phased epics: shared `epic`; implement in `order` unless user re-prioritizes. Examples:
-`DesignFailureMemorySystem`, `GovernanceDriftAlerts`, `GovernanceCompact` (gc0–gc7),
-`LessonsCoverageMetric`, `ForwardFeedbackRegistry` (ff0–ff3, closed 2026-06-27), `DocsGovernanceSplit`
-(dg0–dg3, closed 2026-06-27 — layout schema: [reference.md](reference.md) § Docs governance layout;
-Signature: `docs-governance-split`).
-
-Full spawn body table and Response examples: [reference.md § Spawn from inquiry](reference.md#spawn-from-inquiry).
+Phased epics: shared `epic`; implement in `order`. Closed epic names: `docs/epics-closed.yaml` only.
+Spawn body + gel0/gel3: [reference.md § Spawn, epics, and drift](reference.md#spawn-epics-and-drift).
 
 ## Card label gate
 
@@ -214,7 +175,7 @@ same turn — Signature: `governance-compact-kanban-rule-globs`.
 
 | `labels` | Action |
 | -------- | ------ |
-| `feature`, `bug`, `agent`, `inquiry`, `plan`, `commit-issue` | Matching scoped rule — [agent-routing.mdc](../../rules/agent-routing.mdc) § Kanban card type |
+| `feature`, `bug`, `agent`, `inquiry`, `plan`, `commit-issue`, `feedback` | Matching scoped rule — [agent-routing.mdc](../../rules/agent-routing.mdc) § Kanban card type |
 | missing, `[]`, unknown | **Stop** — user must fix |
 
 ## Reading the board
@@ -226,7 +187,8 @@ same turn — Signature: `governance-compact-kanban-rule-globs`.
 3. Read `labels`, Feature Areas / Feature Area, **Product** + **Tests** + **Docs**
 4. **Label gate** — invalid → stop
 5. **Feature / bug / agent / commit-issue:** pre-implementation card review — no code yet
-6. **Inquiry / plan:** **`Inquire @card`** / **`Plan @card`** in chat — **Response** / **Recommendation** only after `update` or approval
+6. **Inquiry / plan / feedback:** **`Inquire @card`** / **`Plan @card`** in chat; **feedback** stays
+   **`todo`** until user assigns — **Response** / **Recommendation** only after `update` or approval
 7. After review → `todo` → `in-progress`
 
 **Governance epics** (`ArtifactsDocYaml`, `LessonsCoverageMetric`, `GovernanceAreaSchema`): read To Do +
@@ -241,7 +203,8 @@ For in-progress/review cards: grep by status when user names the card. Review ca
 
 **No code** until this step completes:
 
-1. Read full card; confirm user sections present
+1. Read full card; confirm user sections present; mis-placed content →
+   [reference-glossary.md](reference-glossary.md) (Signature: `kanban-card-section-glossary`)
 2. Resolve Feature Areas → **Product Paths** + **Product Methods** + **Tests** + **Docs**
 3. **Prior lessons gate** (§ below) — before Decisions / Corrective Action
 4. Check codebase — **Product Methods** first; one grep per path; **Tests → Files** for pytest map
@@ -258,36 +221,14 @@ Rule detail: [kanban-prior-lessons-gate.mdc](../../rules/kanban-prior-lessons-ga
 
 **Read order:** (1) `docs/lessons-index.yaml` + [agent-triage/reference.md](../agent-triage/reference.md)
 § Lessons by area, (2) `resolve_feature_areas.py --lessons`, (3) `resolve_prior_lessons.py`,
-(4) full done card only when still ambiguous.
+(4) full done card only when still ambiguous. **Do not** broad grep on `done/` / `archived/` — Signature:
+`governance-index-not-grep` ([reference.md § Index vs folder grep](reference.md#index-vs-folder-grep-acb4)).
 
-**Forward-feedback backlog (not prior-lessons citations):** when the user asks for top-N gc5
-questions by category (e.g. "top 3 codebase questions"), read `docs/forward-feedback-index.yaml` and
-run `resolve_forward_feedback.py --category … --top N` after the lessons index — Signature:
-`forward-feedback-index` ([docs/governance/forward-feedback.md](../../docs/governance/forward-feedback.md);
-Signature: `docs-governance-split`).
-For open-depth metrics use `--report` (optional `--stale-days N`); parity advisory:
-`check_governance_parity.py --forward-feedback-stale` — Signature: `forward-feedback-stale-metrics`.
-Do not grep done cards for ranking; Card Done runs `build_forward_feedback_index.py` after
-`build_lessons_index.py` when lessons ran — Signature: `forward-feedback-card-done-ingest`.
-
-```bash
-python3 scripts/resolve_prior_lessons.py --epic "RenderEngine" "Render Preview" \
-  --paths helpers/orbit_face_textures.py
-```
-
-Record on card: `**Prior lessons (YYYY-MM-DD):**` under Decisions or Corrective Action. **C4 pass
-(per-card):** ≥1 accepted cite on eligible active cards — not every surfaced lesson; aggregate C4
-remains advisory (Signature: `lessons-coverage-c4-per-card-threshold`). **Block format:** no line
-starting with `**` inside the block after the header — use `- ` group bullets; cite done stems
-including commit-issue `T` timestamps and drift hash ids — Signature:
-`lessons-coverage-c2-c3-audit` ([reference.md § Card Done](reference.md#card-done--lessons-learned-capture)).
-Block boundary: next `##` heading only — mid-block `**QA follow-up**` does not truncate.
-
-Optional C4 check before `in-progress`: `python3 scripts/resolve_prior_lessons.py --audit application`
-(or full composite via `--audit all`). Exit code 1 when composite &lt; 75% is **threshold failure**, not a
-script crash — Signature: `lessons-coverage-c2-c3-audit`.
-
-Full resolver table and skip rules: [reference.md § Prior lessons gate](reference.md#prior-lessons-gate).
+**Forward-feedback backlog:** `forward-feedback-index.yaml` + `resolve_forward_feedback.py` — not
+prior-lessons citations (Signature: `forward-feedback-index`). Record
+`**Prior lessons (YYYY-MM-DD):**` under Decisions / Corrective Action — C4 / block format:
+[reference.md § Prior lessons gate](reference.md#prior-lessons-gate); Signature:
+`lessons-coverage-c2-c3-audit`.
 
 ## Verify
 
@@ -319,44 +260,40 @@ Rule: [kanban-review-qa.mdc](../../rules/kanban-review-qa.mdc). Examples: [refer
 
 ## Card Done — lessons learned capture
 
-On user **QA-complete / Done** signal (see [reference.md § QA-complete → Card Done](reference.md#qa-complete--card-done-trigger-table); Signature: `card-done-agent-move-qa-complete`), the **agent** moves the card to `done/` and runs this section **same turn**:
+On user **QA-complete / Done** signal (see [reference.md § QA-complete → Card Done](reference.md#qa-complete--card-done-trigger-table); Signature: `card-done-agent-move-qa-complete`), the **agent** moves the card to `done/` and runs this section **same turn**. When the user does **not** name a card, run [reference.md § Disambiguation (card unnamed)](reference.md#disambiguation-card-unnamed) first — Signature: `card-done-disambiguate-multi-review`. **Section placement:** [reference-glossary.md](reference-glossary.md); **ff:** [reference.md § Forward-feedback capture cadence](reference.md#forward-feedback-capture-cadence) — Signatures: `kanban-card-section-glossary`, `card-done-forward-feedback-cadence`, `forward-feedback-capture-policy`.
 
 | `labels` | Action |
 | -------- | ------ |
-| `feature`, `bug`, `agent`, `commit-issue` | **Move** to `done/` + lessons + forward feedback (below) |
-| `inquiry` | **Move** to `done/` only — **no** lessons or forward feedback |
+| `feature`, `bug`, `agent`, `commit-issue` | **Move** to `done/` + **lessons** always; **ff** per cadence gate (below) |
+| `inquiry`, `feedback` | **Move** to `done/` only — **no** lessons or forward feedback |
+
+**Capture cadence (fcp2):** parent **lessons always**; **no** mandatory parent
+`## Forward-looking feedback` on new closes. Spawn **`feedback`** todos when honest risk **≥ 3**;
+**Risk 5** → mandatory **`feedback`** spawn same turn (Option A). SSOT:
+[reference.md § Forward-feedback capture cadence](reference.md#forward-feedback-capture-cadence);
+phase/epic coordination: [reference-glossary.md](reference-glossary.md) — Signatures:
+`forward-feedback-capture-policy`, `card-done-feedback-spawn`, `epic-coordination-not-forward-feedback`.
 
 **Agent must run in that turn:**
 
-1. Read card — Decisions / Corrective Action, QA follow-ups, Context
+1. Read card — Decisions / Corrective Action, QA follow-ups, Context; check cadence row above
 2. Distill durable lessons (symptom → fix pattern → tests)
-3. Update **≥1 skill** + **≥1 rule** + relevant **docs** / registry. **Schema epics** (ks0/cm0
-   pattern): ship full template/matrix in **reference.md** first; SKILL summary + pointer; scoped
-   rules in the next phase — Signature: `kanban-cursor-mode-gates`.
+3. Update **≥1 skill** + **≥1 rule** + relevant **docs** / registry
 4. Add **`## Lessons captured (YYYY-MM-DD)`** on card (edit `done/{id}.md` if moved)
-5. Add **`## Forward-looking feedback (YYYY-MM-DD)`** on the card **after** Lessons captured —
-   card-specific items (not boilerplate). Six categories (≥1 item each): governance, skill,
-   rule, codebase, prompt pattern, routing. Each item: **Question**, **Risk Level** (1–5),
-   **Priority**, **Impact Scope** (local / multi-card / system-wide), **References**,
-   **Mitigation** on every max-tier item, **Detail** when risk ≥ 3; **Importance**
-   (Primary/Secondary/Tertiary) when ≥2 items share max risk — ranking in
-   [reference.md § Forward-looking feedback](reference.md#forward-looking-feedback).
-   Optional **`ff-*`** back-reference in **References** when the question maps to an indexed
-   item (Signature: `forward-feedback-card-done-ingest`). Signature: `card-done-forward-feedback`.
-6. When lessons ran, run `python3 scripts/build_lessons_index.py`; curate `lesson_signatures`
-   when applicable (e.g. `kanban-card-scope-schema` after KanbanCardScope ks2 Done — Signature:
-   `feature-areas-lesson-pointers`) — then `python3 scripts/build_forward_feedback_index.py` (Signature:
-   `forward-feedback-card-done-ingest`). Surface stderr dedup warnings in chat as
-   **`### Forward feedback dedup`** (non-blocking, before **`### Top forward feedback`**).
-7. After writing the card block, surface top 3 items in chat (`### Top forward feedback` before
-   handoff — agent-self-evaluation §7).
-8. Card Done turns only — not per-turn §6 chat feedback.
+5. Score open questions — spawn **`todo`** **`feedback`** card(s) when risk **≥ 3** (**Risk 5**
+   mandatory same turn — Option A). Append **`## Spawned follow-up cards`** on parent with
+   feedback paths; after index rebuild add **`Forward feedback:`** `` `ff-*` `` on child **Context**
+   and run `resolve_forward_feedback.py --link` when linking spawn — Signature:
+   `forward-feedback-resolution-tracking`, `card-done-feedback-spawn`.
+6. When lessons ran: `python3 scripts/build_lessons_index.py`; then
+   `python3 scripts/build_forward_feedback_index.py` when lessons ran **or** **`feedback`** cards
+   were spawned (Signature: `forward-feedback-card-done-ingest`). Dedup → **`### Forward feedback
+   dedup`** in chat.
+7. **Top-3 chat** (`### Top forward feedback`) — risk **≥ 3** only; include 1–2 only when sole
+   items; **omit** when no feedback spawned and no legacy parent ff block written — agent-self-evaluation §7
+8. Card Done turns only — not per-turn §6 chat feedback
 
-Optional `artifacts:` tail — [docs/governance/lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons captured `artifacts:` (Signature: `docs-governance-split`).
-Recommended for C2 promotion-quality scoring (`check_lessons_coverage.py`); not required for Done.
-Use `doc:lessons-index.yaml` (explicit extension). Signature: `artifacts-doc-yaml-normalize`.
-Inline `` `sig:slug` `` on lesson bullets is also indexed — Signature: `lessons-index-inline-sig-backtick`;
-re-run `build_lessons_index.py` after Done when seeded `lesson_signatures` drifted.
+Optional `artifacts:` tail — [lessons-and-coverage.md](../../docs/governance/lessons-and-coverage.md) § Lessons captured `artifacts:` (Signature: `docs-governance-split`). Recommended for C2 scoring; not required for Done. Use `doc:lessons-index.yaml`; inline `` `sig:slug` `` indexed — re-run `build_lessons_index.py` when `lesson_signatures` drift.
 
 **Do not** skip because AC were `[x]` — QA follow-ups matter. **Do not** run Card Done on agent's own
 `review` completion — wait for user QA-complete / Done signal (Review QA fixes stay in **review**).
@@ -376,69 +313,27 @@ Full artifact table: [reference.md § Card Done](reference.md#card-done--lessons
 
 **Agent** (inquiry → `review`): **Response** complete; no pytest/docs unless code changed.
 
-**Agent** (`review` → `done`) — on user **QA-complete / Done** signal ([reference § QA-complete triggers](reference.md#qa-complete--card-done-trigger-table)):
+**Agent** (`review` → `done`) — user **QA-complete / Done**: move to `done/` + § Card Done same turn.
+**Archive:** user **archive group {Name} complete** only — [reference.md § Spawn, epics](reference.md#spawn-epics-and-drift).
 
-- Update frontmatter (`status: done`, `completedAt`, `modified`)
-- Move `.devtool/features/{id}.md` → `done/{id}.md` (remove active copy)
-- Run § Card Done on `done/{id}.md` **same turn** (`feature`/`bug`/`agent`/`commit-issue` only)
-- **Not** `archived/` — batch archive is a separate gate (reference § Archive group)
-
-**Agent** (`done/` → `archived/`) — on user **archive group {Name} complete** only (or **epic done
-archive** on a single-epic product group — gel0 + gel3 same turn; set `archiveGroup:` on all members):
-
-- Verify manifest via `resolve_archive_group.py --group {Name} --status`
-- Move listed members `done/{id}.md` → `archived/{id}.md`; keep `status: "done"`; bump `modified`
-- Refresh active card Context/Decisions links (`done/` → `archived/`); Signature:
-  `kanban-card-stale-dependency-links`
-- Write **`## Archive batch (YYYY-MM-DD)`** on anchor — reference § Archive group (template in reference)
-
-**Inquiry** `review` → `done`: agent or user may move file — **no** Card Done body sections.
-
-File format, fractional `order`, creating cards: [reference.md § File format](reference.md#file-format).
+File format: [reference.md § File format](reference.md#file-format).
 
 ## Periodic AGENTS.md governance audit
 
-**Primary governance cadence:** epic-completion audit when user confirms an epic is complete —
-[reference.md § Epic audit](reference.md#epic-audit-gel0--agent-turn). Use
-`python3 scripts/resolve_epic_cards.py --epic {Name} --status` before parity runs. Emit
-**`### Epic summary`** (gel4) on the audit turn — not on Card Done; Signature:
-`governance-epic-completion-summary`.
-
-**Optional backstop** (quarterly or ~90 days without epic close): user runs
-`python3 scripts/create_governance_audit_card.py`; agent compares artifacts read-only → **## Audit findings**.
-
-Full checklist: [reference.md § Periodic AGENTS.md governance audit](reference.md#periodic-agentsmd-governance-audit).
-Signature: `governance-epic-completion-audit`.
+Epic close (gel0) primary; optional `create_governance_audit_card.py` backstop — [reference.md § Periodic AGENTS.md governance audit](reference.md#periodic-agentsmd-governance-audit).
 
 ## Agent workflow
 
 | Situation | Action |
 | --------- | ------ |
-| Feature/bug card assigned | Pre-implementation review → implement |
-| Inquiry assigned | Research → **Response** → `review` |
-| What to work on? | To Do only; summarize title, path, type |
-| Governance audit card | Read-only audit → findings → `review` |
-| Epic complete (user confirms) | § Epic audit on anchor — parity, lessons, closed registry; **`### Epic summary`** in chat |
-| Archive group complete (user confirms) | § Archive group on anchor — batch archive; **`### Initiative summary`** in chat; Signature `governance-archive-group-batch` |
-| Spawn from inquiry | § Spawn from inquiry |
-| `check_governance_parity.py` drift | Script may spawn todo cards (epic `GovernanceDriftAlert`) |
-| Finishing implementation | Pytests → registry → docs → AC `[x]` → `review` |
-| QA on Review card | Fix + record + stay in **Review** |
-| User **QA-complete / Done** (card named) | Move to **done/** + Card Done same turn — reference § QA-complete triggers |
-
-**Qt hold-fly (Floating Camera):** on Review QA “moves once then stops”, check
-`keyReleaseEvent` ignores `event.isAutoRepeat()` — Signature: `floating-camera-fc0-hold-fly`.
-| New card request | Create in **todo** with Feature Areas / Description |
-| Backlog | **Do not** unless user asks |
+| Feature/bug/agent assigned | Pre-implementation review → implement → `review` |
+| Inquiry / plan | Chat (`Inquire` / `Plan`) → `update` / approval → card section |
+| User **Done** (card named) | Move + Card Done — reference § QA-complete triggers |
+| Epic / archive close | gel0 / gel3 — reference § Spawn, epics |
 
 ## Feature area registry (mandatory maintenance)
 
-After **every implementation** (initial or QA fix):
-
-1. Update [docs/feature-areas.yaml](../../docs/feature-areas.yaml)
-2. Review/update `docs/` per [docs-maintenance](../docs-maintenance/SKILL.md)
-
-Before **Review** or handoff. Registry action table: [reference.md § Feature area registry](reference.md#feature-area-registry).
+After implementation: update [docs/feature-areas.yaml](../../docs/feature-areas.yaml) + `docs/` per [docs-maintenance](../docs-maintenance/SKILL.md).
 
 ## Related skills
 

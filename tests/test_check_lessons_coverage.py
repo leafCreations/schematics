@@ -373,8 +373,78 @@ def test_c1b_forward_feedback_grandfather_and_required(kanban_dirs):
 
     metric = audit_forward_feedback_coverage()
     assert metric.denominator == 3
-    assert metric.numerator == 2
-    assert metric.score == pytest.approx(2 / 3)
+    assert metric.numerator == 3
+    assert metric.score == 1.0
+
+
+def test_c1b_phase_epic_member_lessons_only_passes(kanban_dirs):
+    """Phase member without ff passes C1b (parent ff optional — fcp3)."""
+    features, done, _ = kanban_dirs
+
+    anchor = features / "epic-anchor.md"
+    anchor.write_text(
+        '---\nlabels: ["agent"]\nstatus: review\nepic: PolicyEpic\n---\n\n'
+        "## Epic cards\n\n"
+        "| order | card | status |\n| ----- | ---- | ------ |\n"
+        "| a0 | phase-a | done |\n| a1 | phase-b | done |\n",
+        encoding="utf-8",
+    )
+
+    done.joinpath("phase-a-card.md").write_text(
+        '---\nlabels: ["agent"]\ncompletedAt: "2026-06-29T12:00:00.000Z"\n'
+        "epic: PolicyEpic\n---\n\n"
+        "## Lessons captured (2026-06-29)\n\n- phase lesson only\n",
+        encoding="utf-8",
+    )
+
+    metric = audit_forward_feedback_coverage()
+    assert metric.denominator == 1
+    assert metric.numerator == 1
+    assert metric.score == 1.0
+    assert "parent ff optional" in metric.detail
+
+
+def test_c1b_epic_anchor_lessons_only_passes(kanban_dirs):
+    """Anchor without parent ff passes C1b when lessons captured (fcp3)."""
+    features, done, _ = kanban_dirs
+
+    anchor_body = (
+        "## Epic cards\n\n"
+        "| order | card | status |\n| ----- | ---- | ------ |\n"
+        "| a0 | epic-anchor | done |\n| a1 | phase-b | done |\n\n"
+        "## Lessons captured (2026-06-29)\n\n- anchor lessons\n"
+    )
+    done.joinpath("epic-anchor.md").write_text(
+        '---\nlabels: ["agent"]\ncompletedAt: "2026-06-29T12:00:00.000Z"\n'
+        "epic: PolicyEpic\n---\n\n" + anchor_body,
+        encoding="utf-8",
+    )
+
+    metric = audit_forward_feedback_coverage()
+    assert metric.denominator == 1
+    assert metric.numerator == 1
+    assert metric.score == 1.0
+
+
+def test_phase_epic_ff_policy_advisory(kanban_dirs):
+    from scripts.lessons_coverage_lib import audit_phase_epic_ff_policy_advisory
+
+    features, done, _ = kanban_dirs
+    features.joinpath("anchor.md").write_text(
+        "---\nepic: AdvEpic\nstatus: review\n---\n\n"
+        "## Epic cards\n\n| order | card |\n| ----- | ---- |\n| a0 | a |\n| a1 | b |\n",
+        encoding="utf-8",
+    )
+    done.joinpath("phase-with-ff.md").write_text(
+        '---\nlabels: ["feature"]\ncompletedAt: "2026-06-29T12:00:00.000Z"\n'
+        "epic: AdvEpic\n---\n\n"
+        "## Lessons captured (2026-06-29)\n\n- x\n\n"
+        "## Forward-looking feedback (2026-06-29)\n\n### Governance\n- q\n",
+        encoding="utf-8",
+    )
+
+    lines = audit_phase_epic_ff_policy_advisory(features_dir=features)
+    assert lines == []
 
 
 def test_composite_five_equal_weights():
