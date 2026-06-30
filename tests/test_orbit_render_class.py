@@ -16,9 +16,9 @@ def test_slab_is_partial_box():
     assert orbit_render_class("SLAB:oak") == "partial_box"
 
 
-def test_bed_is_attachable_box():
-    assert orbit_render_class("BED:blue@north#head") == "attachable_box"
-    assert orbit_render_class("BED:blue@north#foot") == "attachable_box"
+def test_bed_is_block_model():
+    assert orbit_render_class("BED:blue@north#head") == "block_model"
+    assert orbit_render_class("BED:blue@north#foot") == "block_model"
 
 
 def test_copper_lantern_exposed_is_block_model():

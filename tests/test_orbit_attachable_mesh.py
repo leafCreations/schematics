@@ -86,7 +86,7 @@ def test_copper_lantern_hanging_uses_variant_hanging_model():
     assert rotation_y == 0
 
 
-def test_bed_pair_spans_two_cells_from_head():
+def test_bed_pair_renders_per_cell_block_models():
     ctx = _ctx_from_layers(
         [
             {
@@ -101,9 +101,130 @@ def test_bed_pair_spans_two_cells_from_head():
     cache = {0: ctx.layers[0]["cells"]}
     boxes = iter_all_orbit_boxes(cells, cache)
 
-    assert len(boxes) == 1
-    assert boxes[0].max_corner[0] - boxes[0].min_corner[0] == 2.0
-    assert boxes[0].max_corner[1] - boxes[0].min_corner[1] < 1.0
+    worlds = {box.cell.world for box in boxes}
+    assert len(worlds) == 2
+    for box in boxes:
+        assert box.max_corner[1] - box.min_corner[1] < 1.0
+
+
+def test_bed_block_model_faces_use_json_textures():
+    from helpers.orbit_block_model_mesh import iter_block_model_face_quads
+
+    quads = iter_block_model_face_quads("blue_bed_head", 0.0, 0.0, 0.0, rotation_y=0)
+    assert quads
+    assert all(quad.signature.startswith("bm:blue_bed_head:") for quad in quads)
+    assert all(quad.texture.width > 0 for quad in quads)
+
+
+def test_bed_rotation_follows_token_direction():
+    from helpers.orbit_attachable_mesh import resolve_attachable_block_model
+    from helpers.orbit_block_model_mesh import iter_block_model_face_quads
+    from helpers.orbit_mesh import OccupiedVoxel
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
+
+    def center_xz(token: str) -> tuple[float, float]:
+        parsed = parse_structure_token(token)
+        entry = get_block_entry(parsed) or {}
+        cell = OccupiedVoxel(world=(0, 0, 0), token=token, layer_list_index=0, local_x=0, local_z=0)
+        model_name, rotation_y = resolve_attachable_block_model(cell, entry, parsed)
+        quads = iter_block_model_face_quads(model_name, 0.0, 0.0, 0.0, rotation_y=rotation_y)
+        xs = [corner[0] for quad in quads for corner in quad.corners]
+        zs = [corner[2] for quad in quads for corner in quad.corners]
+        return (sum(xs) / len(xs), sum(zs) / len(zs))
+
+    centers = {
+        token: center_xz(token)
+        for token in (
+            "BED:blue@north#head",
+            "BED:blue@south#head",
+            "BED:blue@east#head",
+            "BED:blue@west#head",
+        )
+    }
+    assert len(set(centers.values())) == 4
+
+
+def test_bed_north_head_pillow_points_away_from_foot():
+    """@north head+foot along +Z: pillow at low Z, footboard at high Z."""
+    from helpers.orbit_attachable_mesh import resolve_attachable_block_model
+    from helpers.orbit_block_model_mesh import iter_block_model_face_quads
+    from helpers.orbit_mesh import OccupiedVoxel
+    from helpers.registry_lookup import get_block_entry
+    from helpers.structure_tokens import parse_structure_token
+
+    head_token = "BED:blue@north#head"
+    foot_token = "BED:blue@north#foot"
+    head_parsed = parse_structure_token(head_token)
+    foot_parsed = parse_structure_token(foot_token)
+    head_entry = get_block_entry(head_parsed) or {}
+    foot_entry = get_block_entry(foot_parsed) or {}
+
+    head_cell = OccupiedVoxel(
+        world=(0, 0, 0),
+        token=head_token,
+        layer_list_index=0,
+        local_x=0,
+        local_z=0,
+    )
+    foot_cell = OccupiedVoxel(
+        world=(0, 0, 1),
+        token=foot_token,
+        layer_list_index=0,
+        local_x=0,
+        local_z=1,
+    )
+
+    head_model, head_rot = resolve_attachable_block_model(head_cell, head_entry, head_parsed)
+    foot_model, foot_rot = resolve_attachable_block_model(foot_cell, foot_entry, foot_parsed)
+    assert head_rot == 0
+    assert foot_rot == 0
+
+    head_quads = iter_block_model_face_quads(head_model, 0.0, 0.0, 0.0, rotation_y=head_rot)
+    foot_quads = iter_block_model_face_quads(foot_model, 0.0, 0.0, 1.0, rotation_y=foot_rot)
+    head_pillow_z = min(
+        corner[2] for quad in head_quads for corner in quad.corners if corner[1] <= 0.2
+    )
+    foot_board_z = max(
+        corner[2] for quad in foot_quads for corner in quad.corners if corner[1] <= 0.2
+    )
+
+    assert head_pillow_z < 0.5
+    assert foot_board_z > 1.5
+    assert head_pillow_z < foot_board_z
+
+
+def test_bed_partner_internal_faces_occluded():
+    from helpers.orbit_block_model_mesh import block_model_face_neighbor_occluded
+    from helpers.orbit_mesh import OccupiedVoxel
+
+    head = OccupiedVoxel(
+        world=(0, 0, 0),
+        token="BED:blue@north#head",
+        layer_list_index=0,
+        local_x=0,
+        local_z=0,
+    )
+    foot = OccupiedVoxel(
+        world=(0, 0, 1),
+        token="BED:blue@north#foot",
+        layer_list_index=0,
+        local_x=0,
+        local_z=1,
+    )
+    occupancy = {head.world: head, foot.world: foot}
+    assert block_model_face_neighbor_occluded(
+        head,
+        (0, 0, 1),
+        {},
+        occupancy_map=occupancy,
+    )
+    assert block_model_face_neighbor_occluded(
+        foot,
+        (0, 0, -1),
+        {},
+        occupancy_map=occupancy,
+    )
 
 
 def test_chest_pair_spans_two_cells_from_left():

@@ -21,6 +21,12 @@ only — never archive on the same turn. Signature: `governance-archive-group-ba
 turn, emit **`### Initiative summary`** in chat and optional **`## Summary`** on the anchor —
 reference § Epic / initiative completion summary; Signature: `governance-epic-completion-summary`.
 
+**Single-card archive (gel5):** one-off cards (`epic: null`, no `archiveGroup:`) in **`done/`** move
+to `archived/` on user **`archive @card`** / **`archive card {id}`** — not on Card Done, not gel3
+batch. Procedure: reference § Single-card archive. CLI:
+`python3 scripts/move_kanban_card.py --id {id} --to archived`. Move-only — no lessons. Signature:
+`governance-single-card-archive`.
+
 **Optional backstop** (suggested quarterly or ~90 days without an epic close):
 
 ```bash

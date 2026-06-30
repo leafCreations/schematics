@@ -244,10 +244,51 @@ example schema in [reference-glossary.md](reference-glossary.md) or archived fcp
   [docs/governance/feature-areas-parity.md](../../docs/governance/feature-areas-parity.md).
 - **Epic anchor:** `## Epic cards` manifest; **`## Epic coordination`** in-flight only (never ff index) —
   Signature: `epic-coordination-not-forward-feedback`.
-- **gel0 / gel3 / gel4:** `resolve_epic_cards.py`, `resolve_archive_group.py`, `docs/epics-closed.yaml`;
-  chat **`### Epic summary`** / **`### Initiative summary`** —
-  [docs/governance/kanban-workflow.md](../../docs/governance/kanban-workflow.md).
+- **gel0 / gel3 / gel4 / gel5:** `resolve_epic_cards.py`, `resolve_archive_group.py`,
+  `docs/epics-closed.yaml`, `move_kanban_card.py --to archived`; chat **`### Epic summary`** /
+  **`### Initiative summary`** — [docs/governance/kanban-workflow.md](../../docs/governance/kanban-workflow.md).
 - **Closed epic spawn tables:** `docs/epics-closed.yaml` only — Signature: `governance-thin-kanban-reference`.
+
+### Single-card archive (gel5)
+
+Signature: `governance-single-card-archive`. For **standalone** cards — `epic: null` and no
+`archiveGroup:` — that are already in **`done/`**. Distinct from gel3 batch archive (§ Archive group
+below).
+
+**User signals (Agent):** `archive @card`, `archive card {id}`, `archive {stem}`; multi-card:
+repeat per named id/stem in one turn.
+
+**Preconditions:**
+
+- Card resolved via stem or frontmatter `id` under `.devtool/features/done/`
+- Bucket **`done`** (or **`archived`** — idempotent no-op)
+- If bucket is **active** (`todo` / `in-progress` / `review`) → **stop** — user must Card Done first
+
+**Same turn (mandatory):**
+
+1. `python3 scripts/move_kanban_card.py --id {id} --to archived` (Signature: `kanban-card-move-resolver`)
+2. Capture stdout path; keep `status: "done"` in frontmatter (script does not change status on archive)
+3. **Move-only** — no Card Done sections, no lessons, no forward feedback (like inquiry Done)
+
+**Do not:** conflate with gel3 **archive group {Name} complete**; do not archive on Card Done.
+
+### Archive group (gel3)
+
+Signature: `governance-archive-group-batch`. When a **feature spans multiple epics**, epic audit (gel0)
+and batch archive are separate gates. Per-epic audit may run when that `epic:` has no active cards;
+**do not** move members to `archived/` until the user confirms the **archive group** is complete.
+
+**Manifest SSOT:** anchor card **`## Archive group: {Name}`** table; members carry matching
+`archiveGroup:` frontmatter.
+
+**User signals (Agent):** `archive group {Name} complete`, `archive group complete` (when group named).
+
+**Same turn:** verify manifest via `python3 scripts/resolve_archive_group.py --group {Name} --status`;
+batch `move_kanban_card.py --to archived` for each listed `done/` member; optional link refresh
+(Signature: `kanban-card-stale-dependency-links`); chat **`### Initiative summary`**.
+
+**Do not:** archive on Card Done; do not use gel5 for cards that belong to an open archive group
+(wait for group complete).
 
 ## Prior lessons gate
 

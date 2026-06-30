@@ -44,7 +44,7 @@ spawns:** close **Superseded** when parity checks pass — handbook § Stale spa
 When the user signals **QA-complete / Done**, the **agent** moves the agent card to `done/` and
 runs Card Done **same turn** (Signature: `card-done-agent-move-qa-complete`). Checklist:
 [kanban-markdown/SKILL.md](../skills/kanban-markdown/SKILL.md) § Card Done — lessons learned capture;
-gel3/gel4 archive and epic summary pointers in [reference.md § Spawn, epics, and drift](../skills/kanban-markdown/reference.md#spawn-epics-and-drift).
+gel3/gel4/gel5 archive and epic summary pointers in [reference.md § Spawn, epics, and drift](../skills/kanban-markdown/reference.md#spawn-epics-and-drift).
 
 ## Card Done `artifacts:` — registry yaml
 

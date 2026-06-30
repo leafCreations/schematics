@@ -184,6 +184,11 @@ _SCHEMA_INTERNAL_PATHS = frozenset(
         "scripts/pre-commit-lessons-coverage.sh",
         "tests/test_check_lessons_coverage.py",
         "tests/test_governance_compaction.py",
+        "scripts/check_governance_parity.py",
+        "scripts/move_kanban_card.py",
+        "scripts/report_forward_feedback_dedup.py",
+        "tests/test_move_kanban_card.py",
+        "tests/test_report_forward_feedback_dedup.py",
     }
 )
 _LABELS_RE = re.compile(r"^labels:\s*\[(.*?)\]", re.MULTILINE)
@@ -259,6 +264,10 @@ CLASSIFY_ANCHORS: tuple[tuple[str, tuple[str, ...]], ...] = (
         "archive group complete",
         ("archive group complete", "archive group {name}"),
     ),
+    (
+        "single-card archive",
+        ("archive @card", "archive card", "governance-single-card-archive"),
+    ),
     ("governance audit", ("governance audit",)),
     ("explain / audit", ("explain", "is this correct")),
     ("pre-commit failed", ("pre-commit failed",)),
@@ -274,8 +283,8 @@ REFERENCE_CLASSIFY_HEADING = "## Classify the request (signals)"
 AGENTS_CLASSIFY_MAX_ROWS = 5
 TRIAGE_CLASSIFY_MAX_ROWS = 0
 # Fingerprint of reference § Classify signal first-column cells (normalized).
-# Update REFERENCE_CLASSIFY_FINGERPRINT when adding rows (gc9: 594afd85cd2da764).
-REFERENCE_CLASSIFY_FINGERPRINT = "594afd85cd2da764"
+# Update REFERENCE_CLASSIFY_FINGERPRINT when adding rows (gel5: 026b8e21c8fd5480).
+REFERENCE_CLASSIFY_FINGERPRINT = "026b8e21c8fd5480"
 
 
 def _section_after(text: str, heading: str) -> str:

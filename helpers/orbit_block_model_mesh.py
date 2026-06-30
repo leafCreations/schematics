@@ -1,4 +1,4 @@
-"""Block-model element faces for orbit preview attachables (torch, lantern, trapdoor)."""
+"""Block-model element faces for orbit preview attachables (torch, lantern, trapdoor, bed)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from helpers.sprite_baker.block_model import (
     FACE_NORMALS,
     block_model_path,
     crop_model_face_texture,
+    element_face_corner_uvs,
     element_face_corners_in_block_space,
     has_block_model,
     load_block_model,
@@ -24,6 +25,7 @@ _MODEL_SCALE = 1.0 / 16.0
 class BlockModelFaceQuad:
     normal: tuple[int, int, int]
     corners: tuple[tuple[float, float, float], ...]
+    corner_uvs: tuple[tuple[float, float], ...]
     texture: Image.Image
     signature: str
 
@@ -76,6 +78,7 @@ def iter_block_model_face_quads(
                 BlockModelFaceQuad(
                     normal=normal,
                     corners=world_corners,
+                    corner_uvs=element_face_corner_uvs(face_name, face),
                     texture=texture,
                     signature=signature,
                 ),
@@ -88,8 +91,11 @@ def block_model_face_neighbor_occluded(
     cell: OccupiedVoxel,
     normal: tuple[int, int, int],
     voxel_map: dict[tuple[int, int, int], OccupiedVoxel],
+    *,
+    occupancy_map: dict[tuple[int, int, int], OccupiedVoxel] | None = None,
 ) -> bool:
-    """True when a solid neighbor blocks this outward-facing model face."""
+    """True when a neighbor blocks this outward-facing model face."""
+    from helpers.orbit_attachable_mesh import bed_partner_occludes_face
     from helpers.orbit_partial_mesh import is_orbit_box_behavior
 
     neighbor = (
@@ -97,7 +103,10 @@ def block_model_face_neighbor_occluded(
         cell.world[1] + normal[1],
         cell.world[2] + normal[2],
     )
-    neighbor_cell = voxel_map.get(neighbor)
+    lookup = occupancy_map if occupancy_map is not None else voxel_map
+    neighbor_cell = lookup.get(neighbor)
     if neighbor_cell is None:
         return False
+    if bed_partner_occludes_face(cell, neighbor_cell):
+        return True
     return not is_orbit_box_behavior(neighbor_cell.token)

@@ -68,7 +68,12 @@ All three call `add_panel_title_row`, which sets the title `QLabel` font to **bo
   glossary `docs/render-types.md` § Orbit render class. **Partial blocks:** stairs/slabs → opaque atlas
   tiles in `orbit_face_textures.py` (not 2D masks); fences/walls → masked bakes + `sample.a < 0.05` discard
   in `_FRAGMENT_SHADER_TEXTURED`. **C4 attachables:** block-model element faces
-  (`orbit_block_model_mesh.py`) — Signature: `orbit-attachable-block-model-faces`. See `docs/render-types.md`
+  (`orbit_block_model_mesh.py`) — torch/lantern/trapdoor/bed; bed uses `{color}_bed_head|foot` JSON +
+  `_BED_Y_ROTATION`; block-model quads carry `corner_uvs` from `element_face_corner_uvs` (atlas no
+  GL flip: `fv=1 → PIL top`; `up/south` v-axis and `east/north` u-axis are inverted vs naïve;
+  `west` is canonical correct reference) — Signatures: `orbit-attachable-block-model-faces`,
+  `orbit-bed-block-model-faces`, `orbit-bed-direction-rotation`, `orbit-block-model-face-uv`.
+  See `docs/render-types.md`
   § lessons learned. **Orbit view host overlays (fc2b):** `#orbit-view-host-overlays` — transient HUD on
   `_OrbitViewHost` sibling, not GL child.
 

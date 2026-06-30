@@ -33,6 +33,8 @@ DONE → user QA-complete / Done signal → disambiguate when card unnamed (gc9:
  governance-epic-completion-audit, governance-epic-completion-summary)
  → user archive group complete → § Archive group on anchor + **`### Initiative summary`**
  (Signature: governance-archive-group-batch, governance-epic-completion-summary)
+ → user archive @card / archive card {id} (standalone done/) → gel5 single-card archive
+ (Signature: governance-single-card-archive)
  → top-3 forward feedback in chat when risk ≥ 3 spawned (fcp2); inquiry Done: move only — no lessons
  → build_lessons_index.py when lessons ran; build_forward_feedback_index.py when lessons ran or
  feedback cards spawned (Signature: forward-feedback-card-done-ingest)

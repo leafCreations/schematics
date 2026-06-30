@@ -323,8 +323,10 @@ Optional `artifacts:` tail — [lessons-and-coverage.md](../../docs/governance/l
 
 **Do not** skip because AC were `[x]` — QA follow-ups matter. **Do not** run Card Done on agent's own
 `review` completion — wait for user QA-complete / Done signal (Review QA fixes stay in **review**).
-**Do not** move cards to `archived/` on Card Done — batch archive runs only on user **archive group
-{Name} complete** (reference § Archive group; Signature: `governance-archive-group-batch`).
+**Do not** move cards to `archived/` on Card Done. **Archive paths:** gel3 **archive group {Name}
+complete** (batch — reference § Archive group; Signature: `governance-archive-group-batch`); gel5
+**`archive @card`** for standalone cards in **`done/`** (reference § Single-card archive; Signature:
+`governance-single-card-archive`).
 
 Full artifact table: [reference.md § Card Done](reference.md#card-done--lessons-learned-capture).
 
@@ -340,7 +342,8 @@ Full artifact table: [reference.md § Card Done](reference.md#card-done--lessons
 **Agent** (inquiry → `review`): **Response** complete; no pytest/docs unless code changed.
 
 **Agent** (`review` → `done`) — user **QA-complete / Done**: move to `done/` + § Card Done same turn.
-**Archive:** user **archive group {Name} complete** only — [reference.md § Spawn, epics](reference.md#spawn-epics-and-drift).
+**Archive:** gel3 **archive group {Name} complete** (batch) or gel5 **`archive @card`** (standalone
+`done/` card) — [reference.md § Spawn, epics](reference.md#spawn-epics-and-drift).
 
 File format: [reference.md § File format](reference.md#file-format).
 
@@ -355,7 +358,7 @@ Epic close (gel0) primary; optional `create_governance_audit_card.py` backstop �
 | Feature/bug/agent assigned | Pre-implementation review → implement → `review` |
 | Inquiry / plan | Chat (`Inquire` / `Plan`) → `update` / approval → card section |
 | User **Done** (card named) | Move + Card Done — reference § QA-complete triggers |
-| Epic / archive close | gel0 / gel3 — reference § Spawn, epics |
+| Epic / archive close | gel0 / gel3 batch / gel5 single-card — reference § Spawn, epics |
 
 ## Feature area registry (mandatory maintenance)
 

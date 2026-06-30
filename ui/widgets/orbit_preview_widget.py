@@ -136,14 +136,17 @@ _VERTEX_SHADER_TEXTURED = """
 attribute vec3 aPos;
 attribute vec3 aNormal;
 attribute vec4 aTileRect;
+attribute vec2 aFaceUv;
 varying vec3 vWorldPos;
 varying vec3 vNormal;
 varying vec4 vTileRect;
+varying vec2 vFaceUv;
 uniform mat4 uMvp;
 void main() {
     vWorldPos = aPos;
     vNormal = aNormal;
     vTileRect = aTileRect;
+    vFaceUv = aFaceUv;
     gl_Position = uMvp * vec4(aPos, 1.0);
 }
 """
@@ -152,6 +155,7 @@ _FRAGMENT_SHADER_TEXTURED = """
 varying vec3 vWorldPos;
 varying vec3 vNormal;
 varying vec4 vTileRect;
+varying vec2 vFaceUv;
 uniform sampler2D uAtlas;
 
 vec2 tileFrac(vec3 pos, vec3 normal) {
@@ -166,7 +170,7 @@ vec2 tileFrac(vec3 pos, vec3 normal) {
 }
 
 void main() {
-    vec2 t = tileFrac(vWorldPos, vNormal);
+    vec2 t = vFaceUv.x >= 0.0 ? vFaceUv : tileFrac(vWorldPos, vNormal);
     vec2 atlasUv = mix(vTileRect.xy, vTileRect.zw, t);
     vec4 sample = texture2D(uAtlas, atlasUv);
     if (sample.a < 0.05) {
@@ -224,6 +228,7 @@ class OrbitPreviewWidget(QOpenGLWidget):
         self._color_buffer = QOpenGLBuffer(QOpenGLBuffer.Type.VertexBuffer)
         self._normal_buffer = QOpenGLBuffer(QOpenGLBuffer.Type.VertexBuffer)
         self._tile_rect_buffer = QOpenGLBuffer(QOpenGLBuffer.Type.VertexBuffer)
+        self._face_uv_buffer = QOpenGLBuffer(QOpenGLBuffer.Type.VertexBuffer)
         self._atlas_texture: QOpenGLTexture | None = None
         self._gl_ready = False
 
@@ -461,13 +466,14 @@ class OrbitPreviewWidget(QOpenGLWidget):
         self._textured_program = self._link_program(
             _VERTEX_SHADER_TEXTURED,
             _FRAGMENT_SHADER_TEXTURED,
-            (("aPos", 0), ("aNormal", 1), ("aTileRect", 2)),
+            (("aPos", 0), ("aNormal", 1), ("aTileRect", 2), ("aFaceUv", 3)),
         )
         self._vao.create()
         self._position_buffer.create()
         self._color_buffer.create()
         self._normal_buffer.create()
         self._tile_rect_buffer.create()
+        self._face_uv_buffer.create()
         self._gl_ready = True
         self._upload_pending_mesh()
 
@@ -510,6 +516,9 @@ class OrbitPreviewWidget(QOpenGLWidget):
             self._tile_rect_buffer.bind()
             program.enableAttributeArray(2)
             program.setAttributeBuffer(2, _GL_FLOAT, 0, 4)
+            self._face_uv_buffer.bind()
+            program.enableAttributeArray(3)
+            program.setAttributeBuffer(3, _GL_FLOAT, 0, 2)
         else:
             self._color_buffer.bind()
             program.enableAttributeArray(1)
@@ -897,10 +906,13 @@ class OrbitPreviewWidget(QOpenGLWidget):
         if mesh.uses_texture_atlas and mesh.atlas_rgba is not None:
             normal_bytes = array.array("f", mesh.normals).tobytes()
             tile_rect_bytes = array.array("f", mesh.tile_rects).tobytes()
+            face_uv_bytes = array.array("f", mesh.uvs).tobytes()
             self._normal_buffer.bind()
             self._normal_buffer.allocate(normal_bytes, len(normal_bytes))
             self._tile_rect_buffer.bind()
             self._tile_rect_buffer.allocate(tile_rect_bytes, len(tile_rect_bytes))
+            self._face_uv_buffer.bind()
+            self._face_uv_buffer.allocate(face_uv_bytes, len(face_uv_bytes))
             self._upload_atlas(mesh)
             self._textured = True
         else:

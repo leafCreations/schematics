@@ -104,6 +104,7 @@ row count, fingerprint, and summary caps.
 | In-flight epic note mis-placed as ff | Agent / Review | reference § Kanban card sections glossary + § Epic coordination on anchor — not ff index — Signature `epic-coordination-not-forward-feedback` |
 | **Epic complete / audit** (`epic complete`, `run epic audit`, `close epic {Name}`) | Agent | Anchor card + reference § Epic audit — parity, lessons, consolidated ff + coordination superseded — Signature `governance-epic-completion-audit`, `card-done-forward-feedback-cadence` |
 | **Archive group complete** (`archive group complete`, `archive group {Name}`) | Agent | Anchor card + reference § Archive group — verify manifest, batch `done/` → `archived/`; not on Card Done — Signature `governance-archive-group-batch` |
+| **Single-card archive** (`archive @card`, `archive card {id}`, `archive {stem}`) | Agent | gel5 — card named + **`done/`** bucket → `move_kanban_card.py --to archived`; move-only; not Card Done or gel3 — Signature `governance-single-card-archive` |
 | User says inquiry Done | Close only | Move to `done/` — no lessons or forward feedback |
 | AGENTS.md governance audit | Read-only | kanban-markdown § Periodic AGENTS.md governance audit |
 | Lessons coverage drift / low composite | Governance | docs/governance/lessons-and-coverage.md § Lessons Coverage Metric; `check_lessons_coverage.py` — Signature: `lessons-coverage-ci-drift` |

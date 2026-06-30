@@ -6,7 +6,8 @@ Signature: ``kanban-card-move-resolver``. Bounded O(3) bucket scan — no ``find
 Example::
 
     python3 scripts/move_kanban_card.py --id my-card-2026-06-29 --to done
-    python3 scripts/move_kanban_card.py my-card-stem --to archived --set-done
+    python3 scripts/move_kanban_card.py my-card-stem --to archived
+    python3 scripts/move_kanban_card.py --id done-card-2026-06-29 --to archived  # gel5 single-card
 """
 
 from __future__ import annotations

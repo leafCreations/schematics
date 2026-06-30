@@ -78,6 +78,14 @@ Closed — `docs/epics-closed.yaml`. Inspect: `python3 scripts/report_forward_fe
 
 Closed — `docs/epics-closed.yaml`. CLI: `python3 scripts/move_kanban_card.py --id {id} --to done`.
 
+## Single-card archive (gel5)
+
+Standalone cards in **`done/`** (`epic: null`, no `archiveGroup:`) archive on user **`archive @card`**
+/ **`archive card {id}`** — move-only via `move_kanban_card.py --to archived`. Distinct from gel3
+**archive group {Name} complete**. Procedure:
+[kanban-markdown/reference.md § Single-card archive](../../.cursor/skills/kanban-markdown/reference.md#single-card-archive-gel5).
+Signature: `governance-single-card-archive`.
+
 ## Agent workflow scripts
 
 - `python scripts/resolve_feature_areas.py "<label>"` — paths; `--handlers` for registry entry-point symbols; `--lessons` for curated `lesson_signatures` / `lesson_docs`

@@ -44,6 +44,7 @@ Classify the user message **before** editing any file. Case-insensitive; `@path`
 | **Card Done** | `Done`, `QA complete`, … | **Agent** | Move + Card Done — [reference § QA-complete](../skills/kanban-markdown/reference.md#qa-complete--card-done-trigger-table); disambiguation gc9; Signature: `card-done-agent-move-qa-complete` |
 | **Epic audit** | `epic complete`, `close epic {Name}`, … | **Agent** | gel0 anchor audit — [reference § Spawn, epics](../skills/kanban-markdown/reference.md#spawn-epics-and-drift); **`### Epic summary`** |
 | **Archive group batch** | `archive group {Name}`, `{epic} done archive`, … | **Agent** | gel3 batch — **`### Initiative summary`**; not on Card Done |
+| **Single-card archive** | `archive @card`, `archive card {id}`, `archive {stem}` | **Agent** | gel5 — card in **`done/`** → `archived/` via `move_kanban_card.py`; move-only — no Card Done; not gel3 batch — Signature: `governance-single-card-archive` |
 | **Legacy inquiry** | `Kanban: answer inquiry on …` | **Ask** then **Agent** | **Deprecated** — treat as **`Inquire`** (Ask, chat); user then **`update @inquiry-card`** (Agent) for **Response** — not same-turn card write |
 | **No card / default** | anything else | Per §1 | Per §1 |
 

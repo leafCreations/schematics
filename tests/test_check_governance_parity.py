@@ -98,6 +98,8 @@ REFERENCE_CLASSIFY_SNIPPET = """
 | User says feature / bug / agent / commit-issue Done | Governance | Card Done |
 | Epic complete / audit | Agent | Epic audit |
 | Archive group complete | Agent | Archive group batch |
+| **Single-card archive** (`archive @card`, `archive card {id}`) | Agent | gel5 — 
+`move_kanban_card.py --to archived`; governance-single-card-archive |
 | User says inquiry Done | Close only | No lessons |
 | AGENTS.md governance audit | Read-only | Periodic audit |
 | Lessons coverage drift / low composite | Governance | check_lessons_coverage |

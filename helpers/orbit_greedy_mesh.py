@@ -10,7 +10,6 @@ from helpers.grid import get_offset_x, get_offset_z
 from helpers.layer_groups import is_layer_render_visible
 from helpers.layer_management import layer_worldgen_index
 from helpers.orbit_attachable_mesh import (
-    bed_foot_token,
     chest_right_token,
     is_block_model_face_behavior,
     resolve_attachable_block_model,
@@ -60,6 +59,7 @@ class _PendingQuad:
     normal: tuple[int, int, int]
     corners: tuple[tuple[float, float, float], ...]
     atlas_id: int
+    corner_uvs: tuple[tuple[float, float], ...] | None = None
 
 
 _FACE_PASSES: tuple[_FacePass, ...] = (
@@ -166,6 +166,7 @@ def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData
     boxes_by_world = group_orbit_boxes_by_world(all_boxes)
     solid_cells = [cell for cell in cells if not is_orbit_box_behavior(cell.token)]
     voxel_map = {cell.world: cell for cell in solid_cells}
+    occupancy_map = {cell.world: cell for cell in cells}
     partial_worlds = frozenset(
         cell.world for cell in cells if is_partial_volume_behavior(cell.token)
     )
@@ -216,6 +217,7 @@ def build_orbit_greedy_mesh_from_context(ctx: SchematicContext) -> OrbitMeshData
         merge_id_to_atlas,
         signature_to_merge_id,
         pending_quads,
+        occupancy_map=occupancy_map,
     )
 
     _collect_partial_box_faces(
@@ -476,8 +478,10 @@ def _collect_block_model_element_faces(
     merge_id_to_atlas: list[int],
     signature_to_merge_id: dict[str, int],
     pending_quads: list[_PendingQuad],
+    *,
+    occupancy_map: dict[tuple[int, int, int], OccupiedVoxel],
 ) -> None:
-    """Emit JSON element faces for torch/lantern/trapdoor — not 2D sprite bakes on AABBs."""
+    """Emit JSON element faces for block-model attachables — not 2D sprite bakes on AABBs."""
     for cell in cells:
         if not is_block_model_face_behavior(cell.token):
             continue
@@ -504,7 +508,12 @@ def _collect_block_model_element_faces(
             wz,
             rotation_y=rotation_y,
         ):
-            if block_model_face_neighbor_occluded(cell, face_quad.normal, voxel_map):
+            if block_model_face_neighbor_occluded(
+                cell,
+                face_quad.normal,
+                voxel_map,
+                occupancy_map=occupancy_map,
+            ):
                 continue
 
             existing = signature_to_merge_id.get(face_quad.signature)
@@ -522,6 +531,7 @@ def _collect_block_model_element_faces(
                     normal=face_quad.normal,
                     corners=face_quad.corners,
                     atlas_id=merge_id_to_atlas[merge_id],
+                    corner_uvs=face_quad.corner_uvs,
                 ),
             )
 
@@ -652,7 +662,7 @@ def _solid_face_visible(
     return neighbor_cell.token != cell.token
 
 
-def _bed_subbox(
+def _span_subbox(
     box: OrbitBox,
     *,
     min_x: float | None = None,
@@ -680,67 +690,10 @@ def _bed_subbox(
     )
 
 
-def _bed_end_cap_token(
-    head_token: str,
-    foot_token: str,
-    span: tuple[int, int],
-    normal: tuple[int, int, int],
-) -> str:
-    dx, dz = span
-    if dz != 0 and normal[2] != 0:
-        if normal[2] < 0:
-            return head_token if dz > 0 else foot_token
-        return foot_token if dz > 0 else head_token
-    if dx != 0 and normal[0] != 0:
-        if normal[0] < 0:
-            return head_token if dx > 0 else foot_token
-        return foot_token if dx > 0 else head_token
-    return head_token
-
-
-def _bed_split_along_span(
-    box: OrbitBox,
-    normal: tuple[int, int, int],
-    span: tuple[int, int],
-    head_token: str,
-    foot_token: str,
-) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
-    dx, dz = span
-    min_x, _, min_z = box.min_corner
-    max_x, _, max_z = box.max_corner
-
-    if dz != 0:
-        mid_z = (min_z + max_z) / 2.0
-        if dz > 0:
-            head_box = _bed_subbox(box, max_z=mid_z)
-            foot_box = _bed_subbox(box, min_z=mid_z)
-        else:
-            head_box = _bed_subbox(box, min_z=mid_z)
-            foot_box = _bed_subbox(box, max_z=mid_z)
-        return [
-            (head_token, _box_face_corners(head_box, normal)),
-            (foot_token, _box_face_corners(foot_box, normal)),
-        ]
-
-    mid_x = (min_x + max_x) / 2.0
-    if dx > 0:
-        head_box = _bed_subbox(box, max_x=mid_x)
-        foot_box = _bed_subbox(box, min_x=mid_x)
-    else:
-        head_box = _bed_subbox(box, min_x=mid_x)
-        foot_box = _bed_subbox(box, max_x=mid_x)
-    return [
-        (head_token, _box_face_corners(head_box, normal)),
-        (foot_token, _box_face_corners(foot_box, normal)),
-    ]
-
-
 def _iter_attachable_face_parts(
     box: OrbitBox,
     normal: tuple[int, int, int],
 ) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
-    if box.role == "bed" and box.bed_span is not None:
-        return _iter_bed_face_parts(box, normal)
     if box.role == "chest" and box.chest_span is not None:
         return _iter_chest_face_parts(box, normal)
     return [(box.cell.token, _box_face_corners(box, normal))]
@@ -760,19 +713,19 @@ def _chest_split_along_span(
     if dz != 0:
         mid_z = (min_z + max_z) / 2.0
         if dz > 0:
-            left_box = _bed_subbox(box, max_z=mid_z)
-            right_box = _bed_subbox(box, min_z=mid_z)
+            left_box = _span_subbox(box, max_z=mid_z)
+            right_box = _span_subbox(box, min_z=mid_z)
         else:
-            left_box = _bed_subbox(box, min_z=mid_z)
-            right_box = _bed_subbox(box, max_z=mid_z)
+            left_box = _span_subbox(box, min_z=mid_z)
+            right_box = _span_subbox(box, max_z=mid_z)
     else:
         mid_x = (min_x + max_x) / 2.0
         if dx > 0:
-            left_box = _bed_subbox(box, max_x=mid_x)
-            right_box = _bed_subbox(box, min_x=mid_x)
+            left_box = _span_subbox(box, max_x=mid_x)
+            right_box = _span_subbox(box, min_x=mid_x)
         else:
-            left_box = _bed_subbox(box, min_x=mid_x)
-            right_box = _bed_subbox(box, max_x=mid_x)
+            left_box = _span_subbox(box, min_x=mid_x)
+            right_box = _span_subbox(box, max_x=mid_x)
 
     return [
         (left_token, _box_face_corners(left_box, normal)),
@@ -802,30 +755,6 @@ def _iter_chest_face_parts(
         return _chest_split_along_span(box, normal, span, left_token, right_token)
 
     return [(left_token, _box_face_corners(box, normal))]
-
-
-def _iter_bed_face_parts(
-    box: OrbitBox,
-    normal: tuple[int, int, int],
-) -> list[tuple[str, tuple[tuple[float, float, float], ...]]]:
-    if box.role != "bed" or box.bed_span is None:
-        return [(box.cell.token, _box_face_corners(box, normal))]
-
-    head_token = box.cell.token
-    foot_token = bed_foot_token(head_token)
-    dx, dz = box.bed_span
-
-    if normal[1] != 0:
-        return _bed_split_along_span(box, normal, box.bed_span, head_token, foot_token)
-
-    if dz != 0 and normal[0] != 0:
-        return _bed_split_along_span(box, normal, box.bed_span, head_token, foot_token)
-
-    if dx != 0 and normal[2] != 0:
-        return _bed_split_along_span(box, normal, box.bed_span, head_token, foot_token)
-
-    token = _bed_end_cap_token(head_token, foot_token, box.bed_span, normal)
-    return [(token, _box_face_corners(box, normal))]
 
 
 def _register_face_signature(
@@ -900,7 +829,10 @@ def _emit_pending_quad(
         positions.extend(corner)
         normals.extend((float(nx), float(ny), float(nz)))
         colors.extend(color)
-        uvs.extend((0.0, 0.0))
+        if quad.corner_uvs is not None:
+            uvs.extend(quad.corner_uvs[index])
+        else:
+            uvs.extend((-1.0, -1.0))
         tile_rects.extend((u0, v0, u1, v1))
 
 

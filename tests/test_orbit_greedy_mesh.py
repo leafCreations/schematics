@@ -688,61 +688,89 @@ def test_orbit_bed_blue_resolves_face_texture():
     assert "BED:blue#head" in textures
 
 
-def test_orbit_bed_merged_top_uses_head_and_foot_textures():
-    from helpers import constants
-    from helpers.orbit_attachable_mesh import bed_foot_token
-    from helpers.orbit_face_textures import resolve_orbit_face_texture
-    from helpers.orbit_greedy_mesh import _iter_bed_face_parts
-    from helpers.orbit_mesh import OccupiedVoxel
-    from helpers.orbit_partial_mesh import OrbitBox
-    from helpers.paths import GENERATED_ASSETS_FOLDER, resolve_entity_bed_textures_folder
-    from helpers.sprite_baker.cache import cache_path
-    from registries.loader import BLOCK_TEXTURES_FOLDER, compile_texture_set
+def test_orbit_bed_mesh_uses_block_model_signatures():
+    from helpers.orbit_greedy_mesh import build_orbit_greedy_mesh_from_context
+    from helpers.sprite_baker.block_model import has_block_model
 
-    bed_dir = resolve_entity_bed_textures_folder()
-    head_cache = cache_path("top", "BED:blue#head", generated_root=GENERATED_ASSETS_FOLDER)
-    if not (bed_dir / "blue.png").exists() and not head_cache.exists():
-        pytest.skip("blue bed bake assets not available")
+    if not has_block_model("blue_bed_head"):
+        pytest.skip("blue bed block model not available")
 
-    head_token = "BED:blue@north#head"
-    foot_token = bed_foot_token(head_token)
-    cell = OccupiedVoxel(
-        world=(0, 0, 0),
-        token=head_token,
-        layer_list_index=0,
-        local_x=0,
-        local_z=0,
+    ctx = _ctx_from_layers(
+        [
+            {
+                "index": 0,
+                "cells": [
+                    ["BED:blue@north#head", "BED:blue@north#foot"],
+                ],
+            },
+        ],
     )
-    box = OrbitBox(
-        cell=cell,
-        min_corner=(0.0, 0.0, 0.0),
-        max_corner=(1.0, 9.0 / 16.0, 2.0),
-        role="bed",
-        bed_span=(0, 1),
-    )
-    parts = _iter_bed_face_parts(box, (0, 1, 0))
-    assert len(parts) == 2
-    assert parts[0][0] == head_token
-    assert parts[1][0] == foot_token
+    mesh = build_orbit_greedy_mesh_from_context(ctx)
+    assert mesh.triangle_count > 0
+    assert mesh.atlas_rgba is not None
 
-    textures = compile_texture_set(
-        "top",
-        str(BLOCK_TEXTURES_FOLDER),
-        constants.BLOCK_PX,
+
+def test_orbit_bed_head_and_foot_block_models_differ():
+    from helpers.orbit_block_model_mesh import iter_block_model_face_quads
+    from helpers.sprite_baker.block_model import has_block_model
+
+    if not has_block_model("blue_bed_head") or not has_block_model("blue_bed_foot"):
+        pytest.skip("blue bed block models not available")
+
+    head_quads = iter_block_model_face_quads("blue_bed_head", 0.0, 0.0, 0.0, rotation_y=0)
+    foot_quads = iter_block_model_face_quads("blue_bed_foot", 0.0, 0.0, 1.0, rotation_y=0)
+    assert head_quads and foot_quads
+    head_sigs = {quad.signature for quad in head_quads}
+    foot_sigs = {quad.signature for quad in foot_quads}
+    assert head_sigs.isdisjoint(foot_sigs)
+    head_up = next(quad for quad in head_quads if quad.normal == (0, 1, 0))
+    foot_up = next(quad for quad in foot_quads if quad.normal == (0, 1, 0))
+    assert head_up.texture.tobytes() != foot_up.texture.tobytes()
+
+
+def test_orbit_bed_head_up_face_uv_junction_samples_blanket():
+    """Block-model up faces use per-vertex UVs — not tileFrac at integer z (pillow at seam)."""
+    from helpers.sprite_baker.block_model import has_block_model
+
+    if not has_block_model("blue_bed_head"):
+        pytest.skip("blue bed block model not available")
+
+    ctx = _ctx_from_layers(
+        [
+            {
+                "index": 0,
+                "cells": [
+                    ["BED:blue@north#head"],
+                    ["BED:blue@north#foot"],
+                ],
+            },
+        ],
     )
-    head_top = resolve_orbit_face_texture(
-        head_token,
-        textures,
-        face_kind="top",
-    )
-    foot_top = resolve_orbit_face_texture(
-        foot_token,
-        textures,
-        face_kind="top",
-    )
-    assert head_top is not None
-    assert foot_top is not None
-    assert head_top.tobytes() != foot_top.tobytes()
+    mesh = build_orbit_greedy_mesh_from_context(ctx)
+    assert mesh.uses_texture_atlas
+    assert any(uv >= 0.0 for uv in mesh.uvs[::2])
+
+    junction_v: list[float] = []
+    pillow_v: list[float] = []
+    n_verts = len(mesh.positions) // 3
+    for vi in range(n_verts):
+        y = mesh.positions[vi * 3 + 1]
+        z = mesh.positions[vi * 3 + 2]
+        ny = mesh.normals[vi * 3 + 1]
+        face_u = mesh.uvs[vi * 2]
+        face_v = mesh.uvs[vi * 2 + 1]
+        if ny < 0.5 or face_u < 0.0 or y < 0.15:
+            continue
+        # Corrected UV: pillow-end (z=0/north) has fv≈1.0 (PIL top = pillow);
+        # junction-end (z=1) has fv≈0.0 (PIL bottom = blue blanket).
+        if abs(z - 1.0) < 0.02 and face_v < 0.6:
+            junction_v.append(face_v)
+        if abs(z) < 0.02 and face_v > 0.4:
+            pillow_v.append(face_v)
+
+    assert junction_v and pillow_v
+    assert all(v < 0.6 for v in junction_v)
+    assert all(v > 0.4 for v in pillow_v)
 
 
 def _chest_latch_pixel_count(image) -> int:
@@ -1000,4 +1028,4 @@ def test_orbit_bed_side_faces_differ_by_world_facing():
 
 
 def test_orbit_bed_merged_top_head_and_foot_bakes():
-    test_orbit_bed_merged_top_uses_head_and_foot_textures()
+    test_orbit_bed_head_and_foot_block_models_differ()

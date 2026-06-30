@@ -226,6 +226,61 @@ def element_face_corners_in_block_space(
     return tuple(transformed)
 
 
+def element_face_corner_uvs(face_name: str, face: dict) -> tuple[tuple[float, float], ...]:
+    """Normalized 0-1 UVs per corner for shader sampling via atlas mix(v_bottom, v_top, fv).
+
+    Atlas is uploaded without vertical flip, so atlasUv.y=small (v_top) → PIL top of tile crop.
+    mix(v_bottom, v_top, fv): fv=0 → v_bottom (PIL bottom), fv=1 → v_top (PIL top).
+    Minecraft Mc_v=0 maps to the PIL top of the crop, so Mc_v=0 corners need fv=1.
+
+    Corner order matches element_face_corners_in_block_space:
+      up:    (min_x,max_y,min_z), (min_x,max_y,max_z), (max_x,max_y,max_z), (max_x,max_y,min_z)
+      down:  (min_x,min_y,min_z), (max_x,min_y,min_z), (max_x,min_y,max_z), (min_x,min_y,max_z)
+      east:  (max_x,min_y,max_z), (max_x,max_y,max_z), (max_x,max_y,min_z), (max_x,min_y,min_z)
+      west:  (min_x,min_y,min_z), (min_x,min_y,max_z), (min_x,max_y,max_z), (min_x,max_y,min_z)
+      south: (min_x,min_y,max_z), (max_x,min_y,max_z), (max_x,max_y,max_z), (min_x,max_y,max_z)
+      north: (min_x,min_y,min_z), (min_x,max_y,min_z), (max_x,max_y,min_z), (max_x,min_y,min_z)
+    """
+    u1, v1, u2, v2 = face["uv"]
+    # Canonical UVs: Mc u=0 → fu=0 (left of crop / PIL x=0), Mc v=0 → fv=1 (top of crop / PIL y=0).
+    # up:    Mc u increases east (+x); Mc v increases south (+z). Mc v=0 → north (min_z).
+    # east:  Mc u=0 → south (max_z); Mc v=0 → top (max_y). (viewer faces -X, left = south)
+    # west:  Mc u=0 → north (min_z); Mc v=0 → top (max_y). (viewer faces +X, left = north)
+    # south: Mc u=0 → west (min_x);  Mc v=0 → top (max_y). (viewer faces -Z, left = west)
+    # north: Mc u=0 → east (max_x);  Mc v=0 → top (max_y). (viewer faces +Z, left = east)
+    if face_name == "up":
+        # corners: NW(min_x,min_z), SW(min_x,max_z), SE(max_x,max_z), NE(max_x,min_z)
+        # NW → Mc(0,0) → (0,1); SW → Mc(0,16) → (0,0); SE → Mc(16,16) → (1,0); NE → Mc(16,0) → (1,1)
+        uvs = ((0.0, 1.0), (0.0, 0.0), (1.0, 0.0), (1.0, 1.0))
+    elif face_name == "down":
+        # Down face uses same u/v orientation as up for these purposes; tex is symmetric.
+        uvs = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+    elif face_name == "east":
+        # corners: S-bot(max_z,min_y), S-top(max_z,max_y), N-top(min_z,max_y), N-bot(min_z,min_y)
+        # viewer faces -X; left=south(max_z)=Mc_u0; Mc_v0→top(max_y)→fv=1
+        uvs = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0))
+    elif face_name == "west":
+        # corners: N-bot(min_z,min_y), S-bot(max_z,min_y), S-top(max_z,max_y), N-top(min_z,max_y)
+        # viewer faces +X; left=north(min_z)=Mc_u0; Mc_v0→top(max_y)→fv=1
+        uvs = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+    elif face_name == "south":
+        # corners: W-bot(min_x,min_y), E-bot(max_x,min_y), E-top(max_x,max_y), W-top(min_x,max_y)
+        # viewer faces -Z; left=west(min_x)=Mc_u0; Mc_v0→top(max_y)→fv=1
+        uvs = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+    elif face_name == "north":
+        # corners: W-bot(min_x,min_y), W-top(min_x,max_y), E-top(max_x,max_y), E-bot(max_x,min_y)
+        # viewer faces +Z; left=east(max_x)=Mc_u0; Mc_v0→top(max_y)→fv=1
+        uvs = ((1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0))
+    else:
+        raise ValueError(f"Unknown block model face: {face_name}")
+
+    if u2 < u1:
+        uvs = tuple((1.0 - u, v) for u, v in uvs)
+    if v2 < v1:
+        uvs = tuple((u, 1.0 - v) for u, v in uvs)
+    return uvs
+
+
 def _load_texture(ref: str, textures: dict[str, str]) -> Image.Image:
     if ref.startswith("#"):
         ref = textures[ref[1:]]

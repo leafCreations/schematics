@@ -13,6 +13,7 @@ from helpers.sprite_baker.block_model import (
     has_block_model,
     load_block_model,
 )
+from helpers.sprite_baker.compose_bed import resolve_bed_part
 from helpers.sprite_baker.compose_lantern import resolve_lantern_model_name, resolve_lantern_variant
 from helpers.sprite_baker.compose_torch import resolve_torch_variant
 from helpers.sprite_baker.compose_trapdoor import resolve_trapdoor_half
@@ -22,7 +23,7 @@ from helpers.types import BlockRegistryEntry, CellGrid
 from helpers.utils import normalize_direction
 
 ATTACHABLE_BEHAVIORS = frozenset({"torch", "lantern", "bed", "chest", "trapdoor", "door"})
-BLOCK_MODEL_FACE_BEHAVIORS = frozenset({"torch", "lantern", "trapdoor"})
+BLOCK_MODEL_FACE_BEHAVIORS = frozenset({"torch", "lantern", "trapdoor", "bed"})
 
 _MODEL_SCALE = 1.0 / 16.0
 _BED_HEIGHT = 9.0 / 16.0
@@ -31,6 +32,9 @@ _DOOR_THICKNESS = 3.0 / 16.0
 
 # Y-rotation (degrees) keyed by normalize_direction() → N/S/E/W.
 _BOX_Y_ROTATION = {"S": 0, "W": 90, "N": 180, "E": 270}
+# Bed JSON models are authored with the pillow on the block north edge; map ``@direction``
+# (head pillow compass) to block Y rotation — not ``_BOX_Y_ROTATION`` (door-style).
+_BED_Y_ROTATION = {"N": 0, "E": 90, "S": 180, "W": 270}
 _WALL_TORCH_Y_ROTATION = {"E": 0, "S": 90, "W": 180, "N": 270}
 _TRAPDOOR_OPEN_Y_ROTATION = {"N": 0, "E": 90, "S": 180, "W": 270}
 
@@ -87,6 +91,13 @@ def resolve_attachable_block_model(
         suffix = "top" if half == "top" else "bottom"
         return f"{material}_trapdoor_{suffix}", 0
 
+    if behavior == "bed":
+        color = resolve_token_color(entry, parsed)
+        part = resolve_bed_part(parsed.variant, entry)
+        model_name = f"{color}_bed_{part}"
+        rotation = _bed_direction_rotation_y(parsed.direction)
+        return model_name, rotation
+
     return None
 
 
@@ -117,7 +128,7 @@ def attachable_boxes_for_cell(
             layer_cells_cache=layer_cells_cache,
         )
     if behavior == "bed":
-        return _bed_boxes(cell, parsed, cell_by_world, wx, wy, wz)
+        return _bed_boxes(cell, entry, parsed, wx, wy, wz)
     if behavior == "chest":
         return _chest_boxes(cell, parsed, cell_by_world, wx, wy, wz)
     if behavior == "trapdoor":
@@ -145,6 +156,10 @@ def _fallback_unit_box(
 
 def _box_direction_rotation_y(direction: str | None) -> int:
     return _BOX_Y_ROTATION.get(normalize_direction(direction) or "S", 0)
+
+
+def _bed_direction_rotation_y(direction: str | None) -> int:
+    return _BED_Y_ROTATION.get(normalize_direction(direction) or "N", 0)
 
 
 def _wall_torch_rotation_y(direction: str | None) -> int:
@@ -281,85 +296,17 @@ def _infer_lantern_hanging(
 
 def _bed_boxes(
     cell: OccupiedVoxel,
+    entry: BlockRegistryEntry,
     parsed: ParsedToken,
-    cell_by_world: dict[tuple[int, int, int], OccupiedVoxel] | None,
     wx: float,
     wy: float,
     wz: float,
 ) -> list[OrbitBox]:
-    part = parsed.variant or "head"
-
-    if part == "foot" and _bed_has_partner(cell, parsed, cell_by_world, want="head"):
-        return []
-
-    partner_offset = _bed_partner_offset(cell, parsed, cell_by_world)
-    if part == "head" and partner_offset is not None:
-        dx, _, dz = partner_offset
-        min_x, max_x = wx, wx + 1.0
-        min_z, max_z = wz, wz + 1.0
-        if dx > 0:
-            max_x = wx + 2.0
-        elif dx < 0:
-            min_x = wx - 1.0
-        if dz > 0:
-            max_z = wz + 2.0
-        elif dz < 0:
-            min_z = wz - 1.0
-        return [
-            OrbitBox(
-                cell=cell,
-                min_corner=(min_x, wy, min_z),
-                max_corner=(max_x, wy + _BED_HEIGHT, max_z),
-                role="bed",
-                bed_span=(dx, dz),
-            ),
-        ]
-
-    return _single_bed_box(cell, wx, wy, wz)
-
-
-def _bed_has_partner(
-    cell: OccupiedVoxel,
-    parsed: ParsedToken,
-    cell_by_world: dict[tuple[int, int, int], OccupiedVoxel] | None,
-    *,
-    want: str,
-) -> bool:
-    return _bed_partner_offset(cell, parsed, cell_by_world, want=want) is not None
-
-
-def _bed_partner_offset(
-    cell: OccupiedVoxel,
-    parsed: ParsedToken,
-    cell_by_world: dict[tuple[int, int, int], OccupiedVoxel] | None,
-    *,
-    want: str | None = None,
-) -> tuple[int, int, int] | None:
-    if cell_by_world is None:
-        return None
-
-    part = parsed.variant or "head"
-    for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        partner = cell_by_world.get((cell.world[0] + dx, cell.world[1], cell.world[2] + dz))
-        if partner is None:
-            continue
-        partner_parsed = parse_structure_token(partner.token)
-        if partner_parsed is None or partner_parsed.token != "BED":
-            continue
-        if normalize_direction(partner_parsed.direction) != normalize_direction(parsed.direction):
-            continue
-        partner_part = partner_parsed.variant or "head"
-        if want is not None and partner_part != want:
-            continue
-        if part == "head" and partner_part != "foot":
-            continue
-        if part == "foot" and partner_part != "head":
-            continue
-        if not tokens_match_bed_partner(parsed, partner_parsed):
-            continue
-        return (dx, 0, dz)
-
-    return None
+    spec = resolve_attachable_block_model(cell, entry, parsed)
+    if spec is None:
+        return _single_bed_box(cell, wx, wy, wz)
+    model_name, rotation_y = spec
+    return _boxes_from_block_model(cell, model_name, wx, wy, wz, rotation_y=rotation_y)
 
 
 def _single_bed_box(
@@ -511,6 +458,24 @@ def _door_boxes(
         role="door",
     )
     return _rotate_boxes_for_direction([plate], parsed.direction, wx, wy, wz)
+
+
+def bed_partner_occludes_face(
+    cell: OccupiedVoxel,
+    neighbor_cell: OccupiedVoxel,
+) -> bool:
+    """True when neighbor is the paired head/foot bed cell (shared internal face)."""
+    parsed = parse_structure_token(cell.token)
+    neighbor_parsed = parse_structure_token(neighbor_cell.token)
+    if parsed is None or neighbor_parsed is None:
+        return False
+    if parsed.token != "BED" or neighbor_parsed.token != "BED":
+        return False
+    if not tokens_match_bed_partner(parsed, neighbor_parsed):
+        return False
+    part = parsed.variant or "head"
+    partner_part = neighbor_parsed.variant or "head"
+    return part != partner_part
 
 
 def tokens_match_bed_partner(left: ParsedToken, right: ParsedToken) -> bool:
